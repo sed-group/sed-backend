@@ -1,0 +1,9 @@
+# GIT files
+.git
+
+# Development directories
+venv/
+.idea/
+
+# Cache files
+*.pyc
