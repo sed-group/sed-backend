@@ -7,11 +7,14 @@ from apps.core.authentication.exceptions import InvalidCredentialsException
 router = APIRouter()
 
 
-@router.post("/token")
+@router.post("/token",
+             tags=["authentication"],
+             summary="Login using token",
+             description="Login using Token")
 async def login_with_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    '''
+    """
     Authenticates the user when logging in by comparing hashed password values
-    '''
+    """
 
     try:
         return login(form_data.username, form_data.password)

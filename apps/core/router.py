@@ -9,6 +9,6 @@ router.include_router(router_users, prefix='/users')
 router.include_router(router_auth, prefix='/auth')
 
 
-@router.get("/")
+@router.get("/", summary="Core API root", description="This is pointless")
 async def get_api_root():
     return {"version": "1"}
