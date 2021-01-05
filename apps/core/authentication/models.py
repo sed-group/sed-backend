@@ -1,16 +1,7 @@
 from typing import Optional
-
 from pydantic import BaseModel
 
-
-class User(BaseModel):
-    """
-    Standard user model containing only "safe" information.
-    """
-    username: str
-    email: Optional[str] = None
-    full_name: Optional[str] = None
-    disabled: Optional[bool] = None
+from apps.core.users.models import User
 
 
 class UserAuth(User):

@@ -5,7 +5,8 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 
-from apps.core.authentication.models import User, UserAuth, TokenData
+from apps.core.users.models import User
+from apps.core.authentication.models import UserAuth, TokenData
 from apps.core.authentication.exceptions import InvalidCredentialsException
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/core/auth/token")
@@ -44,7 +45,7 @@ def get_user(db, username: str):
         return UserAuth(**user_dict)
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+async def verify_token(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid authentication credentials",
@@ -66,7 +67,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     return user
 
 
-async def get_current_active_user(current_user: User = Depends(get_current_user())):
+async def get_current_active_user(current_user: User = Depends(verify_token)):
     if current_user.disabled:
         raise HTTPException(status_code=400, detail="Inactive user")
 

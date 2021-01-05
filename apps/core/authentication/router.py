@@ -8,7 +8,6 @@ router = APIRouter()
 
 
 @router.post("/token",
-             tags=["authentication"],
              summary="Login using token",
              description="Login using Token")
 async def login_with_token(form_data: OAuth2PasswordRequestForm = Depends()):
