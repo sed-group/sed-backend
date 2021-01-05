@@ -2,14 +2,20 @@ from fastapi import APIRouter, Depends
 
 from apps.core.authentication.utils import verify_token
 from apps.core.authentication.models import User
+from apps.core.db import get_connection
+from apps.core.users.storage import get_user_safe_with_id
 
 router = APIRouter()
 
 
 @router.get("/me",
-            summary="Returns logged in user")
+            summary="Returns logged in user",
+            dependencies=[Depends(verify_token)])
 async def get_users_me(current_user: User = Depends(verify_token)):
-    return current_user
+    con = get_connection()
+    user_safe = get_user_safe_with_id(con, current_user.id)
+    con.close()
+    return user_safe
 
 
 @router.get("/list",
