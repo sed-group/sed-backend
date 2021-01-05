@@ -5,9 +5,11 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 
+from apps.core.db import get_connection
 from apps.core.users.models import User
-from apps.core.authentication.models import UserAuth, TokenData
+from apps.core.authentication.models import TokenData
 from apps.core.authentication.exceptions import InvalidCredentialsException
+from apps.core.authentication.storage import get_user_auth_only
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/core/auth/token")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -17,32 +19,12 @@ SECRET_KEY  = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
 ALGORITHM   = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-fake_users_db = {
-    "johndoe": {
-        "username": "johndoe",
-        "full_name": "John Doe",
-        "email": "johndoe@example.com",
-        "hashed_password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
-        "disabled": False,
-    },
-    "alice": {
-        "username": "alice",
-        "full_name": "Alice Wonderson",
-        "email": "alice@example.com",
-        "hashed_password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
-        "disabled": True,
-    },
-}
 
-
-def fake_hash_password(password: str):
-    return "fh" + password
-
-
-def get_user(db, username: str):
-    if username in db:
-        user_dict = db[username]
-        return UserAuth(**user_dict)
+def get_user(username: str):
+    con = get_connection()
+    user_auth = get_user_auth_only(con, username)
+    con.close()
+    return user_auth
 
 
 async def verify_token(token: str = Depends(oauth2_scheme)):
@@ -60,7 +42,7 @@ async def verify_token(token: str = Depends(oauth2_scheme)):
     except JWTError:
         raise credentials_exception
 
-    user = get_user(fake_users_db, username=token_data.username)
+    user = get_user(username=token_data.username)
     # Requested user does not exist
     if not user:
         raise credentials_exception
@@ -80,12 +62,12 @@ def get_password_hash(plain_pwd):
     return pwd_context.hash(plain_pwd)
 
 
-def authenticate_user(fake_db, username: str, password: str):
-    user = get_user(fake_db, username)
+def authenticate_user(username: str, password: str):
+    user = get_user(username)
     if not user:
         # User does not exist
         return False
-    if not verify_password(password, user.hashed_password):
+    if not verify_password(password, user.password):
         # Password is incorrect
         return False
 
@@ -105,7 +87,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 
 def login(username, plain_pwd):
-    user = authenticate_user(fake_users_db, username, plain_pwd)
+    user = authenticate_user(username, plain_pwd)
     if not user:
         raise InvalidCredentialsException()
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)

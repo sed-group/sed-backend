@@ -9,7 +9,7 @@ class UserAuth(User):
     SHOULD ONLY BE USED DURING AUTHENTICATION PROCESSES.
     User model that also contains the hashed password.
     """
-    hashed_password: str
+    password: str
 
 
 class Token(BaseModel):
