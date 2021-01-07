@@ -9,9 +9,6 @@ from apps.core.users.models import User
 
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="/api/core/auth/token",
-    scopes={
-        "admin": "Administrative access"
-    }
 )
 
 

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Response, status, Security
 from apps.core.authentication.utils import verify_token, get_current_active_user
 from apps.core.authentication.models import User
 from apps.core.db import get_connection
-from apps.core.users.storage import get_user_safe_with_id
+from apps.core.users.storage import get_user_safe_with_id, get_user_list
 from apps.core.users.exceptions import UserNotFoundException
 
 router = APIRouter()
@@ -25,8 +25,10 @@ async def get_users_me(response: Response, current_user: User = Depends(get_curr
             summary="Lists all users",
             description="Produces a list of users in alphabetical order",
             dependencies=[Security(verify_token, scopes=['admin'])])
-async def get_users_list():
-    return ["pelle", "sture", "bengt", "eva"]
+async def get_users(segment_length: int, index: int):
+    with get_connection() as con:
+        user_list = get_user_list(con, segment_length, index)
+        return user_list
 
 
 @router.get("/id/{user_id}",

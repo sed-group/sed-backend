@@ -39,8 +39,8 @@ def get_user_safe_with_id(connection, user_id: int):
     return user
 
 
-def get_user_list(connection, list_size: int, index: int):
-    users = []
+def get_user_list(connection, segment_length: int, index: int):
+    users = ['Pelle', 'Sture', 'Lotta', 'Eva']
 
     return users
 
