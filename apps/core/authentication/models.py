@@ -10,6 +10,7 @@ class UserAuth(User):
     User model that also contains the hashed password.
     """
     password: str
+    scopes: str
 
 
 class Token(BaseModel):

@@ -24,14 +24,14 @@ async def get_users_me(response: Response, current_user: User = Depends(get_curr
 @router.get("/list",
             summary="Lists all users",
             description="Produces a list of users in alphabetical order",
-            dependencies=[Security(verify_token, scopes=['items'])])
+            dependencies=[Security(verify_token, scopes=['admin'])])
 async def get_users_list():
     return ["pelle", "sture", "bengt", "eva"]
 
 
 @router.get("/id/{user_id}",
             summary="Get user with ID",
-            dependencies=[Depends(verify_token)])
+            dependencies=[Security(verify_token, scopes=['admin'])])
 async def get_user_with_id(user_id, response: Response):
     try:
         with get_connection() as con:

@@ -14,6 +14,7 @@ CREATE TABLE `seddb`.`users` (
   `password` VARCHAR(100) NOT NULL,
   `email` VARCHAR(100) NULL,
   `full_name` VARCHAR(255) NULL,
+  `scopes` VARCHAR(500) NULL DEFAULT '';
   `disabled` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,

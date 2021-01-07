@@ -16,8 +16,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-def login(username, plain_pwd, scopes):
-    user = authenticate_user(username, plain_pwd)
+def login(username, plain_pwd):
+    user, scopes = authenticate_user(username, plain_pwd)
     if not user:
         raise InvalidCredentialsException()
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -37,8 +37,17 @@ def authenticate_user(username: str, password: str):
         # Password is incorrect
         return False
 
+    scopes = parse_scopes(user)
+
     # If the credentials are correct, then return the user
-    return user
+    return user, scopes
+
+
+def parse_scopes(user):
+    scopes = []
+    if user.scopes:
+        scopes = user.scopes.split(';')
+    return scopes
 
 
 def get_password_hash(plain_pwd):

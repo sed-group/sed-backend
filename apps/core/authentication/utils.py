@@ -10,8 +10,7 @@ from apps.core.users.models import User
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="/api/core/auth/token",
     scopes={
-        "me": "Read information about current user",
-        "items": "Read items"
+        "admin": "Administrative access"
     }
 )
 
@@ -65,8 +64,7 @@ async def verify_token(security_scopes: SecurityScopes, token: str = Depends(oau
     return user
 
 
-async def get_current_active_user(current_user: User = Security(verify_token, scopes=["me"])):
-    print("GET CURRENT ACTIVE USER")
+async def get_current_active_user(current_user: User = Depends(verify_token)):
     if current_user.disabled:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
