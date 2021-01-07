@@ -31,6 +31,10 @@ else:
 
 @contextmanager
 def get_connection():
+    """
+    Returns a MySQL connection that can be used for read/write.
+    Should be utilized through "get with resources" methodology.
+    """
     connection = connection_pool.get_connection()
     try:
         yield connection

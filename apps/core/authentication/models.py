@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
 
 from apps.core.users.models import User
@@ -10,6 +10,7 @@ class UserAuth(User):
     User model that also contains the hashed password.
     """
     password: str
+    scopes: str
 
 
 class Token(BaseModel):
@@ -19,3 +20,4 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: Optional[str] = None
+    scopes: List[str] = []

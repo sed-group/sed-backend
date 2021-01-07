@@ -1,18 +1,17 @@
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Response, status, Security
 
-from apps.core.authentication.utils import verify_token
+from apps.core.authentication.utils import verify_token, get_current_active_user
 from apps.core.authentication.models import User
 from apps.core.db import get_connection
-from apps.core.users.storage import get_user_safe_with_id
+from apps.core.users.storage import get_user_safe_with_id, get_user_list
 from apps.core.users.exceptions import UserNotFoundException
 
 router = APIRouter()
 
 
 @router.get("/me",
-            summary="Returns logged in user",
-            dependencies=[Depends(verify_token)])
-async def get_users_me(response: Response, current_user: User = Depends(verify_token)):
+            summary="Returns logged in user")
+async def get_users_me(response: Response, current_user: User = Depends(get_current_active_user)):
     try:
         with get_connection() as con:
             user_safe = get_user_safe_with_id(con, current_user.id)
@@ -25,14 +24,16 @@ async def get_users_me(response: Response, current_user: User = Depends(verify_t
 @router.get("/list",
             summary="Lists all users",
             description="Produces a list of users in alphabetical order",
-            dependencies=[Depends(verify_token)])
-async def get_users_list():
-    return ["pelle", "sture", "bengt", "eva"]
+            dependencies=[Security(verify_token, scopes=['admin'])])
+async def get_users(segment_length: int, index: int):
+    with get_connection() as con:
+        user_list = get_user_list(con, segment_length, index)
+        return user_list
 
 
 @router.get("/id/{user_id}",
             summary="Get user with ID",
-            dependencies=[Depends(verify_token)])
+            dependencies=[Security(verify_token, scopes=['admin'])])
 async def get_user_with_id(user_id, response: Response):
     try:
         with get_connection() as con:
