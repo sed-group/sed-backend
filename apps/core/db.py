@@ -1,6 +1,8 @@
 import mysql.connector
 from mysql.connector import errorcode, pooling
 
+from contextlib import contextmanager
+
 connection_pool = None
 
 try:
@@ -27,5 +29,10 @@ else:
     print('Database connection pool was successfully established')
 
 
+@contextmanager
 def get_connection():
-    return connection_pool.get_connection()
+    connection = connection_pool.get_connection()
+    try:
+        yield connection
+    finally:
+        connection.close()

@@ -51,10 +51,9 @@ def get_user_with_pwd_from_db(username: str):
     :param username: Username
     :return:
     """
-    con = get_connection()
-    user_auth = get_user_auth_only(con, username)
-    con.close()
-    return user_auth
+    with get_connection() as con:
+        user_auth = get_user_auth_only(con, username)
+        return user_auth
 
 
 def verify_password(plain_pwd, hashed_pwd):
