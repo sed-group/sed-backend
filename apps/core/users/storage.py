@@ -37,3 +37,13 @@ def get_user_safe_with_id(connection, user_id: int):
 
     user = User(**user_data)
     return user
+
+
+def get_user_list(connection, list_size: int, index: int):
+    users = []
+
+    return users
+
+
+def create_user(connection, user: User):
+    pass

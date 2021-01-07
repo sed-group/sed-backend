@@ -16,7 +16,7 @@ async def login_with_token(form_data: OAuth2PasswordRequestForm = Depends()):
     """
 
     try:
-        return login(form_data.username, form_data.password)
+        return login(form_data.username, form_data.password, form_data.scopes)
     except InvalidCredentialsException:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

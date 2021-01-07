@@ -16,13 +16,13 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-def login(username, plain_pwd):
+def login(username, plain_pwd, scopes):
     user = authenticate_user(username, plain_pwd)
     if not user:
         raise InvalidCredentialsException()
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.username},
+        data={"sub": user.username, "scopes": scopes},
         expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
