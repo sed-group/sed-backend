@@ -4,6 +4,7 @@ from typing import Optional
 from jose import jwt
 from passlib.context import CryptContext
 
+from apps.core.users.exceptions import UserNotFoundException
 from apps.core.authentication.exceptions import InvalidCredentialsException
 from apps.core.authentication.storage import get_user_auth_only
 from apps.core.db import get_connection
@@ -32,10 +33,10 @@ def authenticate_user(username: str, password: str):
     user = get_user_with_pwd_from_db(username)
     if not user:
         # User does not exist
-        return False
+        raise InvalidCredentialsException
     if not verify_password(password, user.password):
         # Password is incorrect
-        return False
+        raise InvalidCredentialsException
 
     scopes = parse_scopes(user)
 
@@ -60,9 +61,12 @@ def get_user_with_pwd_from_db(username: str):
     :param username: Username
     :return:
     """
-    with get_connection() as con:
-        user_auth = get_user_auth_only(con, username)
-        return user_auth
+    try:
+        with get_connection() as con:
+            user_auth = get_user_auth_only(con, username)
+            return user_auth
+    except UserNotFoundException:
+        raise InvalidCredentialsException
 
 
 def verify_password(plain_pwd, hashed_pwd):

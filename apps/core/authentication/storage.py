@@ -13,11 +13,12 @@ def get_user_auth_only(connection, user_name: str):
     query = "SELECT * FROM users WHERE username = %s"
     cursor.execute(query, (user_name,))
     user_data = cursor.fetchone()
-    user_data = dict(zip(cursor.column_names, user_data))
-    cursor.close()
 
     if user_data is None:
         raise UserNotFoundException
+
+    user_data = dict(zip(cursor.column_names, user_data))
+    cursor.close()
 
     user = UserAuth(**user_data)
     return user

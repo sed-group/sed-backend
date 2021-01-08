@@ -19,7 +19,7 @@ async def login_with_token(form_data: OAuth2PasswordRequestForm = Depends()):
         return login(form_data.username, form_data.password)
     except InvalidCredentialsException:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"}
         )
