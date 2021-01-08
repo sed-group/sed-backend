@@ -1,6 +1,10 @@
 from fastapi import FastAPI
 
 import main_router as api
+import setup
+
+
+setup.config_default_logging()
 
 app = FastAPI(
     title="SED lab API",
@@ -10,3 +14,5 @@ app = FastAPI(
 )
 
 app.include_router(api.router, prefix="/api")
+
+setup.install_middleware(app)
