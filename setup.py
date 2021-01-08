@@ -1,6 +1,7 @@
 import time
 import logging
 from logging.handlers import TimedRotatingFileHandler
+import tempfile
 
 from fastapi import Request
 from fastapi.logger import logger
@@ -12,7 +13,7 @@ def config_default_logging():
     :return:
     """
     log_level = logging.DEBUG
-    log_name = "sed-backend.log"
+    log_name = tempfile.gettempdir()+"/sed-backend.log"
     file_name_date_handler = TimedRotatingFileHandler(log_name, when="midnight", interval=1)
     file_name_date_handler.suffix = "%Y%m%d"
     log_format = "%(asctime)s - %(levelname)s - %(message)s"
