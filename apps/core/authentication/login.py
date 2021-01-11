@@ -10,8 +10,8 @@ from apps.core.authentication.storage import get_user_auth_only
 from apps.core.db import get_connection
 
 
-# TODO: Change secret key. Use `openssl rand -hex 32`.
-SECRET_KEY  = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
+# Key can be created using `openssl rand -hex 32`.
+SECRET_KEY  = "0cf1c4bde4c1e423a5eff96e02febe2a562a8256ad6e854f89afdee37220dd2d"
 ALGORITHM   = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -51,10 +51,6 @@ def parse_scopes(user):
     return scopes
 
 
-def get_password_hash(plain_pwd):
-    return pwd_context.hash(plain_pwd)
-
-
 def get_user_with_pwd_from_db(username: str):
     """
     Only for use when authenticating a user
@@ -70,6 +66,8 @@ def get_user_with_pwd_from_db(username: str):
 
 
 def verify_password(plain_pwd, hashed_pwd):
+    print(plain_pwd)
+    print(hashed_pwd)
     return pwd_context.verify(plain_pwd, hashed_pwd)
 
 

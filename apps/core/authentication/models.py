@@ -6,8 +6,7 @@ from apps.core.users.models import User
 
 class UserAuth(User):
     """
-    SHOULD ONLY BE USED DURING AUTHENTICATION PROCESSES.
-    User model that also contains the hashed password.
+    SHOULD ONLY BE USED DURING AUTHENTICATION PROCESSES, OR WHEN CREATING A NEW USER.
     """
     password: str
     scopes: str
