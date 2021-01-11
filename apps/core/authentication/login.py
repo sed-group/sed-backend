@@ -66,8 +66,6 @@ def get_user_with_pwd_from_db(username: str):
 
 
 def verify_password(plain_pwd, hashed_pwd):
-    print(plain_pwd)
-    print(hashed_pwd)
     return pwd_context.verify(plain_pwd, hashed_pwd)
 
 
