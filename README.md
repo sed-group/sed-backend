@@ -6,7 +6,6 @@ This project contains the SED Lab back-end. It consists of a core API containing
 - [x] Standardized database connections
 - [x] Users
 - [x] Permissions/scopes
-- [ ] Support for cookie based authentication
 
 # Installation
 
@@ -19,3 +18,11 @@ This project contains the SED Lab back-end. It consists of a core API containing
 - Run `pip install -r requirements.txt`
 - Run `uvicorn main:app --reload` from project root to launch the application
 - Go to http://localhost:8000/docs to get an overview of the API
+
+## Create an initial admin user for development purposes
+Use the following MySQL query to create a user with the admin role:
+
+```INSERT INTO users (`username`, `password`,`scopes`, `disabled`) VALUES ('admin', '$2b$12$HrAma.HCdIFuHtnbVcle/efa9luh.XUqZapqFEUISj91TKTN6UgR6', 'admin', False)```
+
+- username: admin
+- password: secret
