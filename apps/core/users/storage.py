@@ -1,5 +1,9 @@
-from .exceptions import UserNotFoundException
+from .exceptions import UserNotFoundException, UserNotUniqueException
 from .models import User
+from apps.core.authentication.models import UserAuth
+from apps.core.authentication.utils import get_password_hash
+from libs.mysqlutils import MySQLStatementBuilder
+from mysql.connector.errors import IntegrityError
 
 
 def get_user_safe_with_username(connection, user_name: str):
@@ -45,5 +49,23 @@ def get_user_list(connection, segment_length: int, index: int):
     return users
 
 
-def create_user(connection, user: User):
-    pass
+def insert_user(connection, user: UserAuth):
+    try:
+        mysql_statement = MySQLStatementBuilder(connection)
+        mysql_statement.insert('users',
+                               ('username',
+                                'password',
+                                'email',
+                                'full_name',
+                                'scopes',
+                                'disabled'),
+                               (user.username,
+                                get_password_hash(user.password),
+                                user.email,
+                                user.full_name,
+                                user.scopes,
+                                user.disabled)).execute()
+    except IntegrityError:
+        raise UserNotUniqueException('Suggested user is not unique.')
+
+    return User(**dict(user))

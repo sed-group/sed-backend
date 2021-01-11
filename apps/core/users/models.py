@@ -6,7 +6,7 @@ class User(BaseModel):
     """
     Standard user model containing only "safe" information.
     """
-    id: int
+    id: Optional[int] = None
     username: str
     email: Optional[str] = None
     full_name: Optional[str] = None
