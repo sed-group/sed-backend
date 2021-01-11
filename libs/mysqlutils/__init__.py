@@ -1,1 +1,1 @@
-from .builder import MySQLStatementBuilder
+from .builder import MySQLStatementBuilder, FetchType

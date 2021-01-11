@@ -2,7 +2,7 @@ from .exceptions import UserNotFoundException, UserNotUniqueException
 from .models import User
 from apps.core.authentication.models import UserAuth
 from apps.core.authentication.utils import get_password_hash
-from libs.mysqlutils import MySQLStatementBuilder
+from libs.mysqlutils import MySQLStatementBuilder, FetchType
 from mysql.connector.errors import IntegrityError
 
 
@@ -28,17 +28,17 @@ def get_user_safe_with_id(connection, user_id: int):
     except ValueError:
         raise TypeError
 
-    cursor = connection.cursor(prepared=True)
-    query = "SELECT id, username, email, full_name FROM users WHERE id = %s"
-    cursor.execute(query, (user_id,))
-    user_data = cursor.fetchone()
+    cols_to_fetch = ['username', 'email', 'full_name']
 
-    if user_data is None:
-        raise UserNotFoundException
+    mysql_statement = MySQLStatementBuilder(connection)
+    user_data = mysql_statement\
+        .select('users', cols_to_fetch)\
+        .where('id = %s', [user_id])\
+        .execute(fetch_type=FetchType.FETCH_ONE)
 
-    user_data = dict(zip(cursor.column_names, user_data))
-    cursor.close()
-
+    print(user_data)
+    user_data = dict(zip(cols_to_fetch, user_data))
+    print(user_data)
     user = User(**user_data)
     return user
 
@@ -53,18 +53,18 @@ def insert_user(connection, user: UserAuth):
     try:
         mysql_statement = MySQLStatementBuilder(connection)
         mysql_statement.insert('users',
-                               ('username',
+                               ['username',
                                 'password',
                                 'email',
                                 'full_name',
                                 'scopes',
-                                'disabled'),
-                               (user.username,
+                                'disabled'],
+                               [user.username,
                                 get_password_hash(user.password),
                                 user.email,
                                 user.full_name,
                                 user.scopes,
-                                user.disabled)).execute()
+                                user.disabled]).execute(fetch_type=FetchType.FETCH_NONE)
     except IntegrityError:
         raise UserNotUniqueException('Suggested user is not unique.')
 
