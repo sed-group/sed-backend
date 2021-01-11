@@ -16,7 +16,7 @@ class MySQLStatementBuilder:
         return self
 
     def execute(self):
-        logger.debug(f'executing query "{self.query} with values "{self.values}"')
+        logger.debug(f'executing query "{self.query}" with values "{self.values}"')
         with self.con.cursor(prepared=True) as cursor:
             cursor.execute(self.query, self.values)
             return None
