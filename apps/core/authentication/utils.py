@@ -48,7 +48,6 @@ async def verify_token(security_scopes: SecurityScopes, token: str = Depends(oau
         raise credentials_exception
 
     for scope in security_scopes.scopes:
-        print("Is {} in {}?".format(scope, str(token_data.scopes)))
         if scope not in token_data.scopes:
             print("No.")
             raise HTTPException(
@@ -56,9 +55,6 @@ async def verify_token(security_scopes: SecurityScopes, token: str = Depends(oau
                 detail="Permission denied",
                 headers={"WWW-Authenticate": authenticate_value}
             )
-        else:
-            print('Yes.')
-    print("Return user")
     return user
 
 
