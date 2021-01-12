@@ -4,7 +4,7 @@ from typing import Optional
 from jose import jwt
 from passlib.context import CryptContext
 
-from apps.core.users.exceptions import UserNotFoundException
+from apps.core.users.exceptions import UserNotFoundException, UserDisabledException
 from apps.core.authentication.exceptions import InvalidCredentialsException
 from apps.core.authentication.storage import get_user_auth_only
 from apps.core.db import get_connection
@@ -34,6 +34,8 @@ def authenticate_user(username: str, password: str):
     if not user:
         # User does not exist
         raise InvalidCredentialsException
+    if user.disabled:
+        raise UserDisabledException
     if not verify_password(password, user.password):
         # Password is incorrect
         raise InvalidCredentialsException
