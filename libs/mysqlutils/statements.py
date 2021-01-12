@@ -38,6 +38,7 @@ def create_limit_statement(n):
 def create_offset_statement(n):
     return f"OFFSET {n} "
 
+
 def create_order_by_statement(columns: List[str], order: Sort = None):
     cols_str = ', '.join(wrap_in_backticks(columns))
     if order:

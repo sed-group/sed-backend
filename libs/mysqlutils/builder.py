@@ -1,5 +1,5 @@
 from .statements import *
-from typing import Any, List, Optional
+from typing import Any, List
 from fastapi.logger import logger
 from enum import Enum
 
