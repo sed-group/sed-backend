@@ -38,17 +38,10 @@ def authenticate_user(username: str, password: str):
         # Password is incorrect
         raise InvalidCredentialsException
 
-    scopes = parse_scopes(user)
+    scopes = parse_user_scopes(user)
 
     # If the credentials are correct, then return the user
     return user, scopes
-
-
-def parse_scopes(user):
-    scopes = []
-    if user.scopes:
-        scopes = user.scopes.split(';')
-    return scopes
 
 
 def get_user_with_pwd_from_db(username: str):
@@ -78,3 +71,15 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+
+def parse_user_scopes(user):
+    scopes = []
+    if user.scopes:
+        scopes = parse_scopes_array(user.scopes)
+    return scopes
+
+
+def parse_scopes_array(scopes_array):
+    scopes = scopes_array.split(';')
+    return scopes

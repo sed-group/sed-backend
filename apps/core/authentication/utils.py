@@ -3,7 +3,8 @@ from fastapi.security import OAuth2PasswordBearer, SecurityScopes
 from jose import JWTError, jwt
 from pydantic import ValidationError
 
-from apps.core.authentication.login import get_user_with_pwd_from_db, SECRET_KEY, ALGORITHM, pwd_context
+from apps.core.authentication.login import get_user_with_pwd_from_db, SECRET_KEY, ALGORITHM, pwd_context, \
+    parse_scopes_array
 from apps.core.authentication.models import TokenData
 from apps.core.users.models import User
 
@@ -69,3 +70,14 @@ async def get_current_active_user(current_user: User = Depends(verify_token)):
 
 def get_password_hash(plain_pwd):
     return pwd_context.hash(plain_pwd)
+
+
+def parse_scopes(scopes_array):
+    """
+    Parses a scopes string into an array
+
+    :param user:
+    :return:
+    """
+    return parse_scopes_array(scopes_array)
+
