@@ -20,3 +20,16 @@ Use the following MySQL query to create a user with the admin role:
 
 - username: admin
 - password: secret
+
+## Logging
+Logging is done using FastAPI's own logging module (which is based on the standard Python Logger). Use like this: 
+```
+from fastapi.logger import logger
+
+logger.debug('Use for debugging applications')
+logger.info('Useful information')
+logger.warn('Something might be wrong')
+logger.error('Something is definitely wrong')
+
+```  
+By default, the log is saved in the system TEMP directory: `%TEMP%/sed-backend.log`.
