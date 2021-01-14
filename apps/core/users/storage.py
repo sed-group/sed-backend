@@ -28,7 +28,7 @@ def get_user_safe_with_id(connection, user_id: int):
     except ValueError:
         raise TypeError
 
-    cols_to_fetch = ['username', 'email', 'full_name']
+    cols_to_fetch = ['username', 'email', 'full_name', 'scopes']
 
     mysql_statement = MySQLStatementBuilder(connection)
     user_data = mysql_statement\
@@ -49,10 +49,12 @@ def get_user_list(connection, segment_length: int, index: int):
         int(index)
         if index < 0:
             index = 0
+        if segment_length < 1:
+            segment_length = 1
     except ValueError:
         raise TypeError
 
-    cols = ['id', 'username', 'email', 'full_name']
+    cols = ['id', 'username', 'email', 'full_name', 'scopes']
     mysql_statement = MySQLStatementBuilder(connection)
     users = mysql_statement\
         .select('users', cols)\
@@ -92,17 +94,12 @@ def delete_user(connection, user_id: int):
 
     where_stmnt = 'id = %s'
 
-    admin_stmnt = MySQLStatementBuilder(connection)
-    cols = ['scopes']
-    data = admin_stmnt\
-        .select('users', cols)\
-        .where(where_stmnt, [user_id])\
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+    user = get_user_safe_with_id(connection, user_id)
 
-    if data is None:
+    if user is None:
         raise UserNotFoundException
 
-    scopes = parse_scopes(data.get("scopes"))
+    scopes = parse_scopes(user.scopes)
 
     if 'admin' in scopes:
         raise UnauthorizedOperationException("May not remove admin users this way")

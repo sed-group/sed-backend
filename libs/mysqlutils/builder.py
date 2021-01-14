@@ -83,13 +83,18 @@ class MySQLStatementBuilder:
         self.values.extend(condition_values)
         return self
 
-    def execute(self, fetch_type: FetchType = FetchType.FETCH_NONE, size: int = None, dictionary: bool = False):
+    def execute(self,
+                fetch_type: FetchType = FetchType.FETCH_NONE,
+                size: int = None,
+                dictionary: bool = False,
+                return_affected_rows = False):
         """
         Executes constructed MySQL query. Does not need to be closed (closes automatically).
 
         :param dictionary: boolean. Default is False. Converts response to dictionaries
         :param fetch_type: FetchType.FETCH_NONE by default
         :param size: Required when using FetchType.FETCH_MANY. Determines how many rows to fetch
+        :param return_affected_rows: When deleting rows, the amount of rows deleted may be returned if this is true
         :return: None by default, but can be changed by seting keyword param "fetch_type"
         """
 
@@ -112,14 +117,13 @@ class MySQLStatementBuilder:
             else:
                 res = None
 
-            # Convert result to dictionary (or, array of dictionaries) if requested
-            if dictionary is True:
+            # Convert result to dictionary (or, array of dictionaries) if requested. Skip if there isn't a result
+            if dictionary is True and res is not None:
 
-                if res is None:
-                    return res
-
+                # Format response depending on fetch type
                 if fetch_type in [FetchType.FETCH_ALL, FetchType.FETCH_MANY]:
                     dict_array = []
+
                     for row in res:
                         dict_array.append(dict(zip(cursor.column_names, row)))
 
@@ -128,5 +132,9 @@ class MySQLStatementBuilder:
                 elif fetch_type is FetchType.FETCH_ONE:
                     res = dict(zip(cursor.column_names, res))
 
-            return res
+            # Finally, return results
+            if return_affected_rows is True:
+                return res, cursor.rowcount
+            else:
+                return res
 
