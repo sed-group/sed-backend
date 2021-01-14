@@ -12,6 +12,12 @@ router = APIRouter()
             description="Produces a list of applications in alphabetical order",
             dependencies=[Security(verify_token)])
 async def get_apps(segment_length: int, index: int):
+    """
+
+    :param segment_length: Sample size. Min=1.
+    :param index: Offset, multiplied by segment_length. Min=0 (no offset).
+    :return:
+    """
     return impl_get_apps(segment_length, index)
 
 
@@ -23,7 +29,7 @@ async def post_app(app: Application):
 
 
 @router.get("/{app_id}",
-            summary="Lists all applications",
+            summary="Get application by ID",
             description="Produces a list of applications in alphabetical order",
             dependencies=[Security(verify_token)])
 async def get_app(app_id: int):

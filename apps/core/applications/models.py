@@ -1,13 +1,14 @@
 from pydantic import BaseModel
+from typing import Optional
 
 
 class Application(BaseModel):
-    id: int
+    id: Optional[int] = None
     name: str
-    description: str
-    contact: str
-    href: str               # Project homepage
-    href_access: str        # Front-end access point
-    href_docs: str          # Link to documentation
-    href_source: str        # Project repository
-    href_api:   str         # Reference to associated API root endpoint
+    description: Optional[str] = None
+    contact: Optional[str] = None
+    href: Optional[str] = None          # Project homepage
+    href_access: str                    # Front-end access point
+    href_docs: Optional[str] = None     # Link to documentation
+    href_source: Optional[str] = None   # Project repository
+    href_api: Optional[str] = None      # Reference to associated API root endpoint
