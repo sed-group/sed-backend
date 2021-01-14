@@ -22,3 +22,22 @@ CREATE TABLE `seddb`.`users` (
 
 # User table index for alphabetic order
 
+# TODO: Index users
+
+# Create applications table
+CREATE TABLE `seddb`.`applications` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NOT NULL,
+  `description` VARCHAR(1000) NULL DEFAULT NULL,
+  `contact` VARCHAR(255) NULL DEFAULT NULL,
+  `href` VARCHAR(500) NULL COMMENT 'project homepage',
+  `href_access` VARCHAR(500) NOT NULL COMMENT 'frontend url',
+  `href_docs` VARCHAR(500) NULL DEFAULT NULL COMMENT 'url for documentation',
+  `href_source` VARCHAR(500) NULL DEFAULT NULL,
+  `href_api` VARCHAR(500) NULL DEFAULT NULL COMMENT 'url for api root endpoint',
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
+  UNIQUE INDEX `name_UNIQUE` (`name` ASC) VISIBLE,
+  UNIQUE INDEX `href_access_UNIQUE` (`href_access` ASC) VISIBLE);
+
+

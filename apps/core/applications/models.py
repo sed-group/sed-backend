@@ -4,7 +4,6 @@ from pydantic import BaseModel
 class Application(BaseModel):
     id: int
     name: str
-    url: str
     description: str
     contact: str
     href: str               # Project homepage
