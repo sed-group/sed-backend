@@ -1,0 +1,2 @@
+class ApplicationUnavailable(Exception):
+    pass
