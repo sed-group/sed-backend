@@ -1,11 +1,12 @@
 # Create schema
-CREATE SCHEMA `seddb` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+CREATE SCHEMA IF NOT EXISTS `seddb` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 
-USE seddb
+USE seddb;
 
 # Create user with read write access
-CREATE USER 'rw' IDENTIFIED BY 'DONT_USE_IN_PRODUCTION!';
-GRANT SELECT, INSERT, UPDATE, DELETE ON * TO 'rw';
+
+CREATE USER IF NOT EXISTS 'rw2' IDENTIFIED BY 'DONT_USE_IN_PRODUCTION!';
+GRANT SELECT, INSERT, UPDATE, DELETE ON * TO 'rw2';
 
 # Create users TABLE
 CREATE TABLE `seddb`.`users` (
@@ -14,8 +15,8 @@ CREATE TABLE `seddb`.`users` (
   `password` VARCHAR(100) NOT NULL,
   `email` VARCHAR(100) NULL,
   `full_name` VARCHAR(255) NULL,
-  `scopes` VARCHAR(500) NULL DEFAULT '';
-  `disabled` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
+  `scopes` VARCHAR(500) NULL DEFAULT '',
+  `disabled` TINYINT UNSIGNED NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
   UNIQUE INDEX `username_UNIQUE` (`username` ASC) VISIBLE);
@@ -39,5 +40,3 @@ CREATE TABLE `seddb`.`applications` (
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
   UNIQUE INDEX `name_UNIQUE` (`name` ASC) VISIBLE,
   UNIQUE INDEX `href_access_UNIQUE` (`href_access` ASC) VISIBLE);
-
-
