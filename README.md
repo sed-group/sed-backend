@@ -8,8 +8,8 @@ This project contains the SED Lab back-end. It consists of a core API containing
 - MySQL server
 
 ## Setup
-- Run `mysql -h hostname -u user < setup.sql`
-- Run `pip install -r requirements.txt`
+- Run `mysql -h localhost -u root -p < setup.sql` (or you could use MySQL Workbench to execute the code inside setup.sql)
+- Run `pip install -r requirements.txt` (you may need to install some requirements, such as uvicorn, manually)
 - Run `uvicorn main:app --reload` from project root to launch the application
 - Go to http://localhost:8000/docs to get an overview of the API
 
