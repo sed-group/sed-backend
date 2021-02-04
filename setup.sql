@@ -5,11 +5,11 @@ USE seddb;
 
 # Create user with read write access
 
-CREATE USER IF NOT EXISTS 'rw2' IDENTIFIED BY 'DONT_USE_IN_PRODUCTION!';
-GRANT SELECT, INSERT, UPDATE, DELETE ON * TO 'rw2';
+CREATE USER IF NOT EXISTS 'rw' IDENTIFIED BY 'DONT_USE_IN_PRODUCTION!';
+GRANT SELECT, INSERT, UPDATE, DELETE ON * TO 'rw';
 
 # Create users TABLE
-CREATE TABLE `seddb`.`users` (
+CREATE TABLE IF NOT EXISTS `seddb`.`users` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `username` VARCHAR(45) NOT NULL,
   `password` VARCHAR(100) NOT NULL,
@@ -26,7 +26,7 @@ CREATE TABLE `seddb`.`users` (
 # TODO: Index users
 
 # Create applications table
-CREATE TABLE `seddb`.`applications` (
+CREATE TABLE IF NOT EXISTS `seddb`.`applications` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(255) NOT NULL,
   `description` VARCHAR(1000) NULL DEFAULT NULL,
