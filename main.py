@@ -5,9 +5,6 @@ import setup
 
 
 
-# EFM database setup
-from apps.EFMbackend.database import engine as efmEngine
-from apps.EFMbackend.database import Base as efmBase
 
 setup.config_default_logging()
 
@@ -22,5 +19,11 @@ app.include_router(api.router, prefix="/api")
 
 setup.install_middleware(app)
 
-# EFM
-efmBase.metadata.create_all(bind=efmEngine)
+
+# EFM database setup
+try:
+    from apps.EFMbackend.database import engine as efmEngine
+    from apps.EFMbackend.database import Base as efmBase
+    efmBase.metadata.create_all(bind=efmEngine)
+except:
+    pass
