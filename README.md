@@ -22,14 +22,13 @@ This setup guide will take you through how to get the sed-backend application an
 
 **Database**
 - cd to the project directory
-- cd to <project directory>/apps/core
+- run `cd apps/core`
 - run `docker build -t sed-backend-core-db-img .`
 - run `docker run -d --name sed-backend-core-db -p 3010:3306 --network sedlab sed-backend-core-db-img`
 
 **Finally**
-Now that you have both containers in place, stop sed-backend. The backend container needs to be started LAST to ensure that all databases are online during startup.
-- run `docker stop sed-backend`
-- run `docker start sed-backend`
+Now that you have both containers in place, restart the sed-backend container. The sed-backend container needs to be started LAST to ensure that all database containers are online during startup.
+- run `docker restart sed-backend`
 
 ## Old school setup
 So you're feeling fancy and you want to do it all by yourself even though there is an easy to use dockerfile? 
