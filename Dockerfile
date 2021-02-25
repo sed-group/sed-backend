@@ -1,9 +1,6 @@
-FROM tiangolo/uvicorn-gunicorn-fastapi:python3.7
+FROM tiangolo/uvicorn-gunicorn-fastapi:python3.8
 
 COPY . /app
-
-# Repo refresh
-RUN sudo apt-get update
 
 # Install additional deps
 RUN pip install jose

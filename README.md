@@ -6,14 +6,27 @@ This project contains the SED Lab back-end. It consists of a core API containing
 ## Docker
 Docker will automagically do everything (well, almost) for you.
 
+### Prerequisites
+- Docker
+
+### Setup
+This setup guide will take you through how to get the sed-backend application and the database up and running
+
+**Backend**
 - Pull the project
 - cd to the project directory
-- run `docker build -t sed-backend-img`. This will create the docker image.
-- run `docker run -d --name sed-backend-cnt -p 80:80 sed-backend-img`. This will create the docker container using the image.
+- run `docker network create --driver bridge sedlab`. This will create a shared network so that the containers can communicate with each other.
+- run `docker build -t sed-backend-img .`. This will create the docker image.
+- run `docker run -d --name sed-backend -p 80:80 --network sedlab sed-backend-img`. This will create the docker container using the image.
 - Check if it worked. Log on to `http://localhost/docs`. You should be seeing the API documentation.
 
-## Old school
+**Database**
+- cd to the project directory
+- cd to <project directory>/apps/core
+- run `docker build -t sed-backend-core-db-img .`
+- run `docker run -d --name sed-backend-core-db -p 3010:3306 --network sedlab sed-backend-core-db-img`
 
+## Old school setup
 So you're feeling fancy and you want to do it all by yourself even though there is an easy to use dockerfile? 
 Very old school. Very cool.
 
@@ -22,6 +35,7 @@ Very old school. Very cool.
 - MySQL server
 
 ### Setup
+- cd to `sed-backend/apps/core`, where you will find the setup.sql file needed to setup the core database.
 - Run `mysql -h localhost -u root -p < setup.sql` (or you could use MySQL Workbench to execute the code inside setup.sql)
 - Run `pip install -r requirements.txt` 
 - You may need to install some requirements, such as uvicorn and jose, manually. To do this, run `pip install uvicorn jose`

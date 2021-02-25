@@ -7,9 +7,9 @@ connection_pool = None
 
 try:
     connection_pool = mysql.connector.pooling.MySQLConnectionPool(
-        user='rw',
-        password='DONT_USE_IN_PRODUCTION!',     # Change for production environments
-        host='127.0.0.1',
+        user='root',
+        password='abc123',     # Change for production environments
+        host='sed-backend-core-db',
         database='seddb',
         port=3306,
         autocommit=False,
