@@ -16,15 +16,20 @@ This setup guide will take you through how to get the sed-backend application an
 - Pull the project
 - cd to the project directory
 - run `docker network create --driver bridge sedlab`. This will create a shared network so that the containers can communicate with each other.
-- run `docker build -t sed-backend-img .`. This will create the docker image.
-- run `docker run -d --name sed-backend -p 80:80 --network sedlab sed-backend-img`. This will create the docker container using the image.
-- Check if it worked. Log on to `http://localhost/docs`. You should be seeing the API documentation.
+- run `docker build -t sed-backend-img .`. This will create the docker image using the Dockerfile situated in this directory.
+- run `docker run -d --name sed-backend -p 80:80 --network sedlab sed-backend-img`. This will create the docker container using the image, and include it into the sedlab network.
+- Check if it worked. Log on to `http://localhost/docs`. You should be seeing the API documentation. However, since the database is not plugged in, most things won't be operational.
 
 **Database**
 - cd to the project directory
 - cd to <project directory>/apps/core
 - run `docker build -t sed-backend-core-db-img .`
 - run `docker run -d --name sed-backend-core-db -p 3010:3306 --network sedlab sed-backend-core-db-img`
+
+**Finally**
+Now that you have both containers in place, stop sed-backend. The backend container needs to be started LAST to ensure that all databases are online during startup.
+- run `docker stop sed-backend`
+- run `docker start sed-backend`
 
 ## Old school setup
 So you're feeling fancy and you want to do it all by yourself even though there is an easy to use dockerfile? 
