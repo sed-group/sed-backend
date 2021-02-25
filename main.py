@@ -4,6 +4,11 @@ import main_router as api
 import setup
 
 
+
+# EFM database setup
+from apps.EFMbackend.database import engine as efmEngine
+from apps.EFMbackend.database import Base as efmBase
+
 setup.config_default_logging()
 
 app = FastAPI(
@@ -16,3 +21,6 @@ app = FastAPI(
 app.include_router(api.router, prefix="/api")
 
 setup.install_middleware(app)
+
+# EFM
+efmBase.metadata.create_all(bind=efmEngine)
