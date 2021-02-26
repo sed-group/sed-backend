@@ -31,7 +31,7 @@ This is for documentation purposes. If docker-compose is working, then you shoul
 - Pull the project
 - cd to the project directory
 - run `docker network create --driver bridge sedlab`. This will create a shared network so that the containers can communicate with each other.
-- run `docker build -t sed-backend-img .`. This will create the docker image using the Dockerfile situated in this directory.
+- run `docker build -f Dockerfile-backend-api -t sed-backend-img .`. This will create the docker image using the Dockerfile situated in this directory.
 - run `docker run -d --name sed-backend -p 80:80 --network sedlab sed-backend-img`. This will create the docker container using the image, and include it into the sedlab network.
 - Check if it worked. Log on to `http://localhost/docs`. You should be seeing the API documentation. However, since the database is not plugged in, most things won't be operational.
 
@@ -39,7 +39,7 @@ This is for documentation purposes. If docker-compose is working, then you shoul
 
 - cd to the project directory
 - run `cd apps/core`
-- run `docker build -t sed-backend-core-db-img .`
+- run `docker build -f Dockerfile-core-db -t sed-backend-core-db-img .`
 - run `docker run -d --name sed-backend-core-db -p 3010:3306 --network sedlab sed-backend-core-db-img`
 
 **Finally**
