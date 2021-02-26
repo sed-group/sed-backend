@@ -13,4 +13,4 @@ router.include_router(router_apps, prefix='/apps', tags=['core', 'applications']
 
 @router.get("/", summary="Core API root", description="This is pointless", tags=['core'])
 async def get_api_root():
-    return {"version": "1"}
+    return {"version": "2"}

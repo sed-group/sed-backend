@@ -1,3 +1,4 @@
+from fastapi.logger import logger
 import mysql.connector
 from mysql.connector import errorcode, pooling
 
@@ -9,7 +10,7 @@ try:
     connection_pool = mysql.connector.pooling.MySQLConnectionPool(
         user='rw',            # Change for production environments
         password='DONT_USE_IN_PRODUCTION!',      # Change for production environments
-        host='sed-backend-core-db',
+        host='core-db',
         database='seddb',
         port=3306,
         autocommit=False,
@@ -20,13 +21,13 @@ try:
     )
 except mysql.connector.Error as err:
     if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-        print('Incorrect mysql credentials')
+        logger.error('Incorrect mysql credentials')
     elif err.errno == errorcode.ER_BAD_DB_ERROR:
-        print('DB could not be found')
+        logger.error('DB could not be found')
     else:
-        print(err)
+        logger.error(err)
 else:
-    print('Database connection pool was successfully established')
+    logger.debug('Database connection pool was successfully established')
 
 
 @contextmanager
