@@ -1,0 +1,26 @@
+services:
+
+  core-db:
+    container_name: core-db
+    networks:
+      - sedlab
+    ports:
+      - "3001:3306"
+    build:
+      context: ./apps/core/
+      dockerfile: Dockerfile-core-db
+    restart: on-failure
+
+  backend-api:
+    container_name: backend-api
+    networks:
+      - sedlab
+    ports:
+      - "80:80"
+    build:
+      context: .
+      dockerfile: Dockerfile-backend-api
+    restart: on-failure
+
+networks:
+  sedlab:
