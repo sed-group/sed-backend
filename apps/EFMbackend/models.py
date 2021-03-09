@@ -78,9 +78,9 @@ class DesignSolution(Base):
                             ondelete="CASCADE", 
                             name="fk_isb_id"),
                         nullable=True)
-    isb = relationship("FunctionalRequirement", 
-                        backref="is_solved_by", 
-                        foreign_keys=[isbID])
+    requires_functions = relationship("FunctionalRequirement", 
+                        backref="rf", 
+                        foreign_keys='[FunctionalRequirement.rfID]')
     # identifier if top-level-node of a project
     #### fix because pydantic doesn't allow circular loops =()
     is_top_level_DS = Column(Boolean, default=False)
@@ -106,9 +106,9 @@ class FunctionalRequirement(Base):
     #                     backref="functionalrequirement", 
     #                     foreign_keys=[projectID])
     rfID = Column(Integer, ForeignKey('designsolution.id', ondelete="CASCADE", name="fk_rf_id"))
-    rf = relationship("DesignSolution", 
-                        backref="requires_functions", 
-                        foreign_keys=[rfID])
+    is_solved_by = relationship("DesignSolution", 
+                        backref="isb", 
+                        foreign_keys=[DesignSolution.isbID])
 
     def __repr__(self):
         return "<FR(name='%s', projectID='%s', rf_parentDSid='%s')>" % (self.name, self.projectID, self.rfID)

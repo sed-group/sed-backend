@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, lazyload, subqueryload
 from fastapi import HTTPException, status
 
 
@@ -16,7 +16,7 @@ def get_project_list(db: Session, limit:int = 100, offset:int = 0):
     '''
     list of all project objects from DB
     '''
-    return db.query(models.Project).offset(offset).limit(limit)
+    return db.query(models.Project).offset(offset).limit(limit).all()
 
 def create_project(db: Session, newProject = schemas.ProjectNew):
     '''
@@ -123,10 +123,10 @@ def create_FR(db: Session, parentID: int, newFR: schemas.DSnew):
             detail="Cannot create new FR; parent DS with ID {} cannot be found.".format(parentID)
         )
     
-    if theParent.projectID != parentID:
+    if theParent.projectID != newFR.projectID:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot create new FR; parent DS is in another project!"
+            detail="Cannot create new FR; parent DS is in another project! parentProjectID: {}, FRprojectID: {}".format(theParent.projectID, newFR.projectID)
         )
 
     obj = models.FunctionalRequirement(**newFR.dict())
@@ -185,7 +185,7 @@ def get_DS(db:Session, DSid: int):
         returns a DS object with all details
     '''
     try:
-        theDS = db.query(models.DesignSolution).filter(models.DesignSolution.id == DSid).first()
+        theDS = db.query(models.DesignSolution).options(subqueryload('requires_functions')).filter(models.DesignSolution.id == DSid).first()
         if theDS:
             return theDS
         else:

@@ -52,8 +52,14 @@ class DSnew(BaseModel):
     projectID: int
     isbID: Optional[int] = None
 
-
-#try wrapper function using ID
+class DSinfo(DSnew):
+    '''
+    a DS class without the list of requires_function FR, but FRids instead
+    as such it doesn't carry the entire tree
+    '''
+    id: int
+    requires_functions: List[int]
+    is_top_level_DS: Optional[bool] = False
 
 class DesignSolution(DSnew):
     """
