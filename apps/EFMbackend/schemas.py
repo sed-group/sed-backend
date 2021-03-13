@@ -52,15 +52,6 @@ class DSnew(BaseModel):
     projectID: int
     isbID: Optional[int] = None
 
-class DSinfo(DSnew):
-    '''
-    a DS class without the list of requires_function FR, but FRids instead
-    as such it doesn't carry the entire tree
-    '''
-    id: int
-    requires_functions: List[int]
-    is_top_level_DS: Optional[bool] = False
-
 class DesignSolution(DSnew):
     """
     DS element for EF-M modelling; contains all basic information
@@ -73,6 +64,26 @@ class DesignSolution(DSnew):
         
     class Config:
         orm_mode = True
+
+class DSinfo(DSnew):
+    '''
+    a DS class without the list of requires_function FR, but FRids instead
+    as such it doesn't carry the entire tree
+    '''
+    id: int
+    requires_functions_id: Optional[List[int]] = []
+    is_top_level_DS: Optional[bool] = False
+
+    # def __init__(self, originalDS: DesignSolution):
+    #     self.name = originalDS.name
+    #     self.description = originalDS.description
+    #     self.projectID = originalDS.projectID
+    #     self.isbID = originalDS.projectID
+    #     self.id = originalDS.id
+    #     self.is_top_level_DS = originalDS.is_top_level_DS
+
+    #     for fr in originalDS.requires_functions:
+    #         self.requires_functions_id.append(fr.id)
 
 class FRNew(BaseModel):
     '''

@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session, lazyload, subqueryload
+from sqlalchemy.orm import Session, lazyload, eagerload
 from fastapi import HTTPException, status
 
 
@@ -180,12 +180,12 @@ def edit_FR(db: Session, FRid: int, FRdata: schemas.FRNew):
     return theFR
     
 ### DS
-def get_DS(db:Session, DSid: int):
+def get_DS_with_tree(db:Session, DSid: int):
     ''' 
         returns a DS object with all details
     '''
     try:
-        theDS = db.query(models.DesignSolution).options(subqueryload('requires_functions')).filter(models.DesignSolution.id == DSid).first()
+        theDS = db.query(models.DesignSolution).options(eagerload('requires_functions')).filter(models.DesignSolution.id == DSid).first()
         if theDS:
             return theDS
         else:
@@ -203,6 +203,33 @@ def get_DS(db:Session, DSid: int):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="DSid needs to be an integer"
         )
+
+def get_DS_info(db:Session, DSid: int):
+    ''' 
+        returns a DS object with all details
+        PROBLEM CASE NOT WORKING RIGHT NOW
+    '''
+    #try:
+    theDS = db.query(models.DesignSolution).options(lazyload('requires_functions')).filter(models.DesignSolution.id == DSid).first()
+    if theDS:
+        print(theDS.__dict__)
+        theDSinfo = schemas.DSinfo.construct(theDS.__dict__)
+        return theDSinfo
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="DS with ID {} does not exist.".format(DSid)
+        )
+    # except EfmElementNotFoundException:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_404_NOT_FOUND,
+    #         detail="DS with ID {} does not exist.".format(DSid)
+    #     )
+    # except TypeError:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_400_BAD_REQUEST,
+    #         detail="DSid needs to be an integer"
+    #     )
 
 def create_DS(db: Session, parentID: int, newDS: schemas.DSnew):
     '''

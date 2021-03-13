@@ -47,10 +47,17 @@ async def get_project(projectID: int, db: Session = Depends(get_db)):
 ## DS
 @router.get("/ds/{DSid}",
             response_model = schemas.DesignSolution,
-            summary="returns a single DS object"
+            summary="returns a single DS object with all its children and grandchildren"
             )
-async def get_designSolution(DSid: int, db: Session = Depends(get_db)):
-    return implementation.get_DS(db=db, DSid = DSid)
+async def get_designSolutionTree(DSid: int, db: Session = Depends(get_db)):
+    return implementation.get_DS_with_tree(db=db, DSid = DSid)
+
+# @router.get("/ds/{DSid}",
+#             response_model = schemas.DSinfo,
+#             summary="returns a single DS object"
+#             )
+# async def get_designSolutionInfo(DSid: int, db: Session = Depends(get_db)):
+#     return implementation.get_DS_info(db=db, DSid = DSid)
 
 
 @router.post("/fr/{FRid}/newDS",
