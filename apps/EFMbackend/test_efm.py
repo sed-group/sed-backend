@@ -34,32 +34,32 @@ client = TestClient(app)
 urlPrefix = "/api/efm"
 
 ## GLOBAL TESTING VARIABLES
-testProjectID = 0
+testTreeID = 0
 
 ### BASIC TESTS ##################################################
-# create project
-def test_create_project():
-    global testProjectID
+# create tree
+def test_create_tree():
+    global testTreeID
     
-    # test project
+    # test tree
     response = client.post(
-        urlPrefix + "/projects/",
+        urlPrefix + "/trees/",
         json={"name": "foobar",  "description": "The Foo Barters"}
     )
     assert response.status_code == 200
 
-    testProjectData = response.json()
-    testProjectID = testProjectData['id']
+    testTreeData = response.json()
+    testTreeID = testTreeData['id']
 
-    testTopLevelDSid = testProjectData['topLvlDSid']
+    testTopLevelDSid = testTreeData['topLvlDSid']
 
-    assert testProjectData == {
+    assert testTreeData == {
         "name": "foobar",
         "description": "The Foo Barters",
-        "id": testProjectID,
+        "id": testTreeID,
         "concepts": [],
-        "fr": [],
-        "ds": [],
+        # "fr": [],
+        # "ds": [],
         "topLvlDSid": testTopLevelDSid
     }
 
@@ -72,22 +72,22 @@ def test_create_project():
         'name': 'foobar',
         'description': 'Top-level DS',
         'is_top_level_DS': True,
-        'projectID': testProjectID,
+        'treeID': testTreeID,
         'isbID': None,
         'requires_functions': []
     }
 
-# access non-existent project
+# access non-existent tree
 def test_acces_nonexistent_objects():
 
-    # project via string
-    response = client.get(urlPrefix + '/projects/' + "test")
+    # tree via string
+    response = client.get(urlPrefix + '/trees/' + "test")
     assert response.status_code == 422
-    # project via nonexisting ID
-    response = client.get(urlPrefix + '/projects/' + str(99))
+    # tree via nonexisting ID
+    response = client.get(urlPrefix + '/trees/' + str(99))
     assert response.status_code == 404
-    # project via nonexisting ID (0)
-    response = client.get(urlPrefix + '/projects/' + str(0))
+    # tree via nonexisting ID (0)
+    response = client.get(urlPrefix + '/trees/' + str(0))
     assert response.status_code == 404
 
     ## DS via string
@@ -113,21 +113,21 @@ def test_acces_nonexistent_objects():
 
 # create FR, DS
 def test_create_basic_objects():
-    global testProjectID
+    global testTreeID
     
-    # create FR in testProject, as child of topLvlDS
+    # create FR in testTree, as child of topLvlDS
     # first we need to get the topLvlDS ID:
-    print("testProjectID:" + str(testProjectID)) 
-    testProject =  client.get(urlPrefix + '/projects/' + str(testProjectID))
-    assert testProject.status_code == 200
-    testProjectData = testProject.json()
-    testTopLevelDSid = testProjectData['topLvlDSid']
+    print("testTreeID:" + str(testTreeID)) 
+    testTree =  client.get(urlPrefix + '/trees/' + str(testTreeID))
+    assert testTree.status_code == 200
+    testTreeData = testTree.json()
+    testTopLevelDSid = testTreeData['topLvlDSid']
 
     # creating new FR:
     newFRdata = {
         "name": "testFunction",
         "description": "to test the FR creation",
-        "projectID": testProjectID,
+        "treeID": testTreeID,
         "rfID": testTopLevelDSid
         }
     newFRurl = urlPrefix + "/ds/" + str(testTopLevelDSid) + "/newFR"
@@ -146,7 +146,7 @@ def test_create_basic_objects():
         "name": "testFunction",
         "id": theFRid,
         "description": "to test the FR creation",
-        "projectID": testProjectID,
+        "treeID": testTreeID,
         "rfID": testTopLevelDSid,
         "is_solved_by": []
     }
@@ -161,7 +161,7 @@ def test_create_basic_objects():
     theDSdata = {
         "name": "testDS",
         "description": "to test the DS creation",
-        "projectID": testProjectID,
+        "treeID": testTreeID,
         "isbID": theFRid
     }
     responseDS = client.post(
@@ -177,7 +177,7 @@ def test_create_basic_objects():
         "id": theDSid,
         "name": "testDS",
         "description": "to test the DS creation",
-        "projectID": testProjectID,
+        "treeID": testTreeID,
         "isbID": theFRid,
         "is_top_level_DS": False,
         "requires_functions": []
@@ -191,7 +191,7 @@ def test_create_basic_objects():
     
     
 
-# edit project
+# edit tree
 
 # edit FR
 
@@ -201,12 +201,12 @@ def test_create_basic_objects():
 
 # delete DS
 
-# delete project
+# delete tree
 
 
 ## EF-M logic tests
 
-# create project with FR-DS tree
+# create tree with FR-DS tree
 
 # instantiate concepts
 

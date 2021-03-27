@@ -12,74 +12,74 @@ from apps.EFMbackend.exceptions import *
 # import apps.EFMbackend.storage as storage
 
 #### PROJECTS
-def get_project_list(db: Session, limit:int = 100, offset:int = 0):
+def get_tree_list(db: Session, limit:int = 100, offset:int = 0):
     '''
-    list of all project objects from DB
+    list of all tree objects from DB
     '''
-    return db.query(models.Project).offset(offset).limit(limit).all()
+    return db.query(models.Tree).offset(offset).limit(limit).all()
 
-def create_project(db: Session, newProject = schemas.ProjectNew):
+def create_tree(db: Session, newTree = schemas.TreeNew):
     '''
-        creates one new project based on schemas.projectNew 
-        creates a top-level DS and associates its ID to project.topLvlDSid
+        creates one new tree based on schemas.treeNew 
+        creates a top-level DS and associates its ID to tree.topLvlDSid
     '''
-    # create project without DS:
-    theProject = models.Project(**newProject.dict())
-    db.add(theProject)
+    # create tree without DS:
+    theTree = models.Tree(**newTree.dict())
+    db.add(theTree)
     db.commit()
 
     # create a top-levelDS:
-    topDS = models.DesignSolution(name=newProject.name, description="Top-level DS", projectID = theProject.id, is_top_level_DS = True)
+    topDS = models.DesignSolution(name=newTree.name, description="Top-level DS", treeID = theTree.id, is_top_level_DS = True)
     db.add(topDS)
     db.commit()
 
-    # setting the project topLvlDS
-    theProject.topLvlDSid = topDS.id
+    # setting the tree topLvlDS
+    theTree.topLvlDSid = topDS.id
     db.commit()
 
-    return theProject
+    return theTree
 
-def get_project_details(db:Session, projectID: int):
+def get_tree_details(db:Session, treeID: int):
     ''' 
-        returns a project object with all details
+        returns a tree object with all details
     '''
     try:
-        theProject = db.query(models.Project).filter(models.Project.id == projectID).first()
-        if theProject:
-            return theProject
+        theTree = db.query(models.Tree).filter(models.Tree.id == treeID).first()
+        if theTree:
+            return theTree
         else:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project with ID {} does not exist.".format(projectID)
+                detail="Tree with ID {} does not exist.".format(treeID)
             )
     except EfmElementNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project with ID {} does not exist.".format(projectID)
+            detail="Tree with ID {} does not exist.".format(treeID)
         )
     except TypeError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="projectID needs to be an integer"
+            detail="treeID needs to be an integer"
         )
 
-def delete_project(db: Session, projectID: int):
+def delete_tree(db: Session, treeID: int):
     '''
-        deletes project based on id 
+        deletes tree based on id 
     '''
     try:
-        db.query(models.Project).filter(models.Project.id == projectID).delete()
+        db.query(models.Tree).filter(models.Tree.id == treeID).delete()
         db.commit()
         return True
     except EfmElementNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project with ID {} does not exist.".format(projectID)
+            detail="Tree with ID {} does not exist.".format(treeID)
         )
     except TypeError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="projectID needs to be an integer"
+            detail="treeID needs to be an integer"
         )
 
 ### FR
@@ -114,7 +114,7 @@ def create_FR(db: Session, parentID: int, newFR: schemas.DSnew):
     '''
     newFR.rfID = parentID
 
-    # check for same project 
+    # check for same tree 
     try:
         theParent = db.query(models.DesignSolution).filter(models.DesignSolution.id == parentID).first()
     except EfmElementNotFoundException:
@@ -123,10 +123,10 @@ def create_FR(db: Session, parentID: int, newFR: schemas.DSnew):
             detail="Cannot create new FR; parent DS with ID {} cannot be found.".format(parentID)
         )
     
-    if theParent.projectID != newFR.projectID:
+    if theParent.treeID != newFR.treeID:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot create new FR; parent DS is in another project! parentProjectID: {}, FRprojectID: {}".format(theParent.projectID, newFR.projectID)
+            detail="Cannot create new FR; parent DS is in another tree! parentTreeID: {}, FRtreeID: {}".format(theParent.treeID, newFR.treeID)
         )
 
     obj = models.FunctionalRequirement(**newFR.dict())
@@ -157,8 +157,8 @@ def edit_FR(db: Session, FRid: int, FRdata: schemas.FRNew):
     '''
         overwrites the data in the FR identified with FRid with the data from FRdata
         can change parent (i.e. isb), name and description
-        checks whether the new parent FR is in the same project
-        cannot change project! (projectID)
+        checks whether the new parent FR is in the same tree
+        cannot change tree! (treeID)
     '''
     theFR = db.query(models.FunctionalRequirement).filter(models.FunctionalRequirement.id == FRid).first()
     theFR.name = FRdata.name
@@ -168,13 +168,13 @@ def edit_FR(db: Session, FRid: int, FRdata: schemas.FRNew):
     if FRdata.rfID != theFR.rfID:
         theNewParent = db.query(models.DesignSolution).filter(models.DesignSolution.id == FRdata.rfID).first()
 
-        # check if we are in the same project
-        if theNewParent.project == theFR.project:
+        # check if we are in the same tree
+        if theNewParent.tree == theFR.tree:
             theFR.rfID = theNewParent.id
         else:
-            raise EfmElementNotInProjectException(
+            raise EfmElementNotInTreeException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot edit FR; new parent DS is in another project"
+                detail="Cannot edit FR; new parent DS is in another tree"
             )
     db.commit()
     return theFR
@@ -247,11 +247,11 @@ def create_DS(db: Session, parentID: int, newDS: schemas.DSnew):
             detail="Cannot create new DS; parent FR with ID {} cannot be found.".format(parentID)
         )
 
-    # check for project similarity
-    if theParent.projectID != newDS.projectID:
+    # check for tree similarity
+    if theParent.treeID != newDS.treeID:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot create new DS; parent FR is in another project! (DS parent ID: {}, FR parent ID: {}".format(newDS.projectID, theParent.projectID)
+            detail="Cannot create new DS; parent FR is in another tree! (DS parent ID: {}, FR parent ID: {}".format(newDS.treeID, theParent.treeID)
         )
         
     obj = models.DesignSolution(**newDS.dict())
@@ -282,8 +282,8 @@ def edit_DS(db: Session, DSid: int, DSdata: schemas.DSnew):
     '''
         overwrites the data in the DS identified with DSid with the data from DSnew
         can change parent (i.e. isb), name and description
-        checks whether the new parent FR is in the same project
-        cannot change project! (projectID)
+        checks whether the new parent FR is in the same tree
+        cannot change tree! (treeID)
     '''
     theDS = db.query(models.DesignSolution).filter(models.DesignSolution.id == DSid).first()
     theDS.name = DSdata.name
@@ -299,13 +299,13 @@ def edit_DS(db: Session, DSid: int, DSdata: schemas.DSnew):
                 detail="Cannot create new DS; parent FR cannot be found."
             )
 
-        # check if we are in the same project
-        if theNewParent.project == theDS.project:
+        # check if we are in the same tree
+        if theNewParent.tree == theDS.tree:
             theDS.isbID = theNewParent.id
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot edit DS; new parent FR is in another project"
+                detail="Cannot edit DS; new parent FR is in another tree"
             )
     db.commit()
     return theDS
@@ -314,10 +314,10 @@ def edit_DS(db: Session, DSid: int, DSdata: schemas.DSnew):
 #  {
 #     "name":"TestFR",
 #     "description":"just a test?",
-#     "projectID":2,
+#     "treeID":2,
 #     "rfID":2,
 #     "id":1,
-#     "project": {
+#     "tree": {
 #         "name": "foobar",
 #         "description":"The Foo Barters",
 #         "id":2,
@@ -329,11 +329,11 @@ def edit_DS(db: Session, DSid: int, DSdata: schemas.DSnew):
 #     "is_solved_by":[
 #         {"name":"ds child",
 #         "description":"child test 1",
-#         "projectID":2,
+#         "treeID":2,
 #         "isbID":1,
 #         "id":4,
 #         "requires_functions":[],
-#         "project":{
+#         "tree":{
 #             "name":"foobar",
 #             "description":"The Foo Barters",
 #             "id":2,"concepts":[],

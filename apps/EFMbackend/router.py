@@ -18,30 +18,30 @@ def get_db():
         db.close()
 
 ## PROJECTS
-@router.get("/projects/",
-            response_model=List[schemas.Project],
-            summary="Overview over all projects",  
-            description="Produces a list of all projects",
+@router.get("/trees/",
+            response_model=List[schemas.Tree],
+            summary="Overview over all trees",  
+            description="Produces a list of all trees",
             dependencies=[],
-            # needs authentication to filter projects by user scope
+            # needs authentication to filter trees by user scope
             )
-async def get_all_projects(db: Session = Depends(get_db)):
-   return implementation.get_project_list(db)
+async def get_all_trees(db: Session = Depends(get_db)):
+   return implementation.get_tree_list(db)
    
-@router.post("/projects/", 
-            response_model=schemas.Project,
-            summary="creating a new project",
-            description="creates a new project including topLvlDS and returns the project object",
+@router.post("/trees/", 
+            response_model=schemas.Tree,
+            summary="creating a new tree",
+            description="creates a new tree including topLvlDS and returns the tree object",
             )
-async def create_project(newProject:schemas.ProjectNew, db: Session= Depends(get_db)):
-    return implementation.create_project(db=db, newProject=newProject)
+async def create_tree(newTree:schemas.TreeNew, db: Session= Depends(get_db)):
+    return implementation.create_tree(db=db, newTree=newTree)
 
-@router.get("/projects/{projectID}",
-            response_model= schemas.Project,
-            summary="Returns a single project by ID"
+@router.get("/trees/{treeID}",
+            response_model= schemas.Tree,
+            summary="Returns a single tree by ID"
             )
-async def get_project(projectID: int, db: Session = Depends(get_db)):
-    return implementation.get_project_details(db=db, projectID=projectID)
+async def get_tree(treeID: int, db: Session = Depends(get_db)):
+    return implementation.get_tree_details(db=db, treeID=treeID)
 
 
 ## DS
