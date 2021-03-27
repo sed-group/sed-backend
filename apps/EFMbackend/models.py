@@ -2,7 +2,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, LargeBinary, Boolean
 from sqlalchemy.orm import relationship
 
-from apps.EFMbackend.database import Base
+Base = declarative_base()
 
 class Tree(Base):
     """
@@ -112,22 +112,26 @@ class FunctionalRequirement(Base):
     def __repr__(self):
         return "<FR(name='%s', treeID='%s', rf_parentDSid='%s')>" % (self.name, self.treeID, self.rfID)
 
-# class DesignParameter(Base):
-#     id = Column(Integer, primary_key = True)
-#     name = Column(String(200))
-#     value = Column(String(200))
-#     unit = Column(String(200))
-#     # tree link:
-#     treeID = Column(Integer, 
-#                         ForeignKey('tree.id', 
-#                             ondelete="CASCADE", 
-#                             name="fk_dp_tree")
-#                         )
-#     ds = Column(Integer, 
-#                         ForeignKey('designsolution.id', 
-#                             ondelete="CASCADE",
-#                             name="fk_dp_id")
-#                         )
+class DesignParameter(Base):
+    """
+    parameters to be linked to a DS
+    """
+    __tablename__ = "designparameter"    
+    id = Column(Integer, primary_key = True)
+    name = Column(String(200))
+    value = Column(String(200))
+    unit = Column(String(200))
+    # tree link:
+    treeID = Column(Integer, 
+                        ForeignKey('tree.id', 
+                            ondelete="CASCADE", 
+                            name="fk_dp_tree")
+                        )
+    ds = Column(Integer, 
+                        ForeignKey('designsolution.id', 
+                            ondelete="CASCADE",
+                            name="fk_dp_id")
+                        )
 
     
 # class InteractsWith(Base):
