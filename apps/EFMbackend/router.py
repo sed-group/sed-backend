@@ -89,7 +89,6 @@ async def edit_designSolution(DSid: int, DSdata: schemas.DSnew, db: Session = De
 async def get_functionalRequirement(FRid: int, db: Session = Depends(get_db)):
     return implementation.get_FR(db=db, FRid = FRid)
 
-
 @router.post("/ds/{DSid}/newFR",
             response_model = schemas.FunctionalRequirement,
             summary="creates a new single FR object as a child of DSis",
@@ -105,8 +104,38 @@ async def delete_functionalRequirement(FRid: int, db: Session = Depends(get_db))
     return implementation.delete_FR(db= db, FRid = FRid)
 
 @router.put("/fr/{FRid}",
-            response_model = schemas.DesignSolution,
+            response_model = schemas.FunctionalRequirement,
             summary="edits an exisitng FR object via FRdata"
             )
-async def edit_functionalRequirement(FRid: int, FRdata: schemas.DSnew, db: Session = Depends(get_db)):
+async def edit_functionalRequirement(FRid: int, FRdata: schemas.FRNew, db: Session = Depends(get_db)):
     return implementation.edit_FR(FRid = FRid, FRdata = FRdata, db=db)
+
+
+## DP
+@router.get("/dp/{DPid}",
+            response_model = schemas.DesignParameter,
+            summary="returns a single DP object"
+            )
+async def get_designParameter(DPid: int, db: Session = Depends(get_db)):
+    return implementation.get_DP(db=db, DPid = DPid)
+
+@router.post("/ds/{DSid}/newDP",
+            response_model = schemas.DesignParameter,
+            summary="creates a new DP object as a child of DSid",
+            description="the json part of the post also contains the DSid - at some point this redundancy needs to be reduced, but how i do not know yet!; Furthermore there is redundancy in the treeID"
+            )
+async def create_designParameter( DSid: int, DPdata: schemas.DPnew, db: Session = Depends(get_db)):
+    return implementation.create_DP(db=db, parentID = DSid, newDP= DPdata)
+
+@router.delete("/dp/{DPid}",
+            summary="delets a DP object by id"
+            )
+async def delete_designParameter(DPid: int, db: Session = Depends(get_db)):
+    return implementation.delete_DP(db= db, DPid = DPid)
+
+@router.put("/dp/{DPid}",
+            response_model = schemas.DesignParameter,
+            summary="edits an exisitng DP object via DPdata"
+            )
+async def edit_designParameter(DPid: int, DPdata: schemas.DPnew, db: Session = Depends(get_db)):
+    return implementation.edit_DP(DPid = DPid, DPdata = DPdata, db=db)

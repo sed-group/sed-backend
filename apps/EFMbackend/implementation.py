@@ -310,7 +310,18 @@ def edit_DS(db: Session, DSid: int, DSdata: schemas.DSnew):
     db.commit()
     return theDS
  
+### DP todo!! 
+def get_DP(db:Session, DPid: int):
+    pass
 
+def create_DP(db: Session, parentID: int, newDP: schemas.DPnew):
+    pass
+
+def delete_DP(db:Session, DPid: int):
+    pass
+
+def edit_DP(db: Session, DPid: int, DPdata: schemas.DPnew):
+    pass
 #  {
 #     "name":"TestFR",
 #     "description":"just a test?",

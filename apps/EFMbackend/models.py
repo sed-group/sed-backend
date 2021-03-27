@@ -80,6 +80,12 @@ class DesignSolution(Base):
     requires_functions = relationship("FunctionalRequirement", 
                         backref="rf", 
                         foreign_keys='[FunctionalRequirement.rfID]')
+    interacts_with = relationship("InteractsWith",
+                        backref="fromDS",
+                        foreign_keys='[InteractsWith.fromDsID]')
+    design_parameters = relationship("DesignParameter",
+                        backref="ds",
+                        foreign_keys='[DesignParameter.dsID]')
     # identifier if top-level-node of a tree
     #### fix because pydantic doesn't allow circular loops =()
     is_top_level_DS = Column(Boolean, default=False)
@@ -127,23 +133,26 @@ class DesignParameter(Base):
                             ondelete="CASCADE", 
                             name="fk_dp_tree")
                         )
-    ds = Column(Integer, 
+    dsID = Column(Integer, 
                         ForeignKey('designsolution.id', 
                             ondelete="CASCADE",
-                            name="fk_dp_id")
+                            name="fk_dp_ds")
                         )
-
     
-# class InteractsWith(Base):
-#     id = Column(Integer, primary_key = True)
-#     fromDs = Column(Integer, 
-#                         ForeignKey('designsolution.id', 
-#                             ondelete="CASCADE",
-#                             name="fk_iwOut_id")
-#                         )
-#     toDs = Column(Integer, 
-#                         ForeignKey('designsolution.id', 
-#                             ondelete="CASCADE",
-#                             name="fk_iwIn_id")
-#                         )
-#     iwType = Column(String(20))
+class InteractsWith(Base):
+    """
+    iw between two DS, directional 
+    """
+    __tablename__ = "interactswith" 
+    id = Column(Integer, primary_key = True)
+    fromDsID = Column(Integer, 
+                        ForeignKey('designsolution.id', 
+                            ondelete="CASCADE",
+                            name="fk_iwOut_id")
+                        )
+    toDsID = Column(Integer, 
+                        ForeignKey('designsolution.id', 
+                            ondelete="CASCADE",
+                            name="fk_iwIn_id")
+                        )
+    iwType = Column(String(20))

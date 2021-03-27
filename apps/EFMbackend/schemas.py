@@ -31,6 +31,32 @@ class Tree(TreeNew):
         orm_mode = True
 
 
+class DPnew(BaseModel):
+    name: str
+    value: Optional[str] = None
+    unit: Optional[str] = 'm'
+    treeID: Optional[int] = []
+    dsID: int = None
+
+class DesignParameter(DPnew):
+    id: int
+    
+    class Config:
+        orm_mode = True
+
+
+class IWnew(BaseModel):
+    fromDsID: int
+    toDsID: int
+    iwType: str
+
+class InteractsWith(IWnew):
+    id: int
+    
+    class Config:
+        orm_mode = True
+    
+
 class Concept(BaseModel):
     """
     one instance of a tree of a tree
@@ -42,6 +68,7 @@ class Concept(BaseModel):
     
     class Config:
         orm_mode = True
+
 
 class DSnew(BaseModel):
     '''
@@ -61,6 +88,9 @@ class DesignSolution(DSnew):
     requires_functions: List[FunctionalRequirementTemp] = []
     #tree: Tree
     is_top_level_DS: Optional[bool] = False
+
+    interacts_with: List[InteractsWith] = []
+    design_parameters: List[DesignParameter] = []
         
     class Config:
         orm_mode = True
@@ -84,6 +114,7 @@ class DSinfo(DSnew):
 
     #     for fr in originalDS.requires_functions:
     #         self.requires_functions_id.append(fr.id)
+
 
 class FRNew(BaseModel):
     '''
@@ -112,3 +143,5 @@ DesignSolution.update_forward_refs()
 Tree.update_forward_refs()
 
 
+
+ 
