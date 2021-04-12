@@ -97,10 +97,55 @@ def get_tree_data(db: Session, treeID: int):
 
 ### CONCEPTS
 def run_instantiation(db: Session, treeID: int):
+    
+    # fetch the old concepts, if available:
+    allOldConcepts = get_all_concepts(db, treeID) # will get deleted later
+    allNewConcepts = []                           # will get added later
+
+    theTree = get_tree_details(db, treeID)
+
+    allDna = theTree.topLvlDS.alternativeConfigurations()
+
+    conceptCounter = allOldConcepts.len()
+
+    for dna in allDna:
+        
+        dnaString = json.dumps(dna)
+
+        # check if already exists:
+        for oldC in allOldConcepts:
+            if oldC.dna == dna:
+                # remove from list so it won't get deleted:
+                allOldConcepts.remove(oldC)
+                # and we don't need to create a new object for it, so we jump
+                next()
+
+        newConcept = models.Concept()
+        newConcept.name = f"Concept {conceptCounter}"
+        newConcept.dna = dnaString
+        newConcept.treeID = treeID
+
+        allNewConcepts.append(newConcept)
+        conceptCounter = conceptCounter + 1
+
+    # add new concepts:
+    for nC in allNewConcepts:
+        db.add(nC)
+    
+    # delete old concepts:
+    for oC in allOldConcepts:
+        db.query(models.Concept).filter(models.Concept.id == oC.id).delete()
+
+    db.commit()
+
+
     return not_yet_implemented()
 
 def get_all_concepts(db: Session, treeID: int):
-    return not_yet_implemented()
+    '''
+    returns a list of all concepts of the tree identified via treeID
+    '''
+    return db.query(models.Concept).filter(models.Concept.treeID == treeID).all()
 
 def get_concept(db: Session, cID: int):
     return not_yet_implemented()

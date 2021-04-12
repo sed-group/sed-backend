@@ -2,6 +2,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, LargeBinary, Boolean
 from sqlalchemy.orm import relationship
 
+import itertools #for permutations in concept DNA
+
 Base = declarative_base()
 
 class Tree(Base):
@@ -51,6 +53,7 @@ class Concept(Base):
     # tree = relationship("Tree", 
     #                 backref="concept", 
     #                 foreign_keys=[treeID])
+    dna = Column(String(2000))
     def __repr__(self):
         return "<Concept(name='%s', treeID='%s', )>" % (self.name, self.treeID)
     
@@ -92,7 +95,30 @@ class DesignSolution(Base):
 
     def __repr__(self):
         return "<DS(name='%s', treeID='%s', isb_parentFRid='%s')>" % (self.name, self.treeID, self.isbID)
+    
+    ## function for recursive generation of alternative concepts
+    def alternativeConfigurations(self):
+        # creates the permutations of all child-FR alternative configurations
+        # FR1 [dnaA, dnaB, dnaC]; FR2 [dna1, dna2]; FR3 [DNA]
+        # --> [(dnaA, dna1, DNA), (dnaB, dna1, DNA), (dnaC, dna1, DNA),
+        #      (dnaA, dna2, DNA), (dnaB, dna2, DNA), (dnaC, dna2, DNA)]
+        allDNA = []
+        allConfigurations = []
+        for f in self.requires_functions.all():
+            # creating a list of all DNA from each FR; one entry per FR
+            # this will later be combinatorially multiplied (cross product)
+            # f.linkToCC()
+            allDNA.append(f.alternativeSolutions())
+            # print(" allDNA of {}: {}; fr:{}, altS: {}".format(self, allDNA, f, f.alternativeSolutions()))
 
+            # generating the combinatorial
+            # the first "list" makes it put out a list instead of a map object
+            # the map(list, ) makes it put out lists instead of tuples, needed for further progression on this...
+            allConfigurations = list(map(list, itertools.product(*allDNA)))
+
+        # print(allConfigurations)
+
+        return allConfigurations
 class FunctionalRequirement(Base):
     """
     FR element for EF-M modelling; contains all basic information
@@ -117,6 +143,41 @@ class FunctionalRequirement(Base):
 
     def __repr__(self):
         return "<FR(name='%s', treeID='%s', rf_parentDSid='%s')>" % (self.name, self.treeID, self.rfID)
+
+    ## function for recursive generation of alternative concepts
+    def alternativeSolutions(self):
+        # returns a list of dicts with each DNA, including self
+        # each dna includes all FR:DS pairs of an instance
+        # compiles all DS' alternatives (adding all the DS dna to the allDNA list, and adding thisFR:respectiveDS on top.
+
+        ################ BUG REPORT: ####################
+        ## THis entire mechanism fails if there are FR without DS! Always have at least a dummy-DS!
+        #################################################
+
+        # allDNA collect's all the alternative's DNA, one alternative per entry in the list:
+        allDNA = []
+
+        for d in self.is_solved_by.all():
+            # cerating the individual dna sequence for this FR:DS pair (but only their names):
+            #print(d)
+            thisDNA = {self.id: d.id}
+            # checking if there are any sub-configs for this DS, then we need to add the individual sequence to the end of EACH of the configuration's dna:
+            if d.alternativeConfigurations():
+                for dsDNA in d.alternativeConfigurations():
+                    # print("dsDNA: {}; thisDNA: {}".format(dsDNA, thisDNA))
+                    # add tp the respective sequence:
+                    dsDNA.append(thisDNA)
+                    # print("dsDNA, combined: {}".format(dsDNA))
+                    # add the sequnce to the collectors:
+                    allDNA.append(dsDNA)
+                # print('we append sth; allDNA: {}'.format(allDNA))
+            else:
+                # if we are at the bottom of the tree, i.e. the DS has no FR below it, it doesn't return an array.
+                # so we need to make a new line DNA sequence!
+                allDNA.append([thisDNA])
+
+        # returns the collector of all DNA:
+        return allDNA
 
 class DesignParameter(Base):
     """
