@@ -11,7 +11,17 @@ from apps.EFMbackend.exceptions import *
 # from apps.EFMbackend.exceptions import *
 # import apps.EFMbackend.storage as storage
 
-#### PROJECTS
+
+def not_yet_implemented():
+    ''' 
+    dummy function for not yet implemented API functions 
+    '''
+    raise HTTPException(
+            status_code=status.HTTP_425_TOO_EARLY,
+            detail="API point has not been realised yet, we appologize"
+        )
+
+#### TREES
 def get_tree_list(db: Session, limit:int = 100, offset:int = 0):
     '''
     list of all tree objects from DB
@@ -81,6 +91,22 @@ def delete_tree(db: Session, treeID: int):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="treeID needs to be an integer"
         )
+
+def get_tree_data(db: Session, treeID: int):
+    return not_yet_implemented()
+
+### CONCEPTS
+def run_instantiation(db: Session, treeID: int):
+    return not_yet_implemented()
+
+def get_all_concepts(db: Session, treeID: int):
+    return not_yet_implemented()
+
+def get_concept(db: Session, cID: int):
+    return not_yet_implemented()
+
+def edit_concept(db: Session, cID: int, cData: schemas.ConceptEdit):
+    return not_yet_implemented()
 
 ### FR
 def get_FR(db:Session, FRid: int):
@@ -312,16 +338,30 @@ def edit_DS(db: Session, DSid: int, DSdata: schemas.DSnew):
  
 ### DP todo!! 
 def get_DP(db:Session, DPid: int):
-    pass
-
+    return not_yet_implemented()
+    
 def create_DP(db: Session, parentID: int, newDP: schemas.DPnew):
-    pass
+    return not_yet_implemented()
 
 def delete_DP(db:Session, DPid: int):
-    pass
+    return not_yet_implemented()
 
 def edit_DP(db: Session, DPid: int, DPdata: schemas.DPnew):
-    pass
+    return not_yet_implemented()
+
+### DP todo!! 
+def get_IW(db:Session, IWid: int):
+    return not_yet_implemented()
+
+def create_IW(db: Session,  newIW: schemas.IWnew):
+    return not_yet_implemented()
+
+def delete_IW(db:Session, IWid: int):
+    return not_yet_implemented()
+
+def edit_IW(db: Session, IWid: int, IWdata: schemas.IWnew):
+    return not_yet_implemented()
+
 #  {
 #     "name":"TestFR",
 #     "description":"just a test?",

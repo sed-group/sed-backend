@@ -30,7 +30,6 @@ class Tree(TreeNew):
     class Config:
         orm_mode = True
 
-
 class DPnew(BaseModel):
     name: str
     value: Optional[str] = None
@@ -56,19 +55,22 @@ class InteractsWith(IWnew):
     class Config:
         orm_mode = True
     
+class ConceptEdit(BaseModel):
+    '''
+    externally editable information of a concept
+    '''
+    name: str
 
-class Concept(BaseModel):
+class Concept(ConceptEdit):
     """
     one instance of a tree of a tree
     """
     id: Optional[int]
-    name: str
     treeID: int
     #tree: Tree
     
     class Config:
         orm_mode = True
-
 
 class DSnew(BaseModel):
     '''
@@ -137,7 +139,17 @@ class FunctionalRequirement(FRNew):
         
     class Config:
         orm_mode = True
-        
+
+
+class TreeData(TreeNew):
+    ''' 
+    data dump of an entire tree
+    '''
+    ds: List[DesignSolution] = []
+    fr: List[FunctionalRequirement] = []
+    iw: List[InteractsWith] = []
+    dp: List[DesignParameter] = []
+
 # to be able to use "FunctionalRequirement" (etc) in DS, Tree before defining it, we need to update the forward references:
 DesignSolution.update_forward_refs()
 Tree.update_forward_refs()

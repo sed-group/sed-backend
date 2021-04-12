@@ -17,7 +17,7 @@ def get_db():
     finally:
         db.close()
 
-## PROJECTS
+## TREES
 @router.get("/trees/",
             response_model=List[schemas.Tree],
             summary="Overview over all trees",  
@@ -42,6 +42,45 @@ async def create_tree(newTree:schemas.TreeNew, db: Session= Depends(get_db)):
             )
 async def get_tree(treeID: int, db: Session = Depends(get_db)):
     return implementation.get_tree_details(db=db, treeID=treeID)
+
+@router.get("/trees/{treeID}/data",
+            response_model= schemas.TreeData,
+            summary="Returns all information in a tree as a big json dump -WIP-"
+            )
+async def get_tree_data(treeID: int, db: Session = Depends(get_db)):
+    ''' NOT IMPLEMETED YET '''
+    return implementation.get_tree_data(db= db, treeID = treeID)
+
+# CONCEPTS
+@router.get("/trees/{treeID}/instantiate",
+            response_model= List[schemas.Concept],
+            summary = "generates all concepts of a tree and returns a list of them -WIP-",
+            description = "Executes the instantiation of all possible concepts of a tree and returns them as a list. Computationally expensive!"
+            )
+async def generate_all_concepts(treeID: int, db: Session = Depends(get_db)):
+    await implementation.run_instantiation(treeID = treeID, db = db)
+    return implementation.get_all_concepts(db = db, treeID = treeID)
+
+@router.get("/trees/{treeID}/concepts",
+            response_model= List[schemas.Concept],
+            summary = "returns all concepts without regenerating them -WIP-",
+            )
+async def get_all_concepts(treeID: int, db: Session = Depends(get_db)):
+    return implementation.get_all_concepts(db = db, treeID = treeID)
+
+@router.get("/concepts/{cID}",
+            response_model= schemas.Concept,
+            summary = "returns one concepts by ID -WIP-",
+            )
+async def get_one_concept(cID: int, db: Session = Depends(get_db)):
+    return implementation.get_concept(db = db, cID = cID)
+
+@router.put("/concepts/{cID}",
+            response_model= schemas.Concept,
+            summary = "edits one concepts by ID -WIP-",
+            )
+async def edit_concept(cID: int, cData: schemas.ConceptEdit, db: Session = Depends(get_db)):
+    return implementation.edit_concept(db = db, cData= cData, cID = cID)
 
 
 ## DS
@@ -114,7 +153,7 @@ async def edit_functionalRequirement(FRid: int, FRdata: schemas.FRNew, db: Sessi
 ## DP
 @router.get("/dp/{DPid}",
             response_model = schemas.DesignParameter,
-            summary="returns a single DP object"
+            summary="returns a single DP object -WIP-"
             )
 async def get_designParameter(DPid: int, db: Session = Depends(get_db)):
     return implementation.get_DP(db=db, DPid = DPid)
@@ -122,20 +161,49 @@ async def get_designParameter(DPid: int, db: Session = Depends(get_db)):
 @router.post("/ds/{DSid}/newDP",
             response_model = schemas.DesignParameter,
             summary="creates a new DP object as a child of DSid",
-            description="the json part of the post also contains the DSid - at some point this redundancy needs to be reduced, but how i do not know yet!; Furthermore there is redundancy in the treeID"
+            description="the json part of the post also contains the DSid - at some point this redundancy needs to be reduced, but how i do not know yet!; Furthermore there is redundancy in the treeID -WIP-"
             )
 async def create_designParameter( DSid: int, DPdata: schemas.DPnew, db: Session = Depends(get_db)):
     return implementation.create_DP(db=db, parentID = DSid, newDP= DPdata)
 
 @router.delete("/dp/{DPid}",
-            summary="delets a DP object by id"
+            summary="deletes a DP object by id -WIP-"
             )
 async def delete_designParameter(DPid: int, db: Session = Depends(get_db)):
     return implementation.delete_DP(db= db, DPid = DPid)
 
 @router.put("/dp/{DPid}",
             response_model = schemas.DesignParameter,
-            summary="edits an exisitng DP object via DPdata"
+            summary="edits an exisitng DP object via DPdata (json) -WIP-"
             )
 async def edit_designParameter(DPid: int, DPdata: schemas.DPnew, db: Session = Depends(get_db)):
     return implementation.edit_DP(DPid = DPid, DPdata = DPdata, db=db)
+
+# iw 
+@router.get("/iw/{IWid}",
+            response_model = schemas.InteractsWith,
+            summary="returns a single iw object -WIP-"
+            )
+async def get_interactsWith(IWid: int, db: Session = Depends(get_db)):
+    return implementation.get_IW(db=db, IWid = IWid)
+
+@router.post("/iw/new",
+            response_model = schemas.InteractsWith,
+            summary="creates a new iw object via IWdata (json) -WIP-",
+            description="creates a new interactsWith object"
+            )
+async def create_interactsWith(IWdata: schemas.IWnew, db: Session = Depends(get_db)):
+    return implementation.create_IW(db=db, newIW= IWdata)
+
+@router.delete("/iw/{IWid}",
+            summary="deletes an iw object by id -WIP-"
+            )
+async def delete_interactsWith(IWid: int, db: Session = Depends(get_db)):
+    return implementation.delete_IW(db= db, IWid = IWid)
+
+@router.put("/iw/{IWid}",
+            response_model = schemas.InteractsWith,
+            summary="edits an existing iw object via IWdata (json) -WIP-"
+            )
+async def edit_interactsWith(IWid: int, IWdata: schemas.IWnew, db: Session = Depends(get_db)):
+    return implementation.edit_IW(db=db, IWid= IWid, IWdata=IWdata)

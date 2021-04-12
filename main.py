@@ -36,7 +36,7 @@ app.add_middleware(
 # EFM database setup
 try:
     from apps.EFMbackend.database import engine as efmEngine
-    from apps.EFMbackend.database import Base as efmBase
+    from apps.EFMbackend.models import Base as efmBase
     efmBase.metadata.create_all(bind=efmEngine)
     print(" EFM databases created")
 except:
