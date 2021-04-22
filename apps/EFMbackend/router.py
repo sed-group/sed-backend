@@ -43,6 +43,12 @@ async def create_tree(newTree:schemas.TreeNew, db: Session= Depends(get_db)):
 async def get_tree(treeID: int, db: Session = Depends(get_db)):
     return implementation.get_tree_details(db=db, treeID=treeID)
 
+@router.delete("/trees/{treeID}",
+            summary="Deletes a single tree by ID"
+            )
+async def delete_tree(treeID: int, db: Session = Depends(get_db)):
+    return implementation.delete_tree(db=db, treeID=treeID)
+
 @router.get("/trees/{treeID}/data",
             response_model= schemas.TreeData,
             summary="Returns all information in a tree as a big json dump -WIP-"
@@ -82,21 +88,27 @@ async def get_one_concept(cID: int, db: Session = Depends(get_db)):
 async def edit_concept(cID: int, cData: schemas.ConceptEdit, db: Session = Depends(get_db)):
     return implementation.edit_concept(db = db, cData= cData, cID = cID)
 
+@router.get("/concepts/{cID}/tree",
+            response_model= schemas.ConceptTree,
+            summary = "returns the concept with a tree structure in topLvlDS",
+            )
+async def get_concept_tree(cID: int, db: Session = Depends(get_db)):
+    return implementation.get_concept_tree(cID = cID, db = db)
 
 ## DS
-@router.get("/ds/{DSid}",
+@router.get("/ds/{DSid}/tree",
             response_model = schemas.DesignSolution,
             summary="returns a single DS object with all its children and grandchildren"
             )
 async def get_designSolutionTree(DSid: int, db: Session = Depends(get_db)):
     return implementation.get_DS_with_tree(db=db, DSid = DSid)
 
-# @router.get("/ds/{DSid}",
-#             response_model = schemas.DSinfo,
-#             summary="returns a single DS object"
-#             )
-# async def get_designSolutionInfo(DSid: int, db: Session = Depends(get_db)):
-#     return implementation.get_DS_info(db=db, DSid = DSid)
+@router.get("/ds/{DSid}",
+            response_model = schemas.DSinfo,
+            summary="returns a single DS object"
+            )
+async def get_designSolutionInfo(DSid: int, db: Session = Depends(get_db)):
+    return implementation.get_DS_info(db=db, DSid = DSid)
 
 
 @router.post("/fr/{FRid}/newDS",
@@ -122,11 +134,18 @@ async def edit_designSolution(DSid: int, DSdata: schemas.DSnew, db: Session = De
 
 ## FR
 @router.get("/fr/{FRid}",
-            response_model = schemas.FunctionalRequirement,
+            response_model = schemas.FRinfo,
             summary="returns a single FR object"
             )
 async def get_functionalRequirement(FRid: int, db: Session = Depends(get_db)):
-    return implementation.get_FR(db=db, FRid = FRid)
+    return implementation.get_FR_info()(db=db, FRid = FRid)
+    
+@router.get("/fr/{FRid}/tree",
+            response_model = schemas.FunctionalRequirement,
+            summary="returns a single FR object with all subsequent tree elements"
+            )
+async def get_functionalRequirementTree(FRid: int, db: Session = Depends(get_db)):
+    return implementation.get_FR_tree()(db=db, FRid = FRid)
 
 @router.post("/ds/{DSid}/newFR",
             response_model = schemas.FunctionalRequirement,

@@ -17,8 +17,11 @@ class Tree(Base):
     description = Column(String(2000))
     topLvlDSid = Column(Integer, 
                     ForeignKey('designsolution.id', 
-                        name="fk_topLvlDS"),
-                    nullable=True,)
+                        ondelete="SET NULL",
+                        name="fk_topLvlDS"
+                        ),
+                    nullable=True,
+                    )
     # allDS = relationship("DesignSolution", 
     #                 backref="tree",
     #                 foreign_keys="designsolution.treeID" 
@@ -29,10 +32,10 @@ class Tree(Base):
     # allConcepts = relationship("Concept", 
     #                 backref="tree", 
     #                 )
-    ##### topLvlDS relationship doesn't work because pydantic crashes with circular relations!
-    # topLvlDS = relationship('DesignSolution', 
-    #     uselist=False, 
-    #     foreign_keys=[topLvlDSid])
+    #### topLvlDS relationship doesn't work because pydantic crashes with circular relations!
+    topLvlDS = relationship('DesignSolution', 
+        uselist=False, 
+        foreign_keys=[topLvlDSid])
 
     def __repr__(self):
         return "<Tree(name='%s')>" % (self.name)
@@ -53,7 +56,7 @@ class Concept(Base):
     # tree = relationship("Tree", 
     #                 backref="concept", 
     #                 foreign_keys=[treeID])
-    dna = Column(String(2000))
+    dna = Column(String(2000)) # List of all IDs of the DS in this concept
     def __repr__(self):
         return "<Concept(name='%s', treeID='%s', )>" % (self.name, self.treeID)
     
@@ -104,7 +107,7 @@ class DesignSolution(Base):
         #      (dnaA, dna2, DNA), (dnaB, dna2, DNA), (dnaC, dna2, DNA)]
         allDNA = []
         allConfigurations = []
-        for f in self.requires_functions.all():
+        for f in self.requires_functions:
             # creating a list of all DNA from each FR; one entry per FR
             # this will later be combinatorially multiplied (cross product)
             # f.linkToCC()
@@ -119,6 +122,7 @@ class DesignSolution(Base):
         # print(allConfigurations)
 
         return allConfigurations
+        
 class FunctionalRequirement(Base):
     """
     FR element for EF-M modelling; contains all basic information
@@ -147,7 +151,7 @@ class FunctionalRequirement(Base):
     ## function for recursive generation of alternative concepts
     def alternativeSolutions(self):
         # returns a list of dicts with each DNA, including self
-        # each dna includes all FR:DS pairs of an instance
+        # each dna includes all DS IDs of an instance
         # compiles all DS' alternatives (adding all the DS dna to the allDNA list, and adding thisFR:respectiveDS on top.
 
         ################ BUG REPORT: ####################
@@ -157,10 +161,10 @@ class FunctionalRequirement(Base):
         # allDNA collect's all the alternative's DNA, one alternative per entry in the list:
         allDNA = []
 
-        for d in self.is_solved_by.all():
+        for d in self.is_solved_by:
             # cerating the individual dna sequence for this FR:DS pair (but only their names):
             #print(d)
-            thisDNA = {self.id: d.id}
+            thisDNA = d.id
             # checking if there are any sub-configs for this DS, then we need to add the individual sequence to the end of EACH of the configuration's dna:
             if d.alternativeConfigurations():
                 for dsDNA in d.alternativeConfigurations():
@@ -174,7 +178,7 @@ class FunctionalRequirement(Base):
             else:
                 # if we are at the bottom of the tree, i.e. the DS has no FR below it, it doesn't return an array.
                 # so we need to make a new line DNA sequence!
-                allDNA.append([thisDNA])
+                allDNA.append(thisDNA)
 
         # returns the collector of all DNA:
         return allDNA

@@ -24,12 +24,13 @@ class Tree(TreeNew):
     #fr: List[FunctionalRequirementTemp] = []
     #ds: List[DesignSolutionTemp] = []   
     ### circular link to DS not working because of bug see https://github.com/samuelcolvin/pydantic/issues/2279
-    # topLvlDS: Optional[DesignSolutionTemp] = None
+    topLvlDS: Optional[DesignSolutionTemp] = None
     topLvlDSid: Optional[int] = None 
 
     class Config:
         orm_mode = True
 
+## DESIGN PARAMEERS
 class DPnew(BaseModel):
     name: str
     value: Optional[str] = None
@@ -43,7 +44,7 @@ class DesignParameter(DPnew):
     class Config:
         orm_mode = True
 
-
+## INTERACTS WITH
 class IWnew(BaseModel):
     fromDsID: int
     toDsID: int
@@ -55,23 +56,37 @@ class InteractsWith(IWnew):
     class Config:
         orm_mode = True
     
+## CONCEPTS
 class ConceptEdit(BaseModel):
     '''
     externally editable information of a concept
     '''
     name: str
+    treeID: Optional[int]
 
 class Concept(ConceptEdit):
     """
     one instance of a tree of a tree
     """
     id: Optional[int]
-    treeID: int
+    dna: str
     #tree: Tree
     
     class Config:
         orm_mode = True
+    
+    def dnaList(self):
+        return self.dna.split(',')
 
+class ConceptTree(ConceptEdit):
+    '''
+    contains a tree structure in topLvlDS like a project tree
+    however it is pruned to only the DS included in the concept,
+    i.e. FR:DS 1:1
+    '''
+    topLvlDS: Optional[DesignSolutionTemp]
+
+## DESIGNSOLUTIONS
 class DSnew(BaseModel):
     '''
     DS class for creation of new DS; contains only minimum viable info
@@ -101,23 +116,27 @@ class DSinfo(DSnew):
     '''
     a DS class without the list of requires_function FR, but FRids instead
     as such it doesn't carry the entire tree
+    same for iw and DP
     '''
     id: int
     requires_functions_id: Optional[List[int]] = []
+    interacts_with_id: Optional[List[int]] = []
+    design_parameter_id: Optional[List[int]] = []
+
     is_top_level_DS: Optional[bool] = False
 
-    # def __init__(self, originalDS: DesignSolution):
-    #     self.name = originalDS.name
-    #     self.description = originalDS.description
-    #     self.treeID = originalDS.treeID
-    #     self.isbID = originalDS.treeID
-    #     self.id = originalDS.id
-    #     self.is_top_level_DS = originalDS.is_top_level_DS
+    def update(self, originalDS: DesignSolution):
 
-    #     for fr in originalDS.requires_functions:
-    #         self.requires_functions_id.append(fr.id)
+        for fr in originalDS.requires_functions:
+            self.requires_functions_id.append(fr.id)
 
+        for iw in originalDS.interacts_with:
+            self.interacts_with_id.append(iw.id)
 
+        for dp in originalDS.design_parameters:
+            self.design_parameter_id.append(dp.id)
+
+## FUNCTIONAL REQUIREMENTS
 class FRNew(BaseModel):
     '''
     DS class for creation of new DS; contains only minimum viable info
@@ -140,19 +159,34 @@ class FunctionalRequirement(FRNew):
     class Config:
         orm_mode = True
 
+class FRinfo(FRNew):
+    '''
+    a DS class without the list of requires_function FR, but FRids instead
+    as such it doesn't carry the entire tree
+    same for iw and DP
+    '''
+    id: int
+    is_solved_by_id: Optional[List[int]] = []
 
+    def update(self, originalFR: FunctionalRequirement):
+
+        for ds in originalFR.is_solved_by:
+            self.is_solved_by_id.append(ds.id)
+
+## TREE DATA
 class TreeData(TreeNew):
     ''' 
     data dump of an entire tree
     '''
-    ds: List[DesignSolution] = []
-    fr: List[FunctionalRequirement] = []
+    ds: List[DSinfo] = []
+    fr: List[FRinfo] = []
     iw: List[InteractsWith] = []
     dp: List[DesignParameter] = []
 
 # to be able to use "FunctionalRequirement" (etc) in DS, Tree before defining it, we need to update the forward references:
 DesignSolution.update_forward_refs()
 Tree.update_forward_refs()
+ConceptTree.update_forward_refs()
 
 
 

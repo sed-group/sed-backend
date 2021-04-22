@@ -1,17 +1,20 @@
 from sqlalchemy.orm import Session, lazyload, eagerload
 from fastapi import HTTPException, status
+from typing import List
 
 
 import apps.EFMbackend.models as models
 import apps.EFMbackend.schemas as schemas
 from apps.EFMbackend.exceptions import *
 
+import json
+
 # from apps.core.db import get_connection
 # from apps.EFMbackend.models import *
 # from apps.EFMbackend.exceptions import *
 # import apps.EFMbackend.storage as storage
 
-
+#### HELPER FUNCTIONS 
 def not_yet_implemented():
     ''' 
     dummy function for not yet implemented API functions 
@@ -20,6 +23,21 @@ def not_yet_implemented():
             status_code=status.HTTP_425_TOO_EARLY,
             detail="API point has not been realised yet, we appologize"
         )
+
+def prune_child_ds(ds: models.DesignSolution, dna: List[int]):
+    '''
+        takes a DS and removes all child DS _not_ in dna (dna to be a list of int)
+    '''
+    for fr in ds.requires_functions:
+        for childDS in fr.is_solved_by:
+            # remove the DS not in DNA:
+            if not childDS.id in dna:
+                fr.is_solved_by.remove(childDS)
+            else:
+                # else prune the children, too
+                childDS = prune_child_ds(ds, dna)
+
+    return ds
 
 #### TREES
 def get_tree_list(db: Session, limit:int = 100, offset:int = 0):
@@ -52,6 +70,7 @@ def create_tree(db: Session, newTree = schemas.TreeNew):
 def get_tree_details(db:Session, treeID: int):
     ''' 
         returns a tree object with all details
+        returns a schemas.Tree
     '''
     try:
         theTree = db.query(models.Tree).filter(models.Tree.id == treeID).first()
@@ -93,10 +112,17 @@ def delete_tree(db: Session, treeID: int):
         )
 
 def get_tree_data(db: Session, treeID: int):
+    # theTree = get_tree_details(db, treeID)
+    # treeData = schemas.TreeData(**theTree)
+
+    # # fetch DS
+    # allDS = db.query(models.DesignSolution).filter(models.DesignSolution.treeID == treeID).all()
+    # for ds in allDS:
+
     return not_yet_implemented()
 
 ### CONCEPTS
-def run_instantiation(db: Session, treeID: int):
+async def run_instantiation(db: Session, treeID: int):
     
     # fetch the old concepts, if available:
     allOldConcepts = get_all_concepts(db, treeID) # will get deleted later
@@ -106,11 +132,11 @@ def run_instantiation(db: Session, treeID: int):
 
     allDna = theTree.topLvlDS.alternativeConfigurations()
 
-    conceptCounter = allOldConcepts.len()
+    conceptCounter = len(allOldConcepts)
 
     for dna in allDna:
         
-        dnaString = json.dumps(dna)
+        dnaString = str(dna) #json.dumps(dna)
 
         # check if already exists:
         for oldC in allOldConcepts:
@@ -138,9 +164,6 @@ def run_instantiation(db: Session, treeID: int):
 
     db.commit()
 
-
-    return not_yet_implemented()
-
 def get_all_concepts(db: Session, treeID: int):
     '''
     returns a list of all concepts of the tree identified via treeID
@@ -148,15 +171,54 @@ def get_all_concepts(db: Session, treeID: int):
     return db.query(models.Concept).filter(models.Concept.treeID == treeID).all()
 
 def get_concept(db: Session, cID: int):
-    return not_yet_implemented()
+    try:
+        theConcept = db.query(models.Concept).filter(models.Concept.id == cID).first()
+        if theConcept:
+            return theConcept
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Concept with ID {} does not exist.".format(cID)
+            )
+    except EfmElementNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Concept with ID {} does not exist.".format(cID)
+        )
+    except TypeError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="cID needs to be an integer"
+        )
 
 def edit_concept(db: Session, cID: int, cData: schemas.ConceptEdit):
     return not_yet_implemented()
 
+def get_concept_tree(db: Session, cID: int):
+    '''
+    takes the tree of which the concept has been instantiated
+    and prunes all DS not in the dna
+    requires prune_child_ds() (cause recursive)
+    '''
+    theConcept = get_concept(db, cID)
+    theTree = get_tree_details(db = db, treeID= theConcept.treeID)
+
+    pydanticConcept = schemas.Concept.from_orm(theConcept)
+
+    # pruning:
+    prunedDS = prune_child_ds(theTree.topLvlDS, pydanticConcept.dnaList())
+
+    conceptWithTree = schemas.ConceptTree(**pydanticConcept.dict())
+
+    conceptWithTree.topLvlDS = prunedDS
+
+    return conceptWithTree
+
 ### FR
-def get_FR(db:Session, FRid: int):
+def get_FR_tree(db:Session, FRid: int):
     ''' 
         returns a FR object with all details
+        and the subsequent tree elements
     '''
     try:
         theFR = db.query(models.FunctionalRequirement).filter(models.FunctionalRequirement.id == FRid).first()
@@ -176,6 +238,34 @@ def get_FR(db:Session, FRid: int):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="frID needs to be an integer"
+        )
+
+def get_FR_info(db:Session, FRid: int):
+    ''' 
+        returns a FR object with all details
+        but instead of relationships only ids
+    '''
+    try:
+        theFRtree = db.query(models.FunctionalRequirement).options(lazyload('is_solved_by')).filter(models.FunctionalRequirement.id == FRid).first()
+        if theFRtree:
+            pydanticFRtree = schemas.DesignSolution.from_orm(theFRtree)
+            theFRinfo = schemas.DSinfo(**pydanticFRtree.dict())
+            theFRinfo.update(pydanticFRtree)
+            return theFRinfo
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="FR with ID {} does not exist.".format(FRid)
+            )
+    except EfmElementNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="FR with ID {} does not exist.".format(FRid)
+        )
+    except TypeError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="FRid needs to be an integer"
         )
 
 def create_FR(db: Session, parentID: int, newFR: schemas.DSnew):
@@ -278,13 +368,14 @@ def get_DS_with_tree(db:Session, DSid: int):
 def get_DS_info(db:Session, DSid: int):
     ''' 
         returns a DS object with all details
-        PROBLEM CASE NOT WORKING RIGHT NOW
+        but instead of relationships only ids
     '''
-    #try:
-    theDS = db.query(models.DesignSolution).options(lazyload('requires_functions')).filter(models.DesignSolution.id == DSid).first()
-    if theDS:
-        print(theDS.__dict__)
-        theDSinfo = schemas.DSinfo.construct(theDS.__dict__)
+    # try:
+    theDStree = db.query(models.DesignSolution).options(lazyload('requires_functions')).filter(models.DesignSolution.id == DSid).first()
+    if theDStree:
+        pydanticDStree = schemas.DesignSolution.from_orm(theDStree)
+        theDSinfo = schemas.DSinfo(**pydanticDStree.dict())
+        theDSinfo.update(pydanticDStree)
         return theDSinfo
     else:
         raise HTTPException(
