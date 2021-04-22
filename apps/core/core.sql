@@ -42,3 +42,11 @@ CREATE TABLE IF NOT EXISTS `seddb`.`applications` (
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
   UNIQUE INDEX `name_UNIQUE` (`name` ASC) VISIBLE,
   UNIQUE INDEX `href_access_UNIQUE` (`href_access` ASC) VISIBLE);
+
+# Create projects table
+CREATE TABLE IF NOT EXISTS `seddb`.`projects` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
+
