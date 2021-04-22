@@ -221,3 +221,8 @@ class InteractsWith(Base):
                             name="fk_iwIn_id")
                         )
     iwType = Column(String(20))
+    treeID = Column(Integer,
+                        ForeignKey('tree.id',
+                            ondelete="CASCADE",
+                            name="fk_iw_id")
+                        )

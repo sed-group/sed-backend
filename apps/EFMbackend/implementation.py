@@ -112,14 +112,34 @@ def delete_tree(db: Session, treeID: int):
         )
 
 def get_tree_data(db: Session, treeID: int):
-    # theTree = get_tree_details(db, treeID)
-    # treeData = schemas.TreeData(**theTree)
+    theTree = get_tree_details(db, treeID)
+    treeData = schemas.TreeData.from_orm(theTree)
 
-    # # fetch DS
-    # allDS = db.query(models.DesignSolution).filter(models.DesignSolution.treeID == treeID).all()
-    # for ds in allDS:
+    # fetch DS
+    allDS = db.query(models.DesignSolution).filter(models.DesignSolution.treeID == treeID).all()
+    for ds in allDS:
+        pydanticDStree = schemas.DesignSolution.from_orm(ds)
+        theDSinfo = schemas.DSinfo(**pydanticDStree.dict())
+        theDSinfo.update(pydanticDStree)
+        treeData.ds.append(theDSinfo)
 
-    return not_yet_implemented()
+    # fetch FR
+    allFR = db.query(models.FunctionalRequirement).filter(models.FunctionalRequirement.treeID == treeID).all()
+    for fr in allFR:
+        pydanticFRtree = schemas.FunctionalRequirement.from_orm(fr)
+        theFRinfo = schemas.FRinfo(**pydanticFRtree.dict())
+        theFRinfo.update(pydanticFRtree)
+        treeData.fr.append(theFRinfo)
+
+    # fetch iw
+    allIW = db.query(models.InteractsWith).filter(models.InteractsWith.treeID == treeID).all()
+    treeData.iw = allIW
+
+    # fetch DP
+    allDP = db.query(models.DesignParameter).filter(models.DesignParameter.treeID == treeID).all()
+    treeData.dp = allDP
+
+    return treeData
 
 ### CONCEPTS
 async def run_instantiation(db: Session, treeID: int):

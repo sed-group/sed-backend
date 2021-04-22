@@ -46,6 +46,7 @@ class DesignParameter(DPnew):
 
 ## INTERACTS WITH
 class IWnew(BaseModel):
+    treeID: int
     fromDsID: int
     toDsID: int
     iwType: str
@@ -173,15 +174,21 @@ class FRinfo(FRNew):
         for ds in originalFR.is_solved_by:
             self.is_solved_by_id.append(ds.id)
 
+
 ## TREE DATA
 class TreeData(TreeNew):
     ''' 
     data dump of an entire tree
     '''
+    id: int
+
     ds: List[DSinfo] = []
     fr: List[FRinfo] = []
     iw: List[InteractsWith] = []
     dp: List[DesignParameter] = []
+    
+    class Config:
+        orm_mode = True
 
 # to be able to use "FunctionalRequirement" (etc) in DS, Tree before defining it, we need to update the forward references:
 DesignSolution.update_forward_refs()
