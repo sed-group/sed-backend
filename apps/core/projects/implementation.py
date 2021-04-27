@@ -3,7 +3,7 @@ from fastapi import HTTPException, status
 from apps.core.projects.exceptions import ProjectNotFoundException
 from apps.core.projects.storage import (db_get_projects, db_get_project, db_post_project, db_has_minimum_access)
 from apps.core.db import get_connection
-from apps.core.projects.models import Project, AccessLevel
+from apps.core.projects.models import Project, AccessLevel, ProjectPost
 
 
 def impl_get_projects(segment_length: int, index: int):
@@ -28,9 +28,11 @@ def impl_get_project(project_id: int):
         )
 
 
-def impl_post_project(project: Project):
+def impl_post_project(project: ProjectPost):
     with get_connection() as con:
-        return db_post_project(con, project)
+        res = db_post_project(con, project)
+        con.commit()
+        return res
 
 
 def impl_has_minimum_access(project_id: int, user_id, int, minimum_level: AccessLevel):
