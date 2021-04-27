@@ -7,10 +7,10 @@ from apps.core.projects.router import router as router_projects
 
 router = APIRouter()
 
-router.include_router(router_users, prefix='/users', tags=['core', 'users'])
-router.include_router(router_auth, prefix='/auth', tags=['core', 'authentication'])
-router.include_router(router_apps, prefix='/apps', tags=['core', 'applications'])
-router.include_router(router_projects, prefix='/projects', tags=['core', 'projects'])
+router.include_router(router_users, prefix='/users', tags=['users'])
+router.include_router(router_auth, prefix='/auth', tags=['authentication'])
+router.include_router(router_apps, prefix='/apps', tags=['applications'])
+router.include_router(router_projects, prefix='/projects', tags=['projects'])
 
 
 @router.get("/", summary="Core API root", description="This is pointless", tags=['core'])
