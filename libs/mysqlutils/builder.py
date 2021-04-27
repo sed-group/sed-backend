@@ -56,6 +56,11 @@ class MySQLStatementBuilder:
         self.query += create_select_statement(table, columns)
         return self
 
+    def update(self, table: str, set_statement, values):
+        self.query += create_update_statement(table, set_statement)
+        self.values.extend(values)
+        return self
+
     def delete(self, table: str):
         self.query += create_delete_statement(table)
         return self

@@ -21,6 +21,10 @@ def create_delete_statement(table: str):
     return f"DELETE FROM {table} "
 
 
+def create_update_statement(table: str, set_statement: str):
+    return f"UPDATE {table} SET {set_statement} "
+
+
 def create_prepared_values_statement(count: int):
     placeholder_array = ['%s'] * count
     placeholder_str = ', '.join(placeholder_array)
