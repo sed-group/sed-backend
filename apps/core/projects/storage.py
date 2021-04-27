@@ -27,6 +27,25 @@ def db_get_projects(connection, segment_length: int, index: int) -> List[Project
     return projects
 
 
+def db_get_user_projects(connection, segment_length: int, index: int, user_id: int) -> List[ProjectListing]:
+    participating_sql = MySQLStatementBuilder(connection)
+
+    rs = participating_sql\
+        .select(PROJECTS_TABLE, ['projects_participants.access_level', 'projects.name', 'projects.id']) \
+        .inner_join(PROJECTS_PARTICIPANTS_TABLE, 'projects_participants.project_id = projects.id')\
+        .where('projects_participants.user_id = %s', [user_id]) \
+        .limit(segment_length) \
+        .offset(segment_length * index) \
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    project_list = []
+    for result in rs:
+        pl = ProjectListing(name=result['name'], access_level=result['access_level'], id=result['id'])
+        project_list.append(pl)
+
+    return project_list
+
+
 def db_get_project(connection, project_id) -> Project:
     proj_sql = MySQLStatementBuilder(connection)
     proj_db_res = proj_sql \
@@ -86,7 +105,7 @@ def db_delete_project(connection, project_id: int):
 
 def db_add_participant(connection, project_id, user_id, access_level, check_project_exists=True):
     if check_project_exists:
-        db_get_project(connection, project_id)
+        db_get_project(connection, project_id)  # Raises exception if project does not exist
 
     participants_sql = MySQLStatementBuilder(connection)
     participants_cols = ['user_id', 'project_id', 'access_level']
@@ -97,7 +116,7 @@ def db_add_participant(connection, project_id, user_id, access_level, check_proj
 
 def db_delete_participant(connection, project_id, user_id, check_project_exists=True):
     if check_project_exists:
-        db_get_project(connection, project_id)
+        db_get_project(connection, project_id)  # Raises exception if project does not exist
 
     participants_sql = MySQLStatementBuilder(connection)
     res, row_count = participants_sql\
@@ -113,7 +132,7 @@ def db_delete_participant(connection, project_id, user_id, check_project_exists=
 
 def db_put_name(connection, project_id, name):
 
-    project = db_get_project(connection, project_id)
+    project = db_get_project(connection, project_id)    # Raises exception if project does not exist
 
     if project.name == name:
         return True

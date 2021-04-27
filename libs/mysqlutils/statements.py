@@ -7,8 +7,13 @@ class Sort(Enum):
     DESCENDING = 'DESC'
 
 
-def create_insert_statement(table: str, columns: List[str]):
-    insert_cols_str = ', '.join(wrap_in_backticks(columns))                 # `col1`, `col2`, `col3`, ..
+def create_insert_statement(table: str, columns: List[str], backticks=True):
+
+    if backticks:
+        insert_cols_str = ', '.join(wrap_in_backticks(columns))                 # `col1`, `col2`, `col3`, ..
+    else:
+        insert_cols_str = ', '.join(columns)                                    # col1, col2, col3, ..
+
     query = f"INSERT INTO {table} ({insert_cols_str}) "
     return query
 
@@ -50,6 +55,9 @@ def create_order_by_statement(columns: List[str], order: Sort = None):
     else:
         return f"ORDER BY {cols_str} "
 
+def create_inner_join_statement(target_table, join_statement):
+    return f"INNER JOIN {target_table} ON {join_statement} "
+
 
 def wrap_in_backticks(array: List[str]):
     """
@@ -60,6 +68,7 @@ def wrap_in_backticks(array: List[str]):
     """
     new_array = []
     for element in array:
+        element = element.replace('.', '`.`')
         new_array.append("`{}`".format(element))
 
     return new_array

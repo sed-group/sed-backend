@@ -77,6 +77,10 @@ class MySQLStatementBuilder:
         self.query += create_limit_statement(limit_count)
         return self
 
+    def inner_join(self, target_table, join_statement):
+        self.query += create_inner_join_statement(target_table, join_statement)
+        return self
+
     def where(self, condition, condition_values: List[Any]):
         """
         Create prepared WHERE statement

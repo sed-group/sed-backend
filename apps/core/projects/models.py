@@ -30,6 +30,7 @@ class Project(BaseModel):
 class ProjectListing(BaseModel):
     id: int
     name: str
+    access_level: AccessLevel = AccessLevel.NONE
 
 
 class ProjectPost(BaseModel):
