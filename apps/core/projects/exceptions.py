@@ -9,5 +9,5 @@ class ProjectNotDeletedException(Exception):
 class ParticipantChangeException(Exception):
     pass
 
-class ProjectChangeExceptipn(Exception):
+class ProjectChangeException(Exception):
     pass

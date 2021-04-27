@@ -1,4 +1,4 @@
-from fastapi import Depends, status, HTTPException
+from fastapi import Depends, status, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer, SecurityScopes
 from jose import JWTError, jwt
 from pydantic import ValidationError
@@ -13,12 +13,13 @@ oauth2_scheme = OAuth2PasswordBearer(
 )
 
 
-async def verify_token(security_scopes: SecurityScopes, token: str = Depends(oauth2_scheme)):
+async def verify_token(security_scopes: SecurityScopes, request: Request, token: str = Depends(oauth2_scheme)):
     """
     Can be used as a dependency to check if a user is logged in.
     This is done by asserting that the session token exists and has not expired.
     :param security_scopes: Clearance/permissions
     :param token: The token
+    :param request: HTTP Request
     :return: The user
     """
     if security_scopes.scopes:
@@ -55,10 +56,13 @@ async def verify_token(security_scopes: SecurityScopes, token: str = Depends(oau
                 detail="Permission denied",
                 headers={"WWW-Authenticate": authenticate_value}
             )
+
+    # Store user ID in request for easy access
+    request.state.user_id = user.id
     return user
 
 
-async def get_current_active_user(current_user: User = Depends(verify_token)):
+async def get_current_active_user(current_user: User = Depends(verify_token)) -> User:
     if current_user.disabled:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user

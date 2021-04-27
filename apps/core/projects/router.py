@@ -1,18 +1,19 @@
-from fastapi import APIRouter, Security
+from fastapi import APIRouter, Security, Depends
 
 from apps.core.projects.implementation import (impl_get_projects, impl_get_project, impl_post_project,
                                                impl_delete_project, impl_post_participant, impl_delete_participant,
                                                impl_put_name)
+from apps.core.projects.dependencies import ProjectAccessChecker
 from apps.core.authentication.utils import verify_token
 from apps.core.projects.models import ProjectPost, ProjectListing, AccessLevel
+
 
 router = APIRouter()
 
 
 @router.get("/",
             summary="Lists all projects",
-            description="Lists all projects in alphabetical order",
-            dependencies=[Security(verify_token)])
+            description="Lists all projects in alphabetical order")
 async def get_projects(segment_length: int, index: int):
     """
 
@@ -25,8 +26,7 @@ async def get_projects(segment_length: int, index: int):
 
 @router.get("/{project_id}",
             summary="Get project",
-            description="Get a specific project using project ID",
-            dependencies=[Security(verify_token)])
+            description="Get a specific project using project ID")
 async def get_project(project_id: int):
     return impl_get_project(project_id)
 
@@ -50,7 +50,7 @@ async def delete_project(project_id: int):
 @router.post("/{project_id}/participants/",
              summary="Add participant to project",
              description="Add a participant to a project",
-             dependencies=[Security(verify_token, scopes=['admin'])])
+             dependencies=[Depends(ProjectAccessChecker([AccessLevel.OWNER, AccessLevel.ADMIN]))])
 async def post_participant(project_id: int, user_id: int, access_level: AccessLevel):
     return impl_post_participant(project_id, user_id, access_level)
 
@@ -58,14 +58,14 @@ async def post_participant(project_id: int, user_id: int, access_level: AccessLe
 @router.delete("/{project_id}/participants/{user_id}",
                summary="Remove project participant",
                description="Remove a participant from a project",
-               dependencies=[Security(verify_token, scopes=['admin'])])
+               dependencies=[Depends(ProjectAccessChecker([AccessLevel.OWNER, AccessLevel.ADMIN]))])
 async def post_participant(project_id: int, user_id: int):
     return impl_delete_participant(project_id, user_id)
 
 
-@router.post("/{project_id}/name",
-             summary="Set project name",
-             description="Update the name of the project",
-             dependencies=[Security(verify_token, scopes=['admin'])])
+@router.put("/{project_id}/name",
+            summary="Set project name",
+            description="Update the name of the project",
+            dependencies=[Depends(ProjectAccessChecker([AccessLevel.OWNER]))])
 async def post_participant(project_id: int, name: str):
     return impl_put_name(project_id, name)

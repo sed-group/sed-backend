@@ -5,7 +5,7 @@ from fastapi.logger import logger
 from libs.mysqlutils import MySQLStatementBuilder, FetchType
 from apps.core.projects.models import Project, AccessLevel, ProjectPost, ProjectListing
 from apps.core.projects.exceptions import (ProjectNotFoundException, ProjectNotDeletedException,
-                                           ParticipantChangeException, ProjectChangeExceptipn)
+                                           ParticipantChangeException, ProjectChangeException)
 from apps.core.users.storage import db_get_users_with_ids
 
 PROJECTS_TABLE = 'projects'
@@ -17,16 +17,6 @@ PROJECTS_PARTICIPANTS_COLUMNS = ['id', 'user_id', 'project_id', 'access_level']
 
 
 def db_get_projects(connection, segment_length: int, index: int) -> List[ProjectListing]:
-    try:
-        int(segment_length)
-        int(index)
-        if index < 0:
-            index = 0
-        if segment_length < 1:
-            segment_length = 1
-    except ValueError:
-        raise TypeError
-
     mysql_statement = MySQLStatementBuilder(connection)
     projects = mysql_statement \
         .select('projects', PROJECTS_COLUMNS) \
@@ -122,16 +112,20 @@ def db_delete_participant(connection, project_id, user_id, check_project_exists=
 
 
 def db_put_name(connection, project_id, name):
+
+    project = db_get_project(connection, project_id)
+
+    if project.name == name:
+        return True
+
     project_sql = MySQLStatementBuilder(connection)
     res, row_count = project_sql\
         .update(PROJECTS_TABLE, "name = %s", [name]).where('id = %s', [project_id])\
         .execute(return_affected_rows=True)
 
+    logger.debug(f"Affected rows: {row_count}")
+
     if row_count == 0:
-        raise ProjectChangeExceptipn("Failed to update project information")
+        raise ProjectChangeException("Failed to update project information")
 
     return True
-
-
-def db_has_minimum_access(connection, project_id:int , user_id: int, minimum_level: AccessLevel):
-    pass

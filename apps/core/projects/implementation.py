@@ -1,10 +1,10 @@
 from fastapi import HTTPException, status
 
 from apps.core.projects.exceptions import ProjectNotFoundException
-from apps.core.projects.storage import (db_get_projects, db_get_project, db_post_project, db_has_minimum_access,
+from apps.core.projects.storage import (db_get_projects, db_get_project, db_post_project,
                                         db_delete_project, db_add_participant, db_delete_participant, db_put_name)
 from apps.core.db import get_connection
-from apps.core.projects.models import Project, AccessLevel, ProjectPost
+from apps.core.projects.models import AccessLevel, ProjectPost
 
 
 def impl_get_projects(segment_length: int, index: int):
@@ -62,16 +62,3 @@ def impl_put_name(project_id: int, name: str):
         res = db_put_name(con, project_id, name)
         con.commit()
         return res
-
-
-def impl_has_minimum_access(project_id: int, user_id, int, minimum_level: AccessLevel):
-    """
-    Check if a user has the necessary access level to perform an action in a project
-    :param project_id:
-    :param user_id:
-    :param int:
-    :param minimum_level:
-    :return:
-    """
-    with get_connection() as con:
-        return db_has_minimum_access(con, project_id, user_id, minimum_level)
