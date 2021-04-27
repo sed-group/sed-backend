@@ -50,3 +50,17 @@ CREATE TABLE IF NOT EXISTS `seddb`.`projects` (
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
 
+CREATE TABLE IF NOT EXISTS `seddb`.`projects_participants` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` INT UNSIGNED NOT NULL,
+  `project_id` INT UNSIGNED NOT NULL,
+  `access_type` INT UNSIGNED NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
+
+ALTER TABLE `seddb`.`projects_participants`
+ADD CONSTRAINT `project_cascade`
+  FOREIGN KEY (`project_id`)
+  REFERENCES `seddb`.`projects` (`id`)
+  ON DELETE CASCADE
+  ON UPDATE NO ACTION;
