@@ -1,8 +1,9 @@
+from typing import List
+
 from fastapi import APIRouter, Depends, Security
 
 from apps.core.authentication.utils import verify_token, get_current_active_user
-from apps.core.authentication.models import UserAuth
-from apps.core.users.models import User
+from apps.core.users.models import User, UserPost
 from apps.core.users.implementation import impl_get_users, impl_post_user, impl_delete_user_from_db, \
     impl_get_user_with_id, impl_get_users_me
 
@@ -21,7 +22,7 @@ async def get_users(segment_length: int, index: int):
 @router.post("/",
              summary="Create new user",
              dependencies=[Security(verify_token, scopes=['admin'])])
-async def post_user(user: UserAuth):
+async def post_user(user: UserPost):
     return impl_post_user(user)
 
 
