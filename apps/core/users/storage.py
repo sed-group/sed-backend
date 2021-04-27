@@ -1,6 +1,5 @@
 from .exceptions import UserNotFoundException, UserNotUniqueException
-from .models import User
-from apps.core.authentication.models import UserAuth
+from .models import User, UserPost
 from apps.core.authentication.utils import get_password_hash, parse_scopes
 from apps.core.authentication.exceptions import UnauthorizedOperationException
 from libs.mysqlutils import MySQLStatementBuilder, FetchType
@@ -30,7 +29,7 @@ def db_get_user_safe_with_id(connection, user_id: int):
     except ValueError:
         raise TypeError
 
-    cols_to_fetch = ['username', 'email', 'full_name', 'scopes']
+    cols_to_fetch = ['id', 'username', 'email', 'full_name', 'scopes']
 
     mysql_statement = MySQLStatementBuilder(connection)
     user_data = mysql_statement\
@@ -76,7 +75,7 @@ def db_get_users_with_ids(connection, user_ids):
     return users
 
 
-def db_insert_user(connection, user: UserAuth):
+def db_insert_user(connection, user: UserPost):
     try:
         mysql_statement = MySQLStatementBuilder(connection)
 

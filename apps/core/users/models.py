@@ -19,4 +19,5 @@ class UserPost(BaseModel):
     email: Optional[str] = None
     full_name: Optional[str] = None
     disabled: Optional[bool] = False
+    password: str
     scopes: str = None

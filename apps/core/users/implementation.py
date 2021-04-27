@@ -4,8 +4,7 @@ from fastapi import HTTPException, status
 
 from apps.core.authentication.exceptions import UnauthorizedOperationException
 from apps.core.users.exceptions import UserNotFoundException, UserNotUniqueException
-from apps.core.authentication.models import UserAuth
-from apps.core.users.models import User
+from apps.core.users.models import User, UserPost
 from apps.core.db import get_connection
 from apps.core.users.storage import (db_get_user_safe_with_id, db_get_user_list, db_insert_user, db_delete_user,
                                      db_get_users_with_ids)
@@ -52,7 +51,7 @@ def impl_get_user_with_id(user_id: int):
         )
 
 
-def impl_post_user(user: UserAuth):
+def impl_post_user(user: UserPost):
     try:
         with get_connection() as con:
             db_insert_user(con, user)
