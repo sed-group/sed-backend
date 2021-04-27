@@ -8,6 +8,7 @@ from mysql.connector.errors import IntegrityError
 
 USER_COLUMNS = ['id', 'username', 'email', 'full_name', 'scopes']
 
+
 def db_get_user_safe_with_username(connection, user_name: str):
     mysql_statement = MySQLStatementBuilder(connection)
     cols = ['id', 'username', 'email', 'full_name']
