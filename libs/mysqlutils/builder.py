@@ -25,6 +25,7 @@ class MySQLStatementBuilder:
         self.con = connection
         self.query = ""
         self.values = []
+        self.last_insert_id = None
 
     def insert(self, table: str, columns: List[str]):
         """
@@ -83,6 +84,16 @@ class MySQLStatementBuilder:
         self.values.extend(condition_values)
         return self
 
+    @staticmethod
+    def placeholder_array(number_of_elements):
+        """
+        Creates an array with N elements, where each element is "%s"
+        :param number_of_elements:
+        :return:
+        """
+        placeholder_array = ['%s'] * number_of_elements # Make an array with N '%s' elements
+        return f'({",".join(placeholder_array)})'       # Return that as a SQL array in string format
+
     def execute(self,
                 fetch_type: FetchType = FetchType.FETCH_NONE,
                 size: int = None,
@@ -102,6 +113,7 @@ class MySQLStatementBuilder:
 
         with self.con.cursor(prepared=True) as cursor:
             cursor.execute(self.query, self.values)
+            self.last_insert_id = cursor.lastrowid
 
             # Determine what the query should return
             if fetch_type is FetchType.FETCH_ONE:

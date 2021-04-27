@@ -1,3 +1,5 @@
+from typing import List
+
 from fastapi import HTTPException, status
 
 from apps.core.authentication.exceptions import UnauthorizedOperationException
@@ -5,13 +7,14 @@ from apps.core.users.exceptions import UserNotFoundException, UserNotUniqueExcep
 from apps.core.authentication.models import UserAuth
 from apps.core.users.models import User
 from apps.core.db import get_connection
-from apps.core.users.storage import get_user_safe_with_id, get_user_list, insert_user, delete_user
+from apps.core.users.storage import (db_get_user_safe_with_id, db_get_user_list, db_insert_user, db_delete_user,
+                                     db_get_users_with_ids)
 
 
 def impl_get_users_me(current_user: User):
     try:
         with get_connection() as con:
-            user_safe = get_user_safe_with_id(con, current_user.id)
+            user_safe = db_get_user_safe_with_id(con, current_user.id)
             return user_safe
     except UserNotFoundException:
         raise HTTPException(
@@ -22,14 +25,20 @@ def impl_get_users_me(current_user: User):
 
 def impl_get_users(segment_length: int, index: int):
     with get_connection() as con:
-        user_list = get_user_list(con, segment_length, index)
+        user_list = db_get_user_list(con, segment_length, index)
+        return user_list
+
+
+def impl_get_users_with_id(user_ids: List[int]):
+    with get_connection() as con:
+        user_list = db_get_users_with_ids(con, user_ids)
         return user_list
 
 
 def impl_get_user_with_id(user_id: int):
     try:
         with get_connection() as con:
-            user_safe = get_user_safe_with_id(con, user_id)
+            user_safe = db_get_user_safe_with_id(con, user_id)
             return user_safe
     except UserNotFoundException:
         raise HTTPException(
@@ -46,7 +55,7 @@ def impl_get_user_with_id(user_id: int):
 def impl_post_user(user: UserAuth):
     try:
         with get_connection() as con:
-            insert_user(con, user)
+            db_insert_user(con, user)
             con.commit()
             return "Successfully created user"
     except UserNotUniqueException:
@@ -59,7 +68,7 @@ def impl_post_user(user: UserAuth):
 def impl_delete_user_from_db(user_id: int):
     try:
         with get_connection() as con:
-            delete_user(con, user_id)
+            db_delete_user(con, user_id)
             con.commit()
             return "Successfully deleted user"
     except UnauthorizedOperationException:

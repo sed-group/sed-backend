@@ -1,3 +1,5 @@
+from typing import List
+
 from fastapi import APIRouter, Depends, Security
 
 from apps.core.authentication.utils import verify_token, get_current_active_user
