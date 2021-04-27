@@ -58,9 +58,20 @@ CREATE TABLE IF NOT EXISTS `seddb`.`projects_participants` (
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
 
+# Remove participants from a project that has been removed
 ALTER TABLE `seddb`.`projects_participants`
 ADD CONSTRAINT `project_cascade`
   FOREIGN KEY (`project_id`)
   REFERENCES `seddb`.`projects` (`id`)
+  ON DELETE CASCADE
+  ON UPDATE NO ACTION;
+
+# Remove participant from projects if that user is removed
+ALTER TABLE `seddb`.`projects_participants`
+ADD INDEX `user_cascade_idx` (`user_id` ASC) VISIBLE;
+ALTER TABLE `seddb`.`projects_participants`
+ADD CONSTRAINT `user_cascade`
+  FOREIGN KEY (`user_id`)
+  REFERENCES `seddb`.`users` (`id`)
   ON DELETE CASCADE
   ON UPDATE NO ACTION;
