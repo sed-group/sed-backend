@@ -13,3 +13,10 @@ class User(BaseModel):
     disabled: Optional[bool] = None
     scopes: str = None
 
+
+class UserPost(BaseModel):
+    username: str
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    disabled: Optional[bool] = False
+    scopes: str = None
