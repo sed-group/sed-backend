@@ -1,13 +1,14 @@
 from .exceptions import UserNotFoundException, UserNotUniqueException
-from .models import User
-from apps.core.authentication.models import UserAuth
+from .models import User, UserPost
 from apps.core.authentication.utils import get_password_hash, parse_scopes
 from apps.core.authentication.exceptions import UnauthorizedOperationException
 from libs.mysqlutils import MySQLStatementBuilder, FetchType
 from mysql.connector.errors import IntegrityError
 
+USER_COLUMNS = ['id', 'username', 'email', 'full_name', 'scopes']
 
-def get_user_safe_with_username(connection, user_name: str):
+
+def db_get_user_safe_with_username(connection, user_name: str):
     mysql_statement = MySQLStatementBuilder(connection)
     cols = ['id', 'username', 'email', 'full_name']
     user_data = mysql_statement\
@@ -22,13 +23,13 @@ def get_user_safe_with_username(connection, user_name: str):
     return user
 
 
-def get_user_safe_with_id(connection, user_id: int):
+def db_get_user_safe_with_id(connection, user_id: int):
     try:
         int(user_id)
     except ValueError:
         raise TypeError
 
-    cols_to_fetch = ['username', 'email', 'full_name', 'scopes']
+    cols_to_fetch = ['id', 'username', 'email', 'full_name', 'scopes']
 
     mysql_statement = MySQLStatementBuilder(connection)
     user_data = mysql_statement\
@@ -43,7 +44,7 @@ def get_user_safe_with_id(connection, user_id: int):
     return user
 
 
-def get_user_list(connection, segment_length: int, index: int):
+def db_get_user_list(connection, segment_length: int, index: int):
     try:
         int(segment_length)
         int(index)
@@ -54,10 +55,9 @@ def get_user_list(connection, segment_length: int, index: int):
     except ValueError:
         raise TypeError
 
-    cols = ['id', 'username', 'email', 'full_name', 'scopes']
     mysql_statement = MySQLStatementBuilder(connection)
     users = mysql_statement\
-        .select('users', cols)\
+        .select('users', USER_COLUMNS)\
         .limit(segment_length)\
         .offset(segment_length * index)\
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
@@ -65,7 +65,17 @@ def get_user_list(connection, segment_length: int, index: int):
     return users
 
 
-def insert_user(connection, user: UserAuth):
+def db_get_users_with_ids(connection, user_ids):
+    mysql_statement = MySQLStatementBuilder(connection)
+    users = mysql_statement\
+        .select('users', USER_COLUMNS)\
+        .where(f'id IN {MySQLStatementBuilder.placeholder_array(len(user_ids))}', user_ids)\
+        .execute(fetch_type=FetchType.FETCH_ALL)
+
+    return users
+
+
+def db_insert_user(connection, user: UserPost):
     try:
         mysql_statement = MySQLStatementBuilder(connection)
 
@@ -90,11 +100,11 @@ def insert_user(connection, user: UserAuth):
     return User(**dict(user))
 
 
-def delete_user(connection, user_id: int):
+def db_delete_user(connection, user_id: int):
 
     where_stmnt = 'id = %s'
 
-    user = get_user_safe_with_id(connection, user_id)
+    user = db_get_user_safe_with_id(connection, user_id)
 
     if user is None:
         raise UserNotFoundException

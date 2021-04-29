@@ -42,3 +42,36 @@ CREATE TABLE IF NOT EXISTS `seddb`.`applications` (
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
   UNIQUE INDEX `name_UNIQUE` (`name` ASC) VISIBLE,
   UNIQUE INDEX `href_access_UNIQUE` (`href_access` ASC) VISIBLE);
+
+# Create projects table
+CREATE TABLE IF NOT EXISTS `seddb`.`projects` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
+
+CREATE TABLE IF NOT EXISTS `seddb`.`projects_participants` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` INT UNSIGNED NOT NULL,
+  `project_id` INT UNSIGNED NOT NULL,
+  `access_level` INT UNSIGNED NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
+
+# Remove participants from a project that has been removed
+ALTER TABLE `seddb`.`projects_participants`
+ADD CONSTRAINT `project_cascade`
+  FOREIGN KEY (`project_id`)
+  REFERENCES `seddb`.`projects` (`id`)
+  ON DELETE CASCADE
+  ON UPDATE NO ACTION;
+
+# Remove participant from projects if that user is removed
+ALTER TABLE `seddb`.`projects_participants`
+ADD INDEX `user_cascade_idx` (`user_id` ASC) VISIBLE;
+ALTER TABLE `seddb`.`projects_participants`
+ADD CONSTRAINT `user_cascade`
+  FOREIGN KEY (`user_id`)
+  REFERENCES `seddb`.`users` (`id`)
+  ON DELETE CASCADE
+  ON UPDATE NO ACTION;
