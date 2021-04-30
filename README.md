@@ -87,6 +87,7 @@ Use the following MySQL query to create a user with the admin role:
 It is important that we are consistent when developing packages, such that 1) problems can easily be identified, 2) each component of the code-base can easily be navigated, 3) prevent degradation of code over time. Th that end, packages are suggested to comply to the following structure:
 
 ![Client to database chain](https://github.com/sed-group/architecture/blob/main/img/client-to-db-communication.PNG?raw=true "System Architecture Overview")
+
 Each application package contains (at least) 3-4 files: `router.py`, `implementation.py`, `storage.py` and/or `algorithms.py`. The code contained in these files make up the communication chain from client request to data insertion/extraction into the database. In the case of a request not utilizing the database (such as a request for a computation) should not utilize storage, but rather another file handling such algorithms (e.g. `algorithms.py`).
 
 - The job of `router.py` is to define the API interface, and to relay requests on to its corresponding implementation.
