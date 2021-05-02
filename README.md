@@ -81,7 +81,22 @@ Use the following MySQL query to create a user with the admin role:
 - username: admin
 - password: secret
 
-# Logging
+# Development
+
+## Package structure
+It is important that we are consistent when developing packages, such that 1) problems can easily be identified, 2) each component of the code-base can easily be navigated, 3) prevent degradation of code over time. Th that end, packages are suggested to comply to the following structure:
+
+![Client to database chain](https://github.com/sed-group/architecture/blob/main/img/client-to-db-communication.PNG?raw=true "System Architecture Overview")
+
+Each application package contains (at least) 3-4 files: `router.py`, `implementation.py`, `storage.py` and/or `algorithms.py`. The code contained in these files make up the communication chain from client request to data insertion/extraction into the database. In the case of a request not utilizing the database (such as a request for a computation) should not utilize storage, but rather another file handling such algorithms (e.g. `algorithms.py`).
+
+- The job of `router.py` is to define the API interface, and to relay requests on to its corresponding implementation.
+- The job of `implementation.py` is to ask for a database connection, and to pass the request on to the appropriate storage methods
+- The job of `storage.py` is to perform the necessary database operations. Note that this package should be the only package that imports database-related packages (such as sqlalchemy or mysql-driver).
+- The job of `algorithms.py` is to perform any detailed operations that is not database related. For instance, it could be a calculation, or a simulation, that for some reason needs to be outsourced to the back-end rather than run on the client side.
+
+
+## Logging
 Logging is done using FastAPI's own logging module (which is based on the standard Python Logger). Use like this: 
 ```
 from fastapi.logger import logger
