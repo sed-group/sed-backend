@@ -94,6 +94,7 @@ Each application package contains (at least) 3-4 files: `router.py`, `implementa
 - The job of `implementation.py` is to ask for a database connection, and to pass the request on to the appropriate storage methods
 - The job of `storage.py` is to perform the necessary database operations. Note that this package should be the only package that imports database-related packages (such as sqlalchemy or mysql-driver).
 - The job of `algorithms.py` is to perform any detailed operations that is not database related. For instance, it could be a calculation, or a simulation, that for some reason needs to be outsourced to the back-end rather than run on the client side.
+- The job of `exceptions.py`, is to contain all exceptions that your package can throw. Having all exceptions gathered in a single file makes them easy to find and import for any code that needs to catch (or "except") them.
 
 
 ## Logging
