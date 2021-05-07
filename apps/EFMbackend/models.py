@@ -13,6 +13,13 @@ class Tree(Base):
     """
     __tablename__ = "tree"
     id = Column(Integer, primary_key = True)
+    projectID = Column(Integer) # should be a foreignKey to the projects table in core; however, right now, i am unable to fix this
+    # hence, we need to check for the project manually -.-
+                    # ForeignKey('seddb.projects.id',
+                    #     ondelete='CASCADE',
+                    #     name="parentProject"
+                    #     )
+                    # )
     name = Column(String(200))
     description = Column(String(2000))
     topLvlDSid = Column(Integer, 
