@@ -29,7 +29,7 @@ async def get_all_trees(db: Session = Depends(get_db)):
    return implementation.get_tree_list(db)
    
 @router.post("/trees/", 
-            response_model=List[schemas.Tree],
+            response_model=schemas.Tree,
             summary="creating a new tree",
             description="creates a new tree including topLvlDS and returns the tree object",
             )
@@ -138,14 +138,14 @@ async def edit_designSolution(DSid: int, DSdata: schemas.DSnew, db: Session = De
             summary="returns a single FR object"
             )
 async def get_functionalRequirement(FRid: int, db: Session = Depends(get_db)):
-    return implementation.get_FR_info(db=db, FRid = FRid)
+    return implementation.get_FR_info()(db=db, FRid = FRid)
     
 @router.get("/fr/{FRid}/tree",
             response_model = schemas.FunctionalRequirement,
             summary="returns a single FR object with all subsequent tree elements"
             )
 async def get_functionalRequirementTree(FRid: int, db: Session = Depends(get_db)):
-    return implementation.get_FR_tree(db=db, FRid = FRid)
+    return implementation.get_FR_tree()(db=db, FRid = FRid)
 
 @router.post("/ds/{DSid}/newFR",
             response_model = schemas.FunctionalRequirement,

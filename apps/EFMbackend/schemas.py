@@ -181,7 +181,6 @@ class TreeData(TreeNew):
     data dump of an entire tree
     '''
     id: int
-    topLvlDSid: int
 
     ds: List[DSinfo] = []
     fr: List[FRinfo] = []
