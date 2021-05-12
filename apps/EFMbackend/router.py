@@ -7,6 +7,9 @@ from apps.EFMbackend.database import SessionLocal
 import apps.EFMbackend.implementation as implementation
 import apps.EFMbackend.schemas as schemas
 
+# sub-module-routers
+from apps.EFMbackend.parameters.router import router as param_router
+
 router = APIRouter()
 
 # Dependency
@@ -29,7 +32,7 @@ async def get_all_trees(db: Session = Depends(get_db)):
    return implementation.get_tree_list(db)
    
 @router.post("/trees/", 
-            response_model=List[schemas.Tree],
+            response_model=schemas.Tree,
             summary="creating a new tree",
             description="creates a new tree including topLvlDS and returns the tree object",
             )
@@ -168,36 +171,6 @@ async def delete_functionalRequirement(FRid: int, db: Session = Depends(get_db))
 async def edit_functionalRequirement(FRid: int, FRdata: schemas.FRNew, db: Session = Depends(get_db)):
     return implementation.edit_FR(FRid = FRid, FRdata = FRdata, db=db)
 
-
-## DP
-@router.get("/dp/{DPid}",
-            response_model = schemas.DesignParameter,
-            summary="returns a single DP object -WIP-"
-            )
-async def get_designParameter(DPid: int, db: Session = Depends(get_db)):
-    return implementation.get_DP(db=db, DPid = DPid)
-
-@router.post("/ds/{DSid}/newDP",
-            response_model = schemas.DesignParameter,
-            summary="creates a new DP object as a child of DSid",
-            description="the json part of the post also contains the DSid - at some point this redundancy needs to be reduced, but how i do not know yet!; Furthermore there is redundancy in the treeID -WIP-"
-            )
-async def create_designParameter( DSid: int, DPdata: schemas.DPnew, db: Session = Depends(get_db)):
-    return implementation.create_DP(db=db, parentID = DSid, newDP= DPdata)
-
-@router.delete("/dp/{DPid}",
-            summary="deletes a DP object by id -WIP-"
-            )
-async def delete_designParameter(DPid: int, db: Session = Depends(get_db)):
-    return implementation.delete_DP(db= db, DPid = DPid)
-
-@router.put("/dp/{DPid}",
-            response_model = schemas.DesignParameter,
-            summary="edits an exisitng DP object via DPdata (json) -WIP-"
-            )
-async def edit_designParameter(DPid: int, DPdata: schemas.DPnew, db: Session = Depends(get_db)):
-    return implementation.edit_DP(DPid = DPid, DPdata = DPdata, db=db)
-
 # iw 
 @router.get("/iw/{IWid}",
             response_model = schemas.InteractsWith,
@@ -226,3 +199,6 @@ async def delete_interactsWith(IWid: int, db: Session = Depends(get_db)):
             )
 async def edit_interactsWith(IWid: int, IWdata: schemas.IWnew, db: Session = Depends(get_db)):
     return implementation.edit_IW(db=db, IWid= IWid, IWdata=IWdata)
+
+
+router.include_router(param_router, prefix="/param", tags=['EF-M parameters'])

@@ -5,7 +5,14 @@ from typing import List
 
 import apps.EFMbackend.models as models
 import apps.EFMbackend.schemas as schemas
+import apps.EFMbackend.storage as storage
 from apps.EFMbackend.exceptions import *
+from apps.EFMbackend.database import get_connection
+
+from apps.EFMbackend.utils import not_yet_implemented
+
+# imports from EF-M sub-modules
+from apps.EFMbackend.parameters.schemas import DesignParameter
 
 import json
 
@@ -13,16 +20,6 @@ import json
 # from apps.EFMbackend.models import *
 # from apps.EFMbackend.exceptions import *
 # import apps.EFMbackend.storage as storage
-
-#### HELPER FUNCTIONS 
-def not_yet_implemented():
-    ''' 
-    dummy function for not yet implemented API functions 
-    '''
-    raise HTTPException(
-            status_code=status.HTTP_425_TOO_EARLY,
-            detail="API point has not been realised yet, we appologize"
-        )
 
 def prune_child_ds(ds: models.DesignSolution, dna: List[int]):
     '''
@@ -52,28 +49,34 @@ def create_tree(db: Session, newTree = schemas.TreeNew):
         creates a top-level DS and associates its ID to tree.topLvlDSid
     '''
     # create tree without DS:
-    theTree = models.Tree(**newTree.dict())
-    db.add(theTree)
-    db.commit()
+    
+    with get_connection() as con:
+        theTree = storage.new_EFMobject(con, 'tree', newTree)
 
-    # create a top-levelDS:
-    topDS = models.DesignSolution(name=newTree.name, description="Top-level DS", treeID = theTree.id, is_top_level_DS = True)
-    db.add(topDS)
-    db.commit()
+        # manufacture a top-levelDS:
+        topDS = schemas.DSnew(
+            name=newTree.name, 
+            description="Top-level DS", 
+            treeID = theTree.id, 
+            is_top_level_DS = True
+            )
 
-    # setting the tree topLvlDS
-    theTree.topLvlDSid = topDS.id
-    db.commit()
+        # creating the DS in the DB
+        topDS = storage.new_EFMobject(con, 'DS', topDS)
 
-    return theTree
+        # setting the tree topLvlDS
+        theTree = storage.tree_set_topLvlDs(con, theTree.id, topDS.id)
+        return theTree
 
 def get_tree_details(db:Session, treeID: int):
     ''' 
         returns a tree object with all details
         returns a schemas.Tree
     '''
-    try:
-        theTree = db.query(models.Tree).filter(models.Tree.id == treeID).first()
+    # try:
+    with get_connection() as con:
+        theTree = storage.get_EFMobject(con, 'tree', treeID)
+        #theTree = db.query(models.Tree).filter(models.Tree.id == treeID).first()
         if theTree:
             return theTree
         else:
@@ -81,16 +84,16 @@ def get_tree_details(db:Session, treeID: int):
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Tree with ID {} does not exist.".format(treeID)
             )
-    except EfmElementNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Tree with ID {} does not exist.".format(treeID)
-        )
-    except TypeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="treeID needs to be an integer"
-        )
+    # except EfmElementNotFoundException:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_404_NOT_FOUND,
+    #         detail="Tree with ID {} does not exist.".format(treeID)
+    #     )
+    # except TypeError:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_400_BAD_REQUEST,
+    #         detail="treeID needs to be an integer"
+    #     )
 
 def delete_tree(db: Session, treeID: int):
     '''
@@ -191,25 +194,8 @@ def get_all_concepts(db: Session, treeID: int):
     return db.query(models.Concept).filter(models.Concept.treeID == treeID).all()
 
 def get_concept(db: Session, cID: int):
-    try:
-        theConcept = db.query(models.Concept).filter(models.Concept.id == cID).first()
-        if theConcept:
-            return theConcept
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Concept with ID {} does not exist.".format(cID)
-            )
-    except EfmElementNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Concept with ID {} does not exist.".format(cID)
-        )
-    except TypeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="cID needs to be an integer"
-        )
+    with get_connection() as con:
+        return storage.get_EFMobject(con, 'concept', cID)
 
 def edit_concept(db: Session, cID: int, cData: schemas.ConceptEdit):
     return not_yet_implemented()
@@ -240,31 +226,14 @@ def get_FR_tree(db:Session, FRid: int):
         returns a FR object with all details
         and the subsequent tree elements
     '''
-    try:
-        theFR = db.query(models.FunctionalRequirement).filter(models.FunctionalRequirement.id == FRid).first()
-        if theFR:
-            return theFR
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="FR with ID {} does not exist.".format(FRid)
-            )
-    except EfmElementNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="FR with ID {} does not exist.".format(FRid)
-        )
-    except TypeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="frID needs to be an integer"
-        )
+    with get_connection() as con:
+        return storage.get_EFMobject(con, 'FR', FRid)
 
 def get_FR_info(db:Session, FRid: int):
     ''' 
         returns a FR object with all details
         but instead of relationships only ids
-    '''
+    ''' 
     try:
         theFRtree = db.query(models.FunctionalRequirement).options(lazyload('is_solved_by')).filter(models.FunctionalRequirement.id == FRid).first()
         if theFRtree:
@@ -492,20 +461,7 @@ def edit_DS(db: Session, DSid: int, DSdata: schemas.DSnew):
     db.commit()
     return theDS
  
-### DP todo!! 
-def get_DP(db:Session, DPid: int):
-    return not_yet_implemented()
-    
-def create_DP(db: Session, parentID: int, newDP: schemas.DPnew):
-    return not_yet_implemented()
-
-def delete_DP(db:Session, DPid: int):
-    return not_yet_implemented()
-
-def edit_DP(db: Session, DPid: int, DPdata: schemas.DPnew):
-    return not_yet_implemented()
-
-### DP todo!! 
+### iw todo!! 
 def get_IW(db:Session, IWid: int):
     return not_yet_implemented()
 

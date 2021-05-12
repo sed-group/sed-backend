@@ -31,12 +31,3 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# EFM database setup
-try:
-    from apps.EFMbackend.database import engine as efmEngine
-    from apps.EFMbackend.models import Base as efmBase
-    efmBase.metadata.create_all(bind=efmEngine)
-    print(" EFM databases created")
-except:
-    print(" /!\\ could not create EFM databases")

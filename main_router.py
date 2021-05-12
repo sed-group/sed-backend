@@ -8,4 +8,4 @@ router = APIRouter()
 
 # sub-routers
 router.include_router(core_router, prefix='/core')  # Core module has no prefix
-router.include_router(efm_router, prefix="/efm")
+router.include_router(efm_router, prefix="/efm", tags=['EF-M'])

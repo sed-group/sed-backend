@@ -4,6 +4,9 @@ from sqlalchemy.orm import relationship
 
 import itertools #for permutations in concept DNA
 
+# import EF-M sub models
+# from .parameters.models import DesignParameter
+
 Base = declarative_base()
 
 class Tree(Base):
@@ -189,27 +192,6 @@ class FunctionalRequirement(Base):
 
         # returns the collector of all DNA:
         return allDNA
-
-class DesignParameter(Base):
-    """
-    parameters to be linked to a DS
-    """
-    __tablename__ = "designparameter"    
-    id = Column(Integer, primary_key = True)
-    name = Column(String(200))
-    value = Column(String(200))
-    unit = Column(String(200))
-    # tree link:
-    treeID = Column(Integer, 
-                        ForeignKey('tree.id', 
-                            ondelete="CASCADE", 
-                            name="fk_dp_tree")
-                        )
-    dsID = Column(Integer, 
-                        ForeignKey('designsolution.id', 
-                            ondelete="CASCADE",
-                            name="fk_dp_ds")
-                        )
     
 class InteractsWith(Base):
     """
@@ -232,4 +214,25 @@ class InteractsWith(Base):
                         ForeignKey('tree.id',
                             ondelete="CASCADE",
                             name="fk_iw_id")
+                        )
+
+class DesignParameter(Base):
+    """
+    parameters to be linked to a DS
+    """
+    __tablename__ = "designparameter"    
+    id = Column(Integer, primary_key = True)
+    name = Column(String(200))
+    value = Column(String(200))
+    unit = Column(String(200))
+    # tree link:
+    treeID = Column(Integer, 
+                        ForeignKey('tree.id', 
+                            ondelete="CASCADE", 
+                            name="fk_dp_tree")
+                        )
+    dsID = Column(Integer, 
+                        ForeignKey('designsolution.id', 
+                            ondelete="CASCADE",
+                            name="fk_dp_ds")
                         )

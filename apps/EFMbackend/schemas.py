@@ -3,6 +3,9 @@ from datetime import datetime
 from pydantic import BaseModel, HttpUrl
 from typing import List, Optional, ForwardRef
 
+## importing from EF-M submodules
+from apps.EFMbackend.parameters.schemas import DesignParameter
+
 FunctionalRequirementTemp = ForwardRef('FunctionalRequirement')
 DesignSolutionTemp = ForwardRef('DesignSolution')
 ConceptTemp = ForwardRef('Concept')
@@ -27,20 +30,6 @@ class Tree(TreeNew):
     topLvlDS: Optional[DesignSolutionTemp] = None
     topLvlDSid: Optional[int] = None 
 
-    class Config:
-        orm_mode = True
-
-## DESIGN PARAMEERS
-class DPnew(BaseModel):
-    name: str
-    value: Optional[str] = None
-    unit: Optional[str] = 'm'
-    treeID: Optional[int] = []
-    dsID: int = None
-
-class DesignParameter(DPnew):
-    id: int
-    
     class Config:
         orm_mode = True
 
@@ -96,6 +85,7 @@ class DSnew(BaseModel):
     description: Optional[str] = None
     treeID: int
     isbID: Optional[int] = None
+    is_top_level_DS: Optional[bool] = False
 
 class DesignSolution(DSnew):
     """
@@ -105,7 +95,6 @@ class DesignSolution(DSnew):
     #isb: Optional[FunctionalRequirementTemp]
     requires_functions: List[FunctionalRequirementTemp] = []
     #tree: Tree
-    is_top_level_DS: Optional[bool] = False
 
     interacts_with: List[InteractsWith] = []
     design_parameters: List[DesignParameter] = []

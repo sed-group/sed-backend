@@ -4,6 +4,11 @@
 # Development directories
 venv/
 .idea/
+.vscode
+.pytest_cache
+
+# alembic revisions in EFM
+.apps/EFMbackend/alembic/versions
 
 # Cache files
 *.pyc
