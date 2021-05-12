@@ -8,7 +8,7 @@ venv/
 .pytest_cache
 
 # alembic revisions in EFM
-.apps/EFMbackend/alembic/versions
+apps/EFMbackend/alembic/versions
 
 # Cache files
 *.pyc
