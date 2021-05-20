@@ -75,3 +75,26 @@ ADD CONSTRAINT `user_cascade`
   REFERENCES `seddb`.`users` (`id`)
   ON DELETE CASCADE
   ON UPDATE NO ACTION;
+
+# Create product database
+CREATE TABLE IF NOT EXISTS `seddb`.`products` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NOT NULL DEFAULT 'Unnamed product',
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
+
+# Create design parameter database
+CREATE TABLE `seddb`.`products_design_parameters` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NOT NULL,
+  `value` VARCHAR(255) NULL DEFAULT NULL,
+  `type` TINYINT UNSIGNED NOT NULL,
+  `product_id` INT UNSIGNED NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
+  INDEX `products_cascade_idx` (`product_id` ASC) VISIBLE,
+  CONSTRAINT `products_cascade`
+    FOREIGN KEY (`product_id`)
+    REFERENCES `seddb`.`products` (`id`)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION);
