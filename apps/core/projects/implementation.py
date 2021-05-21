@@ -1,9 +1,7 @@
 from fastapi import HTTPException, status
 
-from apps.core.projects.exceptions import ProjectNotFoundException
-from apps.core.projects.storage import (db_get_projects, db_get_project, db_post_project,
-                                        db_delete_project, db_add_participant, db_delete_participant, db_put_name,
-                                        db_get_user_projects)
+from apps.core.projects.exceptions import ProjectNotFoundException, SubProjectNotFoundException
+from apps.core.projects.storage import *
 from apps.core.db import get_connection
 from apps.core.projects.models import AccessLevel, ProjectPost
 
@@ -26,6 +24,17 @@ def impl_get_project(project_id: int):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found",
+        )
+
+
+def impl_get_sub_project(sub_project_id: int):
+    try:
+        with get_connection() as con:
+            return db_get_sub_project(con, sub_project_id)
+    except SubProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sub project not found"
         )
 
 

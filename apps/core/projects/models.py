@@ -39,3 +39,7 @@ class ProjectPost(BaseModel):
     participants_access: Dict[int, AccessLevel]
 
 
+class SubProject(BaseModel):
+    id: int
+    application_sid: str
+    project_id: int

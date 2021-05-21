@@ -148,3 +148,7 @@ def db_put_name(connection, project_id, name):
         raise ProjectChangeException("Failed to update project information")
 
     return True
+
+
+def db_get_sub_project(connection, sub_project_id):
+    pass
