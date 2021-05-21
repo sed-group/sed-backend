@@ -10,8 +10,8 @@ router = APIRouter()
 
 
 @router.post("/",
-             summary="Create project",
-             description="Create a new empty project",
-             dependencies=[Security(verify_token)])
+             summary="Create product",
+             description="Create a new empty project"
+             )
 async def post_product(name: str, design_parameters: Dict[str, DesignParameter]):
     return impl_create_product(name, design_parameters)

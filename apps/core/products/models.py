@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from enum import IntEnum, unique
+from typing import Any
 
 
 @unique
@@ -13,7 +14,7 @@ class DesignParameterType(IntEnum):
 class DesignParameter(BaseModel):
     id: int
     name: str
-    value: any
+    value: Any
     type: DesignParameterType
     product_id: int
 
