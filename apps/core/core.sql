@@ -57,3 +57,17 @@ ADD CONSTRAINT `user_cascade`
   REFERENCES `seddb`.`users` (`id`)
   ON DELETE CASCADE
   ON UPDATE NO ACTION;
+
+CREATE TABLE IF NOT EXISTS `seddb`.`projects_subprojects` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `application_sid` VARCHAR(255) NOT NULL,
+  `project_id` INT UNSIGNED NOT NULL,
+  `native_project_id` INT UNSIGNED NOT NULL,
+  PRIMARY KEY (`id`),
+  INDEX `NATIVE_SUBPROJ_ID` (`native_project_id` ASC) INVISIBLE,
+  INDEX `projects_cascade_idx` (`project_id` ASC) VISIBLE,
+  CONSTRAINT `projects_cascade`
+    FOREIGN KEY (`project_id`)
+    REFERENCES `seddb`.`projects` (`id`)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION);
