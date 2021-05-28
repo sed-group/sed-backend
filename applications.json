@@ -1,0 +1,12 @@
+{
+  "MOD.EFM": {
+    "name": "EF-M",
+    "description": "Enhanced function-means modelling tool.",
+    "href_api": "/efm/"
+  },
+  "MOD.DIFAM": {
+    "name": "Product data reuse tool",
+    "description": "Model production outcome using design parameters of existing products.",
+    "href_api": "/difam/"
+  }
+}

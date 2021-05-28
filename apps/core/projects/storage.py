@@ -1,17 +1,18 @@
-from typing import List
+from typing import List, Optional
 
 from fastapi.logger import logger
-
 from libs.mysqlutils import MySQLStatementBuilder, FetchType
-from apps.core.projects.models import Project, AccessLevel, ProjectPost, ProjectListing
-from apps.core.projects.exceptions import (ProjectNotFoundException, ProjectNotDeletedException,
-                                           ParticipantChangeException, ProjectChangeException)
+
+from apps.core.applications.exceptions import ApplicationNotFoundException
+from apps.core.applications.state import get_application
+from apps.core.projects.models import Project, ProjectPost, ProjectListing, SubProjectPost, SubProject
+from apps.core.projects.exceptions import *
 from apps.core.users.storage import db_get_users_with_ids
 
 PROJECTS_TABLE = 'projects'
 PROJECTS_COLUMNS = ['id', 'name']
-SUB_PROJECTS_TABLE = 'projects_sub'
-SUB_PROJECT_COLUMNS = ['id', 'project_id', 'sub_project_id']
+SUBPROJECTS_TABLE = 'projects_subprojects'
+SUBPROJECT_COLUMNS = ['id', 'application_sid', 'project_id', 'native_project_id']
 PROJECTS_PARTICIPANTS_TABLE = 'projects_participants'
 PROJECTS_PARTICIPANTS_COLUMNS = ['id', 'user_id', 'project_id', 'access_level']
 
@@ -148,3 +149,68 @@ def db_put_name(connection, project_id, name):
         raise ProjectChangeException("Failed to update project information")
 
     return True
+
+
+def db_post_subproject(connection, subproject: SubProjectPost) -> bool:
+
+    db_get_project(connection, subproject.project_id)   # Raises exception if the project does not exist
+
+    insert_stmnt = MySQLStatementBuilder(connection)
+    res, row_count = insert_stmnt\
+        .insert(SUBPROJECTS_TABLE, ['application_sid', 'project_id', 'native_project_id'])\
+        .set_values([subproject.application_sid, subproject.project_id, subproject.native_project_id])\
+        .execute(return_affected_rows=True)
+
+    if row_count == 0:
+        raise ProjectInsertFailureException
+
+    return True
+
+
+def db_get_subproject(connection, project_id, subproject_id) -> Optional[SubProject]:
+
+    db_get_project(connection, project_id) # Raises exception if project does not exist
+
+    select_stmnt = MySQLStatementBuilder(connection)
+    res = select_stmnt\
+        .select(SUBPROJECTS_TABLE, SUBPROJECT_COLUMNS)\
+        .where("id = %s AND project_id = %s", [subproject_id, project_id])\
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if res is None:
+        raise SubProjectNotFoundException
+
+    sub_project = SubProject(**res)
+
+    return sub_project
+
+
+def db_get_subproject_native(connection, application_sid, native_project_id):
+    get_application(application_sid)        # Raises exception of application does not exist
+
+    select_stmnt = MySQLStatementBuilder(connection)
+    res = select_stmnt\
+        .select(SUBPROJECTS_TABLE, SUBPROJECT_COLUMNS)\
+        .where("native_project_id = %s AND application_sid = %s", [native_project_id, application_sid])\
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if res is None:
+        raise SubProjectNotFoundException
+
+    sub_project = SubProject(**res)
+
+    return sub_project
+
+
+def db_delete_subproject(connection, project_id, subproject_id):
+    db_get_subproject(connection, project_id, subproject_id)  # Raises exception if project does not exist
+
+    delete_stmnt = MySQLStatementBuilder(connection)
+    res, row_count = delete_stmnt.delete(SUBPROJECTS_TABLE)\
+        .where("project_id = %s AND id = %s", [project_id, subproject_id])\
+        .execute(return_affected_rows=True)
+
+    if row_count == 0:
+        raise SubProjectNotDeletedException
+
+    return

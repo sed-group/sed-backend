@@ -20,28 +20,10 @@ CREATE TABLE IF NOT EXISTS `seddb`.`users` (
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
   UNIQUE INDEX `username_UNIQUE` (`username` ASC) VISIBLE);
+# TODO: Index users
 
 # Create default admin user
 INSERT INTO `seddb`.`users` (`username`, `password`,`scopes`, `disabled`) VALUES ('admin', '$2b$12$HrAma.HCdIFuHtnbVcle/efa9luh.XUqZapqFEUISj91TKTN6UgR6', 'admin', False);
-
-# User table index for alphabetic order
-# TODO: Index users
-
-# Create applications table
-CREATE TABLE IF NOT EXISTS `seddb`.`applications` (
-  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(255) NOT NULL,
-  `description` VARCHAR(1000) NULL DEFAULT NULL,
-  `contact` VARCHAR(255) NULL DEFAULT NULL,
-  `href` VARCHAR(500) NULL COMMENT 'project homepage',
-  `href_access` VARCHAR(500) NOT NULL COMMENT 'frontend url',
-  `href_docs` VARCHAR(500) NULL DEFAULT NULL COMMENT 'url for documentation',
-  `href_source` VARCHAR(500) NULL DEFAULT NULL,
-  `href_api` VARCHAR(500) NULL DEFAULT NULL COMMENT 'url for api root endpoint',
-  PRIMARY KEY (`id`),
-  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
-  UNIQUE INDEX `name_UNIQUE` (`name` ASC) VISIBLE,
-  UNIQUE INDEX `href_access_UNIQUE` (`href_access` ASC) VISIBLE);
 
 # Create projects table
 CREATE TABLE IF NOT EXISTS `seddb`.`projects` (
@@ -75,6 +57,20 @@ ADD CONSTRAINT `user_cascade`
   REFERENCES `seddb`.`users` (`id`)
   ON DELETE CASCADE
   ON UPDATE NO ACTION;
+
+CREATE TABLE IF NOT EXISTS `seddb`.`projects_subprojects` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `application_sid` VARCHAR(255) NOT NULL,
+  `project_id` INT UNSIGNED NOT NULL,
+  `native_project_id` INT UNSIGNED NOT NULL,
+  PRIMARY KEY (`id`),
+  INDEX `NATIVE_SUBPROJ_ID` (`native_project_id` ASC) INVISIBLE,
+  INDEX `projects_cascade_idx` (`project_id` ASC) VISIBLE,
+  CONSTRAINT `projects_cascade`
+    FOREIGN KEY (`project_id`)
+    REFERENCES `seddb`.`projects` (`id`)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION);
 
 # Create product database
 CREATE TABLE IF NOT EXISTS `seddb`.`products` (

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Security, Depends
 router = APIRouter()
 
 
-@router.get("/{spid}",
+@router.get("/{subproject_id}",
             summary="Returns overview of DIFAM project",
             description="Returns overview of DIFAM project",)
 async def get_difam_project(spid: int):
