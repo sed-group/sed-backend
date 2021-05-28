@@ -104,7 +104,7 @@ def impl_post_subproject(subproject: SubProjectPost):
         )
 
 
-def impl_get_sub_project(project_id: int, subproject_id: int):
+def impl_get_subproject(project_id: int, subproject_id: int):
     try:
         with get_connection() as con:
             return db_get_subproject(con, project_id, subproject_id)
@@ -120,7 +120,7 @@ def impl_get_sub_project(project_id: int, subproject_id: int):
         )
 
 
-def impl_get_sub_project_native(application_sid: str, native_project_id: int):
+def impl_get_subproject_native(application_sid: str, native_project_id: int):
     try:
         with get_connection() as con:
             return db_get_subproject_native(con, application_sid, native_project_id)
@@ -133,4 +133,21 @@ def impl_get_sub_project_native(application_sid: str, native_project_id: int):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No such application"
+        )
+
+
+def impl_delete_subproject(project_id: int, subproject_id: int):
+    try:
+        with get_connection() as con:
+            db_delete_subproject(con, project_id, subproject_id)
+            con.commit()
+    except SubProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sub project not found"
+        )
+    except ProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
         )

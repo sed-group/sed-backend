@@ -17,5 +17,11 @@ class ProjectChangeException(Exception):
 class SubProjectNotFoundException(Exception):
     pass
 
+
 class ProjectInsertFailureException(Exception):
     pass
+
+
+class SubProjectNotDeletedException(Exception):
+    pass
+
