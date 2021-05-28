@@ -38,8 +38,7 @@ class MySQLStatementBuilder:
         self.query += create_insert_statement(table, columns)
         return self
 
-    def set_values(self, values):
-        print('values')
+    def set_values(self, values: List[str]):
         self.query += create_prepared_values_statement(len(values))
         self.values.extend(values)
         return self
@@ -115,7 +114,7 @@ class MySQLStatementBuilder:
         :param fetch_type: FetchType.FETCH_NONE by default
         :param size: Required when using FetchType.FETCH_MANY. Determines how many rows to fetch
         :param return_affected_rows: When deleting rows, the amount of rows deleted may be returned if this is true
-        :return: None by default, but can be changed by seting keyword param "fetch_type"
+        :return: None by default, but can be changed by setting keyword param "fetch_type"
         """
 
         logger.debug(f'executing query "{self.query}" with values "{self.values}". fetch_type={fetch_type}')
