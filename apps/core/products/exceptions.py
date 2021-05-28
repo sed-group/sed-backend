@@ -1,2 +1,0 @@
-class DuplicateDesignParameterException(Exception):
-    pass
