@@ -72,25 +72,153 @@ CREATE TABLE IF NOT EXISTS `seddb`.`projects_subprojects` (
     ON DELETE CASCADE
     ON UPDATE NO ACTION);
 
-# Create product database
-CREATE TABLE IF NOT EXISTS `seddb`.`products` (
+# Create concepts table
+CREATE TABLE IF NOT EXISTS `seddb`.`concepts` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(255) NOT NULL DEFAULT 'Unnamed product',
+  `name` VARCHAR(255) NOT NULL DEFAULT 'Unnamed concepts',
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
 
-# Create design parameter database
-CREATE TABLE `seddb`.`products_design_parameters` (
+# Create parameter table
+CREATE TABLE IF NOT EXISTS `seddb`.`concepts_parameters` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(255) NOT NULL,
   `value` VARCHAR(255) NULL DEFAULT NULL,
   `type` TINYINT UNSIGNED NOT NULL,
-  `product_id` INT UNSIGNED NOT NULL,
+  `concept_id` INT UNSIGNED NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
-  INDEX `products_cascade_idx` (`product_id` ASC) VISIBLE,
-  CONSTRAINT `products_cascade`
-    FOREIGN KEY (`product_id`)
-    REFERENCES `seddb`.`products` (`id`)
+  INDEX `concepts_cascade_idx` (`concept_id` ASC) VISIBLE,
+  CONSTRAINT `concepts_cascade`
+    FOREIGN KEY (`concept_id`)
+    REFERENCES `seddb`.`concepts` (`id`)
     ON DELETE CASCADE
     ON UPDATE NO ACTION);
+
+# Create concepts archetypes table
+CREATE TABLE `seddb`.`concepts_archetypes` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NOT NULL DEFAULT 'Unnamed concept archetype',
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
+
+# Create concept to archetypes map
+CREATE TABLE `seddb`.`concepts_archetypes_map` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `concept_archetype_id` INT UNSIGNED NOT NULL,
+  `concept_id` INT UNSIGNED NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
+  INDEX `concept_cascade_idx` (`concept_id` ASC) VISIBLE,
+  INDEX `archetype_cascade_idx` (`concept_archetype_id` ASC) VISIBLE,
+  CONSTRAINT `concept_cascade`
+    FOREIGN KEY (`concept_id`)
+    REFERENCES `seddb`.`concepts` (`id`)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION,
+  CONSTRAINT `archetype_cascade`
+    FOREIGN KEY (`concept_archetype_id`)
+    REFERENCES `seddb`.`concepts_archetypes` (`id`)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION);
+
+# Archetype parameters table
+CREATE TABLE `seddb`.`concepts_archetypes_parameters` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `concept_archetype_id` INT UNSIGNED NOT NULL,
+  `name` VARCHAR(255) NOT NULL,
+  `type` TINYINT UNSIGNED NOT NULL,
+  `default_value` VARCHAR(255) NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
+  INDEX `archetype_cascade_idx` (`concept_archetype_id` ASC) VISIBLE,
+  CONSTRAINT `archetype_cascade`
+    FOREIGN KEY (`concept_archetype_id`)
+    REFERENCES `seddb`.`concepts_archetypes` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION);
+
+
+# Archetype parameters table
+CREATE TABLE `seddb`.`concepts_archetypes_parameters` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `concept_archetype_id` INT UNSIGNED NOT NULL,
+  `name` VARCHAR(255) NOT NULL,
+  `type` TINYINT UNSIGNED NOT NULL,
+  `default_value` VARCHAR(255) NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
+  INDEX `archetype_cascade_idx` (`concept_archetype_id` ASC) VISIBLE,
+  CONSTRAINT `archetype_parameter_cascade`
+    FOREIGN KEY (`concept_archetype_id`)
+    REFERENCES `seddb`.`concepts_archetypes` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION);
+
+
+# Measurements table
+CREATE TABLE `seddb`.`measurements` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NOT NULL DEFAULT 'Unnamed measurement',
+  `type` TINYINT UNSIGNED NOT NULL,
+  `description` TEXT NULL,
+  PRIMARY KEY (`id`));
+
+# Measurements to concepts map table
+CREATE TABLE `seddb`.`concept_measurements_map` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `measurement_id` INT UNSIGNED NOT NULL,
+  `concept_id` INT UNSIGNED NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
+  INDEX `measurements_concept_map_concept_cascade_idx` (`concept_id` ASC) VISIBLE,
+  INDEX `measurements_concept_map_measurement_cascade_idx` (`measurement_id` ASC) VISIBLE,
+  CONSTRAINT `measurements_concept_map_concept_cascade`
+    FOREIGN KEY (`concept_id`)
+    REFERENCES `seddb`.`concepts` (`id`)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION,
+  CONSTRAINT `measurements_concept_map_measurement_cascade`
+    FOREIGN KEY (`measurement_id`)
+    REFERENCES `seddb`.`measurements` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION);
+
+# Measurement data table
+CREATE TABLE `seddb`.`measurements_results_data` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `measurement_id` INT UNSIGNED NOT NULL,
+  `value` VARCHAR(255) NOT NULL,
+  `type` TINYINT UNSIGNED NOT NULL,
+  `insert_timestamp` DATETIME(3) NOT NULL DEFAULT NOW(3),
+  `measurement_timestamp` DATETIME(3) NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
+  INDEX `measurement_data_measurements_cascade_idx` (`measurement_id` ASC) VISIBLE,
+  CONSTRAINT `measurement_data_measurements_cascade`
+    FOREIGN KEY (`measurement_id`)
+    REFERENCES `seddb`.`measurements` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION);
+
+# Measurements result files table
+CREATE TABLE `seddb`.`measurements_results_files` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `measurement_id` INT UNSIGNED NOT NULL,
+  `file` VARCHAR(500) NOT NULL,
+  `insert_timestamp` DATETIME(3) NOT NULL DEFAULT NOW(3),
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
+  UNIQUE INDEX `measurement_id_UNIQUE` (`measurement_id` ASC) VISIBLE,
+  CONSTRAINT `measurements_files_measurements_cascade`
+    FOREIGN KEY (`measurement_id`)
+    REFERENCES `seddb`.`measurements` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION);
+
+# Difam projects
+CREATE TABLE `seddb`.`difam_projects` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `concept_archetype_id` INT UNSIGNED NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
