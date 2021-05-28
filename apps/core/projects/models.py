@@ -22,10 +22,6 @@ class Project(BaseModel):
     participants: List[User] = []   # List of users who has any kind of access to this project
     participants_access: Dict[int, AccessLevel] = dict()   # Maps user_id to access_type
 
-    def has_access(self, user_id: int) -> AccessLevel:
-        # Check in database if user has access to this project, and what kind of access.
-        pass
-
 
 class ProjectListing(BaseModel):
     id: int
@@ -39,3 +35,14 @@ class ProjectPost(BaseModel):
     participants_access: Dict[int, AccessLevel]
 
 
+class SubProject(BaseModel):
+    id: int
+    application_sid: str
+    project_id: int
+    native_project_id: int
+
+
+class SubProjectPost(BaseModel): # TODO: Inherit in subproject class?
+    application_sid: str
+    project_id: int
+    native_project_id: int
