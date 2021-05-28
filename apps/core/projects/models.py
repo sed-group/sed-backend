@@ -40,3 +40,9 @@ class SubProject(BaseModel):
     application_sid: str
     project_id: int
     native_project_id: int
+
+
+class SubProjectPost(BaseModel): # TODO: Inherit in subproject class?
+    application_sid: str
+    project_id: int
+    native_project_id: int

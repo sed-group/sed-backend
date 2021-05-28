@@ -2,9 +2,7 @@ from typing import List
 
 from fastapi import APIRouter, Security, Depends
 
-from apps.core.projects.implementation import (impl_get_projects, impl_get_project, impl_post_project,
-                                               impl_delete_project, impl_post_participant, impl_delete_participant,
-                                               impl_put_name, impl_get_user_projects)
+from apps.core.projects.implementation import *
 from apps.core.projects.dependencies import ProjectAccessChecker
 from apps.core.authentication.utils import verify_token, get_current_active_user
 from apps.core.projects.models import ProjectPost, ProjectListing, AccessLevel, Project
@@ -88,3 +86,25 @@ async def post_participant(project_id: int, user_id: int):
             response_model=bool)
 async def post_participant(project_id: int, name: str):
     return impl_put_name(project_id, name)
+
+
+@router.get("/{project_id}/subproject/{subproject_id}",
+            summary="Get subproject",
+            description="Get a specific project using subproject ID")
+async def get_project(project_id: int, subproject_id: int):
+    return impl_get_sub_project(project_id, subproject_id)
+
+
+@router.get("/application-native-subproject/",
+            summary="Get subproject using application native ID",
+            description="Get subproject using application native ID and application string ID")
+async def get_project(application_sid: str, native_project_id: int):
+    return impl_get_sub_project_native(application_sid, native_project_id)
+
+
+@router.post("/{project_id}/subproject/",
+             summary="Create subproject",
+             description="Create a new subproject. Needs to be connected to an existing project.",
+             dependencies=[Security(verify_token), Depends(ProjectAccessChecker([AccessLevel.OWNER, AccessLevel.ADMIN]))])
+async def post_project(subproject: SubProjectPost):
+    return impl_post_subproject(subproject)
