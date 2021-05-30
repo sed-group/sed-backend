@@ -29,17 +29,17 @@ async def get_measurement_result_by_id(measurement_id: int, measurement_result_d
 
 
 @router.get("/{measurement_id}/",
-            summary="Get measurement result data")
+            summary="Get measurement result data",
+            description="Search for specific data measurement. Dates are provided as UNIX timestamp in milliseconds.")
 async def get_measurement_results(measurement_id: int,
-                                  date_from: Optional[datetime],
-                                  date_to: Optional[datetime],
-                                  date_class: Optional[MeasurementMdls.MeasurementDateClassification],
-                                  dtype: Optional[MeasurementMdls.MeasurementDataType]) -> List[MeasurementMdls.MeasurementResultData]:
-    return MeasurementImpl.impl_get_measurement_results(measurement_id,
-                                                        date_from=date_from,
-                                                        date_to=date_to,
-                                                        date_class=date_class,
-                                                        dtype=dtype)
+                                  dtype: Optional[MeasurementMdls.MeasurementDataType] = None,
+                                  date_from: Optional[int] = None,
+                                  date_to: Optional[int] = None,
+                                  date_class: Optional[MeasurementMdls.MeasurementDateClassification] = MeasurementMdls.MeasurementDateClassification.MEASUREMENT,
+                                  ) -> List[MeasurementMdls.MeasurementResultData]:
+    date_from = datetime.fromtimestamp(date_from/1000)
+    date_to = datetime.fromtimestamp(date_to/1000)
+    return MeasurementImpl.impl_get_measurement_results(measurement_id, dtype, date_class, date_from, date_to)
 
 
 @router.post("{measurement_id}/",

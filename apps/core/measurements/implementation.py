@@ -35,18 +35,20 @@ def impl_get_measurement_result_by_id(m_id: int, mr_id: int) -> MeasurementResul
 
 
 def impl_get_measurement_results(measurement_id: int,
+                                 dtype: Optional[MeasurementDataType],
+                                 date_class: Optional[MeasurementDateClassification],
                                  date_from: Optional[datetime],
                                  date_to: Optional[datetime],
-                                 date_class: Optional[MeasurementDateClassification],
-                                 dtype: Optional[MeasurementDataType]) -> List[MeasurementResultData]:
+                                 ) -> List[MeasurementResultData]:
 
     with get_connection() as con:
-        return db_get_measurement_results(con,
-                                          measurement_id,
-                                          date_from=date_from,
-                                          date_to=date_to,
-                                          date_class=date_class,
-                                          dtype=dtype)
+        res = db_get_measurement_results(con,
+                                         measurement_id,
+                                         date_from=date_from,
+                                         date_to=date_to,
+                                         date_class=date_class,
+                                         dtype=dtype)
+        return res
 
 
 def impl_post_measurement_result(measurement_id: int, mr: MeasurementResultDataPost):

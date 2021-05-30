@@ -78,20 +78,18 @@ def db_get_measurement_results(con,
         where_stmnt += f' AND {date_column} < %s'
         where_values.append(date_to)
 
-    if date_to is not None:
+    if dtype is not None:
         where_stmnt += f' AND type = %s'
         where_values.append(dtype.value)
 
-    # Breaks here, probably? Test.
-
     rs = select_stmnt.select(MEASUREMENTS_RESULTS_DATA_TABLE, MEASUREMENTS_RESULTS_DATA_COLUMNS)\
-        .where(where_stmnt, where_values)\
-        .execute(dictionary=True)
+        .where(where_stmnt, where_values).execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
     data_list = []
     for res in rs:
         mrd = MeasurementResultData(**res)
         data_list.append(mrd)
+
     return data_list
 
 
