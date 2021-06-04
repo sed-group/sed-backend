@@ -1,3 +1,13 @@
+"""
+Brief explanation of the structure hierarchy of measurement classes:
+
+A measurement is similar to a "signal" of some sort. In itself, it contains no information other than what
+is being measured. A measurement result may be a file, or raw data. A measurement set contains a collection of
+measurements that are related somehow. For instance, a measurement set might contain measurements done on a particular
+product/concept instance.
+"""
+
+
 from typing import Optional, Any
 from enum import IntEnum, unique, Enum
 from datetime import datetime
@@ -36,6 +46,31 @@ class MeasurementDataType(IntEnum):
 @unique
 class MeasurementType(IntEnum):
     UNDEFINED = 0
+    COMPUTER_SIMULATION = 1
+    LIVE_DATA = 2
+    PREDICTED_DATA = 3
+
+
+@unique
+class MeasurementSetType(IntEnum):
+    UNDEFINED = 0
+    MIXTURE = 1
+    COMPUTER_SIMULATION = 2
+    LIVE_DATA = 3
+    PREDICTED_DATA = 4
+
+
+class MeasurementSet(BaseModel):
+    id: int
+    name: str
+    type: MeasurementSetType
+    description: str
+
+
+class MeasurementSetPost(BaseModel):
+    name: str
+    type: MeasurementSetType
+    description: str
 
 
 class Measurement(BaseModel):
@@ -43,6 +78,7 @@ class Measurement(BaseModel):
     name: str
     type: int
     description: Optional[str]
+    measurement_set_id: int
 
 
 class MeasurementPost(BaseModel):

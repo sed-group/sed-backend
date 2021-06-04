@@ -8,4 +8,4 @@ router = APIRouter()
 
 # sub-routers
 router.include_router(core_router, prefix='/core')
-router.include_router(difam_router, prefix='/difam')
+router.include_router(difam_router, prefix='/difam', tags=['difam'])

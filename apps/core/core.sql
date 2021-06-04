@@ -72,122 +72,89 @@ CREATE TABLE IF NOT EXISTS `seddb`.`projects_subprojects` (
     ON DELETE CASCADE
     ON UPDATE NO ACTION);
 
-# Create concepts table
-CREATE TABLE IF NOT EXISTS `seddb`.`concepts` (
+# Create individuals table
+CREATE TABLE IF NOT EXISTS `seddb`.`individuals` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(255) NOT NULL DEFAULT 'Unnamed concepts',
+  `name` VARCHAR(255) NOT NULL DEFAULT 'Unnamed individuals',
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
 
 # Create parameter table
-CREATE TABLE IF NOT EXISTS `seddb`.`concepts_parameters` (
+CREATE TABLE IF NOT EXISTS `seddb`.`individuals_parameters` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(255) NOT NULL,
   `value` VARCHAR(255) NULL DEFAULT NULL,
   `type` TINYINT UNSIGNED NOT NULL,
-  `concept_id` INT UNSIGNED NOT NULL,
+  `individual_id` INT UNSIGNED NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
-  INDEX `concepts_cascade_idx` (`concept_id` ASC) VISIBLE,
-  CONSTRAINT `concepts_cascade`
-    FOREIGN KEY (`concept_id`)
-    REFERENCES `seddb`.`concepts` (`id`)
+  INDEX `individuals_cascade_idx` (`individual_id` ASC) VISIBLE,
+  CONSTRAINT `individuals_cascade`
+    FOREIGN KEY (`individual_id`)
+    REFERENCES `seddb`.`individuals` (`id`)
     ON DELETE CASCADE
     ON UPDATE NO ACTION);
 
-# Create concepts archetypes table
-CREATE TABLE `seddb`.`concepts_archetypes` (
+# Create individuals archetypes table
+CREATE TABLE IF NOT EXISTS `seddb`.`individuals_archetypes` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(255) NOT NULL DEFAULT 'Unnamed concept archetype',
+  `name` VARCHAR(255) NOT NULL DEFAULT 'Unnamed individual archetype',
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
 
-# Create concept to archetypes map
-CREATE TABLE `seddb`.`concepts_archetypes_map` (
+# Create individual to archetypes map
+CREATE TABLE IF NOT EXISTS `seddb`.`individuals_archetypes_map` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `concept_archetype_id` INT UNSIGNED NOT NULL,
-  `concept_id` INT UNSIGNED NOT NULL,
+  `individual_archetype_id` INT UNSIGNED NOT NULL,
+  `individual_id` INT UNSIGNED NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
-  INDEX `concept_cascade_idx` (`concept_id` ASC) VISIBLE,
-  INDEX `archetype_cascade_idx` (`concept_archetype_id` ASC) VISIBLE,
-  CONSTRAINT `concept_cascade`
-    FOREIGN KEY (`concept_id`)
-    REFERENCES `seddb`.`concepts` (`id`)
+  INDEX `individual_cascade_idx` (`individual_id` ASC) VISIBLE,
+  INDEX `archetype_cascade_idx` (`individual_archetype_id` ASC) VISIBLE,
+  CONSTRAINT `individual_cascade`
+    FOREIGN KEY (`individual_id`)
+    REFERENCES `seddb`.`individuals` (`id`)
     ON DELETE CASCADE
     ON UPDATE NO ACTION,
   CONSTRAINT `archetype_cascade`
-    FOREIGN KEY (`concept_archetype_id`)
-    REFERENCES `seddb`.`concepts_archetypes` (`id`)
+    FOREIGN KEY (`individual_archetype_id`)
+    REFERENCES `seddb`.`individuals_archetypes` (`id`)
     ON DELETE CASCADE
     ON UPDATE NO ACTION);
 
+
 # Archetype parameters table
-CREATE TABLE `seddb`.`concepts_archetypes_parameters` (
+CREATE TABLE IF NOT EXISTS `seddb`.`individuals_archetypes_parameters` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `concept_archetype_id` INT UNSIGNED NOT NULL,
+  `individual_archetype_id` INT UNSIGNED NOT NULL,
   `name` VARCHAR(255) NOT NULL,
   `type` TINYINT UNSIGNED NOT NULL,
   `default_value` VARCHAR(255) NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
-  INDEX `archetype_cascade_idx` (`concept_archetype_id` ASC) VISIBLE,
-  CONSTRAINT `archetype_cascade`
-    FOREIGN KEY (`concept_archetype_id`)
-    REFERENCES `seddb`.`concepts_archetypes` (`id`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION);
-
-
-# Archetype parameters table
-CREATE TABLE `seddb`.`concepts_archetypes_parameters` (
-  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `concept_archetype_id` INT UNSIGNED NOT NULL,
-  `name` VARCHAR(255) NOT NULL,
-  `type` TINYINT UNSIGNED NOT NULL,
-  `default_value` VARCHAR(255) NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
-  INDEX `archetype_cascade_idx` (`concept_archetype_id` ASC) VISIBLE,
+  INDEX `archetype_cascade_idx` (`individual_archetype_id` ASC) VISIBLE,
   CONSTRAINT `archetype_parameter_cascade`
-    FOREIGN KEY (`concept_archetype_id`)
-    REFERENCES `seddb`.`concepts_archetypes` (`id`)
+    FOREIGN KEY (`individual_archetype_id`)
+    REFERENCES `seddb`.`individuals_archetypes` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION);
 
 
 # Measurements table
-CREATE TABLE `seddb`.`measurements` (
+CREATE TABLE IF NOT EXISTS `seddb`.`measurements` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(255) NOT NULL DEFAULT 'Unnamed measurement',
   `type` TINYINT UNSIGNED NOT NULL,
   `description` TEXT NULL,
+  `measurement_set_id` TINYINT UNSIGNED NOT NULL,
   PRIMARY KEY (`id`));
 
-# Measurements to concepts map table
-CREATE TABLE `seddb`.`concept_measurements_map` (
-  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `measurement_id` INT UNSIGNED NOT NULL,
-  `concept_id` INT UNSIGNED NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
-  INDEX `measurements_concept_map_concept_cascade_idx` (`concept_id` ASC) VISIBLE,
-  INDEX `measurements_concept_map_measurement_cascade_idx` (`measurement_id` ASC) VISIBLE,
-  CONSTRAINT `measurements_concept_map_concept_cascade`
-    FOREIGN KEY (`concept_id`)
-    REFERENCES `seddb`.`concepts` (`id`)
-    ON DELETE CASCADE
-    ON UPDATE NO ACTION,
-  CONSTRAINT `measurements_concept_map_measurement_cascade`
-    FOREIGN KEY (`measurement_id`)
-    REFERENCES `seddb`.`measurements` (`id`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION);
 
 # Measurement data table
-CREATE TABLE `seddb`.`measurements_results_data` (
+CREATE TABLE IF NOT EXISTS `seddb`.`measurements_results_data` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `measurement_id` INT UNSIGNED NOT NULL,
+  `individual_id` INT UNSIGNED,
   `value` VARCHAR(255) NOT NULL,
   `type` TINYINT UNSIGNED NOT NULL,
   `insert_timestamp` DATETIME(3) NOT NULL DEFAULT NOW(3),
@@ -202,9 +169,10 @@ CREATE TABLE `seddb`.`measurements_results_data` (
     ON UPDATE NO ACTION);
 
 # Measurements result files table
-CREATE TABLE `seddb`.`measurements_results_files` (
+CREATE TABLE IF NOT EXISTS `seddb`.`measurements_results_files` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `measurement_id` INT UNSIGNED NOT NULL,
+  `individual_id` INT UNSIGNED,
   `file` VARCHAR(500) NOT NULL,
   `insert_timestamp` DATETIME(3) NOT NULL DEFAULT NOW(3),
   PRIMARY KEY (`id`),
@@ -216,9 +184,20 @@ CREATE TABLE `seddb`.`measurements_results_files` (
     ON DELETE NO ACTION
     ON UPDATE NO ACTION);
 
-# Difam projects
-CREATE TABLE `seddb`.`difam_projects` (
+CREATE TABLE IF NOT EXISTS `seddb`.`measurements_sets` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `concept_archetype_id` INT UNSIGNED NULL DEFAULT NULL,
+  `name` VARCHAR(255) NOT NULL DEFAULT 'Unnamed measurement set',
+  `type` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  `description` TEXT NULL,
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
+
+
+# Difam projects
+CREATE TABLE IF NOT EXISTS `seddb`.`difam_projects` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `individual_archetype_id` INT UNSIGNED NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
+
+

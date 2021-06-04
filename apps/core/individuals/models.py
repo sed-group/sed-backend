@@ -30,22 +30,22 @@ class ParameterType(IntEnum):
         raise ValueError("Unhandled data type")
 
 
-class Concept(BaseModel):
+class Individual(BaseModel):
     id: int
     name: str
     parameters: Dict[str, Any]      # Parameter name -> Parameter value
 
 
-class ConceptPost(BaseModel):
+class IndividualPost(BaseModel):
     name: str
     parameters: Dict[str, Any]      # Parameter name -> Parameter value
 
 
-class ConceptParameter(BaseModel):
+class IndividualParameter(BaseModel):
     id: int
     name: str
     type: ParameterType
-    concept_id: int
+    individual_id: int
     value: Any
 
     def get_parsed_value(self):
@@ -59,8 +59,7 @@ class ConceptParameter(BaseModel):
             return str(self.value)
 
 
-class ConceptArchetype(BaseModel):
+class IndividualArchetype(BaseModel):
     id: int
     name: str
     parameters: Dict[str, Any]
-

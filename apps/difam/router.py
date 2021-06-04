@@ -13,4 +13,4 @@ async def get_difam_project(spid: int):
     """
     Returns overview difam project information
     """
-    return None
+    raise ValueError("The application failed successfully")
