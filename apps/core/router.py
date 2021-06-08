@@ -1,4 +1,8 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Security
+
+from apps.core.implementation import impl_check_db_connection
 
 from apps.core.users.router import router as router_users
 from apps.core.authentication.router import router as router_auth
@@ -18,6 +22,18 @@ router.include_router(router_individuals, prefix='/individuals', tags=['individu
 router.include_router(router_measurements, prefix='/data', tags=['data'])
 
 
-@router.get("/", summary="Core API root", description="This is pointless", tags=['core'])
-async def get_api_root():
-    return {"version": "2"}
+@router.get("/ping",
+            summary="Check server connection",
+            response_model=int,
+            tags=["core"])
+async def get_ping():
+    dt = datetime.now()
+    return dt.timestamp() * 1000
+
+
+@router.get("/ping-db",
+            summary="Check database connection",
+            response_model=int,
+            tags=['core'])
+async def get_ping_db() -> int:
+    return impl_check_db_connection()
