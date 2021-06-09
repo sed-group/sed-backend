@@ -196,6 +196,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`measurements_sets` (
 # Difam projects
 CREATE TABLE IF NOT EXISTS `seddb`.`difam_projects` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NULL DEFAULT 'Unnamed project',
   `individual_archetype_id` INT UNSIGNED NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
