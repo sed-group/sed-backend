@@ -11,9 +11,9 @@ def impl_get_projects(segment_length: int, index: int):
         return db_get_projects(con, segment_length, index)
 
 
-def impl_get_user_projects(segment_length:int, index: int, user_id: int):
+def impl_get_user_projects(user_id: int, segment_length: int = 0, index: int = 0):
     with get_connection() as con:
-        return db_get_user_projects(con, segment_length, index, user_id)
+        return db_get_user_projects(con, user_id, segment_length=segment_length, index=index)
 
 
 def impl_get_project(project_id: int):

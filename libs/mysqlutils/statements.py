@@ -55,6 +55,7 @@ def create_order_by_statement(columns: List[str], order: Sort = None):
     else:
         return f"ORDER BY {cols_str} "
 
+
 def create_inner_join_statement(target_table, join_statement):
     return f"INNER JOIN {target_table} ON {join_statement} "
 

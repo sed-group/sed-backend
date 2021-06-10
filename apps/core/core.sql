@@ -198,6 +198,8 @@ CREATE TABLE IF NOT EXISTS `seddb`.`difam_projects` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(255) NULL DEFAULT 'Unnamed project',
   `individual_archetype_id` INT UNSIGNED NULL DEFAULT NULL,
+  `owner_id` INT UNSIGNED NOT NULL,
+  `datetime_created` DATETIME(3) NOT NULL DEFAULT NOW(3),
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
 

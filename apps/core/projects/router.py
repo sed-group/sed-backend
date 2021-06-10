@@ -21,7 +21,7 @@ async def get_projects(segment_length: int, index: int, current_user: User = Dep
     :param index:
     :return:
     """
-    return impl_get_user_projects(segment_length, index, user_id=current_user.id)
+    return impl_get_user_projects(current_user.id, segment_length=segment_length, index=index)
 
 
 @router.get("/all",

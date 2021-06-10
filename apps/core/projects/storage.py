@@ -28,16 +28,21 @@ def db_get_projects(connection, segment_length: int, index: int) -> List[Project
     return projects
 
 
-def db_get_user_projects(connection, segment_length: int, index: int, user_id: int) -> List[ProjectListing]:
+def db_get_user_projects(connection, user_id: int, segment_length: int = 0, index: int = 0) -> List[ProjectListing]:
     participating_sql = MySQLStatementBuilder(connection)
 
-    rs = participating_sql\
+    if index < 0:
+        index = 0
+
+    sql = participating_sql\
         .select(PROJECTS_TABLE, ['projects_participants.access_level', 'projects.name', 'projects.id']) \
         .inner_join(PROJECTS_PARTICIPANTS_TABLE, 'projects_participants.project_id = projects.id')\
-        .where('projects_participants.user_id = %s', [user_id]) \
-        .limit(segment_length) \
-        .offset(segment_length * index) \
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+        .where('projects_participants.user_id = %s', [user_id])
+    if segment_length > 0:
+        # Segment if segment length is specified
+        sql = sql.limit(segment_length).offset(segment_length * index)
+
+    rs = sql.execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
     project_list = []
     for result in rs:
@@ -214,3 +219,27 @@ def db_delete_subproject(connection, project_id, subproject_id):
         raise SubProjectNotDeletedException
 
     return
+
+
+def db_get_user_subprojects_with_application_sid(con, user_id, application_sid):
+    # Get projects in which this user is a participant
+    project_list = db_get_user_projects(con, user_id)
+    project_id_list = []
+    for project in project_list:
+        project_id_list.append(project.id)
+
+    # Figure out which of those projects have an attached subproject with specified application SID.
+    where_values = project_id_list.copy()
+    where_values.append(application_sid)
+    stmnt = MySQLStatementBuilder(con)
+    rs = stmnt.select(SUBPROJECTS_TABLE, SUBPROJECT_COLUMNS)\
+        .where(f"project_id IN {MySQLStatementBuilder.placeholder_array(len(project_id_list))} AND application_sid = %s",
+               where_values)\
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    # Serialize & return
+    subproject_list = []
+    for res in rs:
+        subproject_list.append(SubProject(**res))
+
+    return subproject_list
