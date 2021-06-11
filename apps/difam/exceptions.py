@@ -1,0 +1,2 @@
+class DifamProjectNotFoundException(Exception):
+    pass

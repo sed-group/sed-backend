@@ -3,12 +3,40 @@ from typing import List
 from mysql.connector.pooling import PooledMySQLConnection
 
 import apps.difam.models as models
+import apps.difam.exceptions as exceptions
 from apps.core.projects.storage import db_get_user_subprojects_with_application_sid
-from libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
+from libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort, exclude_cols
 
 DIFAM_APPLICATION_SID = "MOD.DIFAM"
 DIFAM_TABLE = "difam_projects"
 DIFAM_COLUMNS = ["id", "name", "individual_archetype_id", "owner_id", "datetime_created"]
+
+
+def db_post_difam_project(con: PooledMySQLConnection, difam_project: models.DifamProjectPost, current_user_id: int) \
+        -> models.DifamProject:
+    insert_stmnt = MySQLStatementBuilder(con)
+    insert_stmnt\
+        .insert(DIFAM_TABLE, ['name', 'individual_archetype_id', 'owner_id'])\
+        .set_values([difam_project.name,
+                     difam_project.individual_archetype_id,
+                     current_user_id])\
+        .execute(fetch_type=FetchType.FETCH_NONE)
+
+    project_id = insert_stmnt.last_insert_id
+
+    return db_get_difam_project(con, project_id)
+
+
+def db_get_difam_project(con: PooledMySQLConnection, difam_project_id: int) -> models.DifamProject:
+    select_stmnt = MySQLStatementBuilder(con)
+    res = select_stmnt\
+        .select(DIFAM_TABLE, DIFAM_COLUMNS).where("id = %s", [difam_project_id])\
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if res is None:
+        raise exceptions.DifamProjectNotFoundException(f"No DIFAM project found with ID = {difam_project_id}")
+
+    return models.DifamProject(**res)
 
 
 def db_get_difam_projects(con: PooledMySQLConnection, segment_length: int, index: int, current_user_id: int) \

@@ -19,7 +19,7 @@ router.include_router(router_users, prefix='/users', tags=['users'], dependencie
 router.include_router(router_apps, prefix='/apps', tags=['applications'], dependencies=[Security(verify_token)])
 router.include_router(router_projects, prefix='/projects', tags=['projects'], dependencies=[Security(verify_token)])
 router.include_router(router_individuals, prefix='/individuals', tags=['individuals'], dependencies=[Security(verify_token)])
-router.include_router(router_measurements, prefix='/data', tags=['data'])
+router.include_router(router_measurements, prefix='/data', tags=['data'], dependencies=[Security(verify_token)])
 
 
 @router.get("/ping",
