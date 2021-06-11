@@ -31,7 +31,7 @@ else:
 
 
 @contextmanager
-def get_connection():
+def get_connection() -> pooling.PooledMySQLConnection:
     """
     Returns a MySQL connection that can be used for read/write.
     Should be utilized through "get with resources" methodology.
