@@ -27,9 +27,16 @@ async def get_difam_project(native_project_id: int) -> models.DifamProject:
     """
     return impl.impl_get_difam_project(native_project_id)
 
+
 @router.post("/projects/",
              summary="Create new DIFAM project")
 async def post_difam_project(difam_project_post: models.DifamProjectPost,
                              current_user: User = Depends(get_current_active_user)) -> models.DifamProject:
     current_user_id = current_user.id
     return impl.impl_post_difam_project(difam_project_post, current_user_id)
+
+
+@router.put("/projects/{native_project_id}/archetype",
+            summary="Set archetype")
+async def put_difam_archetype(native_project_id: int, individual_archetype_id: int):
+    return impl.impl_put_project_archetype(native_project_id, individual_archetype_id)

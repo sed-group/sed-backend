@@ -20,3 +20,10 @@ def impl_post_difam_project(difam_project: models.DifamProjectPost, current_user
 def impl_get_difam_project(difam_project_id: int):
     with get_connection() as con:
         return storage.db_get_difam_project(con, difam_project_id)
+
+
+def impl_put_project_archetype(difam_project_id: int, individual_archetype_id: int):
+    with get_connection() as con:
+        res = storage.db_put_project_archetype(con, difam_project_id, individual_archetype_id)
+        con.commit()
+        return res

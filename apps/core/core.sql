@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`projects_subprojects` (
 CREATE TABLE IF NOT EXISTS `seddb`.`individuals` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(255) NOT NULL DEFAULT 'Unnamed individuals',
+  `is_archetype` TINYINT UNSIGNED NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
 
@@ -95,12 +96,6 @@ CREATE TABLE IF NOT EXISTS `seddb`.`individuals_parameters` (
     ON DELETE CASCADE
     ON UPDATE NO ACTION);
 
-# Create individuals archetypes table
-CREATE TABLE IF NOT EXISTS `seddb`.`individuals_archetypes` (
-  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(255) NOT NULL DEFAULT 'Unnamed individual archetype',
-  PRIMARY KEY (`id`),
-  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
 
 # Create individual to archetypes map
 CREATE TABLE IF NOT EXISTS `seddb`.`individuals_archetypes_map` (
@@ -110,33 +105,10 @@ CREATE TABLE IF NOT EXISTS `seddb`.`individuals_archetypes_map` (
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
   INDEX `individual_cascade_idx` (`individual_id` ASC) VISIBLE,
-  INDEX `archetype_cascade_idx` (`individual_archetype_id` ASC) VISIBLE,
   CONSTRAINT `individual_cascade`
     FOREIGN KEY (`individual_id`)
     REFERENCES `seddb`.`individuals` (`id`)
     ON DELETE CASCADE
-    ON UPDATE NO ACTION,
-  CONSTRAINT `archetype_cascade`
-    FOREIGN KEY (`individual_archetype_id`)
-    REFERENCES `seddb`.`individuals_archetypes` (`id`)
-    ON DELETE CASCADE
-    ON UPDATE NO ACTION);
-
-
-# Archetype parameters table
-CREATE TABLE IF NOT EXISTS `seddb`.`individuals_archetypes_parameters` (
-  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `individual_archetype_id` INT UNSIGNED NOT NULL,
-  `name` VARCHAR(255) NOT NULL,
-  `type` TINYINT UNSIGNED NOT NULL,
-  `default_value` VARCHAR(255) NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
-  INDEX `archetype_cascade_idx` (`individual_archetype_id` ASC) VISIBLE,
-  CONSTRAINT `archetype_parameter_cascade`
-    FOREIGN KEY (`individual_archetype_id`)
-    REFERENCES `seddb`.`individuals_archetypes` (`id`)
-    ON DELETE NO ACTION
     ON UPDATE NO ACTION);
 
 

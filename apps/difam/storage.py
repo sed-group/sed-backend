@@ -12,8 +12,24 @@ DIFAM_TABLE = "difam_projects"
 DIFAM_COLUMNS = ["id", "name", "individual_archetype_id", "owner_id", "datetime_created"]
 
 
+def db_put_project_archetype(con, difam_project_id, individual_archetype_id: int):
+    update_stmnt = MySQLStatementBuilder(con)
+    res, rows = update_stmnt\
+        .update(DIFAM_TABLE, "individual_archetype_id = %s", [individual_archetype_id])\
+        .where("id = %s", [difam_project_id])\
+        .execute(fetch_type=FetchType.FETCH_NONE, return_affected_rows=True)
+
+    if rows == 0:
+        raise exceptions.DifamProjectFailedToUpdateException(f"Update did not occur for project with id = {difam_project_id}.")
+
+    return db_get_difam_project(con, difam_project_id)
+
+
 def db_post_difam_project(con: PooledMySQLConnection, difam_project: models.DifamProjectPost, current_user_id: int) \
         -> models.DifamProject:
+
+    # TODO: Check if archetype exists
+
     insert_stmnt = MySQLStatementBuilder(con)
     insert_stmnt\
         .insert(DIFAM_TABLE, ['name', 'individual_archetype_id', 'owner_id'])\

@@ -30,36 +30,54 @@ class ParameterType(IntEnum):
         raise ValueError("Unhandled data type")
 
 
-class Individual(BaseModel):
-    id: int
+class IndividualArchetypePost(BaseModel):
     name: str
-    parameters: Dict[str, Any]      # Parameter name -> Parameter value
+    parameters: Optional[Dict[str, Any]] = {}   # Parameter name -> Parameter value
 
 
-class IndividualPost(BaseModel):
-    name: str
-    parameters: Dict[str, Any]      # Parameter name -> Parameter value
-
-
-class IndividualParameter(BaseModel):
+class IndividualArchetype(IndividualArchetypePost):
     id: int
+
+
+class IndividualPost(IndividualArchetypePost):
+    archetype_id: Optional[int] = None
+
+
+class Individual(IndividualPost):
+    id: int
+
+
+class IndividualParameterPost(BaseModel):
     name: str
     type: ParameterType
-    individual_id: int
     value: Any
+    individual_id: int
 
     def get_parsed_value(self):
-        if ParameterType is ParameterType.INTEGER:
+        if self.type is ParameterType.INTEGER:
             return int(self.value)
-        elif ParameterType is ParameterType.FLOAT:
+
+        elif self.type is ParameterType.FLOAT:
             return float(self.value)
-        elif ParameterType is ParameterType.BOOLEAN:
-            return bool(self.value)
-        elif ParameterType is ParameterType.STRING:
+
+        elif self.type is ParameterType.BOOLEAN:
+            # Handle numeric booleans (should not happen if API is used correctly)
+            if self.value.isnumeric():
+                if int(self.value) == 0:
+                    return False
+                else:
+                    return True
+            # Handle regular stringified boolean
+            if str.upper(self.value) == "FALSE":
+                return False
+            return True
+
+        elif self.type is ParameterType.STRING:
             return str(self.value)
 
+        else:
+            raise ValueError("I don't know what you want me to do with this.")
 
-class IndividualArchetype(BaseModel):
+
+class IndividualParameter(IndividualParameterPost):
     id: int
-    name: str
-    parameters: Dict[str, Any]
