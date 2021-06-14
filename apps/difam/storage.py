@@ -4,6 +4,7 @@ from mysql.connector.pooling import PooledMySQLConnection
 
 import apps.difam.models as models
 import apps.difam.exceptions as exceptions
+import apps.core.authentication.exceptions as authorization_exceptions
 from apps.core.projects.storage import db_get_user_subprojects_with_application_sid
 from libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort, exclude_cols
 from libs.datastructures.pagination import ListChunk
@@ -11,6 +12,30 @@ from libs.datastructures.pagination import ListChunk
 DIFAM_APPLICATION_SID = "MOD.DIFAM"
 DIFAM_TABLE = "difam_projects"
 DIFAM_COLUMNS = ["id", "name", "individual_archetype_id", "owner_id", "datetime_created"]
+
+
+def db_delete_project(con: PooledMySQLConnection, difam_project_id: int, current_user_id: int):
+    select_stmnt = MySQLStatementBuilder(con)
+    res = select_stmnt\
+        .select(DIFAM_TABLE, ['owner_id'])\
+        .where('id = %s', [difam_project_id])\
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if res is None:
+        raise exceptions.DifamProjectNotFoundException
+
+    if res["owner_id"] != current_user_id:
+        raise authorization_exceptions.UnauthorizedOperationException
+
+    delete_stmnt = MySQLStatementBuilder(con)
+    res, rows = delete_stmnt.delete(DIFAM_TABLE)\
+        .where("id = %s", [difam_project_id])\
+        .execute(return_affected_rows=True)
+
+    if rows == 0:
+        raise exceptions.DifamProjectDeleteException
+
+    return True
 
 
 def db_put_project_archetype(con, difam_project_id, individual_archetype_id: int):
