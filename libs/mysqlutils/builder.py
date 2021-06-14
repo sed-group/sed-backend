@@ -1,5 +1,5 @@
 from .statements import *
-from typing import Any, List
+from typing import Any, List, Optional
 from fastapi.logger import logger
 from enum import Enum
 
@@ -26,6 +26,7 @@ class MySQLStatementBuilder:
         self.query = ""
         self.values = []
         self.last_insert_id = None
+        self.default_fetchtype = FetchType.FETCH_NONE
 
     def insert(self, table: str, columns: List[str]):
         """
@@ -53,6 +54,11 @@ class MySQLStatementBuilder:
         """
 
         self.query += create_select_statement(table, columns)
+        return self
+
+    def count(self, table: str):
+        self.query += create_count_statement(table)
+        self.default_fetchtype = FetchType.FETCH_ONE
         return self
 
     def update(self, table: str, set_statement, values):
@@ -103,7 +109,7 @@ class MySQLStatementBuilder:
         return f'({",".join(placeholder_array)})'       # Return that as a SQL array in string format
 
     def execute(self,
-                fetch_type: FetchType = FetchType.FETCH_NONE,
+                fetch_type: Optional[FetchType] = None,
                 size: int = None,
                 dictionary: bool = False,
                 return_affected_rows = False):
@@ -116,6 +122,11 @@ class MySQLStatementBuilder:
         :param return_affected_rows: When deleting rows, the amount of rows deleted may be returned if this is true
         :return: None by default, but can be changed by setting keyword param "fetch_type"
         """
+        if fetch_type is None and self.default_fetchtype is not None:
+            fetch_type = self.default_fetchtype
+
+        if fetch_type is None:
+            fetch_type = FetchType.FETCH_NONE
 
         logger.debug(f'executing query "{self.query}" with values "{self.values}". fetch_type={fetch_type}')
 
