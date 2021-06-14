@@ -4,6 +4,7 @@ from fastapi import APIRouter, Security, Depends
 
 import apps.difam.implementation as impl
 import apps.difam.models as models
+from libs.datastructures.pagination import ListChunk
 from apps.core.users.models import User
 from apps.core.authentication.utils import get_current_active_user
 
@@ -13,7 +14,7 @@ router = APIRouter()
 @router.get("/projects/",
             summary="List available DIFAM projects",)
 async def get_difam_projects(segment_length: int, index: int, current_user: User = Depends(get_current_active_user)) \
-        -> List[models.DifamProject]:
+        -> ListChunk[models.DifamProject]:
     current_user_id = current_user.id
     return impl.impl_get_difam_projects(segment_length, index, current_user_id)
 

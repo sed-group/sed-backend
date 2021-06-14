@@ -3,9 +3,10 @@ from fastapi import HTTPException, status
 import apps.difam.storage as storage
 import apps.difam.models as models
 from apps.core.db import get_connection
+from libs.datastructures.pagination import ListChunk
 
 
-def impl_get_difam_projects(segment_length: int, index: int, current_user_id:int):
+def impl_get_difam_projects(segment_length: int, index: int, current_user_id: int) -> ListChunk[models.DifamProject]:
     with get_connection() as con:
         return storage.db_get_difam_projects(con, segment_length, index, current_user_id)
 

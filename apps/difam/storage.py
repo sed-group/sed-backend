@@ -6,6 +6,7 @@ import apps.difam.models as models
 import apps.difam.exceptions as exceptions
 from apps.core.projects.storage import db_get_user_subprojects_with_application_sid
 from libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort, exclude_cols
+from libs.datastructures.pagination import ListChunk
 
 DIFAM_APPLICATION_SID = "MOD.DIFAM"
 DIFAM_TABLE = "difam_projects"
@@ -56,7 +57,7 @@ def db_get_difam_project(con: PooledMySQLConnection, difam_project_id: int) -> m
 
 
 def db_get_difam_projects(con: PooledMySQLConnection, segment_length: int, index: int, current_user_id: int) \
-        -> List[models.DifamProject]:
+        -> ListChunk[models.DifamProject]:
     """
     Returns list of projects in which the current user is a participant.
     :param con: Connection
@@ -96,4 +97,10 @@ def db_get_difam_projects(con: PooledMySQLConnection, segment_length: int, index
     for res in rs:
         difam_project_list.append(models.DifamProject(**res))
 
-    return difam_project_list
+    count_stmnt = MySQLStatementBuilder(con)
+    res = count_stmnt.count(DIFAM_TABLE).where(where_stmnt, where_values).execute(fetch_type=FetchType.FETCH_ONE,
+                                                                                  dictionary=True)
+
+    chunk = ListChunk[models.DifamProject](chunk=difam_project_list, length_total=res["count"])
+
+    return chunk
