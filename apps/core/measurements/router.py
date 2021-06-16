@@ -52,7 +52,7 @@ async def get_measurement_result_by_id(measurement_id: int, measurement_result_d
     return impl.impl_get_measurement_result_by_id(measurement_id, measurement_result_data_id)
 
 
-@router.get("/sets/{measurement_set_id}/measurements/{measurement_id}/results",
+@router.get("/sets/{measurement_set_id}/measurements/{measurement_id}/results/",
             summary="Get measurement result data",
             description="Search for specific data measurement. Dates are provided as UNIX timestamp in milliseconds.",
             response_model=List[models.MeasurementResultData])
