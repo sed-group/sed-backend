@@ -44,8 +44,14 @@ def impl_post_difam_project(difam_project: models.DifamProjectPost, current_user
 
 
 def impl_get_difam_project(difam_project_id: int):
-    with get_connection() as con:
-        return storage.db_get_difam_project(con, difam_project_id)
+    try:
+        with get_connection() as con:
+            return storage.db_get_difam_project(con, difam_project_id)
+    except ex.DifamProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No DIFAM project with ID = {difam_project_id} could be found."
+        )
 
 
 def impl_put_project_archetype(difam_project_id: int, individual_archetype_id: int):

@@ -1,7 +1,10 @@
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime
 
 from pydantic import BaseModel
+
+from apps.core.users.models import User
+from apps.core.individuals.models import IndividualArchetype
 
 
 class DifamProjectPost(BaseModel):
@@ -9,7 +12,9 @@ class DifamProjectPost(BaseModel):
     individual_archetype_id: Optional[int] = None
 
 
-class DifamProject(DifamProjectPost):
+class DifamProject(BaseModel):
     id: int
-    owner_id: int
+    name: str
+    owner: User
+    archetype: Optional[IndividualArchetype]
     datetime_created: datetime

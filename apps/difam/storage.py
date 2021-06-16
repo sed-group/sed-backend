@@ -5,7 +5,10 @@ from mysql.connector.pooling import PooledMySQLConnection
 import apps.difam.models as models
 import apps.difam.exceptions as exceptions
 import apps.core.authentication.exceptions as authorization_exceptions
+from apps.core.users.storage import db_get_user_safe_with_id
 from apps.core.projects.storage import db_get_user_subprojects_with_application_sid
+from apps.core.individuals.storage import db_get_individual
+from apps.core.individuals.exceptions import IndividualNotFoundException
 from libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort, exclude_cols
 from libs.datastructures.pagination import ListChunk
 
@@ -78,7 +81,7 @@ def db_get_difam_project(con: PooledMySQLConnection, difam_project_id: int) -> m
     if res is None:
         raise exceptions.DifamProjectNotFoundException(f"No DIFAM project found with ID = {difam_project_id}")
 
-    return models.DifamProject(**res)
+    return populate_difam_project(con, res)
 
 
 def db_get_difam_projects(con: PooledMySQLConnection, segment_length: int, index: int, current_user_id: int) \
@@ -120,12 +123,27 @@ def db_get_difam_projects(con: PooledMySQLConnection, segment_length: int, index
 
     difam_project_list = []
     for res in rs:
-        difam_project_list.append(models.DifamProject(**res))
+        difam_project_list.append(populate_difam_project(con, res)) # Resource consuming for large batches
 
     count_stmnt = MySQLStatementBuilder(con)
     res = count_stmnt.count(DIFAM_TABLE).where(where_stmnt, where_values).execute(fetch_type=FetchType.FETCH_ONE,
                                                                                   dictionary=True)
-
     chunk = ListChunk[models.DifamProject](chunk=difam_project_list, length_total=res["count"])
 
     return chunk
+
+
+def populate_difam_project (con, difam_project_database_result):
+    res = difam_project_database_result
+    try:
+        archetype = db_get_individual(con, res['individual_archetype_id'], archetype=True)
+    except IndividualNotFoundException:
+        archetype = None
+
+    return models.DifamProject(
+        id=res['id'],
+        name=res['name'],
+        owner=db_get_user_safe_with_id(con, res['owner_id']),
+        archetype=archetype,
+        datetime_created=res['datetime_created']
+    )
