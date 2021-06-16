@@ -5,6 +5,7 @@ from mysql.connector.pooling import PooledMySQLConnection
 import apps.difam.models as models
 import apps.difam.exceptions as exceptions
 import apps.core.authentication.exceptions as authorization_exceptions
+from apps.core.exceptions import NoChangeException
 from apps.core.users.storage import db_get_user_safe_with_id
 from apps.core.projects.storage import db_get_user_subprojects_with_application_sid
 from apps.core.individuals.storage import db_get_individual
@@ -17,7 +18,7 @@ DIFAM_TABLE = "difam_projects"
 DIFAM_COLUMNS = ["id", "name", "individual_archetype_id", "owner_id", "datetime_created"]
 
 
-def db_delete_project(con: PooledMySQLConnection, difam_project_id: int, current_user_id: int):
+def db_delete_project(con: PooledMySQLConnection, difam_project_id: int, current_user_id: int) -> bool:
     select_stmnt = MySQLStatementBuilder(con)
     res = select_stmnt\
         .select(DIFAM_TABLE, ['owner_id'])\
@@ -36,20 +37,28 @@ def db_delete_project(con: PooledMySQLConnection, difam_project_id: int, current
         .execute(return_affected_rows=True)
 
     if rows == 0:
-        raise exceptions.DifamProjectDeleteException
+        raise NoChangeException
 
     return True
 
 
-def db_put_project_archetype(con, difam_project_id, individual_archetype_id: int):
+def db_put_project_archetype(con, difam_project_id: int, individual_archetype_id: int) -> models.DifamProject:
     update_stmnt = MySQLStatementBuilder(con)
+
+    # Assert that project exists
+    db_get_difam_project(con, difam_project_id) # Raises if project does not exist
+
+    # Assert that the archetype exists
+    db_get_individual(con, individual_archetype_id, archetype=True)
+
+    print(f"Set arch = {individual_archetype_id} where id = {difam_project_id}")
     res, rows = update_stmnt\
         .update(DIFAM_TABLE, "individual_archetype_id = %s", [individual_archetype_id])\
         .where("id = %s", [difam_project_id])\
         .execute(fetch_type=FetchType.FETCH_NONE, return_affected_rows=True)
 
     if rows == 0:
-        raise exceptions.DifamProjectFailedToUpdateException(f"Update did not occur for project with id = {difam_project_id}.")
+        return db_get_difam_project(con, difam_project_id)
 
     return db_get_difam_project(con, difam_project_id)
 

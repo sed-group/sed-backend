@@ -49,6 +49,12 @@ class Individual(IndividualPost):
 
 class IndividualParameterPost(BaseModel):
     name: str
+    value: Any
+
+
+class IndividualParameter(IndividualParameterPost):
+    id: int
+    name: str
     type: ParameterType
     value: Any
     individual_id: int
@@ -77,7 +83,3 @@ class IndividualParameterPost(BaseModel):
 
         else:
             raise ValueError("I don't know what you want me to do with this.")
-
-
-class IndividualParameter(IndividualParameterPost):
-    id: int

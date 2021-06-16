@@ -115,14 +115,31 @@ def db_get_archetype_id_of_individual(con, individual_id):
     return res["individual_archetype_id"]
 
 
-def db_post_parameter(con, individual_id: int, parameter_name: str, parameter_value: Any):
-    ptype = models.ParameterType.get_parameter_type(parameter_value).value
+def db_get_parameter(con, parameter_id, individual_id) -> models.IndividualParameter:
+    select_stmnt = MySQLStatementBuilder(con)
+    res = select_stmnt\
+        .select(INDIVIDUALS_PARAMETERS_TABLE, INDIVIDUALS_PARAMETERS_COLUMNS)\
+        .where("id = %s AND individual_id = %s", [parameter_id, individual_id])\
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if res is None:
+        raise ex.ParameterNotFoundException
+
+    return models.IndividualParameter(**res)
+
+
+def db_post_parameter(con, individual_id: int, parameter: models.IndividualParameterPost):
+    ptype = models.ParameterType.get_parameter_type(parameter.value).value
 
     insert_stmnt = MySQLStatementBuilder(con)
     insert_stmnt\
         .insert(INDIVIDUALS_PARAMETERS_TABLE, ['name', 'value', 'type', 'individual_id'])\
-        .set_values([parameter_name, str(parameter_value), ptype, individual_id])\
+        .set_values([parameter.name, str(parameter.value), ptype, individual_id])\
         .execute()
+
+    parameter_id = insert_stmnt.last_insert_id
+
+    return db_get_parameter(con, parameter_id, individual_id)
 
 
 def db_delete_parameter(con, individual_id: int, parameter_name: str):

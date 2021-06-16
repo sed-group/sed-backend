@@ -36,8 +36,8 @@ async def get_individual_archetype(individual_archetype_id) -> Optional[models.I
 
 @router.post("/{individual_id}/parameters/",
              summary="Add parameter to individual")
-async def post_parameter(individual_id: int, parameter_name: str, parameter_value: Any):
-    return impl.impl_post_parameter(individual_id, parameter_name, parameter_value)
+async def post_parameter(individual_id: int, parameter: models.IndividualParameterPost):
+    return impl.impl_post_parameter(individual_id, parameter)
 
 
 @router.delete("/{individual_id}/parameters/{parameter_id}",

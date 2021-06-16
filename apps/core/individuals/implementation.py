@@ -44,9 +44,9 @@ def impl_post_individual_archetype(individual_archetype: models.IndividualArchet
         return res
 
 
-def impl_post_parameter(individual_id: int, parameter_name: str, parameter_value: Any):
+def impl_post_parameter(individual_id: int, parameter: models.IndividualParameterPost):
     with get_connection() as con:
-        res = storage.db_post_parameter(con, individual_id, parameter_name, parameter_value)
+        res = storage.db_post_parameter(con, individual_id, parameter)
         con.commit()
         return res
 
