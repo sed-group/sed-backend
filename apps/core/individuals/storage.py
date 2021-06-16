@@ -79,7 +79,7 @@ def db_post_individual(connection, individual: Union[models.IndividualArchetypeP
     individual_id = insert_stmnt.last_insert_id
 
     if len(individual.parameters.keys()) == 0:
-        return
+        return db_get_individual(connection, individual_id, archetype=is_archetype)
 
     for pname in individual.parameters.keys():
         pvalue_unparsed = individual.parameters[pname]
