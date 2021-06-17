@@ -10,7 +10,7 @@ from apps.core.users.storage import db_get_user_safe_with_id
 from apps.core.projects.storage import db_get_user_subprojects_with_application_sid
 from apps.core.individuals.storage import db_get_individual
 from apps.core.individuals.exceptions import IndividualNotFoundException
-from libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort, exclude_cols
+from libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
 from libs.datastructures.pagination import ListChunk
 
 DIFAM_APPLICATION_SID = "MOD.DIFAM"
