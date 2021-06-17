@@ -45,21 +45,32 @@ def impl_post_individual_archetype(individual_archetype: models.IndividualArchet
 
 
 def impl_post_parameter(individual_id: int, parameter: models.IndividualParameterPost):
-    with get_connection() as con:
-        res = storage.db_post_parameter(con, individual_id, parameter)
-        con.commit()
-        return res
-
-
-def impl_delete_parameter(individual_id: int, parameter_name: str):
     try:
         with get_connection() as con:
-            res = storage.db_delete_parameter(con, individual_id, parameter_name)
+            res = storage.db_post_parameter(con, individual_id, parameter)
+            con.commit()
+            return res
+    except ex.DuplicateParameterException:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f'Parameter with name "{parameter.name} already exists for individual with id = {individual_id}'
+        )
+    except ex.IndividualNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'No individual with id = {individual_id}'
+        )
+
+
+def impl_delete_parameter(individual_id: int, parameter_id: int):
+    try:
+        with get_connection() as con:
+            res = storage.db_delete_parameter(con, individual_id, parameter_id)
             con.commit()
             return res
     except ex.ParameterNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not delete parameter "{parameter_name}". '
-                   f'No parameter with that name for individual with id = {individual_id}'
+            detail=f'Could not delete parameter "{parameter_id}". '
+                   f'No such parameter in individual with id = {individual_id}'
         )

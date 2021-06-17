@@ -42,5 +42,5 @@ async def post_parameter(individual_id: int, parameter: models.IndividualParamet
 
 @router.delete("/{individual_id}/parameters/{parameter_id}",
                summary="Delete a parameter from an individual")
-async def delete_parameter(individual_id: int, parameter_name: str):
-    return impl.impl_delete_parameter(individual_id, parameter_name)
+async def delete_parameter(individual_id: int, parameter_id: int):
+    return impl.impl_delete_parameter(individual_id, parameter_id)

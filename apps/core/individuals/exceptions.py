@@ -4,3 +4,7 @@ class IndividualNotFoundException(Exception):
 
 class ParameterNotFoundException(Exception):
     pass
+
+
+class DuplicateParameterException(Exception):
+    pass

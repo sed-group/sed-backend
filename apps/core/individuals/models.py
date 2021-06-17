@@ -1,5 +1,5 @@
 from enum import IntEnum, unique
-from typing import Optional, Any, Dict
+from typing import Optional, Any, List
 
 from fastapi.logger import logger
 from pydantic import BaseModel
@@ -28,23 +28,6 @@ class ParameterType(IntEnum):
             return ParameterType.STRING
 
         raise ValueError("Unhandled data type")
-
-
-class IndividualArchetypePost(BaseModel):
-    name: str
-    parameters: Optional[Dict[str, Any]] = {}   # Parameter name -> Parameter value
-
-
-class IndividualArchetype(IndividualArchetypePost):
-    id: int
-
-
-class IndividualPost(IndividualArchetypePost):
-    archetype_id: Optional[int] = None
-
-
-class Individual(IndividualPost):
-    id: int
 
 
 class IndividualParameterPost(BaseModel):
@@ -83,3 +66,27 @@ class IndividualParameter(IndividualParameterPost):
 
         else:
             raise ValueError("I don't know what you want me to do with this.")
+
+
+class IndividualArchetypePost(BaseModel):
+    name: str
+    parameters: Optional[List[IndividualParameterPost]] = []
+
+
+class IndividualArchetype(BaseModel):
+    id: int
+    name: str
+    parameters: List[IndividualParameter] = []
+
+
+class IndividualPost(BaseModel):
+    name: str
+    archetype_id: Optional[int] = None
+    parameters: Optional[List[IndividualParameterPost]] = []
+
+
+class Individual(BaseModel):
+    id: int
+    name: str
+    archetype_id: Optional[int] = None
+    parameters: List[IndividualParameter] = []
