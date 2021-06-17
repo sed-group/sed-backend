@@ -10,7 +10,6 @@ class FetchType(Enum):
     """
 
     FETCH_ONE = "Fetch_One"
-    FETCH_MANY = "Fetch_Many"
     FETCH_ALL = "Fetch_All"
     FETCH_NONE = "Fetch_None"
 
@@ -110,7 +109,6 @@ class MySQLStatementBuilder:
 
     def execute(self,
                 fetch_type: Optional[FetchType] = None,
-                size: int = None,
                 dictionary: bool = False,
                 return_affected_rows = False):
         """
@@ -118,7 +116,6 @@ class MySQLStatementBuilder:
 
         :param dictionary: boolean. Default is False. Converts response to dictionaries
         :param fetch_type: FetchType.FETCH_NONE by default
-        :param size: Required when using FetchType.FETCH_MANY. Determines how many rows to fetch
         :param return_affected_rows: When deleting rows, the amount of rows deleted may be returned if this is true
         :return: None by default, but can be changed by setting keyword param "fetch_type"
         """
@@ -137,12 +134,14 @@ class MySQLStatementBuilder:
             # Determine what the query should return
             if fetch_type is FetchType.FETCH_ONE:
                 res = cursor.fetchone()
+
+                # This is awful. But, since we can't combine prepared cursors with buffered cursors this is necessary
+                if res is not None:
+                    while cursor.fetchone() is not None:
+                        pass
+
             elif fetch_type is FetchType.FETCH_ALL:
                 res = cursor.fetchall()
-            elif fetch_type is FetchType.FETCH_MANY:
-                if size is None:
-                    raise ValueError('When using FETCH_MANY size needs to be 1 or higher')
-                res = cursor.fetchmany(size=size)
             elif fetch_type is FetchType.FETCH_NONE:
                 res = None
             else:
@@ -152,7 +151,7 @@ class MySQLStatementBuilder:
             if dictionary is True and res is not None:
 
                 # Format response depending on fetch type
-                if fetch_type in [FetchType.FETCH_ALL, FetchType.FETCH_MANY]:
+                if fetch_type in [FetchType.FETCH_ALL]:
                     dict_array = []
 
                     for row in res:
@@ -168,4 +167,3 @@ class MySQLStatementBuilder:
                 return res, cursor.rowcount
             else:
                 return res
-
