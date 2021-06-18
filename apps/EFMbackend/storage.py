@@ -10,6 +10,7 @@ import apps.EFMbackend.schemas as schemas
 
 
 # EFM database setup
+## EXPERIMENTARY
 try:
     from apps.EFMbackend.database import engine as efmEngine
     from apps.EFMbackend.models import Base as efmBase
@@ -39,7 +40,13 @@ objTypes = {
         'model': models.Concept,
         'schema': schemas.Concept,
         'str': 'EF-M concept'
-    }
+    },
+    'iw': {
+        'model': models.InteractsWith,
+        'schema': schemas.InteractsWith,
+        'str': 'interacts with'
+    },
+    
 }
 
 class efmObj(str, Enum):
@@ -77,6 +84,42 @@ def get_EFMobject(db: Session, objType: efmObj, objID: int):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="objID needs to be an integer"
+        )
+
+def get_EFMobjectAll(db: Session, objType: efmObj, treeID:int=0, limit: int = 100, offset:int = 0, ):
+    '''
+        fetches a list of EF-M objects of one type
+        from offset to limit
+        if treeID is given, limited to objects related to that one tree
+        returns List[schemas.object] or raises exception
+    '''
+
+    objData = objTypes[objType]
+
+    try:
+        if treeID:
+            theObjOrmList = db.query(objData['model']).filter(objData['model'].treeID == treeID).offset(offset).limit(limit).all()
+        else:
+            theObjOrmList = db.query(objData['model']).offset(offset).limit(limit).all()
+        
+        theObjPydanticList = []
+
+        for o in theObjOrmList:
+            theObjPydantic = objData['schema'].from_orm(o)
+            theObjPydanticList.append(theObjPydantic)
+
+        return theObjPydanticList
+    
+    except EfmElementNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Could not load {}".format(objData['str'])
+        )
+
+    except TypeError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Type exception when trying to fetch {}".format(objData['str'])
         )
 
 def new_EFMobject(db: Session, objType: efmObj, objData):
@@ -180,3 +223,4 @@ def tree_set_topLvlDs(db: Session, treeID: int, dsID: int):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Type error when setting topLvlDSid for tree id:{}".format(treeID)
         )
+

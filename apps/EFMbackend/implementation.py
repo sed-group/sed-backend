@@ -13,6 +13,7 @@ from apps.EFMbackend.utils import not_yet_implemented
 
 # imports from EF-M sub-modules
 from apps.EFMbackend.parameters.schemas import DesignParameter
+from apps.EFMbackend.parameters.storage import get_DP_all
 
 import json
 
@@ -41,7 +42,7 @@ def get_tree_list(db: Session, limit:int = 100, offset:int = 0):
     '''
     list of all tree objects from DB
     '''
-    return db.query(models.Tree).offset(offset).limit(limit).all()
+    return storage.get_EFMobjectAll(db, 'tree', 0, limit, offset)
 
 def create_tree(db: Session, newTree = schemas.TreeNew):
     '''
@@ -50,76 +51,53 @@ def create_tree(db: Session, newTree = schemas.TreeNew):
     '''
     # create tree without DS:
     
-    with get_connection() as con:
-        theTree = storage.new_EFMobject(con, 'tree', newTree)
+    theTree = storage.new_EFMobject(db, 'tree', newTree)
 
-        # manufacture a top-levelDS:
-        topDS = schemas.DSnew(
-            name=newTree.name, 
-            description="Top-level DS", 
-            treeID = theTree.id, 
-            is_top_level_DS = True
-            )
+    # manufacture a top-levelDS:
+    topDS = schemas.DSnew(
+        name=newTree.name, 
+        description="Top-level DS", 
+        treeID = theTree.id, 
+        is_top_level_DS = True
+        )
 
-        # creating the DS in the DB
-        topDS = storage.new_EFMobject(con, 'DS', topDS)
+    # creating the DS in the DB
+    topDS = storage.new_EFMobject(db, 'DS', topDS)
 
-        # setting the tree topLvlDS
-        theTree = storage.tree_set_topLvlDs(con, theTree.id, topDS.id)
-        return theTree
+    # setting the tree topLvlDS
+    theTree = storage.tree_set_topLvlDs(db, theTree.id, topDS.id)
+    return theTree
 
-def get_tree_details(db:Session, treeID: int):
+def get_tree_details(db: Session, treeID: int):
     ''' 
         returns a tree object with all details
         returns a schemas.Tree
     '''
-    # try:
-    with get_connection() as con:
-        theTree = storage.get_EFMobject(con, 'tree', treeID)
-        #theTree = db.query(models.Tree).filter(models.Tree.id == treeID).first()
-        if theTree:
-            return theTree
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Tree with ID {} does not exist.".format(treeID)
-            )
-    # except EfmElementNotFoundException:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_404_NOT_FOUND,
-    #         detail="Tree with ID {} does not exist.".format(treeID)
-    #     )
-    # except TypeError:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_400_BAD_REQUEST,
-    #         detail="treeID needs to be an integer"
-    #     )
+    theTree = storage.get_EFMobject(db, 'tree', treeID)
+    #theTree = db.query(models.Tree).filter(models.Tree.id == treeID).first()
+    if theTree:
+        return theTree
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tree with ID {} does not exist.".format(treeID)
+        )
 
 def delete_tree(db: Session, treeID: int):
     '''
         deletes tree based on id 
     '''
-    try:
-        db.query(models.Tree).filter(models.Tree.id == treeID).delete()
-        db.commit()
-        return True
-    except EfmElementNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Tree with ID {} does not exist.".format(treeID)
-        )
-    except TypeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="treeID needs to be an integer"
-        )
+    with db as con:
+        storage.delete_EFMobject(con, 'tree', treeID)
 
-def get_tree_data(db: Session, treeID: int):
+def get_tree_data(db: Session, treeID: int, depth:int=100):
+
     theTree = get_tree_details(db, treeID)
     treeData = schemas.TreeData.from_orm(theTree)
 
     # fetch DS
-    allDS = db.query(models.DesignSolution).filter(models.DesignSolution.treeID == treeID).all()
+    allDS = storage.get_EFMobjectAll(db, 'DS', treeID, depth)
+    # allDS = db.query(models.DesignSolution).filter(models.DesignSolution.treeID == treeID).all()
     for ds in allDS:
         pydanticDStree = schemas.DesignSolution.from_orm(ds)
         theDSinfo = schemas.DSinfo(**pydanticDStree.dict())
@@ -127,7 +105,7 @@ def get_tree_data(db: Session, treeID: int):
         treeData.ds.append(theDSinfo)
 
     # fetch FR
-    allFR = db.query(models.FunctionalRequirement).filter(models.FunctionalRequirement.treeID == treeID).all()
+    allFR = storage.get_EFMobjectAll(db, 'FR', treeID, depth)
     for fr in allFR:
         pydanticFRtree = schemas.FunctionalRequirement.from_orm(fr)
         theFRinfo = schemas.FRinfo(**pydanticFRtree.dict())
@@ -135,11 +113,11 @@ def get_tree_data(db: Session, treeID: int):
         treeData.fr.append(theFRinfo)
 
     # fetch iw
-    allIW = db.query(models.InteractsWith).filter(models.InteractsWith.treeID == treeID).all()
+    allIW = storage.get_EFMobjectAll(db, 'iw', treeID, depth)
     treeData.iw = allIW
 
     # fetch DP
-    allDP = db.query(models.DesignParameter).filter(models.DesignParameter.treeID == treeID).all()
+    allDP = get_DP_all(db, treeID, depth)
     treeData.dp = allDP
 
     return treeData
@@ -183,15 +161,16 @@ async def run_instantiation(db: Session, treeID: int):
     
     # delete old concepts:
     for oC in allOldConcepts:
-        db.query(models.Concept).filter(models.Concept.id == oC.id).delete()
-
+        storage.delete_EFMobject(db, 'concept', oC.id)
+        
     db.commit()
 
-def get_all_concepts(db: Session, treeID: int):
+def get_all_concepts(db: Session, treeID: int, limit:int=100, offset: int = 0):
     '''
     returns a list of all concepts of the tree identified via treeID
     '''
-    return db.query(models.Concept).filter(models.Concept.treeID == treeID).all()
+    with get_connection() as con:
+        return storage.get_EFMobjectAll(db, 'concept', treeID, limit, offset)
 
 def get_concept(db: Session, cID: int):
     with get_connection() as con:

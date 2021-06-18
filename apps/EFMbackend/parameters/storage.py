@@ -42,6 +42,30 @@ def get_DP(DPid: int, db: Session = Depends(get_db)):
             detail="DPid needs to be an integer"
         )
 
+def get_DP_all(db: Session, treeID:int, limit: int = 100, offset:int = 0): 
+    try:
+        theDPormList = db.query(models.DesignParameter).offset(offset).limit(limit).all()
+
+        theDPpydanticList = []
+
+        for dp in theDPormList:
+            dpPydantic = schemas.DesignParameter.from_orm(dp)
+            theDPpydanticList.append(dpPydantic)
+
+        return theDPpydanticList    
+
+    except EfmElementNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Could not load design parameter list"
+        )
+
+    except TypeError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Type exception when trying to fetch design parameter list"
+        )
+
 def new_DP(DPdata: schemas.DPnew,  db: Session = Depends(get_db)):
     '''
     stores DPdata as a new DP object in the database

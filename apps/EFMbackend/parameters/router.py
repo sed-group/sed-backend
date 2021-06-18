@@ -17,10 +17,10 @@ router = APIRouter()
 async def get_designParameter(DPid: int):
     return implementation.get_DP(DPid = DPid)
 
-@router.post("/ds/{DSid}/newDP",
+@router.post("/dp",
             response_model = schemas.DesignParameter,
-            summary="creates a new DP object as a child of DSid",
-            description="the json part of the post also contains the DSid - at some point this redundancy needs to be reduced, but how i do not know yet!; Furthermore there is redundancy in the treeID -WIP-"
+            summary="creates a new DP object",
+            description="the json part of the post contains the DSid of the parent DS"
             )
 async def create_designParameter( DSid: int, DPdata: schemas.DPnew):
     return implementation.create_DP(parentID = DSid, newDP= DPdata)
