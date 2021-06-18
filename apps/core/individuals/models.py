@@ -33,6 +33,7 @@ class ParameterType(IntEnum):
 class IndividualParameterPost(BaseModel):
     name: str
     value: Any
+    type: Optional[int] = None
 
 
 class IndividualParameter(IndividualParameterPost):
@@ -44,7 +45,9 @@ class IndividualParameter(IndividualParameterPost):
 
     def get_parsed_value(self):
         if self.type is ParameterType.INTEGER:
-            return int(self.value)
+            # Parse to float first, in case it is a float which the user has requested to be treated as an int.
+            # This avoids a value exception.
+            return int(float(self.value))
 
         elif self.type is ParameterType.FLOAT:
             return float(self.value)

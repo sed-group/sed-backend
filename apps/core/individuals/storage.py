@@ -1,4 +1,4 @@
-from typing import Union, Optional, Any
+from typing import Union, Optional, Any, List
 
 from mysql.connector.pooling import PooledMySQLConnection
 from fastapi.logger import  logger
@@ -96,7 +96,11 @@ def db_post_individual(connection, individual: Union[models.IndividualArchetypeP
 
     for parameter in individual.parameters:
         pvalue_unparsed = parameter.value
-        ptype = models.ParameterType.get_parameter_type(pvalue_unparsed).value
+        if parameter.type is None:
+            ptype = models.ParameterType.get_parameter_type(pvalue_unparsed).value
+        else:
+            ptype = parameter.type
+
         pvalue = str(pvalue_unparsed)
 
         insert_param_stmnt = MySQLStatementBuilder(connection)
@@ -164,7 +168,12 @@ def db_get_parameter_with_name(con: PooledMySQLConnection, individual_id, name) 
 
 def db_post_parameter(con, individual_id: int, parameter: models.IndividualParameterPost):
     logger.debug(f'Post parameter with name "{parameter.name}" to individual with id = {individual_id}')
-    ptype = models.ParameterType.get_parameter_type(parameter.value).value
+
+    # Set parameter type
+    if parameter.type is None:
+        ptype = models.ParameterType.get_parameter_type(parameter.value).value
+    else:
+        ptype = parameter.type
 
     # Assert that the individual exists
     individual_exists = db_assert_individual_exists(con, individual_id)
@@ -205,3 +214,30 @@ def db_delete_parameter(con, individual_id: int, parameter_id: int):
         raise ex.ParameterNotFoundException
 
     return True
+
+
+def db_get_archetype_individuals(con: PooledMySQLConnection, archetype_id: int) -> List[models.Individual]:
+
+    # Assert that the archetype exists
+    db_get_individual(con, archetype_id, archetype=True)
+
+    select_stmnt = MySQLStatementBuilder(con)
+    rs = select_stmnt\
+        .select(INDIVIDUALS_ARCHETYPES_MAP_TABLE, ["individual_id"])\
+        .where("individual_archetype_id = %s", [archetype_id])\
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    individuals = []
+    for res in rs:
+        # This implementation is lazy, and suboptimal. Want to fix it? Be my guest.
+        # If there are many individuals, this is going to eat a lot of resources.
+        # A better solution would be to use "WHERE individual_id IN (id1, id2, id3, ...)"
+        # OR we could return a simplified individual without all parameters. An "IndividualListObject". That'd be easy.
+        # ..but ain't nobody got time for that
+        try:
+            individual = db_get_individual(con, individual_id=res['individual_id'], archetype=False)
+            individuals.append(individual)
+        except ex.IndividualNotFoundException:
+            continue
+
+    return individuals
