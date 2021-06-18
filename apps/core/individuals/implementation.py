@@ -74,3 +74,14 @@ def impl_delete_parameter(individual_id: int, parameter_id: int):
             detail=f'Could not delete parameter "{parameter_id}". '
                    f'No such parameter in individual with id = {individual_id}'
         )
+
+
+def impl_get_archetype_individuals(archetype_id: int):
+    try:
+        with get_connection() as con:
+            return storage.db_get_archetype_individuals(con, archetype_id)
+    except ex.IndividualNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"No archetype individual with ID = {archetype_id}"
+        )
