@@ -119,6 +119,23 @@ def db_post_individual(connection, individual: Union[models.IndividualArchetypeP
     return db_get_individual(connection, individual_id, archetype=is_archetype)
 
 
+def db_put_individual_name(con, individual_id, individual_name, archetype=False) \
+        -> Union[models.Individual, models.IndividualArchetype]:
+
+    # Assert that individual exists
+    individual = db_get_individual(con, individual_id, archetype=archetype)
+
+    update_stmnt = MySQLStatementBuilder(con)
+    res, rows = update_stmnt\
+        .update(INDIVIDUALS_TABLE, "name = %s", [individual_name])\
+        .where("id = %s", [individual_id])\
+        .execute(return_affected_rows=True)
+
+    if rows == 0:
+        return individual
+
+    return db_get_individual(con, individual_id, archetype=archetype)
+
 def db_get_archetype_id_of_individual(con, individual_id):
     select_stmnt = MySQLStatementBuilder(con)
     res = select_stmnt\

@@ -22,6 +22,12 @@ async def post_individual_archetype(individual_archetype: models.IndividualArche
     return impl.impl_post_individual_archetype(individual_archetype)
 
 
+@router.put("/{individual_id}/name",
+            summary="Set individual name")
+async def put_individual_name(individual_id, individual_name):
+    return impl.impl_put_individual_name(individual_id, individual_name, archetype=False)
+
+
 @router.get("/{individual_id}",
             summary="Get individual")
 async def get_individual(individual_id) -> models.Individual:
@@ -32,6 +38,12 @@ async def get_individual(individual_id) -> models.Individual:
             summary="Get individual")
 async def get_individual_archetype(individual_archetype_id) -> Optional[models.IndividualArchetype]:
     return impl.impl_get_individual_archetype(individual_archetype_id)
+
+
+@router.put("/archetypes/{individual_archetype_id}/name",
+            summary="Set archetype name")
+async def put_individual_archetype_name(individual_archetype_id, individual_name):
+    return impl.impl_put_individual_name(individual_archetype_id, individual_name, archetype=True)
 
 
 @router.get("/archetypes/{individual_archetype_id}/individuals/")

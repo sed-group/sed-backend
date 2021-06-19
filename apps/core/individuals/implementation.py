@@ -44,6 +44,19 @@ def impl_post_individual_archetype(individual_archetype: models.IndividualArchet
         return res
 
 
+def impl_put_individual_name(individual_id: int, individual_name: str, archetype: bool = False):
+    try:
+        with get_connection() as con:
+            res = storage.db_put_individual_name(con, individual_id, individual_name, archetype=archetype)
+            con.commit()
+            return res
+    except ex.IndividualNotFoundException:
+        HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"No individual with id = {individual_id}"
+        )
+
+
 def impl_post_parameter(individual_id: int, parameter: models.IndividualParameterPost):
     try:
         with get_connection() as con:
