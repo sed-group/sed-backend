@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import Enum
 
 from pydantic import BaseModel, HttpUrl
 from typing import List, Optional, ForwardRef
@@ -34,11 +35,17 @@ class Tree(TreeNew):
         orm_mode = True
 
 ## INTERACTS WITH
+class iwType(str, Enum):
+    SP = 'spatial'
+    EN = 'energy'
+    MA = 'material flow'
+    IN = 'information'
+
 class IWnew(BaseModel):
-    treeID: int
+    treeID: Optional[int]
     fromDsID: int
     toDsID: int
-    iwType: str
+    iwType: iwType
 
 class InteractsWith(IWnew):
     id: int
@@ -53,6 +60,12 @@ class ConceptEdit(BaseModel):
     '''
     name: str
     treeID: Optional[int]
+
+class ConceptNew(ConceptEdit):
+    ''' 
+    used in create all instances to create new concept (with new DNA)
+    '''
+    dna: str
 
 class Concept(ConceptEdit):
     """
@@ -83,8 +96,8 @@ class DSnew(BaseModel):
     '''
     name: str
     description: Optional[str] = None
-    treeID: int
     isbID: Optional[int] = None
+    treeID: Optional[int] = None
     is_top_level_DS: Optional[bool] = False
 
 class DesignSolution(DSnew):
@@ -133,9 +146,8 @@ class FRNew(BaseModel):
     '''
     name: str
     description: Optional[str] = None
-    treeID: int
-    rfID: Optional[int]
-    # one might want to discuss why we have _both_ rfID (parentDS) _AND_ treeID, where the parentDS already contains the treeID (and we check for that match, don't worry!). the answer is that in the future we might want to be able to create FR (or even DS) without a parent, "floating" so to speak.
+    treeID: Optional[int] = None
+    rfID: int
 
 class FunctionalRequirement(FRNew):
     """

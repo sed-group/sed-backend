@@ -89,7 +89,7 @@ def get_EFMobject(db: Session, objType: efmObj, objID: int):
 def get_EFMobjectAll(db: Session, objType: efmObj, treeID:int=0, limit: int = 100, offset:int = 0, ):
     '''
         fetches a list of EF-M objects of one type
-        from offset to limit
+        from offset to limit; if limit=0 returns all
         if treeID is given, limited to objects related to that one tree
         returns List[schemas.object] or raises exception
     '''
@@ -98,10 +98,14 @@ def get_EFMobjectAll(db: Session, objType: efmObj, treeID:int=0, limit: int = 10
 
     try:
         if treeID:
-            theObjOrmList = db.query(objData['model']).filter(objData['model'].treeID == treeID).offset(offset).limit(limit).all()
+            theObjOrmList = db.query(objData['model']).filter(objData['model'].treeID == treeID).all()
         else:
-            theObjOrmList = db.query(objData['model']).offset(offset).limit(limit).all()
+            theObjOrmList = db.query(objData['model']).all()
+
+        if limit:
+            theObjOrmList.offset(offset).limit(limit)
         
+        # rewrite to schema:
         theObjPydanticList = []
 
         for o in theObjOrmList:

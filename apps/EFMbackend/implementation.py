@@ -1,13 +1,15 @@
-from sqlalchemy.orm import Session, lazyload, eagerload
+from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from typing import List
-
+import json
 
 import apps.EFMbackend.models as models
 import apps.EFMbackend.schemas as schemas
 import apps.EFMbackend.storage as storage
+import apps.EFMbackend.algorithms as algorithms
+
 from apps.EFMbackend.exceptions import *
-from apps.EFMbackend.database import get_connection
+# from apps.EFMbackend.database import get_connection
 
 from apps.EFMbackend.utils import not_yet_implemented
 
@@ -15,27 +17,6 @@ from apps.EFMbackend.utils import not_yet_implemented
 from apps.EFMbackend.parameters.schemas import DesignParameter
 from apps.EFMbackend.parameters.storage import get_DP_all
 
-import json
-
-# from apps.core.db import get_connection
-# from apps.EFMbackend.models import *
-# from apps.EFMbackend.exceptions import *
-# import apps.EFMbackend.storage as storage
-
-def prune_child_ds(ds: models.DesignSolution, dna: List[int]):
-    '''
-        takes a DS and removes all child DS _not_ in dna (dna to be a list of int)
-    '''
-    for fr in ds.requires_functions:
-        for childDS in fr.is_solved_by:
-            # remove the DS not in DNA:
-            if not childDS.id in dna:
-                fr.is_solved_by.remove(childDS)
-            else:
-                # else prune the children, too
-                childDS = prune_child_ds(ds, dna)
-
-    return ds
 
 #### TREES
 def get_tree_list(db: Session, limit:int = 100, offset:int = 0):
@@ -74,26 +55,24 @@ def get_tree_details(db: Session, treeID: int):
         returns a schemas.Tree
     '''
     theTree = storage.get_EFMobject(db, 'tree', treeID)
-    #theTree = db.query(models.Tree).filter(models.Tree.id == treeID).first()
-    if theTree:
-        return theTree
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Tree with ID {} does not exist.".format(treeID)
-        )
+
 
 def delete_tree(db: Session, treeID: int):
     '''
         deletes tree based on id 
     '''
-    with db as con:
-        storage.delete_EFMobject(con, 'tree', treeID)
+    storage.delete_EFMobject(db, 'tree', treeID)
 
-def get_tree_data(db: Session, treeID: int, depth:int=100):
+def get_tree_data(db: Session, treeID: int, depth:int=0):
+    '''
+    returns a list of all obejcts related to a specific tree
+    depth = 0 makes it return _all_ objects - can be quite big then!
+    however, there is no sorting applied to the returned objects, so it is difficult to know which elements you get back...
+    '''
 
-    theTree = get_tree_details(db, treeID)
-    treeData = schemas.TreeData.from_orm(theTree)
+    theTree = storage.get_EFMobject(db, 'tree', treeID)
+
+    treeData = schemas.TreeData(**theTree.dict())
 
     # fetch DS
     allDS = storage.get_EFMobjectAll(db, 'DS', treeID, depth)
@@ -123,77 +102,31 @@ def get_tree_data(db: Session, treeID: int, depth:int=100):
     return treeData
 
 ### CONCEPTS
-async def run_instantiation(db: Session, treeID: int):
-    
-    # fetch the old concepts, if available:
-    allOldConcepts = get_all_concepts(db, treeID) # will get deleted later
-    allNewConcepts = []                           # will get added later
-
-    theTree = get_tree_details(db, treeID)
-
-    allDna = theTree.topLvlDS.alternativeConfigurations()
-
-    conceptCounter = len(allOldConcepts)
-
-    for dna in allDna:
-        
-        dnaString = str(dna) #json.dumps(dna)
-
-        # check if already exists:
-        for oldC in allOldConcepts:
-            if oldC.dna == dna:
-                # remove from list so it won't get deleted:
-                allOldConcepts.remove(oldC)
-                # and we don't need to create a new object for it, so we jump
-                next()
-
-        newConcept = models.Concept()
-        newConcept.name = f"Concept {conceptCounter}"
-        newConcept.dna = dnaString
-        newConcept.treeID = treeID
-
-        allNewConcepts.append(newConcept)
-        conceptCounter = conceptCounter + 1
-
-    # add new concepts:
-    for nC in allNewConcepts:
-        db.add(nC)
-    
-    # delete old concepts:
-    for oC in allOldConcepts:
-        storage.delete_EFMobject(db, 'concept', oC.id)
-        
-    db.commit()
-
 def get_all_concepts(db: Session, treeID: int, limit:int=100, offset: int = 0):
     '''
     returns a list of all concepts of the tree identified via treeID
     '''
-    with get_connection() as con:
-        return storage.get_EFMobjectAll(db, 'concept', treeID, limit, offset)
+    return storage.get_EFMobjectAll(db, 'concept', treeID, limit, offset)
 
 def get_concept(db: Session, cID: int):
-    with get_connection() as con:
-        return storage.get_EFMobject(con, 'concept', cID)
+    return storage.get_EFMobject(db, 'concept', cID)
 
 def edit_concept(db: Session, cID: int, cData: schemas.ConceptEdit):
-    return not_yet_implemented()
+    return storage.edit_EFMobject(db, 'concept', cID, cData)
 
 def get_concept_tree(db: Session, cID: int):
     '''
     takes the tree of which the concept has been instantiated
     and prunes all DS not in the dna
-    requires prune_child_ds() (cause recursive)
+    requires algorithms.prune_child_ds() (cause recursive)
     '''
-    theConcept = get_concept(db, cID)
-    theTree = get_tree_details(db = db, treeID= theConcept.treeID)
-
-    pydanticConcept = schemas.Concept.from_orm(theConcept)
+    theConcept = storage.get_EFMobject(db, 'concept', cID)
+    theTree = storage.get_EFMobject(db, 'tree', theConcept.treeID)
 
     # pruning:
-    prunedDS = prune_child_ds(theTree.topLvlDS, pydanticConcept.dnaList())
+    prunedDS = algorithms.prune_child_ds(theTree.topLvlDS, theConcept.dnaList())
 
-    conceptWithTree = schemas.ConceptTree(**pydanticConcept.dict())
+    conceptWithTree = schemas.ConceptTree(**theConcept.dict())
 
     conceptWithTree.topLvlDS = prunedDS
 
@@ -205,208 +138,84 @@ def get_FR_tree(db:Session, FRid: int):
         returns a FR object with all details
         and the subsequent tree elements
     '''
-    with get_connection() as con:
-        return storage.get_EFMobject(con, 'FR', FRid)
+    return storage.get_EFMobject(db, 'FR', FRid)
 
 def get_FR_info(db:Session, FRid: int):
     ''' 
         returns a FR object with all details
         but instead of relationships only ids
     ''' 
-    try:
-        theFRtree = db.query(models.FunctionalRequirement).options(lazyload('is_solved_by')).filter(models.FunctionalRequirement.id == FRid).first()
-        if theFRtree:
-            pydanticFRtree = schemas.DesignSolution.from_orm(theFRtree)
-            theFRinfo = schemas.DSinfo(**pydanticFRtree.dict())
-            theFRinfo.update(pydanticFRtree)
-            return theFRinfo
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="FR with ID {} does not exist.".format(FRid)
-            )
-    except EfmElementNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="FR with ID {} does not exist.".format(FRid)
-        )
-    except TypeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="FRid needs to be an integer"
-        )
+    theTreeFR = storage.get_EFMobject(db, 'FR', FRid)
+    theInfoFR = schemas.FRinfo(**theTreeFR.dict())
+    theInfoFR.update(theTreeFR)
 
-def create_FR(db: Session, parentID: int, newFR: schemas.DSnew):
+    return theInfoFR
+
+
+def create_FR(db: Session, newFR: schemas.FRNew):
     '''
         creates new FR based on schemas.FRnew (name, description) 
         associates it to DS with parentID via FR.rfID ("requires function")
     '''
-    newFR.rfID = parentID
+    # first we need to set the treeID, fetched from the parent DS
+    parentDS = storage.get_EFMobject(db, 'DS', newFR.rfID)
+    newFR.treeID = parentDS.treeID
 
-    # check for same tree 
-    try:
-        theParent = db.query(models.DesignSolution).filter(models.DesignSolution.id == parentID).first()
-    except EfmElementNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot create new FR; parent DS with ID {} cannot be found.".format(parentID)
-        )
-    
-    if theParent.treeID != newFR.treeID:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot create new FR; parent DS is in another tree! parentTreeID: {}, FRtreeID: {}".format(theParent.treeID, newFR.treeID)
-        )
-
-    obj = models.FunctionalRequirement(**newFR.dict())
-    db.add(obj)
-    db.commit()
-    return obj
+    return storage.new_EFMobject(db, 'FR', newFR)
     
 def delete_FR(db: Session, FRid: int):
     '''
         deletes FR based on id 
     '''
-    try:
-        db.query(models.FunctionalRequirement).filter(models.FunctionalRequirement.id == FRid).delete()
-        db.commit()
-        return True
-    except EfmElementNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="FR with ID {} does not exist.".format(FRid)
-        )
-    except TypeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="FRid needs to be an integer"
-        )
+    storage.delete_EFMobject(db, 'FR', FRid)
 
 def edit_FR(db: Session, FRid: int, FRdata: schemas.FRNew):
     '''
         overwrites the data in the FR identified with FRid with the data from FRdata
         can change parent (i.e. isb), name and description
-        checks whether the new parent FR is in the same tree
-        cannot change tree! (treeID)
+        treeID is set through parent; therefore, change of tree is theoretically possible
     '''
-    theFR = db.query(models.FunctionalRequirement).filter(models.FunctionalRequirement.id == FRid).first()
-    theFR.name = FRdata.name
-    theFR.description = FRdata.description
+    # first we need to set the treeID, fetched from the parent DS
+    parentDS = storage.get_EFMobject(db, 'DS', FRdata.rfID)
+    FRdata.treeID = parentDS.treeID
 
-    # check if we need to change parent, too:
-    if FRdata.rfID != theFR.rfID:
-        theNewParent = db.query(models.DesignSolution).filter(models.DesignSolution.id == FRdata.rfID).first()
-
-        # check if we are in the same tree
-        if theNewParent.tree == theFR.tree:
-            theFR.rfID = theNewParent.id
-        else:
-            raise EfmElementNotInTreeException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot edit FR; new parent DS is in another tree"
-            )
-    db.commit()
-    return theFR
+    return storage.edit_EFMobject(db, 'FR', FRid, FRdata)
     
 ### DS
 def get_DS_with_tree(db:Session, DSid: int):
     ''' 
         returns a DS object with all details
     '''
-    try:
-        theDS = db.query(models.DesignSolution).options(eagerload('requires_functions')).filter(models.DesignSolution.id == DSid).first()
-        if theDS:
-            return theDS
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="DS with ID {} does not exist.".format(DSid)
-            )
-    except EfmElementNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="DS with ID {} does not exist.".format(DSid)
-        )
-    except TypeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="DSid needs to be an integer"
-        )
+    return storage.get_EFMobject(db, 'DS', DSid)
 
 def get_DS_info(db:Session, DSid: int):
     ''' 
         returns a DS object with all details
         but instead of relationships only ids
     '''
-    # try:
-    theDStree = db.query(models.DesignSolution).options(lazyload('requires_functions')).filter(models.DesignSolution.id == DSid).first()
-    if theDStree:
-        pydanticDStree = schemas.DesignSolution.from_orm(theDStree)
-        theDSinfo = schemas.DSinfo(**pydanticDStree.dict())
-        theDSinfo.update(pydanticDStree)
-        return theDSinfo
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="DS with ID {} does not exist.".format(DSid)
-        )
-    # except EfmElementNotFoundException:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_404_NOT_FOUND,
-    #         detail="DS with ID {} does not exist.".format(DSid)
-    #     )
-    # except TypeError:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_400_BAD_REQUEST,
-    #         detail="DSid needs to be an integer"
-    #     )
+    theDStree = storage.get_EFMobject(db, 'DS', DSid)
 
-def create_DS(db: Session, parentID: int, newDS: schemas.DSnew):
+    theInfoDS = schemas.DSinfo(**theDStree.dict())
+    theInfoDS.update(theDStree)
+
+    return theInfoDS
+
+def create_DS(db: Session, newDS: schemas.DSnew):
     '''
         creates new DS based on schemas.DSnew (name, description) 
         associates it to 
     '''
-    newDS.isbID = parentID
+    # first we need to set the treeID, fetched from the parent FR
+    parentFR = storage.get_EFMobject(db, 'FR', newDS.isbID)
+    newDS.treeID = parentFR.treeID
 
-    # check if parent exists
-    try:
-        theParent = db.query(models.FunctionalRequirement).filter(models.FunctionalRequirement.id == parentID).first()
-    except EfmElementNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot create new DS; parent FR with ID {} cannot be found.".format(parentID)
-        )
-
-    # check for tree similarity
-    if theParent.treeID != newDS.treeID:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot create new DS; parent FR is in another tree! (DS parent ID: {}, FR parent ID: {}".format(newDS.treeID, theParent.treeID)
-        )
-        
-    obj = models.DesignSolution(**newDS.dict())
-    db.add(obj)
-    db.commit()
-    return obj
+    return storage.new_EFMobject(db, 'DS', newDS)
     
 def delete_DS(db: Session, DSid: int):
     '''
         deletes DS based on id 
     '''
-    try:
-        db.query(models.DesignSolution).filter(models.DesignSolution.id == DSid).delete()
-        db.commit()
-        return True 
-    except EfmElementNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="DS with ID {} does not exist.".format(DSid)
-        )
-    except TypeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="DSid needs to be an integer"
-        )
+    return storage.delete_EFMobject(db, 'DS', DSid)
 
 def edit_DS(db: Session, DSid: int, DSdata: schemas.DSnew):
     '''
@@ -415,43 +224,55 @@ def edit_DS(db: Session, DSid: int, DSdata: schemas.DSnew):
         checks whether the new parent FR is in the same tree
         cannot change tree! (treeID)
     '''
-    theDS = db.query(models.DesignSolution).filter(models.DesignSolution.id == DSid).first()
-    theDS.name = DSdata.name
-    theDS.description = DSdata.description
+    # first we need to set the treeID, fetched from the parent FR
+    parentFR = storage.get_EFMobject(db, 'FR', DSdata.isbID)
+    DSdata.treeID = parentFR.treeID
 
-    # check if we need to change parent, too:
-    if DSdata.isbID != theDS.isbID:
-        try:
-            theNewParent = db.query(models.FunctionalRequirement).filter(models.FunctionalRequirement.id == DSdata.isbID).first()
-        except EfmElementNotFoundException:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot create new DS; parent FR cannot be found."
-            )
+    return storage.edit_EFMobject(db, 'DS', DSid, DSdata)
 
-        # check if we are in the same tree
-        if theNewParent.tree == theDS.tree:
-            theDS.isbID = theNewParent.id
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot edit DS; new parent FR is in another tree"
-            )
-    db.commit()
-    return theDS
- 
 ### iw todo!! 
 def get_IW(db:Session, IWid: int):
-    return not_yet_implemented()
+    return storage.get_EFMobject(db, 'iw', IWid)
 
 def create_IW(db: Session,  newIW: schemas.IWnew):
-    return not_yet_implemented()
+    '''
+        first verifies whether the two DS are in the same tree, 
+        then commits to DB
+    '''
+    toDS = storage.get_EFMobject(db, 'DS', newIW.toDsID)
+    fromDS = storage.get_EFMobject(db, 'DS', newIW.fromDsID)
+
+    if not toDS.treeID == fromDS.treeID:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Both DS for an iw need to be in the same tree"
+        )
+
+    newIW.treeID = toDS.treeID
+
+    return storage.new_EFMobject(db, 'iw', newIW)
 
 def delete_IW(db:Session, IWid: int):
-    return not_yet_implemented()
+    return storage.delete_EFMobject(db, 'iw', IWid)
 
 def edit_IW(db: Session, IWid: int, IWdata: schemas.IWnew):
-    return not_yet_implemented()
+    '''
+        first verifies whether the two DS are in the same tree, 
+        then commits to DB
+    '''
+    toDS = storage.get_EFMobject(db, 'DS', IWdata.toDsID)
+    fromDS = storage.get_EFMobject(db, 'DS', IWdata.fromDsID)
+
+    if not toDS.treeID == fromDS.treeID:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Both DS for an iw need to be in the same tree"
+        )
+
+    IWdata.treeID = toDS.treeID
+
+    return storage.edit_EFMobject(db, 'iw', IWid, IWdata)
+
 
 #  {
 #     "name":"TestFR",
