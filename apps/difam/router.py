@@ -48,7 +48,8 @@ async def put_difam_archetype(native_project_id: int, individual_archetype_id: i
 
 
 @router.delete("/projects/{native_project_id}",
-               summary="Delete DIFAM project")
+               summary="Delete DIFAM project",
+               response_model=bool)
 async def delete_difam_project(native_project_id: int,
                                current_user: User = Depends(get_current_active_user)):
     current_user_id = current_user.id

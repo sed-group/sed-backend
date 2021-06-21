@@ -75,7 +75,7 @@ def db_post_individual_archetype(con: PooledMySQLConnection, individual_archetyp
 
 
 def db_post_individual(connection, individual: Union[models.IndividualArchetypePost, models.IndividualPost],
-                       is_archetype: bool = False):
+                       is_archetype: bool = False) -> Union[models.IndividualArchetype, models.Individual]:
     insert_stmnt = MySQLStatementBuilder(connection)
 
     if is_archetype is False:
@@ -183,7 +183,7 @@ def db_get_parameter_with_name(con: PooledMySQLConnection, individual_id, name) 
     return parameter
 
 
-def db_post_parameter(con, individual_id: int, parameter: models.IndividualParameterPost):
+def db_post_parameter(con, individual_id: int, parameter: models.IndividualParameterPost) -> models.IndividualParameter:
     logger.debug(f'Post parameter with name "{parameter.name}" to individual with id = {individual_id}')
 
     # Set parameter type
@@ -220,7 +220,7 @@ def db_post_parameter(con, individual_id: int, parameter: models.IndividualParam
     return db_get_parameter(con, parameter_id, individual_id)
 
 
-def db_delete_parameter(con, individual_id: int, parameter_id: int):
+def db_delete_parameter(con, individual_id: int, parameter_id: int) -> bool:
     delete_stmnt = MySQLStatementBuilder(con)
     res, rows = delete_stmnt\
         .delete(INDIVIDUALS_PARAMETERS_TABLE)\

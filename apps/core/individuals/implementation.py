@@ -1,4 +1,4 @@
-from typing import Optional, Any
+from typing import Optional, Union, List
 
 from fastapi import HTTPException, status
 
@@ -30,14 +30,14 @@ def impl_get_individual_archetype(individual_archetype_id) -> Optional[models.In
         )
 
 
-def impl_post_individual(individual: models.IndividualPost):
+def impl_post_individual(individual: models.IndividualPost) -> models.Individual:
     with get_connection() as con:
         res = storage.db_post_individual(con, individual)
         con.commit()
         return res
 
 
-def impl_post_individual_archetype(individual_archetype: models.IndividualArchetypePost):
+def impl_post_individual_archetype(individual_archetype: models.IndividualArchetypePost) -> models.IndividualArchetype:
     with get_connection() as con:
         res = storage.db_post_individual_archetype(con, individual_archetype)
         con.commit()
@@ -57,7 +57,7 @@ def impl_put_individual_name(individual_id: int, individual_name: str, archetype
         )
 
 
-def impl_post_parameter(individual_id: int, parameter: models.IndividualParameterPost):
+def impl_post_parameter(individual_id: int, parameter: models.IndividualParameterPost) -> models.IndividualParameter:
     try:
         with get_connection() as con:
             res = storage.db_post_parameter(con, individual_id, parameter)
@@ -75,7 +75,7 @@ def impl_post_parameter(individual_id: int, parameter: models.IndividualParamete
         )
 
 
-def impl_delete_parameter(individual_id: int, parameter_id: int):
+def impl_delete_parameter(individual_id: int, parameter_id: int) -> bool:
     try:
         with get_connection() as con:
             res = storage.db_delete_parameter(con, individual_id, parameter_id)
@@ -89,7 +89,7 @@ def impl_delete_parameter(individual_id: int, parameter_id: int):
         )
 
 
-def impl_get_archetype_individuals(archetype_id: int):
+def impl_get_archetype_individuals(archetype_id: int) -> List[models.Individual]:
     try:
         with get_connection() as con:
             return storage.db_get_archetype_individuals(con, archetype_id)
