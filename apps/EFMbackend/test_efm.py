@@ -35,6 +35,8 @@ urlPrefix = "/api/efm"
 
 ## GLOBAL TESTING VARIABLES
 testTreeID = 0
+allFRID = []
+allDSID = []
 
 ### BASIC TESTS ##################################################
 # create tree
@@ -60,22 +62,24 @@ def test_create_tree():
         "concepts": [],
         # "fr": [],
         # "ds": [],
-        "topLvlDSid": testTopLevelDSid
+        "topLvlDSid": testTopLevelDSid,
+        "topLvlDS":  {
+            'id': testTopLevelDSid,
+            'name': 'foobar',
+            'description': 'Top-level DS',
+            'is_top_level_DS': True,
+            'treeID': testTreeID,
+            'isbID': None,
+            'requires_functions': [],
+            "interacts_with": [],
+            "design_parameters": []
+        }
     }
 
     # test Top level DS:
     topLvlDS = client.get(urlPrefix + '/ds/' + str(testTopLevelDSid))
 
     assert topLvlDS.status_code == 200
-    assert topLvlDS.json() == {
-        'id': testTopLevelDSid,
-        'name': 'foobar',
-        'description': 'Top-level DS',
-        'is_top_level_DS': True,
-        'treeID': testTreeID,
-        'isbID': None,
-        'requires_functions': []
-    }
 
 # access non-existent tree
 def test_acces_nonexistent_objects():
@@ -114,79 +118,92 @@ def test_acces_nonexistent_objects():
 # create FR, DS
 def test_create_basic_objects():
     global testTreeID
+    global allFRID
     
     # create FR in testTree, as child of topLvlDS
     # first we need to get the topLvlDS ID:
-    print("testTreeID:" + str(testTreeID)) 
-    testTree =  client.get(urlPrefix + '/trees/' + str(testTreeID))
+    print("test_create_basic_objects testTreeID:" + str(testTreeID)) 
+    testTreeUrl = urlPrefix + '/trees/' +str(testTreeID)
+    testTree =  client.get(testTreeUrl)
+
     assert testTree.status_code == 200
     testTreeData = testTree.json()
+
+    print("testing TREE: url {}, RESPONSE: status: {}, json: {}".format(testTreeUrl, testTree.status_code, testTreeData))
+
     testTopLevelDSid = testTreeData['topLvlDSid']
 
-    # creating new FR:
-    newFRdata = {
-        "name": "testFunction",
-        "description": "to test the FR creation",
-        "treeID": testTreeID,
-        "rfID": testTopLevelDSid
+
+    # creating three top lvl FR:
+    for i in range(1,4):
+        newFRdata = {
+            "name": f"Test function {i}",
+            "description": f"Top level function number {i}",
+            "treeID": testTreeID,
+            "rfID": testTopLevelDSid
+            }
+        newFRurl = urlPrefix + "/fr/new"
+        responseFR = client.post(
+            newFRurl,
+            json = newFRdata,
+            )
+
+        print("testing FR: url {}, json: {}".format(newFRurl, newFRdata))
+        print(responseFR.json() )
+
+        assert responseFR.status_code == 200
+        theFRdata = responseFR.json()
+        theFRid = theFRdata['id']
+        assert theFRdata == {
+            "name": f"Test function {i}",
+            "id": theFRid,
+            "description": f"Top level function number {i}",
+            "treeID": testTreeID,
+            "rfID": testTopLevelDSid,
+            "is_solved_by": []
         }
-    newFRurl = urlPrefix + "/ds/" + str(testTopLevelDSid) + "/newFR"
-    responseFR = client.post(
-        newFRurl,
-        json = newFRdata,
-        )
 
-    print("testing: url {}, json: {}".format(newFRurl, newFRdata))
-    print(responseFR.json() )
+        allFRID.append(theFRid)
 
-    assert responseFR.status_code == 200
-    theFRdata = responseFR.json()
-    theFRid = theFRdata['id']
-    assert theFRdata == {
-        "name": "testFunction",
-        "id": theFRid,
-        "description": "to test the FR creation",
-        "treeID": testTreeID,
-        "rfID": testTopLevelDSid,
-        "is_solved_by": []
-    }
+        # check whether topLvlDS now has theFR as a "requires_function"
+        requestTopLvlDS = client.get(urlPrefix + '/ds/' + str(testTopLevelDSid))
+        topLvlDSdata = requestTopLvlDS.json()
+        assert theFRid in topLvlDSdata['requires_functions_id']
 
-    # check whether topLvlDS now has theFR as a "requires_function"
-    requestTopLvlDS = client.get(urlPrefix + '/ds/' + str(testTopLevelDSid))
-    topLvlDSdata = requestTopLvlDS.json()
-    assert theFRdata in topLvlDSdata['requires_functions']
+        # create DS as child of FR above
+        for ii in range(1,i+1):
+            theDSdata = {
+                "name": f"DS {ii} for FR {i}",
+                "description": f"One of {i} alternatives solutions",
+                "treeID": testTreeID,
+                "isbID": theFRid
+            }
+            responseDS = client.post(
+                urlPrefix + '/ds/new',
+                json = theDSdata,
+            )
 
 
-    # create DS as child of FR above
-    theDSdata = {
-        "name": "testDS",
-        "description": "to test the DS creation",
-        "treeID": testTreeID,
-        "isbID": theFRid
-    }
-    responseDS = client.post(
-        urlPrefix + '/fr/' + str(theFRid) + "/newDS",
-        json = theDSdata,
-    )
+            assert responseDS.status_code == 200
+            theDSdata = responseDS.json()
+            theDSid = theDSdata['id']
+            assert theDSdata == {
+                "id": theDSid,
+                "name": f"DS {ii} for FR {i}",
+                "description": f"One of {i} alternatives solutions",
+                "treeID": testTreeID,
+                "isbID": theFRid,
+                "is_top_level_DS": False,
+                "requires_functions": [],
+                'interacts_with': [],
+                'design_parameters': []
+            }
 
+            # check whether theFR now has theDS as a "is_solved_by"
+            requestFR2 = client.get(urlPrefix + '/fr/' + str(theFRid))
+            FR2data = requestFR2.json()
+            assert theDSid in FR2data['is_solved_by_id']
 
-    assert responseDS.status_code == 200
-    theDSdata = responseDS.json()
-    theDSid = theDSdata['id']
-    assert theDSdata == {
-        "id": theDSid,
-        "name": "testDS",
-        "description": "to test the DS creation",
-        "treeID": testTreeID,
-        "isbID": theFRid,
-        "is_top_level_DS": False,
-        "requires_functions": []
-    }
-
-    # check whether theFR now has theDS as a "is_solved_by"
-    requestFR2 = client.get(urlPrefix + '/fr/' + str(theFRid))
-    FR2data = requestFR2.json()
-    assert theDSdata in FR2data['is_solved_by']
 
     
     

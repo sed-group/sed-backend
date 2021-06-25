@@ -55,13 +55,14 @@ def get_tree_details(db: Session, treeID: int):
         returns a schemas.Tree
     '''
     theTree = storage.get_EFMobject(db, 'tree', treeID)
+    return theTree
 
 
 def delete_tree(db: Session, treeID: int):
     '''
         deletes tree based on id 
     '''
-    storage.delete_EFMobject(db, 'tree', treeID)
+    return storage.delete_EFMobject(db, 'tree', treeID)
 
 def get_tree_data(db: Session, treeID: int, depth:int=0):
     '''

@@ -2,7 +2,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, LargeBinary, Boolean
 from sqlalchemy.orm import relationship
 
-import itertools #for permutations in concept DNA
 
 # import EF-M sub models
 # from .parameters.models import DesignParameter

@@ -6,6 +6,7 @@ from typing import List
 from apps.EFMbackend.database import SessionLocal
 import apps.EFMbackend.implementation as implementation
 import apps.EFMbackend.schemas as schemas
+import apps.EFMbackend.algorithms as algorithms
 
 # sub-module-routers
 from apps.EFMbackend.parameters.router import router as param_router
@@ -67,7 +68,7 @@ async def get_tree_data(treeID: int, db: Session = Depends(get_db)):
             description = "Executes the instantiation of all possible concepts of a tree and returns them as a list. Computationally expensive!"
             )
 async def generate_all_concepts(treeID: int, db: Session = Depends(get_db)):
-    await implementation.run_instantiation(treeID = treeID, db = db)
+    await algorithms.run_instantiation(treeID = treeID, db = db)
     return implementation.get_all_concepts(db = db, treeID = treeID)
 
 @router.get("/trees/{treeID}/concepts",
@@ -114,12 +115,12 @@ async def get_designSolutionInfo(DSid: int, db: Session = Depends(get_db)):
     return implementation.get_DS_info(db=db, DSid = DSid)
 
 
-@router.post("/fr/{FRid}/newDS",
+@router.post("/ds/new",
             response_model = schemas.DesignSolution,
             summary="creates a new single DS object as a child of FRid"
             )
-async def create_designSolution( FRid: int, DSdata: schemas.DSnew, db: Session = Depends(get_db)):
-    return implementation.create_DS(db=db, parentID = FRid, newDS= DSdata)
+async def create_designSolution(DSdata: schemas.DSnew, db: Session = Depends(get_db)):
+    return implementation.create_DS(db=db, newDS= DSdata)
 
 @router.delete("/ds/{DSid}",
             summary="delets a new single DS object by id"
@@ -150,13 +151,13 @@ async def get_functionalRequirement(FRid: int, db: Session = Depends(get_db)):
 async def get_functionalRequirementTree(FRid: int, db: Session = Depends(get_db)):
     return implementation.get_FR_tree(db=db, FRid = FRid)
 
-@router.post("/ds/{DSid}/newFR",
+@router.post("/fr/new",
             response_model = schemas.FunctionalRequirement,
             summary="creates a new single FR object as a child of DSis",
             description="the json part of the post also contains the DSid - at some point this redundancy needs to be reduced, but how i do not know yet!"
             )
-async def create_functionalRequirement( DSid: int, FRdata: schemas.FRNew, db: Session = Depends(get_db)):
-    return implementation.create_FR(db=db, parentID = DSid, newFR= FRdata)
+async def create_functionalRequirement(FRdata: schemas.FRNew, db: Session = Depends(get_db)):
+    return implementation.create_FR(db=db, newFR= FRdata)
 
 @router.delete("/fr/{FRid}",
             summary="delets a new single FR object by id"

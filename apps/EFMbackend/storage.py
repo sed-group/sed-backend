@@ -98,12 +98,14 @@ def get_EFMobjectAll(db: Session, objType: efmObj, treeID:int=0, limit: int = 10
 
     try:
         if treeID:
-            theObjOrmList = db.query(objData['model']).filter(objData['model'].treeID == treeID).all()
+            theObjOrmList = db.query(objData['model']).filter(objData['model'].treeID == treeID)
         else:
-            theObjOrmList = db.query(objData['model']).all()
+            theObjOrmList = db.query(objData['model'])
 
         if limit:
-            theObjOrmList.offset(offset).limit(limit)
+            theObjOrmList = theObjOrmList.offset(offset).limit(limit)
+        else:
+            theObjOrmList = theObjOrmList.all()
         
         # rewrite to schema:
         theObjPydanticList = []

@@ -35,6 +35,8 @@ urlPrefix = "/api/efm"
 
 ## GLOBAL TESTING VARIABLES
 testTreeID = 0
+allFRID = []
+allDSID = []
 
 ### BASIC TESTS ##################################################
 # create tree
@@ -127,10 +129,13 @@ def test_acces_nonexistent_objects():
 # create FR, DS
 def test_create_basic_objects():
     global testTreeID
+    global allDSID
+    global allFRID
+
     
     # create FR in testTree, as child of topLvlDS
     # first we need to get the topLvlDS ID:
-    print("testTreeID:" + str(testTreeID)) 
+    print("test_create_basic_objects testTreeID:" + str(testTreeID)) 
     testTree =  client.get(urlPrefix + '/trees/' + str(testTreeID))
     assert testTree.status_code == 200
     testTreeData = testTree.json()
@@ -164,6 +169,8 @@ def test_create_basic_objects():
             "rfID": testTopLevelDSid,
             "is_solved_by": []
         }
+
+        allFRID.append(theFRid)
 
         # check whether topLvlDS now has theFR as a "requires_function"
         requestTopLvlDS = client.get(urlPrefix + '/ds/' + str(testTopLevelDSid))
