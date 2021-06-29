@@ -1,3 +1,5 @@
+from typing import List
+
 from fastapi import HTTPException, status
 
 import apps.core.individuals.exceptions as ind_ex
@@ -72,6 +74,20 @@ def impl_put_project_archetype(difam_project_id: int, individual_archetype_id: i
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No DIFAM project with ID = {difam_project_id} could be found."
         )
+    except ind_ex.IndividualNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"No such archetype with ID = {individual_archetype_id}"
+        )
+
+
+def impl_post_generate_individuals(individual_archetype_id: int, range_parameters: List[models.RangeParameter],
+                                   current_user_id: int):
+    try:
+        with get_connection() as con:
+            res = storage.db_post_generate_individuals(con, individual_archetype_id, range_parameters, current_user_id)
+            con.commit()
+            return res
     except ind_ex.IndividualNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

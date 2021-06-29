@@ -20,4 +20,8 @@ class DifamProject(BaseModel):
     datetime_created: datetime
 
 
-
+class RangeParameter(BaseModel):
+    parameter_id: int
+    lower_value: float
+    upper_value: float
+    fill_type: int

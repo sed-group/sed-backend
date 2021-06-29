@@ -47,6 +47,14 @@ async def put_difam_archetype(native_project_id: int, individual_archetype_id: i
     return impl.impl_put_project_archetype(native_project_id, individual_archetype_id)
 
 
+@router.post("/projects/{native_project_id}/generate/doe")
+async def post_generate_individuals(native_project_id: int, individual_archetype_id: int,
+                               range_parameters: List[models.RangeParameter], doeType: int, doeSamples: int,
+                               current_user: User = Depends(get_current_active_user)):
+    current_user_id = current_user.id
+    return impl.impl_post_generate_individuals(individual_archetype_id, range_parameters, current_user_id)
+
+
 @router.delete("/projects/{native_project_id}",
                summary="Delete DIFAM project",
                response_model=bool)

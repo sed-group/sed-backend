@@ -142,6 +142,12 @@ def db_get_difam_projects(con: PooledMySQLConnection, segment_length: int, index
     return chunk
 
 
+def db_post_generate_individuals (con, individual_archetype_id: int, range_parameters: List[models.RangeParameter],
+                                  current_user_id: int):
+    for range_parameter in range_parameters:
+        print(range_parameter)
+
+
 def populate_difam_project (con, difam_project_database_result):
     res = difam_project_database_result
     try:
