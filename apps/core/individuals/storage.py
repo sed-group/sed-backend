@@ -46,26 +46,7 @@ def db_get_individual(con: PooledMySQLConnection, individual_id: int, archetype:
         raise ex.IndividualNotFoundException(f'No individual or individual archetype found '
                                              f'with id {individual_id} with archetype set to {archetype}')
 
-    if archetype:
-        individual = models.IndividualArchetype(id=res['id'], name=res['name'])
-    else:
-        individual = models.Individual(id=res['id'], name=res['name'])
-
-    # Set parameters
-    select_parameters_stmnt = MySQLStatementBuilder(con)
-    rs = select_parameters_stmnt\
-        .select(INDIVIDUALS_PARAMETERS_TABLE, INDIVIDUALS_PARAMETERS_COLUMNS)\
-        .where("individual_id = %s", [individual_id])\
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-
-    for res in rs:
-        param = models.IndividualParameter(**res)
-        param.value = param.get_parsed_value()  # Value is stored as string in DB. Convert to correct format.
-        individual.parameters.append(param)
-
-    # Set archetype id (if not an archetype itself)
-    if archetype is False:
-        individual.archetype_id = db_get_archetype_id_of_individual(con, individual_id)
+    individual = parse_individual_from_db(con, res, archetype)
 
     return individual
 
@@ -135,6 +116,7 @@ def db_put_individual_name(con, individual_id, individual_name, archetype=False)
         return individual
 
     return db_get_individual(con, individual_id, archetype=archetype)
+
 
 def db_get_archetype_id_of_individual(con, individual_id):
     select_stmnt = MySQLStatementBuilder(con)
@@ -238,23 +220,53 @@ def db_get_archetype_individuals(con: PooledMySQLConnection, archetype_id: int) 
     # Assert that the archetype exists
     db_get_individual(con, archetype_id, archetype=True)
 
+    nested_stmnt = "(SELECT individual_id FROM individuals_archetypes_map WHERE individual_archetype_id = %s)"
     select_stmnt = MySQLStatementBuilder(con)
     rs = select_stmnt\
-        .select(INDIVIDUALS_ARCHETYPES_MAP_TABLE, ["individual_id"])\
-        .where("individual_archetype_id = %s", [archetype_id])\
+        .select(INDIVIDUALS_TABLE, INDIVIDUALS_COLUMNS)\
+        .where(f"id IN ({nested_stmnt})", [archetype_id])\
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
     individuals = []
     for res in rs:
-        # This implementation is lazy, and suboptimal. Want to fix it? Be my guest.
-        # If there are many individuals, this is going to eat a lot of resources.
-        # A better solution would be to use "WHERE individual_id IN (id1, id2, id3, ...)"
-        # OR we could return a simplified individual without all parameters. An "IndividualListObject". That'd be easy.
-        # ..but ain't nobody got time for that
-        try:
-            individual = db_get_individual(con, individual_id=res['individual_id'], archetype=False)
-            individuals.append(individual)
-        except ex.IndividualNotFoundException:
-            continue
+        individuals.append(parse_individual_from_db(con, res, archetype=False, archetype_id=archetype_id))
 
     return individuals
+
+
+def parse_individual_from_db(con: PooledMySQLConnection, db_res,
+                             archetype: Optional[bool] = False,
+                             archetype_id: Optional[int] = None):
+    """
+    Construct individual using database row
+    :param con:
+    :param db_res:
+    :param archetype:
+    :param archetype_id:
+    :return:
+    """
+    if archetype:
+        individual = models.IndividualArchetype(id=db_res['id'], name=db_res['name'])
+    else:
+        individual = models.Individual(id=db_res['id'], name=db_res['name'])
+
+    # Set parameters
+    select_parameters_stmnt = MySQLStatementBuilder(con)
+    rs = select_parameters_stmnt\
+        .select(INDIVIDUALS_PARAMETERS_TABLE, INDIVIDUALS_PARAMETERS_COLUMNS)\
+        .where("individual_id = %s", [individual.id])\
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    for res in rs:
+        param = models.IndividualParameter(**res)
+        param.value = param.get_parsed_value()  # Value is stored as string in DB. Convert to correct format.
+        individual.parameters.append(param)
+
+    # Set archetype id (if not an archetype itself)
+    if archetype is False:
+        if archetype_id is None:
+            individual.archetype_id = db_get_archetype_id_of_individual(con, individual.id)
+        else:
+            individual.archetype_id = archetype_id
+
+    return individual
