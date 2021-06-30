@@ -8,7 +8,8 @@ import apps.core.authentication.exceptions as authorization_exceptions
 from apps.core.exceptions import NoChangeException
 from apps.core.users.storage import db_get_user_safe_with_id
 from apps.core.projects.storage import db_get_user_subprojects_with_application_sid
-from apps.core.individuals.storage import db_get_individual
+import apps.core.individuals.storage as ind_storage
+import apps.core.individuals.models as ind_models
 from apps.core.individuals.exceptions import IndividualNotFoundException
 from libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
 from libs.datastructures.pagination import ListChunk
@@ -49,7 +50,7 @@ def db_put_project_archetype(con, difam_project_id: int, individual_archetype_id
     db_get_difam_project(con, difam_project_id) # Raises if project does not exist
 
     # Assert that the archetype exists
-    db_get_individual(con, individual_archetype_id, archetype=True)
+    ind_storage.db_get_individual(con, individual_archetype_id, archetype=True)
 
     print(f"Set arch = {individual_archetype_id} where id = {difam_project_id}")
     res, rows = update_stmnt\
@@ -142,16 +143,57 @@ def db_get_difam_projects(con: PooledMySQLConnection, segment_length: int, index
     return chunk
 
 
-def db_post_generate_individuals (con, individual_archetype_id: int, range_parameters: List[models.RangeParameter],
+def db_post_generate_individuals(con, individual_archetype_id: int, parameter_id_list: List[int], hypercube: List[List],
                                   current_user_id: int):
-    for range_parameter in range_parameters:
-        print(range_parameter)
+
+    # Fetch archetype reference
+    archetype = ind_storage.db_get_individual(con, individual_archetype_id, archetype=True)
+    archetype_parameters = archetype.parameters
+    archetype_parameters_filtered = []
+
+    # Remove parameters which we will overwrite
+    for parameter in archetype_parameters:
+        if parameter.id not in parameter_id_list:
+            archetype_parameters_filtered.append(parameter)
+
+    # Fetch parameters that we wish to "overwrite" in the new individuals
+    parameters_to_overwrite = []
+    for parameter_id in parameter_id_list:
+        arch_param = ind_storage.db_get_parameter(con, parameter_id, individual_archetype_id)
+        parameters_to_overwrite.append(arch_param)
+
+    # Loop through hypercube and create all necessary individuals
+    for experiment_number, experiment in enumerate(hypercube):
+
+        # Each experiment requires a new individual. Each individual should have the same parameters as the
+        # archetype except for those parameters included in the experiment.
+        ind_name = f'individual_{experiment_number}'
+        individual = ind_models.IndividualPost(
+            name=ind_name,
+            archetype_id=individual_archetype_id,
+            parameters=archetype_parameters_filtered
+        )
+
+        overwritten_parameters = []
+        for index, parameter_value in enumerate(experiment):
+            arch_param = parameters_to_overwrite[index]
+            new_param = ind_models.IndividualParameterPost(
+                name=arch_param.name,
+                type=arch_param.type,
+                value=parameter_value
+            )
+            overwritten_parameters.append(new_param)
+
+        individual.parameters.extend(overwritten_parameters)
+
+        print(individual)
+        ind_storage.db_post_individual(con, individual, is_archetype=False)
 
 
 def populate_difam_project (con, difam_project_database_result):
     res = difam_project_database_result
     try:
-        archetype = db_get_individual(con, res['individual_archetype_id'], archetype=True)
+        archetype = ind_storage.db_get_individual(con, res['individual_archetype_id'], archetype=True)
     except IndividualNotFoundException:
         archetype = None
 

@@ -1,4 +1,5 @@
-from typing import Optional
+from typing import Optional, Union, List
+from enum import IntEnum, unique
 from datetime import datetime
 
 from pydantic import BaseModel
@@ -22,6 +23,17 @@ class DifamProject(BaseModel):
 
 class RangeParameter(BaseModel):
     parameter_id: int
-    lower_value: float
-    upper_value: float
-    fill_type: int
+    lower_value: Union[int, float, bool]
+    upper_value: Union[int, float, bool]
+
+
+@unique
+class DOEType(IntEnum):
+    HYPERCUBE = 0
+    FACTORIAL_2K = 1
+
+
+class DOEGenerationRequest(BaseModel):
+    doe_type: DOEType
+    doe_experiment_count: int
+    range_parameters: List[RangeParameter]
