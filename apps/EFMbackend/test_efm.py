@@ -119,6 +119,7 @@ def test_acces_nonexistent_objects():
 def test_create_basic_objects():
     global testTreeID
     global allFRID
+    global allDSID
     
     # create FR in testTree, as child of topLvlDS
     # first we need to get the topLvlDS ID:
@@ -204,9 +205,73 @@ def test_create_basic_objects():
             FR2data = requestFR2.json()
             assert theDSid in FR2data['is_solved_by_id']
 
+            allDSID.append(theDSid)
 
+# create iw
+def test_create_iw():
+    global testTreeID
+    global allDSID
+
+    # pick the first 2 DS frim allDSID
+    DS1id = allDSID[0]
+    DS2id = allDSID[2]
+
+    theNewIWdata = {
+        'fromDsID': DS1id,
+        'toDsID': DS2id,
+        'iwType': 'spatial'
+    }
+
+    response = client.post(
+                urlPrefix + '/iw/new',
+                json = theNewIWdata,
+                )
     
+    ## assert status
+    assert response.status_code ==200
+    responseData = response.json()
+    theIWid = responseData['id']
     
+    ## assert returndata
+    assert responseData == {
+        'id': theIWid,
+        'treeID': testTreeID,
+        'fromDsID': DS1id,
+        'toDsID': DS2id,
+        'iwType': 'spatial'
+    }
+
+    ## assert that the iw is listed in the DS:
+    theDS1response = client.get(urlPrefix + '/ds/'+ str(DS1id))
+    theDS1 = theDS1response.json()
+    assert theIWid in theDS1['interacts_with_id']
+
+# create iw in alternative instances (--> 400)
+def test_create_bad_iw():
+    global testTreeID
+    global allFRID
+
+    # allFRID[1] should have two alternative DS
+    theFRresponse = client.get(urlPrefix + '/fr/' + str(allFRID[1]))
+    # assert theFRresponse.status_code == 200
+
+    theFR = theFRresponse.json()
+
+    DS1id = theFR['is_solved_by_id'][0]
+    DS2id = theFR['is_solved_by_id'][1]
+    
+    theNewIWdata = {
+        'fromDsID': DS1id,
+        'toDsID': DS2id,
+        'iwType': 'spatial'
+    }
+
+    iwResponse = client.post(
+        urlPrefix + '/iw/new',
+        json = theNewIWdata,
+    )
+
+    assert iwResponse.status_code == 400
 
 # edit tree
 
@@ -215,6 +280,10 @@ def test_create_basic_objects():
 # edit DS
 
 # delete FR
+def test_delete_FR():
+    global testTreeID
+    pass
+
 
 # delete DS
 

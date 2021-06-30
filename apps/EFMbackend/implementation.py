@@ -238,16 +238,30 @@ def get_IW(db:Session, IWid: int):
 def create_IW(db: Session,  newIW: schemas.IWnew):
     '''
         first verifies whether the two DS are in the same tree, 
+        but don't have the same parentFR
+            --> this needs to check whether they are _on no level_ in alternative DS; so i'm afraid we need to iterate all the parent DS and check whether one of them are alternatives to each other?? 
+            --> NOT IMPLEMENTED
         then commits to DB
     '''
+
     toDS = storage.get_EFMobject(db, 'DS', newIW.toDsID)
     fromDS = storage.get_EFMobject(db, 'DS', newIW.fromDsID)
 
+    # checking if we're in the same tree:
     if not toDS.treeID == fromDS.treeID:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Both DS for an iw need to be in the same tree"
         )
+
+    # checking whether we're in the same instance (no share 1st lvl FR parent)
+    # --> needs to be extended for any level FR parent!
+    if toDS.isbID == fromDS.isbID:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='DS for an iw need to be in the same instance; DS {} and {} share a parent FR'.format(toDS.name, fromDS.name)
+        )
+
 
     newIW.treeID = toDS.treeID
 
