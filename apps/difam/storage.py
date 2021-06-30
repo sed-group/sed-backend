@@ -184,9 +184,8 @@ def db_post_generate_individuals(con, individual_archetype_id: int, parameter_id
             )
             overwritten_parameters.append(new_param)
 
+        # Add new individual to storage
         individual.parameters.extend(overwritten_parameters)
-
-        print(individual)
         ind_storage.db_post_individual(con, individual, is_archetype=False)
 
 
