@@ -234,7 +234,7 @@ def db_get_archetype_individuals(con: PooledMySQLConnection, archetype_id: int) 
     return individuals
 
 
-def db_delete_archetype_individuals(con: PooledMySQLConnection, archetype_id: int):
+def db_delete_archetype_individuals(con: PooledMySQLConnection, archetype_id: int) -> int:
     nested_stmnt = "(SELECT individual_id FROM individuals_archetypes_map WHERE individual_archetype_id = %s)"
     delete_stmnt = MySQLStatementBuilder(con)
     res, rows = delete_stmnt\
@@ -243,6 +243,19 @@ def db_delete_archetype_individuals(con: PooledMySQLConnection, archetype_id: in
         .execute(return_affected_rows=True)
 
     return rows
+
+
+def db_delete_individual(con: PooledMySQLConnection, individual_id) -> bool:
+    delete_stmnt = MySQLStatementBuilder(con)
+    res, rows = delete_stmnt\
+        .delete(INDIVIDUALS_TABLE)\
+        .where("id = %s", [individual_id])\
+        .execute(return_affected_rows=True)
+
+    if rows == 0:
+        raise ex.IndividualNotFoundException
+
+    return True
 
 
 def parse_individual_from_db(con: PooledMySQLConnection, db_res,
