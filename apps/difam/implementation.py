@@ -85,7 +85,12 @@ def impl_put_project_archetype(difam_project_id: int, individual_archetype_id: i
 def impl_post_generate_individuals(individual_archetype_id: int, doe_generation_request: models.DOEGenerationRequest,
                                    current_user_id: int):
     try:
-        parameter_id_list, hypercube = algs.create_hypercube_doe(doe_generation_request)
+        if doe_generation_request.doe_type == 0:
+            parameter_id_list, hypercube = algs.create_hypercube_doe(doe_generation_request)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED
+            )
 
         with get_connection() as con:
             res = storage.db_post_generate_individuals(con, individual_archetype_id, parameter_id_list, hypercube, current_user_id)
