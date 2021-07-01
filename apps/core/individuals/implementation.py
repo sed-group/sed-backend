@@ -98,3 +98,16 @@ def impl_get_archetype_individuals(archetype_id: int) -> List[models.Individual]
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"No archetype individual with ID = {archetype_id}"
         )
+
+
+def impl_delete_archetype_individuals(archetype_id) -> int:
+    try:
+        with get_connection() as con:
+            res = storage.db_delete_archetype_individuals(con, archetype_id)
+            con.commit()
+            return res
+    except ex.IndividualNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"No archetype individual with ID = {archetype_id}"
+        )

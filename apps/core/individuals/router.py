@@ -70,3 +70,10 @@ async def post_parameter(individual_id: int, parameter: models.IndividualParamet
                response_model=bool)
 async def delete_parameter(individual_id: int, parameter_id: int):
     return impl.impl_delete_parameter(individual_id, parameter_id)
+
+
+@router.delete("/archetypes/{individual_archetype_id}/individuals/",
+               response_model=int,
+               summary="Delete all individuals for specific archetype")
+async def delete_archetype_individuals(individual_archetype_id: int):
+    return impl.impl_delete_archetype_individuals(individual_archetype_id)
