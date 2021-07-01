@@ -49,8 +49,8 @@ async def put_difam_archetype(native_project_id: int, individual_archetype_id: i
 
 @router.post("/projects/{native_project_id}/generate/doe")
 async def post_generate_individuals(native_project_id: int, individual_archetype_id: int,
-                               doe_generation_request: models.DOEGenerationRequest,
-                               current_user: User = Depends(get_current_active_user)):
+                                    doe_generation_request: models.DOEGenerationRequest,
+                                    current_user: User = Depends(get_current_active_user)):
     current_user_id = current_user.id
     return impl.impl_post_generate_individuals(individual_archetype_id, doe_generation_request, current_user_id)
 
