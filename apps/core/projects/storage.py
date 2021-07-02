@@ -3,7 +3,6 @@ from typing import List, Optional
 from fastapi.logger import logger
 from libs.mysqlutils import MySQLStatementBuilder, FetchType
 
-from apps.core.applications.exceptions import ApplicationNotFoundException
 from apps.core.applications.state import get_application
 from apps.core.projects.models import Project, ProjectPost, ProjectListing, SubProjectPost, SubProject
 from apps.core.projects.exceptions import *
@@ -12,7 +11,7 @@ from apps.core.users.storage import db_get_users_with_ids
 PROJECTS_TABLE = 'projects'
 PROJECTS_COLUMNS = ['id', 'name']
 SUBPROJECTS_TABLE = 'projects_subprojects'
-SUBPROJECT_COLUMNS = ['id', 'application_sid', 'project_id', 'native_project_id']
+SUBPROJECT_COLUMNS = ['id', 'application_sid', 'project_id', 'native_project_id', 'owner_id']
 PROJECTS_PARTICIPANTS_TABLE = 'projects_participants'
 PROJECTS_PARTICIPANTS_COLUMNS = ['id', 'user_id', 'project_id', 'access_level']
 
@@ -74,6 +73,10 @@ def db_get_project(connection, project_id) -> Project:
     for participant_db in participant_rows:
         participant_ids.append(participant_db['user_id'])
         project.participants_access[participant_db['user_id']] = participant_db['access_level']
+
+    if len(participant_ids) == 0:
+        logger.error(f"This project (id = {project_id}) does not have any participants")
+        raise NoParticipantsException()
 
     project.participants = db_get_users_with_ids(connection, participant_ids)
 
@@ -156,20 +159,25 @@ def db_put_name(connection, project_id, name):
     return True
 
 
-def db_post_subproject(connection, subproject: SubProjectPost) -> bool:
+def db_post_subproject(connection, subproject: SubProjectPost, current_user_id: int, project_id: Optional[int] = None) \
+        -> SubProject:
 
-    db_get_project(connection, subproject.project_id)   # Raises exception if the project does not exist
+    if project_id is not None:
+        db_get_project(connection, project_id)   # Raises exception if the project does not exist
 
-    insert_stmnt = MySQLStatementBuilder(connection)
-    res, row_count = insert_stmnt\
-        .insert(SUBPROJECTS_TABLE, ['application_sid', 'project_id', 'native_project_id'])\
-        .set_values([subproject.application_sid, subproject.project_id, subproject.native_project_id])\
-        .execute(return_affected_rows=True)
+    # Avoid duplicates
+    try:
+        duplicate = db_get_subproject_native(connection, subproject.application_sid, subproject.native_project_id)
+        if duplicate is not None:
+            raise SubProjectDuplicateException
+    except SubProjectNotFoundException:
+        insert_stmnt = MySQLStatementBuilder(connection)
+        insert_stmnt\
+            .insert(SUBPROJECTS_TABLE, ['application_sid', 'project_id', 'native_project_id', 'owner_id'])\
+            .set_values([subproject.application_sid, project_id, subproject.native_project_id, current_user_id])\
+            .execute()
 
-    if row_count == 0:
-        raise ProjectInsertFailureException
-
-    return True
+        return db_get_subproject_native(connection, subproject.application_sid, subproject.native_project_id)
 
 
 def db_get_subproject(connection, project_id, subproject_id) -> Optional[SubProject]:
@@ -190,7 +198,7 @@ def db_get_subproject(connection, project_id, subproject_id) -> Optional[SubProj
     return sub_project
 
 
-def db_get_subproject_native(connection, application_sid, native_project_id):
+def db_get_subproject_native(connection, application_sid, native_project_id) -> SubProject:
     get_application(application_sid)        # Raises exception of application does not exist
 
     select_stmnt = MySQLStatementBuilder(connection)
@@ -221,12 +229,15 @@ def db_delete_subproject(connection, project_id, subproject_id):
     return
 
 
-def db_get_user_subprojects_with_application_sid(con, user_id, application_sid):
+def db_get_user_subprojects_with_application_sid(con, user_id, application_sid) -> List[SubProject]:
     # Get projects in which this user is a participant
     project_list = db_get_user_projects(con, user_id)
     project_id_list = []
     for project in project_list:
         project_id_list.append(project.id)
+
+    if len(project_id_list) == 0:
+        return []
 
     # Figure out which of those projects have an attached subproject with specified application SID.
     where_values = project_id_list.copy()

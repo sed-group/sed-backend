@@ -1,7 +1,8 @@
-from pydantic import BaseModel
-
+from __future__ import annotations          # Obsolete in Python 3.10
 from typing import Optional, List, Dict
 from enum import IntEnum, unique
+
+from pydantic import BaseModel
 
 from apps.core.users.models import User
 
@@ -13,6 +14,18 @@ class AccessLevel(IntEnum):
     EDITOR = 2
     ADMIN = 3
     OWNER = 4
+
+    @staticmethod
+    def list_can_read() -> List[AccessLevel]:
+        return [AccessLevel.READONLY, AccessLevel.EDITOR, AccessLevel.ADMIN, AccessLevel.OWNER]
+
+    @staticmethod
+    def list_can_edit() -> List[AccessLevel]:
+        return [AccessLevel.EDITOR, AccessLevel.ADMIN, AccessLevel.OWNER]
+
+    @staticmethod
+    def list_are_admins() -> List[AccessLevel]:
+        return [AccessLevel.ADMIN, AccessLevel.OWNER]
 
 
 class Project(BaseModel):
@@ -35,14 +48,12 @@ class ProjectPost(BaseModel):
     participants_access: Dict[int, AccessLevel]
 
 
-class SubProject(BaseModel):
+class SubProjectPost(BaseModel):
+    application_sid: str
+    native_project_id: int
+
+
+class SubProject(SubProjectPost):
     id: int
-    application_sid: str
-    project_id: int
-    native_project_id: int
-
-
-class SubProjectPost(BaseModel): # TODO: Inherit in subproject class?
-    application_sid: str
-    project_id: int
-    native_project_id: int
+    owner_id: int
+    project_id: Optional[int]

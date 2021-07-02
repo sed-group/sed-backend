@@ -61,16 +61,16 @@ ADD CONSTRAINT `user_cascade`
 CREATE TABLE IF NOT EXISTS `seddb`.`projects_subprojects` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `application_sid` VARCHAR(255) NOT NULL,
-  `project_id` INT UNSIGNED NOT NULL,
+  `project_id` INT UNSIGNED NULL DEFAULT NULL,
   `native_project_id` INT UNSIGNED NOT NULL,
+  `owner_id` INT UNSIGNED NOT NULL,
   PRIMARY KEY (`id`),
   INDEX `NATIVE_SUBPROJ_ID` (`native_project_id` ASC) INVISIBLE,
   INDEX `projects_cascade_idx` (`project_id` ASC) VISIBLE,
   CONSTRAINT `projects_cascade`
-    FOREIGN KEY (`project_id`)
-    REFERENCES `seddb`.`projects` (`id`)
-    ON DELETE CASCADE
-    ON UPDATE NO ACTION);
+  FOREIGN KEY (`project_id`)
+  REFERENCES `seddb`.`projects` (`id`)
+  ON DELETE CASCADE);
 
 # Create individuals table
 CREATE TABLE IF NOT EXISTS `seddb`.`individuals` (
@@ -174,5 +174,3 @@ CREATE TABLE IF NOT EXISTS `seddb`.`difam_projects` (
   `datetime_created` DATETIME(3) NOT NULL DEFAULT NOW(3),
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
-
-

@@ -1,16 +1,19 @@
-from typing import List
+from typing import List, Optional
 
 from mysql.connector.pooling import PooledMySQLConnection
+from fastapi.logger import logger
 
 import apps.difam.models as models
 import apps.difam.exceptions as exceptions
 import apps.core.authentication.exceptions as authorization_exceptions
 from apps.core.exceptions import NoChangeException
 from apps.core.users.storage import db_get_user_safe_with_id
-from apps.core.projects.storage import db_get_user_subprojects_with_application_sid
+import apps.core.projects.storage as proj_storage
+import apps.core.projects.models as proj_models
 import apps.core.individuals.storage as ind_storage
 import apps.core.individuals.models as ind_models
 from apps.core.individuals.exceptions import IndividualNotFoundException
+
 from libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
 from libs.datastructures.pagination import ListChunk
 
@@ -64,11 +67,15 @@ def db_put_project_archetype(con, difam_project_id: int, individual_archetype_id
     return db_get_difam_project(con, difam_project_id)
 
 
-def db_post_difam_project(con: PooledMySQLConnection, difam_project: models.DifamProjectPost, current_user_id: int) \
+def db_post_difam_project(con: PooledMySQLConnection, difam_project: models.DifamProjectPost, current_user_id: int,
+                          project_id: Optional[int] = None) \
         -> models.DifamProject:
 
-    # TODO: Check if archetype exists
+    # Check if archetype exists
+    if difam_project.individual_archetype_id is not None:
+        ind_storage.db_get_individual(con, difam_project.individual_archetype_id, archetype=True)
 
+    # Insert DIFAM project row
     insert_stmnt = MySQLStatementBuilder(con)
     insert_stmnt\
         .insert(DIFAM_TABLE, ['name', 'individual_archetype_id', 'owner_id'])\
@@ -77,9 +84,13 @@ def db_post_difam_project(con: PooledMySQLConnection, difam_project: models.Difa
                      current_user_id])\
         .execute(fetch_type=FetchType.FETCH_NONE)
 
-    project_id = insert_stmnt.last_insert_id
+    difam_project_id = insert_stmnt.last_insert_id
 
-    return db_get_difam_project(con, project_id)
+    # Insert corresponding subproject row
+    subproject = proj_models.SubProjectPost(application_sid=DIFAM_APPLICATION_SID, native_project_id=difam_project_id)
+    proj_storage.db_post_subproject(con, subproject, current_user_id, project_id)
+
+    return db_get_difam_project(con, difam_project_id)
 
 
 def db_get_difam_project(con: PooledMySQLConnection, difam_project_id: int) -> models.DifamProject:
@@ -104,8 +115,8 @@ def db_get_difam_projects(con: PooledMySQLConnection, segment_length: int, index
     :param current_user_id: ID of current user
     :return:
     """
-
-    subproject_list = db_get_user_subprojects_with_application_sid(con, current_user_id, DIFAM_APPLICATION_SID)
+    logger.debug(f"Fetch DIFAM project for user with ID = {current_user_id}")
+    subproject_list = proj_storage.db_get_user_subprojects_with_application_sid(con, current_user_id, DIFAM_APPLICATION_SID)
 
     difam_project_id_list = []
     for subproject in subproject_list:

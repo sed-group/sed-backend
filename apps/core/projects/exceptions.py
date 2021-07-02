@@ -25,3 +25,9 @@ class ProjectInsertFailureException(Exception):
 class SubProjectNotDeletedException(Exception):
     pass
 
+
+class NoParticipantsException(Exception):
+    pass
+
+class SubProjectDuplicateException(Exception):
+    pass
