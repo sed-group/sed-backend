@@ -100,6 +100,17 @@ def impl_get_archetype_individuals(archetype_id: int) -> List[models.Individual]
         )
 
 
+def impl_get_archetype_individuals_count(archetype_id: int) -> int:
+    try:
+        with get_connection() as con:
+            return storage.db_get_archetype_individuals_count(con, archetype_id)
+    except ex.IndividualNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"No archetype individual with ID = {archetype_id}"
+        )
+
+
 def impl_delete_archetype_individuals(archetype_id: int) -> int:
     try:
         with get_connection() as con:

@@ -216,7 +216,6 @@ def db_delete_parameter(con, individual_id: int, parameter_id: int) -> bool:
 
 
 def db_get_archetype_individuals(con: PooledMySQLConnection, archetype_id: int) -> List[models.Individual]:
-
     # Assert that the archetype exists
     db_get_individual(con, archetype_id, archetype=True)
 
@@ -232,6 +231,19 @@ def db_get_archetype_individuals(con: PooledMySQLConnection, archetype_id: int) 
         individuals.append(parse_individual_from_db(con, res, archetype=False, archetype_id=archetype_id))
 
     return individuals
+
+
+def db_get_archetype_individuals_count(con: PooledMySQLConnection, archetype_id: int) -> int:
+    # Assert that the archetype exists
+    db_get_individual(con, archetype_id, archetype=True)
+
+    nested_stmnt = "(SELECT individual_id FROM individuals_archetypes_map WHERE individual_archetype_id = %s)"
+    select_stmnt = MySQLStatementBuilder(con)
+    res = select_stmnt\
+        .count(INDIVIDUALS_TABLE)\
+        .where(f"id IN ({nested_stmnt})", [archetype_id])\
+        .execute(dictionary=True)
+    return res['count']
 
 
 def db_delete_archetype_individuals(con: PooledMySQLConnection, archetype_id: int) -> int:

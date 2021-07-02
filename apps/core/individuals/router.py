@@ -67,9 +67,17 @@ async def get_individual_archetype(individual_archetype_id) -> Optional[models.I
 
 
 @router.get("/archetypes/{individual_archetype_id}/individuals/",
+            summary="Get all individuals that uses this archetype",
             response_model=List[models.Individual])
 async def get_archetype_individuals(individual_archetype_id: int):
     return impl.impl_get_archetype_individuals(individual_archetype_id)
+
+
+@router.get("/archetypes/{individual_archetype_id}/individuals/count",
+            summary="Count all individuals that uses this archetype",
+            response_model=int)
+async def get_archetype_individuals_count(individual_archetype_id: int):
+    return impl.impl_get_archetype_individuals_count(individual_archetype_id)
 
 
 @router.put("/archetypes/{individual_archetype_id}/name",
