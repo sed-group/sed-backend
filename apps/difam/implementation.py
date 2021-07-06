@@ -30,7 +30,7 @@ def impl_delete_project(difam_project_id: int, current_user_id: int):
         )
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="No."
         )
 

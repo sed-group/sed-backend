@@ -10,6 +10,6 @@ class MeasurementAccessChecker:
         # TODO: Lookup measurement set ID. Is it mapped to a project? Does the user have access to that project?
 
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_403_UNAUTHORIZED,
             detail="Access to measurement is restricted."
         )

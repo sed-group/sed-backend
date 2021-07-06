@@ -22,7 +22,7 @@ class ProjectAccessChecker:
         # Check if user is a participant in the project
         if user_id not in project.participants_access.keys():
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
+                status_code=status.HTTP_403_FORBIDDEN,
                 detail="User is not a participant in this project."
             )
 
@@ -34,7 +34,7 @@ class ProjectAccessChecker:
 
         # User dot not have the necessary access level
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="User does not have the necessary access level",
         )
 
@@ -70,7 +70,7 @@ class SubProjectAccessChecker:
 
         logger.debug(f"No, user {user_id} does not have the minimum required access level")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="User does not have the necessary access level",
         )
 
