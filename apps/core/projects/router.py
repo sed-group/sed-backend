@@ -56,7 +56,7 @@ async def post_project(project: ProjectPost):
 @router.delete("/{project_id}",
                summary="Delete project",
                description="Delete a project",
-               dependencies=[Security(verify_token, scopes=['admin'])])
+               dependencies=[Depends(ProjectAccessChecker([AccessLevel.OWNER, AccessLevel.ADMIN]))])
 async def delete_project(project_id: int):
     return impl_delete_project(project_id)
 
