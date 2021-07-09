@@ -19,16 +19,17 @@ def impl_get_measurement_set(measurement_set_id: int):
         )
 
 
-def impl_post_measurement_set(measurement_set: models.MeasurementSetPost):
+def impl_post_measurement_set(measurement_set: models.MeasurementSetPost, subproject_id: Optional[int] = None):
     with get_connection() as con:
-        res = storage.db_post_measurement_set(con, measurement_set)
+        res = storage.db_post_measurement_set(con, measurement_set, subproject_id=subproject_id)
         con.commit()
         return res
 
 
-def impl_get_measurement_sets(segment_length: int, index: int):
+def impl_get_measurement_sets(segment_length: Optional[int] = None, index: Optional[int] = None,
+                              subproject_id: Optional[int] = None):
     with get_connection() as con:
-        return storage.db_get_measurement_sets(con, segment_length, index)
+        return storage.db_get_measurement_sets(con, segment_length, index, subproject_id=subproject_id)
 
 
 def impl_get_measurement(measurement_set_id: int, measurement_id: int) -> Optional[models.Measurement]:

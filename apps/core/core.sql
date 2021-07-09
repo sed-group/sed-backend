@@ -165,6 +165,20 @@ CREATE TABLE IF NOT EXISTS `seddb`.`measurements_sets` (
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
 
 
+CREATE TABLE `seddb`.`measurements_sets_subprojects_map` (
+  COMMENT = 'Maps access to measurements sets from subprojects',
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `subproject_id` INT UNSIGNED NOT NULL,
+  `measurement_set_id` INT UNSIGNED NOT NULL,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `measurement_set_subproject_cascade`
+  FOREIGN KEY (`subproject_id`)
+  REFERENCES `seddb`.`projects_subprojects` (`id`)
+  ON DELETE CASCADE
+  ON UPDATE NO ACTION);
+
+
+
 # Difam projects
 CREATE TABLE IF NOT EXISTS `seddb`.`difam_projects` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,

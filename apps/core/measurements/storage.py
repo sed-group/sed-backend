@@ -6,11 +6,13 @@ import apps.core.measurements.models as models
 import apps.core.measurements.exceptions as exc
 
 MEASUREMENTS_SETS_TABLE = 'measurements_sets'
-MEASUREMENTS_SETS_COLUMNS = ['id', 'name', 'type', 'description']
+MEASUREMENTS_SETS_COLUMNS = ['measurements_sets.id', 'measurements_sets.name', 'measurements_sets.type', 'measurements_sets.description']
 MEASUREMENTS_TABLE = 'measurements'
 MEASUREMENTS_COLUMNS = ['id', 'name', 'type', 'description', 'measurement_set_id']
 MEASUREMENTS_RESULTS_DATA_TABLE = 'measurements_results_data'
 MEASUREMENTS_RESULTS_DATA_COLUMNS = ['id', 'measurement_id', 'value', 'type', 'insert_timestamp', 'measurement_timestamp']
+MEASUREMENTS_SETS_SUBPROJECTS_MAP_TABLE = 'measurements_sets_subprojects_map'
+MEASUREMENTS_SETS_SUBPROJECTS_MAP_COLUMNS = ['id', 'subproject_id', 'measurement_set_id']
 
 
 def db_get_measurement_set(con, measurement_set_id) -> models.MeasurementSet:
@@ -27,7 +29,9 @@ def db_get_measurement_set(con, measurement_set_id) -> models.MeasurementSet:
     return measurement_set
 
 
-def db_post_measurement_set(con, measurement_set: models.MeasurementSetPost) -> models.MeasurementSet:
+def db_post_measurement_set(con, measurement_set: models.MeasurementSetPost, subproject_id: Optional[int] = None,
+                            project_id: Optional[int] = None) \
+        -> models.MeasurementSet:
     post_stmnt = MySQLStatementBuilder(con)
     post_stmnt\
         .insert(MEASUREMENTS_SETS_TABLE, ['name', 'type', 'description'])\
@@ -36,24 +40,49 @@ def db_post_measurement_set(con, measurement_set: models.MeasurementSetPost) -> 
 
     set_id = post_stmnt.last_insert_id
 
+    # Map to subproject
+    if subproject_id is not None:
+        insert_map_stmnt = MySQLStatementBuilder(con)
+        insert_map_stmnt\
+            .insert(MEASUREMENTS_SETS_SUBPROJECTS_MAP_TABLE, ['subproject_id', 'measurement_set_id'])\
+            .set_values([subproject_id, set_id]).execute()
+
+    # Map to project
+    if project_id is not None:
+        raise NotImplemented
+
     return db_get_measurement_set(con, set_id)
 
 
-def db_get_measurement_sets(con, segment_length: int, index: int) -> List[models.MeasurementSet]:
+def db_get_measurement_sets(con, segment_length: Optional[int] = None, index: Optional[int] = None,
+                            subproject_id: Optional[int] = None, project_id: Optional[int] = None) \
+        -> List[models.MeasurementSet]:
 
-    if index < 0:
-        index = 0
-    if segment_length < 1:
-        segment_length = 1
+    if segment_length is not None and index is not None:
+        if index < 0:
+            index = 0
+        if segment_length < 1:
+            segment_length = 1
 
-    set_list = []
+    # Build SQL statement
     select_stmnt = MySQLStatementBuilder(con)
-    rs = select_stmnt\
-        .select(MEASUREMENTS_SETS_TABLE, MEASUREMENTS_SETS_COLUMNS) \
-        .limit(segment_length) \
-        .offset(segment_length * index) \
-        .execute(dictionary=True, fetch_type=FetchType.FETCH_ALL)
+    select_stmnt.select(MEASUREMENTS_SETS_TABLE, MEASUREMENTS_SETS_COLUMNS)
 
+    if subproject_id is not None:
+        select_stmnt.inner_join(MEASUREMENTS_SETS_SUBPROJECTS_MAP_TABLE,
+                                'measurements_sets.id = measurements_sets_subprojects_map.measurement_set_id')\
+            .where('measurements_sets_subprojects_map.subproject_id = %s', [subproject_id])
+
+    if project_id is not None:
+        raise NotImplemented
+
+    if index is not None and segment_length is not None:
+        select_stmnt.limit(segment_length).offset(segment_length * index)
+
+    rs = select_stmnt.execute(dictionary=True, fetch_type=FetchType.FETCH_ALL)
+
+    # Parse results
+    set_list = []
     for res in rs:
         mset = models.MeasurementSet(**res)
         set_list.append(mset)

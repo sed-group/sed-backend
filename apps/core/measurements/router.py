@@ -9,33 +9,26 @@ import apps.core.measurements.implementation as impl
 router = APIRouter()
 
 
+@router.post("/sets/",
+             summary="Post measurement set",
+             response_model=models.MeasurementSet)
+async def post_measurement_set(measurement_set: models.MeasurementSetPost, subproject_id: Optional[int] = None):
+    return impl.impl_post_measurement_set(measurement_set, subproject_id=subproject_id)
+
+
+@router.get("/sets/",
+            summary="Get measurement sets",
+            response_model=List[models.MeasurementSet])
+async def get_measurement_sets(segment_length: Optional[int] = None, index: Optional[int] = None,
+                               subproject_id: Optional[int] = None):
+    return impl.impl_get_measurement_sets(segment_length, index, subproject_id = subproject_id)
+
+
 @router.get("/sets/{measurement_set_id}",
             summary="Get measurement set by ID",
             response_model=models.MeasurementSet)
 async def get_measurement_set(measurement_set_id: int):
     return impl.impl_get_measurement_set(measurement_set_id)
-
-
-@router.post("/sets/",
-             summary="Post measurement set",
-             response_model=models.MeasurementSet)
-async def post_measurement_set(measurement_set: models.MeasurementSetPost):
-    return impl.impl_post_measurement_set(measurement_set)
-
-
-@router.get("/sets/",
-             summary="Get measurement sets",
-             response_model=List[models.MeasurementSet])
-async def get_measurement_sets(segment_length:int, index: int):
-    return impl.impl_get_measurement_sets(segment_length, index)
-
-
-@router.get("/sets/{measurement_set_id}/measurements/{measurement_id}",
-            summary="Get measurement",
-            description="Get measurement information",
-            response_model=models.Measurement)
-async def get_measurement (measurement_set_id: int, measurement_id: int):
-    return impl.impl_get_measurement(measurement_set_id, measurement_id)
 
 
 @router.post("/sets/{measurement_set_id}/",
@@ -45,11 +38,12 @@ async def post_measurement(measurement: models.MeasurementPost, measurement_set_
     return impl.impl_post_measurement(measurement, measurement_set_id)
 
 
-@router.get("/sets/{measurement_set_id}/measurements/{measurement_id}/results/{measurement_result_data_id}",
-            summary="Get measurement result datapoint",
-            response_model=models.MeasurementResultData)
-async def get_measurement_result_by_id(measurement_id: int, measurement_result_data_id: int):
-    return impl.impl_get_measurement_result_by_id(measurement_id, measurement_result_data_id)
+@router.get("/sets/{measurement_set_id}/measurements/{measurement_id}",
+            summary="Get measurement",
+            description="Get measurement information",
+            response_model=models.Measurement)
+async def get_measurement (measurement_set_id: int, measurement_id: int):
+    return impl.impl_get_measurement(measurement_set_id, measurement_id)
 
 
 @router.get("/sets/{measurement_set_id}/measurements/{measurement_id}/results/",
@@ -73,3 +67,10 @@ async def get_measurement_results(measurement_set_id: int,
              response_model=None)
 async def post_measurement_result(measurement_id: int, measurement_data_post: models.MeasurementResultDataPost):
     impl.impl_post_measurement_result(measurement_id, measurement_data_post)
+
+
+@router.get("/sets/{measurement_set_id}/measurements/{measurement_id}/results/{measurement_result_data_id}",
+            summary="Get measurement result datapoint",
+            response_model=models.MeasurementResultData)
+async def get_measurement_result_by_id(measurement_id: int, measurement_result_data_id: int):
+    return impl.impl_get_measurement_result_by_id(measurement_id, measurement_result_data_id)
