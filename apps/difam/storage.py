@@ -207,10 +207,13 @@ def populate_difam_project (con, difam_project_database_result):
     except IndividualNotFoundException:
         archetype = None
 
+    subproject = proj_storage.db_get_subproject_native(con, DIFAM_APPLICATION_SID, res['id'])
+
     return models.DifamProject(
         id=res['id'],
         name=res['name'],
         owner=db_get_user_safe_with_id(con, res['owner_id']),
         archetype=archetype,
-        datetime_created=res['datetime_created']
+        datetime_created=res['datetime_created'],
+        subproject_id=subproject.id
     )

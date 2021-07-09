@@ -19,6 +19,7 @@ class DifamProject(BaseModel):
     owner: User
     archetype: Optional[IndividualArchetype]
     datetime_created: datetime
+    subproject_id: int
 
 
 class RangeParameter(BaseModel):
