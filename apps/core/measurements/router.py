@@ -31,6 +31,13 @@ async def get_measurement_set(measurement_set_id: int):
     return impl.impl_get_measurement_set(measurement_set_id)
 
 
+@router.delete("/sets/{measurement_set_id}",
+               summary="Delete measurement set",
+               response_model=bool)
+async def delete_measurement_set(measurement_set_id: int) -> bool:
+    return impl.impl_delete_measurement_set(measurement_set_id)
+
+
 @router.post("/sets/{measurement_set_id}/",
              summary="Post measurement",
              response_model=models.Measurement)

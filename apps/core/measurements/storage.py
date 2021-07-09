@@ -29,6 +29,19 @@ def db_get_measurement_set(con, measurement_set_id) -> models.MeasurementSet:
     return measurement_set
 
 
+def db_delete_measurement_set(con, measurement_set_id) -> bool:
+    delete_stmnt = MySQLStatementBuilder(con)
+    res, rows = delete_stmnt\
+        .delete(MEASUREMENTS_SETS_TABLE)\
+        .where("id = %s", [measurement_set_id])\
+        .execute(return_affected_rows=True)
+
+    if rows == 0:
+        raise exc.MeasurementSetNotFoundException
+
+    return True
+
+
 def db_post_measurement_set(con, measurement_set: models.MeasurementSetPost, subproject_id: Optional[int] = None,
                             project_id: Optional[int] = None) \
         -> models.MeasurementSet:

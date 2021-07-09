@@ -32,6 +32,19 @@ def impl_get_measurement_sets(segment_length: Optional[int] = None, index: Optio
         return storage.db_get_measurement_sets(con, segment_length, index, subproject_id=subproject_id)
 
 
+def impl_delete_measurement_set(measurement_set_id: int) -> bool:
+    try:
+        with get_connection() as con:
+            res = storage.db_delete_measurement_set(con, measurement_set_id)
+            con.commit()
+            return res
+    except exc.MeasurementSetNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No rows were affected. Incorrect ID?"
+        )
+
+
 def impl_get_measurement(measurement_set_id: int, measurement_id: int) -> Optional[models.Measurement]:
     try:
         with get_connection() as con:
