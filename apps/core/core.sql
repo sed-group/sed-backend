@@ -216,7 +216,7 @@ BEGIN
         (SELECT COUNT(*) FROM `measurements` WHERE `measurements`.`measurement_set_id` = `measurements_sets`.`id`) as measurement_count
 	FROM `measurements_sets`
 	WHERE `measurements_sets`.`id` in
-		(SELECT `measurements_sets_subprojects_map`.`measurement_set_id` FROM `measurements_sets_subprojects_map` WHERE `measurements_sets_subprojects_map`.`subproject_id` = 33)
+		(SELECT `measurements_sets_subprojects_map`.`measurement_set_id` FROM `measurements_sets_subprojects_map` WHERE `measurements_sets_subprojects_map`.`subproject_id` = subproject_id)
 	;
 END$$
 DELIMITER ;
