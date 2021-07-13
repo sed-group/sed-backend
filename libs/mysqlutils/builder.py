@@ -1,5 +1,5 @@
 from .statements import *
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 from fastapi.logger import logger
 from enum import Enum
 
@@ -167,3 +167,28 @@ class MySQLStatementBuilder:
                 return res, cursor.rowcount
             else:
                 return res
+
+    def execute_procedure(self, procedure: str, args: List) -> List[List[Any]]:
+        """
+        Execute a stored procedure. May return multiple result sets depending on the procedure.
+        :param procedure: Name of stored procedure
+        :param args: List of arguments
+        :return: List of result sets
+        """
+        logger.debug(f'executing stored procedure "{procedure}" with arguments {args}')
+
+        with self.con.cursor(dictionary=True) as cursor:
+            cursor.callproc(procedure, args=args)
+
+            result_sets = []
+
+            for recordset in cursor.stored_results():
+                column_names = recordset.column_names
+                res_list = []
+                for row in recordset:
+                    row_dict = dict(zip(column_names, row))
+                    res_list.append(row_dict)
+
+                result_sets.append(res_list)
+
+        return result_sets
