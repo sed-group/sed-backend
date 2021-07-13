@@ -7,6 +7,7 @@ USE seddb;
 
 CREATE USER IF NOT EXISTS 'rw' IDENTIFIED BY 'DONT_USE_IN_PRODUCTION!';
 GRANT SELECT, INSERT, UPDATE, DELETE ON * TO 'rw';
+GRANT EXECUTE ON `seddb`.* TO 'rw'@'%';
 
 # Create users TABLE
 CREATE TABLE IF NOT EXISTS `seddb`.`users` (
@@ -188,3 +189,34 @@ CREATE TABLE IF NOT EXISTS `seddb`.`difam_projects` (
   `datetime_created` DATETIME(3) NOT NULL DEFAULT NOW(3),
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
+
+
+# Stored procedure for getting a measurement set
+DROP procedure IF EXISTS `get_measurements_set`;
+DELIMITER $$
+CREATE PROCEDURE `get_measurements_set` (IN set_id INT)
+BEGIN
+	SELECT *
+    FROM measurements_sets
+    WHERE id = set_id;
+
+	SELECT *
+    FROM measurements
+    WHERE measurement_set_id = set_id;
+END$$
+DELIMITER ;
+
+# Stored procedure for getting measurements belonging to a subproject
+DROP procedure IF EXISTS `get_measurements_sets_in_subproject`;
+DELIMITER $$
+CREATE PROCEDURE `get_measurements_sets_in_subproject` (IN subproject_id INT)
+BEGIN
+	SELECT
+		*,
+        (SELECT COUNT(*) FROM `measurements` WHERE `measurements`.`measurement_set_id` = `measurements_sets`.`id`) as measurement_count
+	FROM `measurements_sets`
+	WHERE `measurements_sets`.`id` in
+		(SELECT `measurements_sets_subprojects_map`.`measurement_set_id` FROM `measurements_sets_subprojects_map` WHERE `measurements_sets_subprojects_map`.`subproject_id` = 33)
+	;
+END$$
+DELIMITER ;

@@ -26,10 +26,9 @@ def impl_post_measurement_set(measurement_set: models.MeasurementSetPost, subpro
         return res
 
 
-def impl_get_measurement_sets(segment_length: Optional[int] = None, index: Optional[int] = None,
-                              subproject_id: Optional[int] = None):
+def impl_get_measurement_sets(subproject_id: Optional[int] = None) -> List[models.MeasurementSetListing]:
     with get_connection() as con:
-        return storage.db_get_measurement_sets(con, segment_length, index, subproject_id=subproject_id)
+        return storage.db_get_measurement_sets(con, subproject_id=subproject_id)
 
 
 def impl_delete_measurement_set(measurement_set_id: int) -> bool:

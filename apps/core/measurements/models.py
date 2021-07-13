@@ -7,8 +7,7 @@ measurements that are related somehow. For instance, a measurement set might con
 product/concept instance.
 """
 
-
-from typing import Optional, Any
+from typing import Optional, Any, List
 from enum import IntEnum, unique, Enum
 from datetime import datetime
 
@@ -50,29 +49,6 @@ class MeasurementType(IntEnum):
     LIVE_DATA = 2
     PREDICTED_DATA = 3
 
-
-@unique
-class MeasurementSetType(IntEnum):
-    UNDEFINED = 0
-    MIXTURE = 1
-    COMPUTER_SIMULATION = 2
-    LIVE_DATA = 3
-    PREDICTED_DATA = 4
-
-
-class MeasurementSet(BaseModel):
-    id: int
-    name: str
-    type: MeasurementSetType
-    description: str
-
-
-class MeasurementSetPost(BaseModel):
-    name: str
-    type: MeasurementSetType
-    description: str
-
-
 class Measurement(BaseModel):
     id: int
     name: str
@@ -113,3 +89,34 @@ class MeasurementResultFilePost(BaseModel):
     measurement_id: int
     file: str
     insert_timestamp: int
+
+
+@unique
+class MeasurementSetType(IntEnum):
+    UNDEFINED = 0
+    MIXTURE = 1
+    COMPUTER_SIMULATION = 2
+    LIVE_DATA = 3
+    PREDICTED_DATA = 4
+
+
+class MeasurementSetListing(BaseModel):
+    id: int
+    name: str
+    type: MeasurementSetType
+    description: str
+    measurement_count: int
+
+
+class MeasurementSet(BaseModel):
+    id: int
+    name: str
+    type: MeasurementSetType
+    description: str
+    measurements: Optional[List[Measurement]] = []
+
+
+class MeasurementSetPost(BaseModel):
+    name: str
+    type: MeasurementSetType
+    description: str

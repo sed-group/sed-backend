@@ -18,10 +18,9 @@ async def post_measurement_set(measurement_set: models.MeasurementSetPost, subpr
 
 @router.get("/sets/",
             summary="Get measurement sets",
-            response_model=List[models.MeasurementSet])
-async def get_measurement_sets(segment_length: Optional[int] = None, index: Optional[int] = None,
-                               subproject_id: Optional[int] = None):
-    return impl.impl_get_measurement_sets(segment_length, index, subproject_id = subproject_id)
+            response_model=List[models.MeasurementSetListing])
+async def get_measurement_sets(subproject_id: Optional[int] = None):
+    return impl.impl_get_measurement_sets(subproject_id=subproject_id)
 
 
 @router.get("/sets/{measurement_set_id}",

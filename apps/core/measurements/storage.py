@@ -17,14 +17,14 @@ MEASUREMENTS_SETS_SUBPROJECTS_MAP_COLUMNS = ['id', 'subproject_id', 'measurement
 
 def db_get_measurement_set(con, measurement_set_id) -> models.MeasurementSet:
     select_stmnt = MySQLStatementBuilder(con)
-    res = select_stmnt.select(MEASUREMENTS_SETS_TABLE, MEASUREMENTS_SETS_COLUMNS)\
-        .where('id = %s', [measurement_set_id])\
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+    rs_list = select_stmnt.execute_procedure('get_measurements_set', [measurement_set_id])
 
-    if res is None:
+    if len(rs_list[0]) == 0:
         raise exc.MeasurementSetNotFoundException(f'Measurement set with id {measurement_set_id} not found.')
 
-    measurement_set = models.MeasurementSet(**res)
+    measurement_set = models.MeasurementSet(**rs_list[0][0])
+    for res in rs_list[1]:
+        measurement_set.measurements.append(models.Measurement(**res))
 
     return measurement_set
 
@@ -67,37 +67,22 @@ def db_post_measurement_set(con, measurement_set: models.MeasurementSetPost, sub
     return db_get_measurement_set(con, set_id)
 
 
-def db_get_measurement_sets(con, segment_length: Optional[int] = None, index: Optional[int] = None,
-                            subproject_id: Optional[int] = None, project_id: Optional[int] = None) \
-        -> List[models.MeasurementSet]:
-
-    if segment_length is not None and index is not None:
-        if index < 0:
-            index = 0
-        if segment_length < 1:
-            segment_length = 1
+def db_get_measurement_sets(con, subproject_id: Optional[int] = None, project_id: Optional[int] = None) \
+        -> List[models.MeasurementSetListing]:
 
     # Build SQL statement
-    select_stmnt = MySQLStatementBuilder(con)
-    select_stmnt.select(MEASUREMENTS_SETS_TABLE, MEASUREMENTS_SETS_COLUMNS)
-
+    sql = MySQLStatementBuilder(con)
+    rs_list = []
     if subproject_id is not None:
-        select_stmnt.inner_join(MEASUREMENTS_SETS_SUBPROJECTS_MAP_TABLE,
-                                'measurements_sets.id = measurements_sets_subprojects_map.measurement_set_id')\
-            .where('measurements_sets_subprojects_map.subproject_id = %s', [subproject_id])
+        rs_list = sql.execute_procedure('get_measurements_sets_in_subproject', [subproject_id])
 
     if project_id is not None:
         raise NotImplemented
 
-    if index is not None and segment_length is not None:
-        select_stmnt.limit(segment_length).offset(segment_length * index)
-
-    rs = select_stmnt.execute(dictionary=True, fetch_type=FetchType.FETCH_ALL)
-
     # Parse results
     set_list = []
-    for res in rs:
-        mset = models.MeasurementSet(**res)
+    for res in rs_list[0]:
+        mset = models.MeasurementSetListing(**res)
         set_list.append(mset)
 
     return set_list
