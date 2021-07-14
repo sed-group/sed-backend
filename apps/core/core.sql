@@ -113,14 +113,29 @@ CREATE TABLE IF NOT EXISTS `seddb`.`individuals_archetypes_map` (
     ON UPDATE NO ACTION);
 
 
+CREATE TABLE IF NOT EXISTS `seddb`.`measurements_sets` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NOT NULL DEFAULT 'Unnamed measurement set',
+  `type` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  `description` TEXT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
+
+
 # Measurements table
 CREATE TABLE IF NOT EXISTS `seddb`.`measurements` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(255) NOT NULL DEFAULT 'Unnamed measurement',
   `type` TINYINT UNSIGNED NOT NULL,
   `description` TEXT NULL,
-  `measurement_set_id` TINYINT UNSIGNED NOT NULL,
-  PRIMARY KEY (`id`));
+  `measurement_set_id` INT UNSIGNED NOT NULL,
+  PRIMARY KEY (`id`),
+  INDEX `measurement_set_cascade_idx` (`measurement_set_id` ASC) VISIBLE,
+  CONSTRAINT `measurement_set_cascade`
+      FOREIGN KEY (`measurement_set_id`)
+      REFERENCES `seddb`.`measurements_sets` (`id`)
+      ON DELETE CASCADE
+      ON UPDATE NO ACTION);
 
 
 # Measurement data table
@@ -157,17 +172,8 @@ CREATE TABLE IF NOT EXISTS `seddb`.`measurements_results_files` (
     ON DELETE CASCADE
     ON UPDATE NO ACTION);
 
-CREATE TABLE IF NOT EXISTS `seddb`.`measurements_sets` (
-  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(255) NOT NULL DEFAULT 'Unnamed measurement set',
-  `type` TINYINT UNSIGNED NOT NULL DEFAULT 0,
-  `description` TEXT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
-
 
 CREATE TABLE `seddb`.`measurements_sets_subprojects_map` (
-  COMMENT = 'Maps access to measurements sets from subprojects',
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `subproject_id` INT UNSIGNED NOT NULL,
   `measurement_set_id` INT UNSIGNED NOT NULL,
@@ -177,7 +183,6 @@ CREATE TABLE `seddb`.`measurements_sets_subprojects_map` (
   REFERENCES `seddb`.`projects_subprojects` (`id`)
   ON DELETE CASCADE
   ON UPDATE NO ACTION);
-
 
 
 # Difam projects
