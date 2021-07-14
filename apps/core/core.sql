@@ -138,7 +138,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`measurements_results_data` (
   CONSTRAINT `measurement_data_measurements_cascade`
     FOREIGN KEY (`measurement_id`)
     REFERENCES `seddb`.`measurements` (`id`)
-    ON DELETE NO ACTION
+    ON DELETE CASCADE
     ON UPDATE NO ACTION);
 
 # Measurements result files table
@@ -154,7 +154,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`measurements_results_files` (
   CONSTRAINT `measurements_files_measurements_cascade`
     FOREIGN KEY (`measurement_id`)
     REFERENCES `seddb`.`measurements` (`id`)
-    ON DELETE NO ACTION
+    ON DELETE CASCADE
     ON UPDATE NO ACTION);
 
 CREATE TABLE IF NOT EXISTS `seddb`.`measurements_sets` (
