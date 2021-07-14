@@ -118,6 +118,21 @@ def db_post_measurement(con, measurement: models.MeasurementPost, measurement_se
     return db_get_measurement(con, measurement_set_id, measurement_id)
 
 
+def db_delete_measurement(con, measurement_set_id: int, measurement_id: int) -> bool:
+    db_get_measurement_set(con, measurement_set_id) # Raises if set does not exist
+
+    delete_stmnt = MySQLStatementBuilder(con)
+    res, rows = delete_stmnt\
+        .delete(MEASUREMENTS_TABLE)\
+        .where("id = %s AND measurement_set_id = %s", [measurement_id, measurement_set_id])\
+        .execute(return_affected_rows=True)
+
+    if rows == 0:
+        raise exc.MeasurementNotFoundException
+
+    return True
+
+
 def db_get_measurement_result_by_id(con, m_id: int, mr_id: int) -> models.MeasurementResultData:
     select_stmnt = MySQLStatementBuilder(con)
     res = select_stmnt.select(MEASUREMENTS_RESULTS_DATA_TABLE, MEASUREMENTS_RESULTS_DATA_COLUMNS)\

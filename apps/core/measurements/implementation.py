@@ -62,6 +62,24 @@ def impl_post_measurement(measurement: models.MeasurementPost, measurement_set_i
         return res
 
 
+def impl_delete_measurement(measurement_set_id: int, measurement_id: int) -> bool:
+    try:
+        with get_connection() as con:
+            res = storage.db_delete_measurement(con, measurement_set_id, measurement_id)
+            con.commit()
+            return res
+    except exc.MeasurementNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Measurement not found"
+        )
+    except exc.MeasurementSetNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Measurement set not found"
+        )
+
+
 def impl_get_measurement_result_by_id(m_id: int, mr_id: int) -> models.MeasurementResultData:
     with get_connection() as con:
         return storage.db_get_measurement_result_by_id(con, m_id, mr_id)
