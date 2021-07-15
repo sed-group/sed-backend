@@ -69,10 +69,14 @@ def db_post_measurement_set(con, measurement_set: models.MeasurementSetPost, sub
 
 def db_get_measurement_sets(con, subproject_id: Optional[int] = None, project_id: Optional[int] = None) \
         -> List[models.MeasurementSetListing]:
+    # Validate input
+    if subproject_id is None and project_id is None:
+        raise exc.MeasurementSearchParameterException('Project ID or subproject ID needs to be set')
 
     # Build SQL statement
     sql = MySQLStatementBuilder(con)
     rs_list = []
+
     if subproject_id is not None:
         rs_list = sql.execute_procedure('get_measurements_sets_in_subproject', [subproject_id])
 

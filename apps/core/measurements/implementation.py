@@ -27,8 +27,14 @@ def impl_post_measurement_set(measurement_set: models.MeasurementSetPost, subpro
 
 
 def impl_get_measurement_sets(subproject_id: Optional[int] = None) -> List[models.MeasurementSetListing]:
-    with get_connection() as con:
-        return storage.db_get_measurement_sets(con, subproject_id=subproject_id)
+    try:
+        with get_connection() as con:
+            return storage.db_get_measurement_sets(con, subproject_id=subproject_id)
+    except exc.MeasurementSearchParameterException as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 
 def impl_delete_measurement_set(measurement_set_id: int) -> bool:

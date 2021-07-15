@@ -8,3 +8,7 @@ class MeasurementResultNotFoundException(Exception):
 
 class MeasurementSetNotFoundException(Exception):
     pass
+
+
+class MeasurementSearchParameterException(Exception):
+    pass
