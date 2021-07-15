@@ -70,6 +70,7 @@ class MeasurementResultData(BaseModel):
     type: MeasurementDataType
     insert_timestamp: datetime
     measurement_timestamp: Optional[datetime]
+    individual_id: Optional[int]
 
 
 class MeasurementResultDataPost(BaseModel):

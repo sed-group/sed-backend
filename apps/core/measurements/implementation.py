@@ -108,7 +108,7 @@ def impl_get_measurement_results(measurement_id: int,
         return res
 
 
-def impl_post_measurement_result(measurement_id: int, mr: models.MeasurementResultDataPost):
+def impl_post_measurement_result(measurement_id: int, mr: models.MeasurementResultDataPost) -> models.MeasurementResultData:
     with get_connection() as con:
         res = storage.db_post_measurement_result(con, measurement_id, mr)
         con.commit()

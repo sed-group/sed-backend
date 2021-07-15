@@ -79,9 +79,9 @@ async def get_measurement_results(measurement_set_id: int,
 
 @router.post("/sets/{measurement_set_id}/measurements/{measurement_id}/results/",
              summary="Post measurement result data",
-             response_model=None)
+             response_model=models.MeasurementResultData)
 async def post_measurement_result(measurement_id: int, measurement_data_post: models.MeasurementResultDataPost):
-    impl.impl_post_measurement_result(measurement_id, measurement_data_post)
+    return impl.impl_post_measurement_result(measurement_id, measurement_data_post)
 
 
 @router.get("/sets/{measurement_set_id}/measurements/{measurement_id}/results/{measurement_result_data_id}",

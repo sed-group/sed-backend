@@ -137,14 +137,14 @@ def db_delete_measurement(con, measurement_set_id: int, measurement_id: int) -> 
     return True
 
 
-def db_get_measurement_result_by_id(con, m_id: int, mr_id: int) -> models.MeasurementResultData:
+def db_get_measurement_result_by_id(con, measurement_id: int, result_id: int) -> models.MeasurementResultData:
     select_stmnt = MySQLStatementBuilder(con)
     res = select_stmnt.select(MEASUREMENTS_RESULTS_DATA_TABLE, MEASUREMENTS_RESULTS_DATA_COLUMNS)\
-        .where('id = %s AND measurement_id = %s', [mr_id, m_id])\
+        .where('id = %s AND measurement_id = %s', [result_id, measurement_id])\
         .execute(dictionary=True, fetch_type=FetchType.FETCH_ONE)
 
     if res is None:
-        raise exc.MeasurementResultNotFoundException(f'No measurement result found with id {mr_id}')
+        raise exc.MeasurementResultNotFoundException(f'No measurement result found with id {result_id}')
 
     mrd = models.MeasurementResultData(**res)
 
@@ -192,11 +192,13 @@ def db_get_measurement_results(con,
     return data_list
 
 
-def db_post_measurement_result(con, measurement_id: int, mr: models.MeasurementResultDataPost) -> bool:
+def db_post_measurement_result(con, measurement_id: int, mr: models.MeasurementResultDataPost) -> models.MeasurementResultData:
     insert_stmnt = MySQLStatementBuilder(con)
     insert_stmnt\
         .insert(MEASUREMENTS_RESULTS_DATA_TABLE, exclude_cols(MEASUREMENTS_RESULTS_DATA_COLUMNS, ['id', 'insert_timestamp']))\
         .set_values([measurement_id, mr.value, mr.type, mr.measurement_timestamp])\
         .execute()
 
-    return True
+    insert_id = insert_stmnt.last_insert_id
+
+    return db_get_measurement_result_by_id(con, measurement_id, insert_id)
