@@ -205,9 +205,9 @@ BEGIN
     FROM measurements_sets
     WHERE id = set_id;
 
-	SELECT *
-    FROM measurements
-    WHERE measurement_set_id = set_id;
+	SELECT *, (SELECT COUNT(*) FROM `measurements_results_data` WHERE `measurements_results_data`.`measurement_id` = `measurements`.`id`) as data_count
+	FROM measurements
+	WHERE measurement_set_id = 54;
 END$$
 DELIMITER ;
 

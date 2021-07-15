@@ -24,7 +24,7 @@ def db_get_measurement_set(con, measurement_set_id) -> models.MeasurementSet:
 
     measurement_set = models.MeasurementSet(**rs_list[0][0])
     for res in rs_list[1]:
-        measurement_set.measurements.append(models.Measurement(**res))
+        measurement_set.measurements.append(models.MeasurementListing(**res))
 
     return measurement_set
 

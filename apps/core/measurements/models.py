@@ -49,12 +49,17 @@ class MeasurementType(IntEnum):
     LIVE_DATA = 2
     PREDICTED_DATA = 3
 
+
 class Measurement(BaseModel):
     id: int
     name: str
     type: int
     description: Optional[str]
     measurement_set_id: int
+
+
+class MeasurementListing(Measurement):
+    data_count: int
 
 
 class MeasurementPost(BaseModel):
@@ -114,7 +119,7 @@ class MeasurementSet(BaseModel):
     name: str
     type: MeasurementSetType
     description: str
-    measurements: Optional[List[Measurement]] = []
+    measurements: Optional[List[MeasurementListing]] = []
 
 
 class MeasurementSetPost(BaseModel):
