@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional, List
 
-from fastapi import APIRouter, Security, Depends
+from fastapi import APIRouter, Security, Depends, UploadFile, File
 
 import apps.core.measurements.models as models
 import apps.core.measurements.implementation as impl
@@ -22,6 +22,17 @@ async def post_measurement_set(measurement_set: models.MeasurementSetPost, subpr
 async def get_measurement_sets(subproject_id: Optional[int] = None):
     return impl.impl_get_measurement_sets(subproject_id=subproject_id)
 
+
+@router.post("/sets/upload",
+             summary="Upload measurement set")
+async def post_upload_set(file: UploadFile = File(...)):
+
+    # Use file.file to read file
+
+    return {
+        "filename": file.filename,
+        "content_type": file.content_type
+    }
 
 @router.get("/sets/{measurement_set_id}",
             summary="Get measurement set by ID",
