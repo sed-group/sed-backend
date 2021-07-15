@@ -70,8 +70,10 @@ async def get_measurement_results(measurement_set_id: int,
                                   date_to: Optional[int] = None,
                                   date_class: Optional[models.MeasurementDateClassification] = models.MeasurementDateClassification.MEASUREMENT,
                                   ) -> List[models.MeasurementResultData]:
-    date_from = datetime.fromtimestamp(date_from/1000)
-    date_to = datetime.fromtimestamp(date_to/1000)
+    if date_from:
+        date_from = datetime.fromtimestamp(date_from/1000)
+    if date_to:
+        date_to = datetime.fromtimestamp(date_to/1000)
     return impl.impl_get_measurement_results(measurement_id, dtype, date_class, date_from, date_to)
 
 
