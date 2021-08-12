@@ -8,7 +8,7 @@ import apps.core.measurements.models as models
 import apps.core.measurements.exceptions as exc
 
 MEASUREMENTS_SETS_TABLE = 'measurements_sets'
-MEASUREMENTS_SETS_COLUMNS = ['measurements_sets.id', 'measurements_sets.name', 'measurements_sets.type', 'measurements_sets.description']
+MEASUREMENTS_SETS_COLUMNS = ['id', 'name', 'type', 'description']
 MEASUREMENTS_TABLE = 'measurements'
 MEASUREMENTS_COLUMNS = ['id', 'name', 'type', 'description', 'measurement_set_id']
 MEASUREMENTS_RESULTS_DATA_TABLE = 'measurements_results_data'
@@ -103,23 +103,11 @@ def db_get_measurement_sets(con, subproject_id: Optional[int] = None, project_id
     if subproject_id is None and project_id is None:
         raise exc.MeasurementSearchParameterException('Project ID or subproject ID needs to be set')
 
-    # Build SQL statement
-    sql = MySQLStatementBuilder(con)
-    rs_list = []
-
     if subproject_id is not None:
-        rs_list = sql.execute_procedure('get_measurements_sets_in_subproject', [subproject_id])
+        return db_get_measurements_sets_in_subproject(con, subproject_id)
 
     if project_id is not None:
         raise NotImplemented
-
-    # Parse results
-    set_list = []
-    for res in rs_list[0]:
-        mset = models.MeasurementSetListing(**res)
-        set_list.append(mset)
-
-    return set_list
 
 
 def db_get_measurement(con, measurement_set_id, measurement_id) -> Optional[models.Measurement]:
@@ -232,3 +220,40 @@ def db_post_measurement_result(con, measurement_id: int, mr: models.MeasurementR
     insert_id = insert_stmnt.last_insert_id
 
     return db_get_measurement_result_by_id(con, measurement_id, insert_id)
+
+
+def db_get_measurements_sets_in_subproject(con, subproject_id: int) -> List[models.MeasurementSetListing]:
+    """
+    Get all measurement sets that are accessible to a specific subproject
+    :param con:
+    :param subproject_id:
+    :return:
+    """
+    nested_measurement_count = "(SELECT COUNT(*) FROM `measurements` " \
+                               "WHERE `measurements`.`measurement_set_id` = `measurements_sets`.`id`)"
+
+    nested_subproject_map = f"(SELECT `measurements_sets_subprojects_map`.`measurement_set_id` " \
+                            f"FROM `measurements_sets_subprojects_map` " \
+                            f"WHERE `measurements_sets_subprojects_map`.`subproject_id` = ?)"
+
+    query = f"SELECT *, {nested_measurement_count} " \
+            f"FROM `measurements_sets` " \
+            f"WHERE `measurements_sets`.`id` IN {nested_subproject_map}"
+
+    values = [subproject_id]
+
+    logger.debug(f"db_get_measurements_sets_in_subproject query: '{query}' with values: {values}")
+
+    set_list = []
+    with con.cursor(prepared=True) as cursor:
+        cursor.execute(query, values)
+        rs = cursor.fetchall()
+        columns = MEASUREMENTS_SETS_COLUMNS + ['measurement_count']
+
+        for res in rs:
+            res_dict = dict(zip(columns, res))
+            print(res_dict)
+            m_set = models.MeasurementSetListing(**res_dict)
+            set_list.append(m_set)
+
+    return set_list
