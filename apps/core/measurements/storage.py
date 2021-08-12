@@ -1,6 +1,8 @@
 from typing import Optional, List
 from datetime import datetime
 
+from fastapi.logger import logger
+
 from libs.mysqlutils import MySQLStatementBuilder, FetchType, exclude_cols
 import apps.core.measurements.models as models
 import apps.core.measurements.exceptions as exc
@@ -16,15 +18,43 @@ MEASUREMENTS_SETS_SUBPROJECTS_MAP_COLUMNS = ['id', 'subproject_id', 'measurement
 
 
 def db_get_measurement_set(con, measurement_set_id) -> models.MeasurementSet:
-    select_stmnt = MySQLStatementBuilder(con)
-    rs_list = select_stmnt.execute_procedure('get_measurements_set', [measurement_set_id])
+    # Fetch measurement set
+    select_set_stmnt = MySQLStatementBuilder(con)
+    res = select_set_stmnt\
+        .select(MEASUREMENTS_SETS_TABLE, MEASUREMENTS_SETS_COLUMNS)\
+        .where("id = ?", [measurement_set_id])\
+        .execute(dictionary=True, fetch_type=FetchType.FETCH_ONE)
 
-    if len(rs_list[0]) == 0:
-        raise exc.MeasurementSetNotFoundException(f'Measurement set with id {measurement_set_id} not found.')
+    if res is None:
+        raise exc.MeasurementNotFoundException
 
-    measurement_set = models.MeasurementSet(**rs_list[0][0])
-    for res in rs_list[1]:
-        measurement_set.measurements.append(models.MeasurementListing(**res))
+    measurement_set = models.MeasurementSet(**res)
+
+    # Fetch measurements
+    nested_count_exp = f'(SELECT COUNT(*) FROM `{MEASUREMENTS_RESULTS_DATA_TABLE}` ' \
+                       f'WHERE `{MEASUREMENTS_RESULTS_DATA_TABLE}`.`measurement_id` = `{MEASUREMENTS_TABLE}`.`id`)'
+
+    with con.cursor(prepared=True) as cursor:
+        # This expression requires nested expressions, and is thus written by hand, rather than through abstraction
+        # build expression..
+        data_count_name = 'data_count'
+        query = f"SELECT {', '.join(MEASUREMENTS_COLUMNS)}, {nested_count_exp} as {data_count_name} " \
+                f"FROM {MEASUREMENTS_TABLE} " \
+                f"WHERE measurement_set_id = ?"
+        values = [measurement_set_id]
+
+        # Log for sanity-check
+        logger.debug(f"db_get_measurement_set query: '{query}' with values: {values}")
+
+        # Execute query
+        cursor.execute(query, values)
+
+        # Loop through results, and put information into measurement_set object
+        rs = cursor.fetchall()
+        columns = MEASUREMENTS_COLUMNS + [data_count_name]
+        for res in rs:
+            res_dict = dict(zip(columns, res))
+            measurement_set.measurements.append(models.MeasurementListing(**res_dict))
 
     return measurement_set
 
