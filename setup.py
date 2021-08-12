@@ -5,6 +5,7 @@ import tempfile
 
 from fastapi import Request
 from fastapi.logger import logger
+from starlette.responses import Response
 
 
 def config_default_logging():
@@ -30,6 +31,14 @@ def install_middleware(app):
     :param app: FastAPI app
     :return: Null
     """
+
+    @app.middleware("http")
+    async def log_exceptions(request: Request, call_next):
+        try:
+            return await call_next(request)
+        except:
+            logger.exception("Internal server error.")
+            return Response("Internal server error", status_code=500)
 
     @app.middleware("http")
     async def log_requests(request: Request, call_next):

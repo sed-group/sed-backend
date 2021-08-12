@@ -21,7 +21,7 @@ async def get_projects(segment_length: int, index: int, current_user: User = Dep
     :param index:
     :return:
     """
-    return impl_get_user_projects(segment_length, index, user_id=current_user.id)
+    return impl_get_user_projects(current_user.id, segment_length=segment_length, index=index)
 
 
 @router.get("/all",
@@ -56,7 +56,7 @@ async def post_project(project: ProjectPost):
 @router.delete("/{project_id}",
                summary="Delete project",
                description="Delete a project",
-               dependencies=[Security(verify_token, scopes=['admin'])])
+               dependencies=[Depends(ProjectAccessChecker([AccessLevel.OWNER, AccessLevel.ADMIN]))])
 async def delete_project(project_id: int):
     return impl_delete_project(project_id)
 
@@ -103,9 +103,12 @@ async def get_subproject_native(application_sid: str, native_project_id: int):
 @router.post("/{project_id}/subproject/",
              summary="Create subproject",
              description="Create a new subproject. Needs to be connected to an existing project.",
-             dependencies=[Security(verify_token), Depends(ProjectAccessChecker([AccessLevel.OWNER, AccessLevel.ADMIN]))])
-async def post_subproject(subproject: SubProjectPost):
-    return impl_post_subproject(subproject)
+             response_model=SubProject,
+             dependencies=[Security(verify_token),
+                           Depends(ProjectAccessChecker([AccessLevel.OWNER, AccessLevel.ADMIN]))])
+async def post_subproject(project_id: int, subproject: SubProjectPost,
+                          current_user: User = Depends(get_current_active_user)):
+    return impl_post_subproject(subproject, current_user.id, project_id=project_id)
 
 
 @router.delete("/{project_id}/subproject/{subproject_id}",

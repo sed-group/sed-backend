@@ -11,9 +11,9 @@ def impl_get_projects(segment_length: int, index: int):
         return db_get_projects(con, segment_length, index)
 
 
-def impl_get_user_projects(segment_length:int, index: int, user_id: int):
+def impl_get_user_projects(user_id: int, segment_length: int = 0, index: int = 0):
     with get_connection() as con:
-        return db_get_user_projects(con, segment_length, index, user_id)
+        return db_get_user_projects(con, user_id, segment_length=segment_length, index=index)
 
 
 def impl_get_project(project_id: int):
@@ -86,10 +86,11 @@ def impl_put_name(project_id: int, name: str):
         )
 
 
-def impl_post_subproject(subproject: SubProjectPost):
+def impl_post_subproject(subproject: SubProjectPost, current_user_id: int, project_id: Optional[int] = None) \
+        -> SubProject:
     try:
         with get_connection() as con:
-            res = db_post_subproject(con, subproject)
+            res = db_post_subproject(con, subproject, current_user_id, project_id)
             con.commit()
             return res
     except ProjectNotFoundException:
@@ -97,10 +98,10 @@ def impl_post_subproject(subproject: SubProjectPost):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
         )
-    except ProjectInsertFailureException:
+    except SubProjectDuplicateException:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to insert new project"
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Subproject with same native id and application sid already exists."
         )
 
 
@@ -120,7 +121,7 @@ def impl_get_subproject(project_id: int, subproject_id: int):
         )
 
 
-def impl_get_subproject_native(application_sid: str, native_project_id: int):
+def impl_get_subproject_native(application_sid: str, native_project_id: int) -> SubProject:
     try:
         with get_connection() as con:
             return db_get_subproject_native(con, application_sid, native_project_id)

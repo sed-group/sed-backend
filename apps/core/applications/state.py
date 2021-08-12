@@ -6,6 +6,8 @@ not be accessed directly.
 from typing import List
 import json
 
+from fastapi.logger import logger
+
 from apps.core.applications.exceptions import ApplicationNotFoundException
 from apps.core.applications.models import Application
 
@@ -25,6 +27,7 @@ def get_application(app_id: str) -> Application:
     :param app_id:
     :return:
     """
+    logger.debug(f"Get application with app_sid = {app_id}")
     if app_id in _applications_data.keys():
         return _get_application_instance(app_id)
     else:
