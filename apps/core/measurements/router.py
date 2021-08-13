@@ -5,6 +5,10 @@ from fastapi import APIRouter, Security, Depends, UploadFile, File
 
 import apps.core.measurements.models as models
 import apps.core.measurements.implementation as impl
+import apps.core.files.models as models_files
+import apps.core.files.implementation as impl_files
+from apps.core.users.models import User
+from apps.core.authentication.utils import get_current_active_user
 
 router = APIRouter()
 
@@ -25,14 +29,11 @@ async def get_measurement_sets(subproject_id: Optional[int] = None):
 
 @router.post("/sets/upload",
              summary="Upload measurement set")
-async def post_upload_set(file: UploadFile = File(...)):
+async def post_upload_set(file: UploadFile = File(...), current_user: User = Depends(get_current_active_user)):
 
     # Use file.file to read file
-
-    return {
-        "filename": file.filename,
-        "content_type": file.content_type
-    }
+    stored_file_post = models_files.StoredFilePost.import_fastapi_file(file, current_user.id)
+    return impl_files.impl_save_file(stored_file_post)
 
 
 @router.get("/sets/{measurement_set_id}",
