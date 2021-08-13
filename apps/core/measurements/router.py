@@ -28,9 +28,9 @@ async def get_measurement_sets(subproject_id: Optional[int] = None):
 
 
 @router.post("/sets/upload",
-             summary="Upload measurement set")
+             summary="Upload measurement set",
+             response_model=models_files.StoredFileEntry)
 async def post_upload_set(file: UploadFile = File(...), current_user: User = Depends(get_current_active_user)):
-
     # Use file.file to read file
     stored_file_post = models_files.StoredFilePost.import_fastapi_file(file, current_user.id)
     return impl_files.impl_save_file(stored_file_post)

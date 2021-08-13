@@ -17,12 +17,19 @@ class StoredFilePost(BaseModel):
     def import_fastapi_file(file: UploadFile, current_user_id: int):
         filename = file.filename
         extension = os.path.splitext(file.filename)[1]
-        print(f"{filename} {extension} {current_user_id}")
-
         return StoredFilePost(filename=filename,
                               extension=extension,
                               owner_id=current_user_id,
                               file_object=file.file)
+
+
+class StoredFileEntry(BaseModel):
+    id: int
+    temp: bool
+    filename: str
+    insert_timestamp: datetime
+    owner_id: int
+    extension: str
 
 
 class StoredFile(BaseModel):

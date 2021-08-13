@@ -7,12 +7,9 @@ import apps.core.authentication.exceptions as exc_auth
 import apps.core.files.models as models
 
 
-def impl_save_file(file: models.StoredFilePost):
-    print("test")
+def impl_save_file(file: models.StoredFilePost) -> models.StoredFileEntry:
     try:
-        print("test2")
         with get_connection() as con:
-            print("test3")
             res = storage.db_save_file(con, file)
             con.commit()
             return res
@@ -23,7 +20,7 @@ def impl_save_file(file: models.StoredFilePost):
         )
 
 
-def impl_delete_file(file_id: int, current_user_id: int):
+def impl_delete_file(file_id: int, current_user_id: int) -> bool:
     try:
         with get_connection() as con:
             res = storage.db_delete_file(con, file_id, current_user_id)
