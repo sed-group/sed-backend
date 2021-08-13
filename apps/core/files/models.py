@@ -35,7 +35,7 @@ class StoredFileEntry(BaseModel):
 class StoredFile(BaseModel):
     id: int
     temp: bool
-    path: str
+    uuid: str
     filename: str
     insert_timestamp: datetime
     directory: str
