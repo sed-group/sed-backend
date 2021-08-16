@@ -8,23 +8,22 @@ import apps.core.files.models as models
 import apps.core.files.exceptions as exc
 from libs.mysqlutils import MySQLStatementBuilder, exclude_cols, FetchType
 
+FILES_RELATIVE_UPLOAD_DIR = f'{os.path.abspath(os.sep)}sed_lab/uploaded_files/'
 FILES_TABLE = 'files'
 FILES_COLUMNS = ['id', 'temp', 'uuid', 'filename', 'insert_timestamp', 'directory', 'owner_id', 'extension']
 
 
 def db_save_file(con: PooledMySQLConnection, file: models.StoredFilePost) -> models.StoredFileEntry:
     # Store file in filesystem
-    root = os.path.abspath(os.sep)
-    directory = root + 'sed_lab/uploaded_files/'
     filename_uuid = uuid.uuid4().hex
-    path = directory+filename_uuid
+    path = FILES_RELATIVE_UPLOAD_DIR+filename_uuid
     with open(path, 'wb') as buffer:
         shutil.copyfileobj(file.file_object, buffer)
 
     # Store reference to file in database
     insert_stmnt = MySQLStatementBuilder(con)
     insert_stmnt.insert(FILES_TABLE, exclude_cols(FILES_COLUMNS, ['id', 'insert_timestamp']))\
-        .set_values([True, filename_uuid, file.filename, directory, file.owner_id, file.extension])\
+        .set_values([True, filename_uuid, file.filename, FILES_RELATIVE_UPLOAD_DIR, file.owner_id, file.extension])\
         .execute()
 
     file_id = insert_stmnt.last_insert_id
@@ -49,9 +48,19 @@ def db_get_file_entry(con: PooledMySQLConnection, file_id: int, current_user_id:
     return stored_file
 
 
+def db_get_file_path(con: PooledMySQLConnection, file_id: int, current_user_id: int) -> models.StoredFilePath:
+    select_stmnt = MySQLStatementBuilder(con)
+    res = select_stmnt\
+        .select(FILES_TABLE, ['filename', 'uuid', 'directory', 'extension'])\
+        .where('id=?', [file_id])\
+        .execute(dictionary=True, fetch_type=FetchType.FETCH_ONE)
 
-def db_get_file(con: PooledMySQLConnection, file_id: int, current_user_id: int):
-    pass
+    if res is None:
+        raise exc.FileNotFoundException('File not found in DB')
+
+    path = res['directory'] + res['uuid']
+    stored_path = models.StoredFilePath(id=file_id, filename=res['filename'], path=path, extension=res['extension'])
+    return stored_path
 
 
 def db_put_file_temp(con: PooledMySQLConnection, file_id: int, temp: bool, current_user_id: int) \
@@ -62,3 +71,5 @@ def db_put_file_temp(con: PooledMySQLConnection, file_id: int, temp: bool, curre
 def db_put_filename(con: PooledMySQLConnection, file_id: int, filename_new: str, current_user_id: int) \
         -> models.StoredFileEntry:
     pass
+
+

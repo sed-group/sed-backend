@@ -41,3 +41,16 @@ class StoredFile(BaseModel):
     directory: str
     owner_id: int
     extension: str
+
+
+class StoredFilePath(BaseModel):
+    id: int
+    filename: str
+    path: str
+    extension: str
+
+
+class StoredFileReadout(BaseModel):
+    id: int
+    filename: str
+    content: str

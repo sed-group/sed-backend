@@ -5,6 +5,8 @@ from fastapi import HTTPException, status
 import apps.core.measurements.models as models
 import apps.core.measurements.storage as storage
 import apps.core.measurements.exceptions as exc
+import apps.core.measurements.algorithms as algs
+import apps.core.files.models as models_files
 from apps.core.db import get_connection
 
 
@@ -113,3 +115,7 @@ def impl_post_measurement_result(measurement_id: int, mr: models.MeasurementResu
         res = storage.db_post_measurement_result(con, measurement_id, mr)
         con.commit()
         return res
+
+
+def impl_post_upload_set(stored_file_path: models_files.StoredFilePath):
+    return algs.get_sheet_headers(stored_file_path)

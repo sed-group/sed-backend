@@ -38,10 +38,10 @@ def impl_delete_file(file_id: int, current_user_id: int) -> bool:
         )
 
 
-def impl_get_file_content(file_id: int, current_user_id: int):
+def impl_get_file_path(file_id: int, current_user_id: int):
     try:
         with get_connection() as con:
-            return storage.db_get_file(con, file_id, current_user_id)
+            return storage.db_get_file_path(con, file_id, current_user_id)
     except exc.FileNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

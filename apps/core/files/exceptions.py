@@ -4,3 +4,7 @@ class FileSizeException(Exception):
 
 class FileNotFoundException(Exception):
     pass
+
+
+class FileParsingException(Exception):
+    pass
