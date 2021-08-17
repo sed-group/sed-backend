@@ -28,13 +28,16 @@ async def get_measurement_sets(subproject_id: Optional[int] = None):
 
 
 @router.post("/sets/upload",
-             summary="Upload measurement set")
-async def post_upload_set(file: UploadFile = File(...), current_user: User = Depends(get_current_active_user)):
+             summary="Upload measurement set",
+             response_model=List[str],
+             description="Upload a measurement set using a CSV or Excel file. Leaving csv_delimiter as None will "
+                         "result in the value being inferred automatically.")
+async def post_upload_set(file: UploadFile = File(...), csv_delimiter: Optional[str] = None, current_user: User = Depends(get_current_active_user)):
     # Use file.file to read file
     stored_file_post = models_files.StoredFilePost.import_fastapi_file(file, current_user.id)
     file_entry = impl_files.impl_save_file(stored_file_post)
     file_path = impl_files.impl_get_file_path(file_entry.id, current_user.id)
-    return impl.impl_post_upload_set(file_path)
+    return impl.impl_post_upload_set(file_path, csv_delimiter=csv_delimiter)
 
 
 @router.get("/sets/{measurement_set_id}",

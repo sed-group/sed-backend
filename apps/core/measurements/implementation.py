@@ -117,5 +117,5 @@ def impl_post_measurement_result(measurement_id: int, mr: models.MeasurementResu
         return res
 
 
-def impl_post_upload_set(stored_file_path: models_files.StoredFilePath):
-    return algs.get_sheet_headers(stored_file_path)
+def impl_post_upload_set(stored_file_path: models_files.StoredFilePath, csv_delimiter: Optional[str] = None):
+    return algs.get_sheet_headers(stored_file_path, csv_delimiter=csv_delimiter)
