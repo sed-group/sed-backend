@@ -7,6 +7,7 @@ USE seddb;
 
 CREATE USER IF NOT EXISTS 'rw' IDENTIFIED BY 'DONT_USE_IN_PRODUCTION!';
 GRANT SELECT, INSERT, UPDATE, DELETE ON * TO 'rw';
+GRANT EXECUTE ON `seddb`.* TO 'rw'@'%';
 
 # Create users TABLE
 CREATE TABLE IF NOT EXISTS `seddb`.`users` (
@@ -20,28 +21,10 @@ CREATE TABLE IF NOT EXISTS `seddb`.`users` (
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
   UNIQUE INDEX `username_UNIQUE` (`username` ASC) VISIBLE);
+# TODO: Index users
 
 # Create default admin user
 INSERT INTO `seddb`.`users` (`username`, `password`,`scopes`, `disabled`) VALUES ('admin', '$2b$12$HrAma.HCdIFuHtnbVcle/efa9luh.XUqZapqFEUISj91TKTN6UgR6', 'admin', False);
-
-# User table index for alphabetic order
-# TODO: Index users
-
-# Create applications table
-CREATE TABLE IF NOT EXISTS `seddb`.`applications` (
-  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(255) NOT NULL,
-  `description` VARCHAR(1000) NULL DEFAULT NULL,
-  `contact` VARCHAR(255) NULL DEFAULT NULL,
-  `href` VARCHAR(500) NULL COMMENT 'project homepage',
-  `href_access` VARCHAR(500) NOT NULL COMMENT 'frontend url',
-  `href_docs` VARCHAR(500) NULL DEFAULT NULL COMMENT 'url for documentation',
-  `href_source` VARCHAR(500) NULL DEFAULT NULL,
-  `href_api` VARCHAR(500) NULL DEFAULT NULL COMMENT 'url for api root endpoint',
-  PRIMARY KEY (`id`),
-  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
-  UNIQUE INDEX `name_UNIQUE` (`name` ASC) VISIBLE,
-  UNIQUE INDEX `href_access_UNIQUE` (`href_access` ASC) VISIBLE);
 
 # Create projects table
 CREATE TABLE IF NOT EXISTS `seddb`.`projects` (
@@ -75,3 +58,139 @@ ADD CONSTRAINT `user_cascade`
   REFERENCES `seddb`.`users` (`id`)
   ON DELETE CASCADE
   ON UPDATE NO ACTION;
+
+CREATE TABLE IF NOT EXISTS `seddb`.`projects_subprojects` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `application_sid` VARCHAR(255) NOT NULL,
+  `project_id` INT UNSIGNED NULL DEFAULT NULL,
+  `native_project_id` INT UNSIGNED NOT NULL,
+  `owner_id` INT UNSIGNED NOT NULL,
+  PRIMARY KEY (`id`),
+  INDEX `NATIVE_SUBPROJ_ID` (`native_project_id` ASC) INVISIBLE,
+  INDEX `projects_cascade_idx` (`project_id` ASC) VISIBLE,
+  CONSTRAINT `projects_cascade`
+  FOREIGN KEY (`project_id`)
+  REFERENCES `seddb`.`projects` (`id`)
+  ON DELETE CASCADE);
+
+# Create individuals table
+CREATE TABLE IF NOT EXISTS `seddb`.`individuals` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NOT NULL DEFAULT 'Unnamed individuals',
+  `is_archetype` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
+
+# Create parameter table
+CREATE TABLE IF NOT EXISTS `seddb`.`individuals_parameters` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NOT NULL,
+  `value` VARCHAR(255) NULL DEFAULT NULL,
+  `type` TINYINT UNSIGNED NOT NULL,
+  `individual_id` INT UNSIGNED NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
+  INDEX `individuals_cascade_idx` (`individual_id` ASC) VISIBLE,
+  CONSTRAINT `individuals_cascade`
+    FOREIGN KEY (`individual_id`)
+    REFERENCES `seddb`.`individuals` (`id`)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION);
+
+
+# Create individual to archetypes map
+CREATE TABLE IF NOT EXISTS `seddb`.`individuals_archetypes_map` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `individual_archetype_id` INT UNSIGNED NOT NULL,
+  `individual_id` INT UNSIGNED NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
+  INDEX `individual_cascade_idx` (`individual_id` ASC) VISIBLE,
+  CONSTRAINT `individual_cascade`
+    FOREIGN KEY (`individual_id`)
+    REFERENCES `seddb`.`individuals` (`id`)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION);
+
+
+CREATE TABLE IF NOT EXISTS `seddb`.`measurements_sets` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NOT NULL DEFAULT 'Unnamed measurement set',
+  `type` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  `description` TEXT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
+
+
+# Measurements table
+CREATE TABLE IF NOT EXISTS `seddb`.`measurements` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NOT NULL DEFAULT 'Unnamed measurement',
+  `type` TINYINT UNSIGNED NOT NULL,
+  `description` TEXT NULL,
+  `measurement_set_id` INT UNSIGNED NOT NULL,
+  PRIMARY KEY (`id`),
+  INDEX `measurement_set_cascade_idx` (`measurement_set_id` ASC) VISIBLE,
+  CONSTRAINT `measurement_set_cascade`
+      FOREIGN KEY (`measurement_set_id`)
+      REFERENCES `seddb`.`measurements_sets` (`id`)
+      ON DELETE CASCADE
+      ON UPDATE NO ACTION);
+
+
+# Measurement data table
+CREATE TABLE IF NOT EXISTS `seddb`.`measurements_results_data` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `measurement_id` INT UNSIGNED NOT NULL,
+  `individual_id` INT UNSIGNED,
+  `value` VARCHAR(255) NOT NULL,
+  `type` TINYINT UNSIGNED NOT NULL,
+  `insert_timestamp` DATETIME(3) NOT NULL DEFAULT NOW(3),
+  `measurement_timestamp` DATETIME(3) NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
+  INDEX `measurement_data_measurements_cascade_idx` (`measurement_id` ASC) VISIBLE,
+  CONSTRAINT `measurement_data_measurements_cascade`
+    FOREIGN KEY (`measurement_id`)
+    REFERENCES `seddb`.`measurements` (`id`)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION);
+
+# Measurements result files table
+CREATE TABLE IF NOT EXISTS `seddb`.`measurements_results_files` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `measurement_id` INT UNSIGNED NOT NULL,
+  `individual_id` INT UNSIGNED,
+  `file` VARCHAR(500) NOT NULL,
+  `insert_timestamp` DATETIME(3) NOT NULL DEFAULT NOW(3),
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
+  UNIQUE INDEX `measurement_id_UNIQUE` (`measurement_id` ASC) VISIBLE,
+  CONSTRAINT `measurements_files_measurements_cascade`
+    FOREIGN KEY (`measurement_id`)
+    REFERENCES `seddb`.`measurements` (`id`)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION);
+
+
+CREATE TABLE `seddb`.`measurements_sets_subprojects_map` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `subproject_id` INT UNSIGNED NOT NULL,
+  `measurement_set_id` INT UNSIGNED NOT NULL,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `measurement_set_subproject_cascade`
+  FOREIGN KEY (`subproject_id`)
+  REFERENCES `seddb`.`projects_subprojects` (`id`)
+  ON DELETE CASCADE
+  ON UPDATE NO ACTION);
+
+
+# Difam projects
+CREATE TABLE IF NOT EXISTS `seddb`.`difam_projects` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NULL DEFAULT 'Unnamed project',
+  `individual_archetype_id` INT UNSIGNED NULL DEFAULT NULL,
+  `owner_id` INT UNSIGNED NOT NULL,
+  `datetime_created` DATETIME(3) NOT NULL DEFAULT NOW(3),
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);

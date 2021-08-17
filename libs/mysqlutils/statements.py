@@ -22,6 +22,10 @@ def create_select_statement(table, columns: List[str]):
     return f"SELECT {','.join(wrap_in_backticks(columns))} FROM {table} "   # SELECT col1, col2 FROM table
 
 
+def create_count_statement(table):
+    return f"SELECT COUNT(*) as count FROM {table} "
+
+
 def create_delete_statement(table: str):
     return f"DELETE FROM {table} "
 
@@ -54,6 +58,7 @@ def create_order_by_statement(columns: List[str], order: Sort = None):
         return f"ORDER BY {cols_str} {order.value} "
     else:
         return f"ORDER BY {cols_str} "
+
 
 def create_inner_join_statement(target_table, join_statement):
     return f"INNER JOIN {target_table} ON {join_statement} "

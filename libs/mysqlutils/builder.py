@@ -1,5 +1,5 @@
 from .statements import *
-from typing import Any, List
+from typing import Any, List, Optional, Tuple
 from fastapi.logger import logger
 from enum import Enum
 
@@ -10,7 +10,6 @@ class FetchType(Enum):
     """
 
     FETCH_ONE = "Fetch_One"
-    FETCH_MANY = "Fetch_Many"
     FETCH_ALL = "Fetch_All"
     FETCH_NONE = "Fetch_None"
 
@@ -26,6 +25,7 @@ class MySQLStatementBuilder:
         self.query = ""
         self.values = []
         self.last_insert_id = None
+        self.default_fetchtype = FetchType.FETCH_NONE
 
     def insert(self, table: str, columns: List[str]):
         """
@@ -38,8 +38,7 @@ class MySQLStatementBuilder:
         self.query += create_insert_statement(table, columns)
         return self
 
-    def set_values(self, values):
-        print('values')
+    def set_values(self, values: List[str]):
         self.query += create_prepared_values_statement(len(values))
         self.values.extend(values)
         return self
@@ -54,6 +53,11 @@ class MySQLStatementBuilder:
         """
 
         self.query += create_select_statement(table, columns)
+        return self
+
+    def count(self, table: str):
+        self.query += create_count_statement(table)
+        self.default_fetchtype = FetchType.FETCH_ONE
         return self
 
     def update(self, table: str, set_statement, values):
@@ -104,8 +108,7 @@ class MySQLStatementBuilder:
         return f'({",".join(placeholder_array)})'       # Return that as a SQL array in string format
 
     def execute(self,
-                fetch_type: FetchType = FetchType.FETCH_NONE,
-                size: int = None,
+                fetch_type: Optional[FetchType] = None,
                 dictionary: bool = False,
                 return_affected_rows = False):
         """
@@ -113,10 +116,14 @@ class MySQLStatementBuilder:
 
         :param dictionary: boolean. Default is False. Converts response to dictionaries
         :param fetch_type: FetchType.FETCH_NONE by default
-        :param size: Required when using FetchType.FETCH_MANY. Determines how many rows to fetch
         :param return_affected_rows: When deleting rows, the amount of rows deleted may be returned if this is true
-        :return: None by default, but can be changed by seting keyword param "fetch_type"
+        :return: None by default, but can be changed by setting keyword param "fetch_type"
         """
+        if fetch_type is None and self.default_fetchtype is not None:
+            fetch_type = self.default_fetchtype
+
+        if fetch_type is None:
+            fetch_type = FetchType.FETCH_NONE
 
         logger.debug(f'executing query "{self.query}" with values "{self.values}". fetch_type={fetch_type}')
 
@@ -127,12 +134,14 @@ class MySQLStatementBuilder:
             # Determine what the query should return
             if fetch_type is FetchType.FETCH_ONE:
                 res = cursor.fetchone()
+
+                # This is awful. But, since we can't combine prepared cursors with buffered cursors this is necessary
+                if res is not None:
+                    while cursor.fetchone() is not None:
+                        pass
+
             elif fetch_type is FetchType.FETCH_ALL:
                 res = cursor.fetchall()
-            elif fetch_type is FetchType.FETCH_MANY:
-                if size is None:
-                    raise ValueError('When using FETCH_MANY size needs to be 1 or higher')
-                res = cursor.fetchmany(size=size)
             elif fetch_type is FetchType.FETCH_NONE:
                 res = None
             else:
@@ -142,7 +151,7 @@ class MySQLStatementBuilder:
             if dictionary is True and res is not None:
 
                 # Format response depending on fetch type
-                if fetch_type in [FetchType.FETCH_ALL, FetchType.FETCH_MANY]:
+                if fetch_type in [FetchType.FETCH_ALL]:
                     dict_array = []
 
                     for row in res:
@@ -159,3 +168,27 @@ class MySQLStatementBuilder:
             else:
                 return res
 
+    def execute_procedure(self, procedure: str, args: List) -> List[List[Any]]:
+        """
+        Execute a stored procedure. May return multiple result sets depending on the procedure.
+        :param procedure: Name of stored procedure
+        :param args: List of arguments
+        :return: List of result sets
+        """
+        logger.debug(f'executing stored procedure "{procedure}" with arguments {args}')
+
+        with self.con.cursor(dictionary=True) as cursor:
+            cursor.callproc(procedure, args=args)
+
+            result_sets = []
+
+            for recordset in cursor.stored_results():
+                column_names = recordset.column_names
+                res_list = []
+                for row in recordset:
+                    row_dict = dict(zip(column_names, row))
+                    res_list.append(row_dict)
+
+                result_sets.append(res_list)
+
+        return result_sets

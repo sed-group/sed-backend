@@ -21,6 +21,8 @@ services:
       context: .
       dockerfile: Dockerfile-backend-api
     restart: on-failure
+    depends_on:
+      - "core-db"
 
 networks:
   sedlab:

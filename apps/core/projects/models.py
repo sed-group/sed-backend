@@ -1,7 +1,8 @@
-from pydantic import BaseModel
-
+from __future__ import annotations          # Obsolete in Python 3.10
 from typing import Optional, List, Dict
 from enum import IntEnum, unique
+
+from pydantic import BaseModel
 
 from apps.core.users.models import User
 
@@ -14,6 +15,18 @@ class AccessLevel(IntEnum):
     ADMIN = 3
     OWNER = 4
 
+    @staticmethod
+    def list_can_read() -> List[AccessLevel]:
+        return [AccessLevel.READONLY, AccessLevel.EDITOR, AccessLevel.ADMIN, AccessLevel.OWNER]
+
+    @staticmethod
+    def list_can_edit() -> List[AccessLevel]:
+        return [AccessLevel.EDITOR, AccessLevel.ADMIN, AccessLevel.OWNER]
+
+    @staticmethod
+    def list_are_admins() -> List[AccessLevel]:
+        return [AccessLevel.ADMIN, AccessLevel.OWNER]
+
 
 class Project(BaseModel):
     id: Optional[int] = None        # Project database ID
@@ -21,10 +34,6 @@ class Project(BaseModel):
     subprojects: List[int] = []     # Mappings to application subproject IDs
     participants: List[User] = []   # List of users who has any kind of access to this project
     participants_access: Dict[int, AccessLevel] = dict()   # Maps user_id to access_type
-
-    def has_access(self, user_id: int) -> AccessLevel:
-        # Check in database if user has access to this project, and what kind of access.
-        pass
 
 
 class ProjectListing(BaseModel):
@@ -39,3 +48,12 @@ class ProjectPost(BaseModel):
     participants_access: Dict[int, AccessLevel]
 
 
+class SubProjectPost(BaseModel):
+    application_sid: str
+    native_project_id: int
+
+
+class SubProject(SubProjectPost):
+    id: int
+    owner_id: int
+    project_id: Optional[int]

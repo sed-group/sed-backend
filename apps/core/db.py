@@ -24,14 +24,16 @@ except mysql.connector.Error as err:
         logger.error('Incorrect mysql credentials')
     elif err.errno == errorcode.ER_BAD_DB_ERROR:
         logger.error('DB could not be found')
+    elif err.errno == 2003:
+        logger.error('Incorrect database configuration')
     else:
-        logger.error(err)
-else:
-    logger.debug('Database connection pool was successfully established')
+        logger.debug('Unknown database error')
+
+    raise ValueError('Malfunctioning database configuration')
 
 
 @contextmanager
-def get_connection():
+def get_connection() -> pooling.PooledMySQLConnection:
     """
     Returns a MySQL connection that can be used for read/write.
     Should be utilized through "get with resources" methodology.
