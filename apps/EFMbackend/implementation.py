@@ -49,6 +49,9 @@ def create_tree(db: Session, newTree = schemas.TreeNew):
     theTree = storage.tree_set_topLvlDs(db, theTree.id, topDS.id)
     return theTree
 
+def edit_tree(db:Session, treeID: int, treeData: schemas.TreeNew):
+    return storage.edit_EFMobject(db, 'tree', treeID, treeID)
+
 def get_tree_details(db: Session, treeID: int):
     ''' 
         returns a tree object with all details

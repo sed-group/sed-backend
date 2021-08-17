@@ -274,6 +274,26 @@ def test_create_bad_iw():
     assert iwResponse.status_code == 400
 
 # edit tree
+def test_edit_tree():
+    global testTreeID
+    newTreeData = {
+        'name': 'a new tree name',
+        'description': 'an edited description'
+    }
+
+    response = client.put(urlPrefix + '/trees/' + str(testTreeID), newTreeData)
+
+    assert response.status_code == 200
+
+    responseData = response.json()
+    topLvlDSid = responseData['topLvlDSid']
+    
+    assert responseData == {
+        'id': testTreeID,
+        'name': 'a new tree name',
+        'description': 'an edited description',
+        'topLvlDSid': topLvlDSid
+    }
 
 # edit FR
 

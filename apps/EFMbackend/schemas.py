@@ -19,6 +19,14 @@ class TreeNew(BaseModel):
     name: str
     description: str
 
+class TreeInfo(TreeNew):
+    '''
+    tree class only containing header info, 
+    no actual tree
+    '''
+    id: int
+    topLvlDSid: int
+
 class Tree(TreeNew):
     """
     tree class including all fields

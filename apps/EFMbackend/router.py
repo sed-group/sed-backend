@@ -53,9 +53,16 @@ async def get_tree(treeID: int, db: Session = Depends(get_db)):
 async def delete_tree(treeID: int, db: Session = Depends(get_db)):
     return implementation.delete_tree(db=db, treeID=treeID)
 
+@router.put("/trees/{treeID}",
+            response_model= schemas.TreeInfo,
+            summary="edits the header info of a tree (e.g. name, description) and returns a info object containing only header info"
+            )
+async def edit_tree(treeID: int, treeData: schemas.TreeNew, db: Session = Depends(get_db)):
+    return implementation.edit_tree(db, treeID, treeData)
+
 @router.get("/trees/{treeID}/data",
             response_model= schemas.TreeData,
-            summary="Returns all information in a tree as a big json dump -WIP-"
+            summary="Returns all information in a tree as a big json dump"
             )
 async def get_tree_data(treeID: int, db: Session = Depends(get_db)):
     ''' NOT IMPLEMETED YET '''
