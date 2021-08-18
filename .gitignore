@@ -10,3 +10,10 @@ venv/
 
 # Logs
 *.log
+.vscode/settings.json
+
+# alembic versions
+apps/EFMbackend/alembic/versions
+
+# test database
+*.db 
