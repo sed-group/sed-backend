@@ -86,6 +86,14 @@ async def put_participant_name(project_id: int, name: str):
     return impl_put_name(project_id, name)
 
 
+@router.get("/{project_id}/subproject/",
+            summary="Get subprojects in project",
+            dependencies=[Depends(ProjectAccessChecker(AccessLevel.list_can_read()))],
+            response_model=List[SubProject])
+async def get_subprojects(project_id: int):
+    return impl_get_subprojects(project_id)
+
+
 @router.get("/{project_id}/subproject/{subproject_id}",
             summary="Get subproject",
             description="Get a specific project using subproject ID")

@@ -2,6 +2,7 @@ from typing import List, Optional
 
 from fastapi.logger import logger
 from libs.mysqlutils import MySQLStatementBuilder, FetchType
+from mysql.connector.pooling import PooledMySQLConnection
 
 from apps.core.applications.state import get_application
 from apps.core.projects.models import Project, ProjectPost, ProjectListing, SubProjectPost, SubProject
@@ -178,6 +179,27 @@ def db_post_subproject(connection, subproject: SubProjectPost, current_user_id: 
             .execute()
 
         return db_get_subproject_native(connection, subproject.application_sid, subproject.native_project_id)
+
+
+def db_get_subprojects(connection: PooledMySQLConnection, project_id: int) -> List[SubProject]:
+    # Assert that the project exists
+    db_get_project(connection, project_id)  # Throws if project does not exist
+
+    select_stmnt = MySQLStatementBuilder(connection)
+    rs = select_stmnt.select(SUBPROJECTS_TABLE, SUBPROJECT_COLUMNS)\
+        .where('project_id = ?', [project_id])\
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    subproject_list = []
+
+    if rs is None:
+        return subproject_list
+
+    for res in rs:
+        subproject = SubProject(**res)
+        subproject_list.append(subproject)
+
+    return subproject_list
 
 
 def db_get_subproject(connection, project_id, subproject_id) -> Optional[SubProject]:
