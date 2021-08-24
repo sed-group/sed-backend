@@ -17,7 +17,6 @@ class ProjectAccessChecker:
         user_id = request.state.user_id
 
         project = impl_get_project(project_id)
-        print(project)
 
         # Check if user is a participant in the project
         if user_id not in project.participants_access.keys():

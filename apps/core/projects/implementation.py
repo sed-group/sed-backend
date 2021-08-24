@@ -105,6 +105,11 @@ def impl_post_subproject(subproject: SubProjectPost, current_user_id: int, proje
         )
 
 
+def impl_get_subprojects(project_id: int) -> List[SubProject]:
+    with get_connection() as con:
+        return db_get_subprojects(con, project_id)
+
+
 def impl_get_subproject(project_id: int, subproject_id: int):
     try:
         with get_connection() as con:
