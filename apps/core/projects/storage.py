@@ -84,9 +84,14 @@ def db_get_project(connection, project_id) -> models.Project:
     return project
 
 
-def db_post_project(connection, project: models.ProjectPost) -> models.Project:
+def db_post_project(connection, project: models.ProjectPost, owner_id: int) -> models.Project:
     logger.debug('Adding new project:')
     logger.debug(project)
+
+    # Set owner if it is not already set
+    if owner_id not in project.participants:
+        project.participants.append(owner_id)
+    project.participants_access[owner_id] = models.AccessLevel.OWNER
 
     project_sql = MySQLStatementBuilder(connection)
     project_cols = ['name']
@@ -95,6 +100,10 @@ def db_post_project(connection, project: models.ProjectPost) -> models.Project:
 
     for participant_id in project.participants:
         access_level = project.participants_access.get(participant_id)
+
+        if access_level is None:
+            raise exc.ParticipantInconsistencyException('Participant is listed, but was not assigned an access level.')
+
         db_add_participant(connection, project_id, participant_id, access_level, check_project_exists=False)
 
     return db_get_project(connection, project_id)
