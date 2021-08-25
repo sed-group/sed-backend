@@ -1,25 +1,26 @@
 from .exceptions import UserNotFoundException, UserNotUniqueException
-from .models import User, UserPost
+import apps.core.users.models as models
 from apps.core.authentication.utils import get_password_hash, parse_scopes
 from apps.core.authentication.exceptions import UnauthorizedOperationException
 from libs.mysqlutils import MySQLStatementBuilder, FetchType
 from mysql.connector.errors import IntegrityError
 
-USER_COLUMNS = ['id', 'username', 'email', 'full_name', 'scopes']
+USERS_COLUMNS_SAFE = ['id', 'username', 'email', 'full_name', 'scopes'] # Safe, as it does not contain passwords
+USERS_TABLE = 'users'
 
 
 def db_get_user_safe_with_username(connection, user_name: str):
     mysql_statement = MySQLStatementBuilder(connection)
     cols = ['id', 'username', 'email', 'full_name']
     user_data = mysql_statement\
-        .select('users', cols)\
+        .select(USERS_TABLE, cols)\
         .where('username = %s', [user_name])\
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if user_data is None:
         raise UserNotFoundException
 
-    user = User(**user_data)
+    user = models.User(**user_data)
     return user
 
 
@@ -33,14 +34,14 @@ def db_get_user_safe_with_id(connection, user_id: int):
 
     mysql_statement = MySQLStatementBuilder(connection)
     user_data = mysql_statement\
-        .select('users', cols_to_fetch)\
+        .select(USERS_TABLE, cols_to_fetch)\
         .where('id = %s', [user_id])\
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if user_data is None:
         raise UserNotFoundException
 
-    user = User(**user_data)
+    user = models.User(**user_data)
     return user
 
 
@@ -57,7 +58,7 @@ def db_get_user_list(connection, segment_length: int, index: int):
 
     mysql_statement = MySQLStatementBuilder(connection)
     users = mysql_statement\
-        .select('users', USER_COLUMNS)\
+        .select(USERS_TABLE, USERS_COLUMNS_SAFE)\
         .limit(segment_length)\
         .offset(segment_length * index)\
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
@@ -67,15 +68,24 @@ def db_get_user_list(connection, segment_length: int, index: int):
 
 def db_get_users_with_ids(connection, user_ids):
     mysql_statement = MySQLStatementBuilder(connection)
-    users = mysql_statement\
-        .select('users', USER_COLUMNS)\
+    rs = mysql_statement\
+        .select(USERS_TABLE, USERS_COLUMNS_SAFE)\
         .where(f'id IN {MySQLStatementBuilder.placeholder_array(len(user_ids))}', user_ids)\
-        .execute(fetch_type=FetchType.FETCH_ALL)
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    users = []
+
+    if rs is None:
+        return users
+
+    for res in rs:
+        user = models.User(**res)
+        users.append(user)
 
     return users
 
 
-def db_insert_user(connection, user: UserPost):
+def db_insert_user(connection, user: models.UserPost):
     try:
         mysql_statement = MySQLStatementBuilder(connection)
 
@@ -93,11 +103,11 @@ def db_insert_user(connection, user: UserPost):
                 user.scopes,
                 user.disabled]
 
-        mysql_statement.insert('users', cols).set_values(vals).execute(fetch_type=FetchType.FETCH_NONE)
+        mysql_statement.insert(USERS_TABLE, cols).set_values(vals).execute(fetch_type=FetchType.FETCH_NONE)
     except IntegrityError:
         raise UserNotUniqueException('Suggested user is not unique.')
 
-    return User(**dict(user))
+    return models.User(**dict(user))
 
 
 def db_delete_user(connection, user_id: int):
@@ -115,6 +125,6 @@ def db_delete_user(connection, user_id: int):
         raise UnauthorizedOperationException("May not remove admin users this way")
 
     del_stmnt = MySQLStatementBuilder(connection)
-    del_stmnt.delete('users').where(where_stmnt, [user_id]).execute()
+    del_stmnt.delete(USERS_TABLE).where(where_stmnt, [user_id]).execute()
 
     return True
