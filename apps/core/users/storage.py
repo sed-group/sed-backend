@@ -1,6 +1,6 @@
 from typing import List
 
-from .exceptions import UserNotFoundException, UserNotUniqueException
+import apps.core.users.exceptions as exc
 import apps.core.users.models as models
 from apps.core.authentication.utils import get_password_hash, parse_scopes
 from apps.core.authentication.exceptions import UnauthorizedOperationException
@@ -20,7 +20,7 @@ def db_get_user_safe_with_username(connection, user_name: str) -> models.User:
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if user_data is None:
-        raise UserNotFoundException
+        raise exc.UserNotFoundException
 
     user = models.User(**user_data)
     return user
@@ -39,7 +39,7 @@ def db_get_user_safe_with_id(connection, user_id: int) -> models.User:
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if user_data is None:
-        raise UserNotFoundException
+        raise exc.UserNotFoundException
 
     user = models.User(**user_data)
     return user
@@ -75,6 +75,8 @@ def db_get_user_list(connection, segment_length: int, index: int) -> List[models
 
 
 def db_get_users_with_ids(connection, user_ids) -> List[models.User]:
+    id_set = set(user_ids)
+
     mysql_statement = MySQLStatementBuilder(connection)
     rs = mysql_statement\
         .select(USERS_TABLE, USERS_COLUMNS_SAFE)\
@@ -89,6 +91,10 @@ def db_get_users_with_ids(connection, user_ids) -> List[models.User]:
     for res in rs:
         user = models.User(**res)
         users.append(user)
+        id_set.remove(user.id)
+
+    if len(id_set) != 0:
+        raise exc.UserNotFoundException('The following users could not be found: ' + str(id_set))
 
     return users
 
@@ -117,7 +123,7 @@ def db_insert_user(connection, user: models.UserPost) -> models.User:
         return db_get_user_safe_with_id(connection, user_id)
 
     except IntegrityError:
-        raise UserNotUniqueException('Suggested user is not unique.')
+        raise exc.UserNotUniqueException('Suggested user is not unique.')
 
 
 def db_delete_user(connection, user_id: int) -> bool:
@@ -127,7 +133,7 @@ def db_delete_user(connection, user_id: int) -> bool:
     user = db_get_user_safe_with_id(connection, user_id)
 
     if user is None:
-        raise UserNotFoundException
+        raise exc.UserNotFoundException
 
     scopes = parse_scopes(user.scopes)
 
