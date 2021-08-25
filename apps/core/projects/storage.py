@@ -5,8 +5,8 @@ from libs.mysqlutils import MySQLStatementBuilder, FetchType
 from mysql.connector.pooling import PooledMySQLConnection
 
 from apps.core.applications.state import get_application
-from apps.core.projects.models import Project, ProjectPost, ProjectListing, SubProjectPost, SubProject
-from apps.core.projects.exceptions import *
+import apps.core.projects.models as models
+import apps.core.projects.exceptions as exc
 from apps.core.users.storage import db_get_users_with_ids
 
 PROJECTS_TABLE = 'projects'
@@ -17,7 +17,7 @@ PROJECTS_PARTICIPANTS_TABLE = 'projects_participants'
 PROJECTS_PARTICIPANTS_COLUMNS = ['id', 'user_id', 'project_id', 'access_level']
 
 
-def db_get_projects(connection, segment_length: int, index: int) -> List[ProjectListing]:
+def db_get_projects(connection, segment_length: int, index: int) -> List[models.ProjectListing]:
     mysql_statement = MySQLStatementBuilder(connection)
     projects = mysql_statement \
         .select('projects', PROJECTS_COLUMNS) \
@@ -28,7 +28,7 @@ def db_get_projects(connection, segment_length: int, index: int) -> List[Project
     return projects
 
 
-def db_get_user_projects(connection, user_id: int, segment_length: int = 0, index: int = 0) -> List[ProjectListing]:
+def db_get_user_projects(connection, user_id: int, segment_length: int = 0, index: int = 0) -> List[models.ProjectListing]:
     participating_sql = MySQLStatementBuilder(connection)
 
     if index < 0:
@@ -46,13 +46,13 @@ def db_get_user_projects(connection, user_id: int, segment_length: int = 0, inde
 
     project_list = []
     for result in rs:
-        pl = ProjectListing(name=result['name'], access_level=result['access_level'], id=result['id'])
+        pl = models.ProjectListing(name=result['name'], access_level=result['access_level'], id=result['id'])
         project_list.append(pl)
 
     return project_list
 
 
-def db_get_project(connection, project_id) -> Project:
+def db_get_project(connection, project_id) -> models.Project:
     proj_sql = MySQLStatementBuilder(connection)
     proj_db_res = proj_sql \
         .select(PROJECTS_TABLE, PROJECTS_COLUMNS) \
@@ -60,9 +60,9 @@ def db_get_project(connection, project_id) -> Project:
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if proj_db_res is None:
-        raise ProjectNotFoundException
+        raise exc.ProjectNotFoundException
 
-    project = Project(id=proj_db_res['id'], name=proj_db_res['name'])
+    project = models.Project(id=proj_db_res['id'], name=proj_db_res['name'])
 
     part_sql = MySQLStatementBuilder(connection)
     participant_rows = part_sql \
@@ -77,16 +77,23 @@ def db_get_project(connection, project_id) -> Project:
 
     if len(participant_ids) == 0:
         logger.error(f"This project (id = {project_id}) does not have any participants")
-        raise NoParticipantsException()
+        raise exc.NoParticipantsException()
 
     project.participants = db_get_users_with_ids(connection, participant_ids)
+
+    project.subprojects = db_get_subprojects(connection, project_id)
 
     return project
 
 
-def db_post_project(connection, project: ProjectPost) -> Project:
+def db_post_project(connection, project: models.ProjectPost, owner_id: int) -> models.Project:
     logger.debug('Adding new project:')
     logger.debug(project)
+
+    # Set owner if it is not already set
+    if owner_id not in project.participants:
+        project.participants.append(owner_id)
+    project.participants_access[owner_id] = models.AccessLevel.OWNER
 
     project_sql = MySQLStatementBuilder(connection)
     project_cols = ['name']
@@ -95,27 +102,31 @@ def db_post_project(connection, project: ProjectPost) -> Project:
 
     for participant_id in project.participants:
         access_level = project.participants_access.get(participant_id)
+
+        if access_level is None:
+            raise exc.ParticipantInconsistencyException('Participant is listed, but was not assigned an access level.')
+
         db_add_participant(connection, project_id, participant_id, access_level, check_project_exists=False)
 
     return db_get_project(connection, project_id)
 
 
-def db_delete_project(connection, project_id: int):
+def db_delete_project(connection, project_id: int) -> bool:
     logger.debug(f"Removing project: {project_id}")
 
-    db_get_project(connection, project_id) # If the project does not exist, this raises the appropriate exception
+    db_get_project_exists(connection, project_id) # If the project does not exist, this raises the appropriate exception
 
     del_sql = MySQLStatementBuilder(connection)
     res, row_count = del_sql.delete(PROJECTS_TABLE).where('id = %s', [project_id]).execute(return_affected_rows=True)
     if row_count == 0:
-        raise ProjectNotDeletedException("Unable to remove project")
+        raise exc.ProjectNotDeletedException("Unable to remove project")
 
     return True
 
 
-def db_add_participant(connection, project_id, user_id, access_level, check_project_exists=True):
+def db_add_participant(connection, project_id, user_id, access_level, check_project_exists=True) -> bool:
     if check_project_exists:
-        db_get_project(connection, project_id)  # Raises exception if project does not exist
+        db_get_project_exists(connection, project_id)  # Raises exception if project does not exist
 
     participants_sql = MySQLStatementBuilder(connection)
     participants_cols = ['user_id', 'project_id', 'access_level']
@@ -123,10 +134,12 @@ def db_add_participant(connection, project_id, user_id, access_level, check_proj
         .set_values([user_id, project_id, access_level])\
         .execute()
 
+    return True
 
-def db_delete_participant(connection, project_id, user_id, check_project_exists=True):
+
+def db_delete_participant(connection, project_id, user_id, check_project_exists=True) -> bool:
     if check_project_exists:
-        db_get_project(connection, project_id)  # Raises exception if project does not exist
+        db_get_project_exists(connection, project_id)  # Raises exception if project does not exist
 
     participants_sql = MySQLStatementBuilder(connection)
     res, row_count = participants_sql\
@@ -135,12 +148,12 @@ def db_delete_participant(connection, project_id, user_id, check_project_exists=
         .execute(return_affected_rows=True)
 
     if row_count == 0:
-        raise ParticipantChangeException("Failed to remove participant from project")
+        raise exc.ParticipantChangeException("Failed to remove participant from project")
 
     return True
 
 
-def db_put_name(connection, project_id, name):
+def db_put_name(connection, project_id, name) -> bool:
 
     project = db_get_project(connection, project_id)    # Raises exception if project does not exist
 
@@ -155,23 +168,23 @@ def db_put_name(connection, project_id, name):
     logger.debug(f"Affected rows: {row_count}")
 
     if row_count == 0:
-        raise ProjectChangeException("Failed to update project information")
+        raise exc.ProjectChangeException("Failed to update project information")
 
     return True
 
 
-def db_post_subproject(connection, subproject: SubProjectPost, current_user_id: int, project_id: Optional[int] = None) \
-        -> SubProject:
+def db_post_subproject(connection, subproject: models.SubProjectPost, current_user_id: int, project_id: Optional[int] = None) \
+        -> models.SubProject:
 
     if project_id is not None:
-        db_get_project(connection, project_id)   # Raises exception if the project does not exist
+        db_get_project_exists(connection, project_id)   # Raises exception if the project does not exist
 
     # Avoid duplicates
     try:
         duplicate = db_get_subproject_native(connection, subproject.application_sid, subproject.native_project_id)
         if duplicate is not None:
-            raise SubProjectDuplicateException
-    except SubProjectNotFoundException:
+            raise exc.SubProjectDuplicateException
+    except exc.SubProjectNotFoundException:
         insert_stmnt = MySQLStatementBuilder(connection)
         insert_stmnt\
             .insert(SUBPROJECTS_TABLE, ['application_sid', 'project_id', 'native_project_id', 'owner_id'])\
@@ -181,9 +194,10 @@ def db_post_subproject(connection, subproject: SubProjectPost, current_user_id: 
         return db_get_subproject_native(connection, subproject.application_sid, subproject.native_project_id)
 
 
-def db_get_subprojects(connection: PooledMySQLConnection, project_id: int) -> List[SubProject]:
+def db_get_subprojects(connection: PooledMySQLConnection, project_id: int) \
+        -> List[models.SubProject]:
     # Assert that the project exists
-    db_get_project(connection, project_id)  # Throws if project does not exist
+    db_get_project_exists(connection, project_id)  # Throws if project does not exist
 
     select_stmnt = MySQLStatementBuilder(connection)
     rs = select_stmnt.select(SUBPROJECTS_TABLE, SUBPROJECT_COLUMNS)\
@@ -196,15 +210,15 @@ def db_get_subprojects(connection: PooledMySQLConnection, project_id: int) -> Li
         return subproject_list
 
     for res in rs:
-        subproject = SubProject(**res)
+        subproject = models.SubProject(**res)
         subproject_list.append(subproject)
 
     return subproject_list
 
 
-def db_get_subproject(connection, project_id, subproject_id) -> Optional[SubProject]:
+def db_get_subproject(connection, project_id, subproject_id) -> models.SubProject:
 
-    db_get_project(connection, project_id) # Raises exception if project does not exist
+    db_get_project_exists(connection, project_id) # Raises exception if project does not exist
 
     select_stmnt = MySQLStatementBuilder(connection)
     res = select_stmnt\
@@ -213,14 +227,14 @@ def db_get_subproject(connection, project_id, subproject_id) -> Optional[SubProj
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if res is None:
-        raise SubProjectNotFoundException
+        raise exc.SubProjectNotFoundException
 
-    sub_project = SubProject(**res)
+    sub_project = models.SubProject(**res)
 
     return sub_project
 
 
-def db_get_subproject_native(connection, application_sid, native_project_id) -> SubProject:
+def db_get_subproject_native(connection, application_sid, native_project_id) -> models.SubProject:
     get_application(application_sid)        # Raises exception of application does not exist
 
     select_stmnt = MySQLStatementBuilder(connection)
@@ -230,14 +244,14 @@ def db_get_subproject_native(connection, application_sid, native_project_id) -> 
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if res is None:
-        raise SubProjectNotFoundException
+        raise exc.SubProjectNotFoundException
 
-    sub_project = SubProject(**res)
+    sub_project = models.SubProject(**res)
 
     return sub_project
 
 
-def db_delete_subproject(connection, project_id, subproject_id):
+def db_delete_subproject(connection, project_id, subproject_id) -> bool:
     db_get_subproject(connection, project_id, subproject_id)  # Raises exception if project does not exist
 
     delete_stmnt = MySQLStatementBuilder(connection)
@@ -246,12 +260,12 @@ def db_delete_subproject(connection, project_id, subproject_id):
         .execute(return_affected_rows=True)
 
     if row_count == 0:
-        raise SubProjectNotDeletedException
+        raise exc.SubProjectNotDeletedException
 
-    return
+    return True
 
 
-def db_get_user_subprojects_with_application_sid(con, user_id, application_sid) -> List[SubProject]:
+def db_get_user_subprojects_with_application_sid(con, user_id, application_sid) -> List[models.SubProject]:
     # Get projects in which this user is a participant
     project_list = db_get_user_projects(con, user_id)
     project_id_list = []
@@ -273,6 +287,24 @@ def db_get_user_subprojects_with_application_sid(con, user_id, application_sid) 
     # Serialize & return
     subproject_list = []
     for res in rs:
-        subproject_list.append(SubProject(**res))
+        subproject_list.append(models.SubProject(**res))
 
     return subproject_list
+
+
+def db_get_project_exists(connection: PooledMySQLConnection, project_id: int) -> bool:
+    """
+    Convenience function for asserting that a project exists. Faster than getting and building the entire project.
+    :param connection:
+    :param project_id:
+    :return:
+    """
+    select_stmnt = MySQLStatementBuilder(connection)
+    res = select_stmnt.select(PROJECTS_TABLE, ['id'])\
+        .where('id = ?', [project_id])\
+        .execute(fetch_type=FetchType.FETCH_ONE)
+
+    if res is None:
+        raise exc.ProjectNotFoundException
+
+    return True
