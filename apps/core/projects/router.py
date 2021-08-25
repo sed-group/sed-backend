@@ -51,11 +51,12 @@ async def get_project(project_id: int):
 
 @router.post("/",
              summary="Create project",
-             description="Create a new empty project",
+             description="Create a new empty project. The current user is automatically set as the owner.",
              response_model=models.Project,
              dependencies=[Security(verify_token, scopes=['admin'])])
-async def post_project(project: models.ProjectPost):
-    return impl.impl_post_project(project)
+async def post_project(project: models.ProjectPost, current_user: User = Depends(get_current_active_user)):
+    current_user_id = current_user.id
+    return impl.impl_post_project(project, current_user_id)
 
 
 @router.delete("/{project_id}",
