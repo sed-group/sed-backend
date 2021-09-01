@@ -83,6 +83,21 @@ Use the following MySQL query to create a user with the admin role:
 
 # Development
 
+## Module development
+When creating a new module for the SED Lab backend, there are a few things that are good to be aware of.
+
+### Step 1: Create an application description
+Go to `applications.json` in the root directory of the SED-Backend project. Here you'll see a JSON list of all applications currently implemented into the backend. Note that each application has a "key" (e.g. the EF-M module has the key "MOD.EFM"). Create a key for your project, and follow the convention of the existing modules to create a description of your module. The `href_api` should have the same value as your API-prefix (remember this in the next sections).
+
+### Step 2: Create an application module
+Go to the folder `apps/` in the SED-backend catalogue. Here you will find every currently integrated module. Create a folder here with the name of your application module. This folder will contain ALL of your code (with only a few exceptions). This means that you shouldn't ever have to change or add code to other modules, as it is important that they remain unchanged for compatibility purposes. All application modules have the same package structure, as seen in the later chapter of this readme, called "Package structure".
+
+### Step 3: Adding your module API to the backend API
+There is one file outside of your own module that needs to be appended to make your module API accessible, and that is `main_router.py` in the root directory of the project. This contains references to each application API (routers). Look at how other sub-routers have been implemented (e.g. Core and DIFAM), and implement your own sub-router in the same way. Remember to add an API-prefix (same as the one written in step 1), a tag, and the security dependency "verify_token" (this forces the user to be logged in if he/she wants to use your API).
+
+### Step 4: The database
+Unless your module for some reason requires it, all modules use the same database. A connection to this database can be gained through `apps.core.db.get_connection()` This is typically done in the implementation layer, see the section about package structure below. Secondly, to avoid complexity and variation between modules, all interactions with the database are done so using "Prepared statement" calls, rather than using an ORM. Thus, database requests can either be written manually (e.g. ``SELECT username FROM `users` WHERE `id`=?``) or you can use some abstraction layer (e.g. the one provided in `libs.mysqlutils`). Examples of abstracted SQL requests can be found in any `storage.py`-file in the core application module `apps.core` (e.g. `apps.core.projects.storage`)
+
 ## Package structure
 It is important that we are consistent when developing packages, such that 1) problems can easily be identified, 2) each component of the code-base can easily be navigated, 3) prevent degradation of code over time. Th that end, packages are suggested to comply to the following structure:
 
