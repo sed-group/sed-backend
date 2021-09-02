@@ -107,9 +107,7 @@ class DesignSolution(Base):
 
     def __repr__(self):
         return "<DS(name='%s', treeID='%s', isb_parentFRid='%s')>" % (self.name, self.treeID, self.isbID)
-    
-
-        
+           
 class FunctionalRequirement(Base):
     """
     FR element for EF-M modelling; contains all basic information
@@ -134,8 +132,6 @@ class FunctionalRequirement(Base):
 
     def __repr__(self):
         return "<FR(name='%s', treeID='%s', rf_parentDSid='%s')>" % (self.name, self.treeID, self.rfID)
-
- 
     
 class InteractsWith(Base):
     """

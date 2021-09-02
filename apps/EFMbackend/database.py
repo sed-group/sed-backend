@@ -3,7 +3,7 @@ from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
 
 DB_USER = 'root'
-DB_PASSWORD = 'admin'
+DB_PASSWORD = 'secret'
 DB_HOST='localhost'
 DB_DATABASE='efm_schema'
 

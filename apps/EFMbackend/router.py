@@ -23,7 +23,7 @@ def get_db():
 
 ## TREES
 @router.get("/trees/",
-            response_model=List[schemas.Tree],
+            response_model=List[schemas.TreeInfo],
             summary="Overview over all trees",  
             description="Produces a list of all trees",
             dependencies=[],

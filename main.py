@@ -9,7 +9,7 @@ import setup
 
 
 
-setup.config_default_logging()
+# setup.config_default_logging()
 
 app = FastAPI(
     title="SED lab API",
@@ -35,6 +35,7 @@ setup.install_middleware(app)
 
 origins = [
     "http://localhost:8080",
+    "http://localhost:8081",
 ]
 
 app.add_middleware(

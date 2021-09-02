@@ -190,7 +190,13 @@ def edit_EFMobject(db: Session, objType: efmObj, objID: int, objData):
     # writing all the info we want to write:
     for key, value in objData.dict().items():
         print(key, value)
-        theObjOrm.__dict__[key] = value
+        # theObjOrm.__dict__[key] = value
+        # print(theObjOrm.__dict__[key])
+        setattr(theObjOrm, key, value)
+
+    # DOESN'T WORK!
+    # follow tutorial: https://fastapi.tiangolo.com/tutorial/body-updates/
+    print(theObjOrm)
 
     # # write values
     # theDPorm.name = DPdata.name
@@ -201,6 +207,8 @@ def edit_EFMobject(db: Session, objType: efmObj, objID: int, objData):
 
     # and write back to DB
     db.commit()
+
+    print(theObjOrm)
 
     # convert to pydantic
     theObjPydantic = objInfo['schema'].from_orm(theObjOrm)
@@ -230,3 +238,12 @@ def tree_set_topLvlDs(db: Session, treeID: int, dsID: int):
             detail="Type error when setting topLvlDSid for tree id:{}".format(treeID)
         )
 
+def get_treeInfoList(db: Session) -> List[schemas.TreeInfo]:
+    # fetches all tree items and converts to treeInfo list
+    
+    ormTreeList = db.query(models.Tree)
+    returnList = []
+    for t in ormTreeList:
+        treeInfo = schemas.TreeInfo(t)
+        returnList.append(treeInfo)
+    return returnList

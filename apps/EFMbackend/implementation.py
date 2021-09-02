@@ -23,7 +23,12 @@ def get_tree_list(db: Session, limit:int = 100, offset:int = 0):
     '''
     list of all tree objects from DB
     '''
-    return storage.get_EFMobjectAll(db, 'tree', 0, limit, offset)
+    treeList = storage.get_EFMobjectAll(db, 'tree', 0, limit, offset)
+    treeInfoList = []
+    for t in treeList:
+        tInfo = schemas.TreeInfo(**t.dict())
+        treeInfoList.append(tInfo)
+    return treeInfoList
 
 def create_tree(db: Session, newTree = schemas.TreeNew):
     '''
@@ -228,7 +233,7 @@ def edit_DS(db: Session, DSid: int, DSdata: schemas.DSnew):
         checks whether the new parent FR is in the same tree
         cannot change tree! (treeID)
     '''
-    # first we need to set the treeID, fetched from the parent FR
+    # first we need to set (correct?) the treeID, fetched from the parent FR
     parentFR = storage.get_EFMobject(db, 'FR', DSdata.isbID)
     DSdata.treeID = parentFR.treeID
 

@@ -17,7 +17,7 @@ class TreeNew(BaseModel):
     only contains information that is collected during setup of tree
     '''
     name: str
-    description: str
+    description: Optional[str]
 
 class TreeInfo(TreeNew):
     '''
@@ -25,7 +25,7 @@ class TreeInfo(TreeNew):
     no actual tree
     '''
     id: int
-    topLvlDSid: int
+    topLvlDSid: Optional[int]
 
 class Tree(TreeNew):
     """

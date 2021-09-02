@@ -44,8 +44,10 @@ def db_get_user_projects(connection, user_id: int, segment_length: int = 0, inde
     rs = sql.execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
     project_list = []
+    print('DB_get_user_projects')
     for result in rs:
-        pl = ProjectListing(name=result['name'], access_level=result['access_level'], id=result['id'])
+        print(result)
+        pl = ProjectListing(name=result['name'], access_level=result['access_level'], id=result['id']) 
         project_list.append(pl)
 
     return project_list
