@@ -8,7 +8,6 @@ services:
     build:
       context: ./nginx/
       dockerfile: Dockerfile-tls-termination-proxy
-    restart: on-failure
     volumes:
       - C:\Certbot\live\imspc063247.ppd.chalmers.se\:/etc/ssl/certs # TLS Certs location
     depends_on:
