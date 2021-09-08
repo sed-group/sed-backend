@@ -1,4 +1,5 @@
 services:
   backend-api:
     volumes:
-      - C:\docker-static:/var/www/static
+      - C:\docker-static:/var/www/static   # Static content
+      - C:\Certbot\live\imspc063247.ppd.chalmers.se\:/etc/ssl/certs # Certs
