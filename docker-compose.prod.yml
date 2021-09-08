@@ -1,0 +1,4 @@
+services:
+  backend-api:
+    volumes:
+      - C:\docker-static:/var/www/static
