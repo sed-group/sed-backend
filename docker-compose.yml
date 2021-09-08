@@ -23,8 +23,6 @@ services:
     restart: on-failure
     depends_on:
       - "core-db"
-    volumes:
-      - C:\docker-static:/var/www/static
 
 networks:
   sedlab:

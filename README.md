@@ -23,6 +23,15 @@ But before you build it is advisable to first shut down your containers. These o
 - run `docker-compose build` again.
 - Run `docker-compose up -d` again.
 
+### Production setup
+In production (on the SED Server) things are slightly different.
+- Go to project root
+- Run `docker-compose -f docker-compose.yml -f docker-compose.prod.yml build`
+- Run `docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d`
+- Done
+
+The reason we need to setup production slightly differently is because we also need docker-compose to use the contents of `docker-compose.prod.yml` which contains setup instructions that are specific to the production environment.
+
 ### Manual docker setup 
 This is for documentation purposes. If docker-compose is working, then you should probably use that instead.
 
