@@ -24,13 +24,15 @@ But before you build it is advisable to first shut down your containers. These o
 - Run `docker-compose up -d` again.
 
 ### Production setup
-In production (on the SED Server) things are slightly different.
+In production (on the SED Server) things are slightly different. We need to run two compose files at the same time.
 - Go to project root
 - Run `docker-compose -f docker-compose.yml -f docker-compose.prod.yml build`
 - Run `docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d`
 - Done
 
-The reason we need to setup production slightly differently is because we also need docker-compose to use the contents of `docker-compose.prod.yml` which contains setup instructions that are specific to the production environment.
+The reason we need to setup production slightly differently is because we also need docker-compose to use the contents of `docker-compose.prod.yml` which contains setup instructions that are specific to the production environment. In short, `docker-compose.prod.yml` sets up a new docker container, which contains a TLS termination proxy using nginx. Incomming HTTPS traffic is handled by the nginx container, which translates it to HTTP for the FastAPI container. This allows FastAPI to communicate with HTTP within the docker network, while clients connecting to the API can communicate safely with HTTPS. 
+
+TLS is achieved using a certbot certificate, which is mounted into the container in `docker-compose.prod.yml`. The `nginx/` directory contains the rest of the necessary files to make this work. Note that the setup requires knowledge of what the domain name is. At the time of writing, it was `imspc063247.ppd.chalmers.se`. Attempting to deploy using the production composition on any other domain will not work without minor tweaks to the build code.
 
 ### Manual docker setup 
 This is for documentation purposes. If docker-compose is working, then you should probably use that instead.
