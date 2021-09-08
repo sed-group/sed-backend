@@ -1,0 +1,20 @@
+FROM ubuntu:latest
+MAINTAINER Julian Martinsson "julianm@chalmers.se"
+
+USER root
+
+RUN apt-get update
+RUN apt-get install -y nginx nodejs
+
+# Remove default Nginx config
+RUN rm -v /etc/nginx/nginx.conf
+
+# Copy custom config file
+ADD nginx.conf /etc/nginx/
+
+RUN echo "daemon off;" >> /etc/nginx/nginx.conf
+
+# Expose ports
+EXPOSE 443
+
+CMD service nginx start

@@ -16,7 +16,7 @@ services:
     networks:
       - sedlab
     ports:
-      - "80:80"
+      - "8000:80"
     build:
       context: .
       dockerfile: Dockerfile-backend-api

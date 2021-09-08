@@ -1,9 +1,5 @@
-import os
-import os.path as path
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 import main_router as api
 import setup
@@ -18,14 +14,6 @@ app = FastAPI(
 )
 
 app.include_router(api.router, prefix="/api")
-
-# Production specific logic
-deploy_mode = os.getenv("SED_DEPLOY_MODE")
-if deploy_mode == 'prod':
-    # Set static content
-    static_content_directory = '/var/www/static'
-    if path.exists(static_content_directory):
-        app.mount("/static", StaticFiles(directory="/var/www/static"), name="static")
 
 # CORS
 origins = ["http://localhost:8080"]

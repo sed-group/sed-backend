@@ -1,5 +1,16 @@
 services:
-  backend-api:
+  tls-termination-proxy:
+    container_name: tls-termination-proxy
+    networks:
+      - sedlab
+    ports:
+      - "443:443"
+    build:
+      context: ./nginx/
+      dockerfile: Dockerfile-tls-termination-proxy
+    restart: on-failure
     volumes:
-      - C:\docker-static:/var/www/static   # Static content
-      - C:\Certbot\live\imspc063247.ppd.chalmers.se\:/etc/ssl/certs # Certs
+      - C:\Certbot\live\imspc063247.ppd.chalmers.se\:/etc/ssl/certs # TLS Certs location
+    depends_on:
+      - "core-db"
+      - "backend-api"

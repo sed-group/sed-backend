@@ -1,11 +1,5 @@
 FROM tiangolo/uvicorn-gunicorn-fastapi:python3.8
 
-# Environment variables
-ENV SED_DEPLOY_MODE=prod
-
-# Create static content directory
-RUN mkdir -p /var/www/static
-
 # Copy application to directory which is automatically initialized on start
 COPY . /app
 
