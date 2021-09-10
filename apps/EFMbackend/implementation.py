@@ -190,6 +190,22 @@ def edit_FR(db: Session, FRid: int, FRdata: schemas.FRNew):
 
     return storage.edit_EFMobject(db, 'FR', FRid, FRdata)
     
+def newParent_FR(db: Session, FRid: int, DSid: int):
+    '''
+    sets DSid as new rfID for FR
+    i.e. a change in parent
+    '''
+    # fetch the FR data
+    fr_data = storage.get_EFMobject(db, 'FR', FRid)
+    # first we check if the new parent exists
+    new_parent_DS = storage.get_EFMobject(db, 'DS', DSid)
+    # set new parent ID
+    fr_data.rfID = new_parent_DS.id
+    
+    # store it
+    return storage.edit_EFMobject(db, 'FR', FRid, fr_data)
+
+
 ### DS
 def get_DS_with_tree(db:Session, DSid: int):
     ''' 
@@ -238,6 +254,24 @@ def edit_DS(db: Session, DSid: int, DSdata: schemas.DSnew):
     DSdata.treeID = parentFR.treeID
 
     return storage.edit_EFMobject(db, 'DS', DSid, DSdata)
+
+def newParent_DS(db: Session, DSid: int, FRid: int):
+    '''
+    sets FRid as new isbID for DS
+    i.e. a change in parent
+    '''
+    # fetch the DS data
+    ds_data = storage.get_EFMobject(db, 'DS', DSid)
+    # first we check if the new parent exists
+    new_parent_FR = storage.get_EFMobject(db, 'FR', FRid)
+    # set new parent ID
+    ds_data.isbID = new_parent_FR.id
+    
+    # store it
+    return storage.edit_EFMobject(db, 'DS', DSid, ds_data)
+
+
+
 
 ### iw todo!! 
 def get_IW(db:Session, IWid: int):

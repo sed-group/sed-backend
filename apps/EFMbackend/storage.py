@@ -194,8 +194,6 @@ def edit_EFMobject(db: Session, objType: efmObj, objID: int, objData):
         # print(theObjOrm.__dict__[key])
         setattr(theObjOrm, key, value)
 
-    # DOESN'T WORK!
-    # follow tutorial: https://fastapi.tiangolo.com/tutorial/body-updates/
     print(theObjOrm)
 
     # # write values

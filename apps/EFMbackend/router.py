@@ -142,6 +142,13 @@ async def delete_designSolution(DSid: int, db: Session = Depends(get_db)):
 async def edit_designSolution(DSid: int, DSdata: schemas.DSnew, db: Session = Depends(get_db)):
     return implementation.edit_DS(DSid = DSid, DSdata = DSdata, db=db)
 
+@router.put("/ds/{DSid}/isb/",
+            response_model = schemas.DesignSolution,
+            summary = "sets new parent to DS"
+            )
+async def newParent_designSolution(DSid: int, newParentID: int, db: Session = Depends(get_db)):
+    return implementation.newParent_DS(DSid= DSid, FRid= newParentID, db = db)
+
 
 ## FR
 @router.get("/fr/{FRid}",
@@ -178,6 +185,14 @@ async def delete_functionalRequirement(FRid: int, db: Session = Depends(get_db))
             )
 async def edit_functionalRequirement(FRid: int, FRdata: schemas.FRNew, db: Session = Depends(get_db)):
     return implementation.edit_FR(FRid = FRid, FRdata = FRdata, db=db)
+
+@router.put("/fr/{FRid}/rf/",
+            response_model = schemas.FunctionalRequirement,
+            summary = "sets new parent to FR"
+            )
+async def newParent_functionalRequirement(FRid: int, newParentID: int, db: Session = Depends(get_db)):
+    return implementation.newParent_FR(FRid= FRid, DSid= newParentID, db = db)
+
 
 # iw 
 @router.get("/iw/{IWid}",

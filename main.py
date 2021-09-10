@@ -31,7 +31,7 @@ app.add_middleware(
 )
 
 # Misc middleware
-setup.install_middleware(app)
+# setup.install_middleware(app)
 
 origins = [
     "http://localhost:8080",
