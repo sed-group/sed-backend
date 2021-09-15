@@ -7,8 +7,8 @@ services:
     ports:
       - "3001:3306"
     build:
-      context: ./apps/core/
-      dockerfile: Dockerfile-core-db
+      context: .
+      dockerfile: Dockerfile-mysql-server
     restart: on-failure
     volumes:
       - persistent-volume:/var/lib/mysql
