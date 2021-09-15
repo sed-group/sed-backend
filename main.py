@@ -3,6 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import main_router as api
 import setup
+import env
+
+
+# Parse environment variables
+env.Environment.parse_env()
+
+print('Env test: ADMIN_PWD = ' + env.Environment.get_variable('ADMIN_PWD'))
+print('Env test: JWT_KEY = ' + env.Environment.get_variable('JWT_KEY'))
 
 
 setup.config_default_logging()

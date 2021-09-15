@@ -12,6 +12,13 @@ services:
     restart: on-failure
     volumes:
       - persistent-volume:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
+      MYSQL_PASSWORD_FILE: /run/secrets/mysql_user_password
+      MYSQL_USER: rw
+    secrets:
+      - mysql_root_password
+      - mysql_user_password
 
   backend-api:
     container_name: backend-api
@@ -31,3 +38,9 @@ networks:
 
 volumes:
   persistent-volume:  # Stores database even if the containers are restarted
+
+secrets:
+  mysql_root_password:
+    file: env/MYSQL_PWD_ROOT.txt
+  mysql_user_password:
+    file: env/MYSQL_PWD_RW.txt

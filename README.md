@@ -23,17 +23,6 @@ But before you build it is advisable to first shut down your containers. These o
 - run `docker-compose build` again.
 - Run `docker-compose up -d` again.
 
-### Production setup
-In production (on the SED Server) things are slightly different. We need to run two compose files at the same time.
-- Go to project root
-- Run `docker-compose -f docker-compose.yml -f docker-compose.prod.yml build`
-- Run `docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d`
-- Done
-
-The reason we need to setup production slightly differently is because we also need docker-compose to use the contents of `docker-compose.prod.yml` which contains setup instructions that are specific to the production environment. In short, `docker-compose.prod.yml` sets up a new docker container, which contains a TLS termination proxy using nginx. Incomming HTTPS traffic is handled by the nginx container, which translates it to HTTP for the FastAPI container. This allows FastAPI to communicate with HTTP within the docker network, while clients connecting to the API can communicate safely with HTTPS. 
-
-TLS is achieved using a certbot certificate, which is mounted into the container in `docker-compose.prod.yml`. The `nginx/` directory contains the rest of the necessary files to make this work. Note that the setup requires knowledge of what the domain name is. At the time of writing, it was `sedlab.ppd.chalmers.se`. Attempting to deploy using the production composition on any other domain will not work without minor tweaks to the build code.
-
 ### Manual docker setup 
 This is for documentation purposes. If docker-compose is working, then you should probably use that instead.
 
@@ -70,8 +59,18 @@ However, if you don't want to change anything in the databases, then you could u
 - MySQL server
 
 ### Setup
-- cd to `sed-backend/apps/core`, where you will find the setup.sql file needed to setup the core database.
-- Run `mysql -h localhost -u root -p < setup.sql` (or you could use MySQL Workbench to execute the code inside setup.sql)
+- cd to `sed-backend/sql/`, where you will find the sql files needed to setup the core database.
+- Run `mysql -h localhost -u root -p` (or, use MySQL workbench which is easier) and execute the following code:
+```
+# This code creates a MySQL user with read and write access. 
+# It will be used by the sed-backend to access and edit the database
+
+CREATE USER IF NOT EXISTS 'rw' IDENTIFIED BY 'DONT_USE_IN_PRODUCTION!';
+GRANT SELECT, INSERT, UPDATE, DELETE ON * TO 'rw';
+GRANT EXECUTE ON `seddb`.* TO 'rw'@'%';
+```
+- Exit MySQL
+- Run `mysql -h localhost -u root -p < V1__base.sql` (or you could use MySQL Workbench to execute the code)
 - Run `pip install -r requirements.txt` 
 - You may need to install some requirements, such as uvicorn and jose, manually. To do this, run `pip install uvicorn jose`
 - Run `uvicorn main:app --reload` from project root to launch the application
@@ -136,3 +135,36 @@ logger.error('Something is definitely wrong')
 
 ```  
 By default, the log is saved in the system TEMP directory: `%TEMP%/sed-backend.log`.
+
+
+# Production deployment
+
+## TL;DR
+There are control scripts available on the server to facilitate safe and secure deployment of all 
+assets (you're welcome). The control scripts can be found at `F:\control-scripts`.
+Use those, and as long as it works you shouldn't have to worry.
+
+## How it really works (in case something goes wrong)
+In production (on the SED Server) things are a bit more complicated.
+For starters, we have an extra docker-compose file which needs to be run after the first file for the server to start properly.
+This can be done (BUT IT IS NOT SAFE) by running
+- Go to project root
+- Run `docker-compose -f docker-compose.yml -f docker-compose.prod.yml build`
+- Run `docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d`
+- Done
+
+This is all we need to start the web-server. But, in order to make it safe, we first need to change the contents 
+of all files in the `env/` directory. This ensures that the passwords used are not the same 
+ones that are publically available on github. To ease this, I've created some 
+standardized launch/stop/rebuild-scripts that are available on the server.
+
+
+The reason we need to setup production slightly differently is because we also need docker-compose to use the contents 
+of `docker-compose.prod.yml` which contains setup instructions that are specific to the production environment. 
+In short, `docker-compose.prod.yml` sets up a new docker container, which contains a TLS termination proxy 
+using nginx. Incomming HTTPS traffic is handled by the nginx container, which translates it to HTTP for the 
+FastAPI container. This allows FastAPI to communicate with HTTP within the docker network, 
+while clients connecting to the API can communicate safely with HTTPS. 
+
+
+TLS is achieved using a certbot certificate, which is mounted into the container in `docker-compose.prod.yml`. The `nginx/` directory contains the rest of the necessary files to make this work. Note that the setup requires knowledge of what the domain name is. At the time of writing, it was `sedlab.ppd.chalmers.se`. Attempting to deploy using the production composition on any other domain will not work without minor tweaks to the build code.
