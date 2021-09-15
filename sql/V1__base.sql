@@ -22,9 +22,6 @@ CREATE TABLE IF NOT EXISTS `seddb`.`users` (
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
   UNIQUE INDEX `username_UNIQUE` (`username` ASC) VISIBLE);
 
-# Create default admin user
-INSERT INTO `seddb`.`users` (`username`, `password`,`scopes`, `disabled`) VALUES ('admin', '$2b$12$HrAma.HCdIFuHtnbVcle/efa9luh.XUqZapqFEUISj91TKTN6UgR6', 'admin', False);
-
 # Create projects table
 CREATE TABLE IF NOT EXISTS `seddb`.`projects` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -165,7 +162,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`measurements_results_files` (
     ON UPDATE NO ACTION);
 
 
-CREATE TABLE `seddb`.`measurements_sets_subprojects_map` (
+CREATE TABLE IF NOT EXISTS `seddb`.`measurements_sets_subprojects_map` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `subproject_id` INT UNSIGNED NOT NULL,
   `measurement_set_id` INT UNSIGNED NOT NULL,
