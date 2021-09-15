@@ -21,7 +21,6 @@ CREATE TABLE IF NOT EXISTS `seddb`.`users` (
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
   UNIQUE INDEX `username_UNIQUE` (`username` ASC) VISIBLE);
-# TODO: Index users
 
 # Create default admin user
 INSERT INTO `seddb`.`users` (`username`, `password`,`scopes`, `disabled`) VALUES ('admin', '$2b$12$HrAma.HCdIFuHtnbVcle/efa9luh.XUqZapqFEUISj91TKTN6UgR6', 'admin', False);
@@ -39,25 +38,18 @@ CREATE TABLE IF NOT EXISTS `seddb`.`projects_participants` (
   `project_id` INT UNSIGNED NOT NULL,
   `access_level` INT UNSIGNED NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
-
-# Remove participants from a project that has been removed
-ALTER TABLE `seddb`.`projects_participants`
-ADD CONSTRAINT `project_cascade`
-  FOREIGN KEY (`project_id`)
-  REFERENCES `seddb`.`projects` (`id`)
-  ON DELETE CASCADE
-  ON UPDATE NO ACTION;
-
-# Remove participant from projects if that user is removed
-ALTER TABLE `seddb`.`projects_participants`
-ADD INDEX `user_cascade_idx` (`user_id` ASC) VISIBLE;
-ALTER TABLE `seddb`.`projects_participants`
-ADD CONSTRAINT `user_cascade`
-  FOREIGN KEY (`user_id`)
-  REFERENCES `seddb`.`users` (`id`)
-  ON DELETE CASCADE
-  ON UPDATE NO ACTION;
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
+  CONSTRAINT `project_cascade`
+    FOREIGN KEY (`project_id`)
+    REFERENCES `seddb`.`projects` (`id`)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION,
+  INDEX `user_cascade_idx` (`user_id` ASC) VISIBLE,
+  CONSTRAINT `user_cascade`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `seddb`.`users` (`id`)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION);
 
 CREATE TABLE IF NOT EXISTS `seddb`.`projects_subprojects` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
