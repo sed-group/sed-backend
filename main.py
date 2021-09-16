@@ -3,6 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import main_router as api
 import setup
+import env
+
+
+# Parse environment variables
+env.Environment.parse_env()
 
 
 setup.config_default_logging()

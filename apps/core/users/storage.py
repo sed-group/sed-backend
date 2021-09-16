@@ -135,11 +135,6 @@ def db_delete_user(connection, user_id: int) -> bool:
     if user is None:
         raise exc.UserNotFoundException
 
-    scopes = parse_scopes(user.scopes)
-
-    if 'admin' in scopes:
-        raise UnauthorizedOperationException("May not remove admin users this way")
-
     del_stmnt = MySQLStatementBuilder(connection)
     del_stmnt.delete(USERS_TABLE).where(where_stmnt, [user_id]).execute()
 
