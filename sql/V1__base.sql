@@ -1,13 +1,9 @@
 # Create schema
 CREATE SCHEMA IF NOT EXISTS `seddb` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 
+
 USE seddb;
 
-# Create user with read write access
-
-CREATE USER IF NOT EXISTS 'rw' IDENTIFIED BY 'DONT_USE_IN_PRODUCTION!';
-GRANT SELECT, INSERT, UPDATE, DELETE ON * TO 'rw';
-GRANT EXECUTE ON `seddb`.* TO 'rw'@'%';
 
 # Create users TABLE
 CREATE TABLE IF NOT EXISTS `seddb`.`users` (
@@ -21,10 +17,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`users` (
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
   UNIQUE INDEX `username_UNIQUE` (`username` ASC) VISIBLE);
-# TODO: Index users
 
-# Create default admin user
-INSERT INTO `seddb`.`users` (`username`, `password`,`scopes`, `disabled`) VALUES ('admin', '$2b$12$HrAma.HCdIFuHtnbVcle/efa9luh.XUqZapqFEUISj91TKTN6UgR6', 'admin', False);
 
 # Create projects table
 CREATE TABLE IF NOT EXISTS `seddb`.`projects` (
@@ -33,31 +26,26 @@ CREATE TABLE IF NOT EXISTS `seddb`.`projects` (
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
 
+
 CREATE TABLE IF NOT EXISTS `seddb`.`projects_participants` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `user_id` INT UNSIGNED NOT NULL,
   `project_id` INT UNSIGNED NOT NULL,
   `access_level` INT UNSIGNED NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
+  CONSTRAINT `project_cascade`
+    FOREIGN KEY (`project_id`)
+    REFERENCES `seddb`.`projects` (`id`)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION,
+  INDEX `user_cascade_idx` (`user_id` ASC) VISIBLE,
+  CONSTRAINT `user_cascade`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `seddb`.`users` (`id`)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION);
 
-# Remove participants from a project that has been removed
-ALTER TABLE `seddb`.`projects_participants`
-ADD CONSTRAINT `project_cascade`
-  FOREIGN KEY (`project_id`)
-  REFERENCES `seddb`.`projects` (`id`)
-  ON DELETE CASCADE
-  ON UPDATE NO ACTION;
-
-# Remove participant from projects if that user is removed
-ALTER TABLE `seddb`.`projects_participants`
-ADD INDEX `user_cascade_idx` (`user_id` ASC) VISIBLE;
-ALTER TABLE `seddb`.`projects_participants`
-ADD CONSTRAINT `user_cascade`
-  FOREIGN KEY (`user_id`)
-  REFERENCES `seddb`.`users` (`id`)
-  ON DELETE CASCADE
-  ON UPDATE NO ACTION;
 
 CREATE TABLE IF NOT EXISTS `seddb`.`projects_subprojects` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -73,6 +61,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`projects_subprojects` (
   REFERENCES `seddb`.`projects` (`id`)
   ON DELETE CASCADE);
 
+
 # Create individuals table
 CREATE TABLE IF NOT EXISTS `seddb`.`individuals` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -80,6 +69,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`individuals` (
   `is_archetype` TINYINT UNSIGNED NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
+
 
 # Create parameter table
 CREATE TABLE IF NOT EXISTS `seddb`.`individuals_parameters` (
@@ -156,6 +146,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`measurements_results_data` (
     ON DELETE CASCADE
     ON UPDATE NO ACTION);
 
+
 # Measurements result files table
 CREATE TABLE IF NOT EXISTS `seddb`.`measurements_results_files` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -173,7 +164,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`measurements_results_files` (
     ON UPDATE NO ACTION);
 
 
-CREATE TABLE `seddb`.`measurements_sets_subprojects_map` (
+CREATE TABLE IF NOT EXISTS `seddb`.`measurements_sets_subprojects_map` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `subproject_id` INT UNSIGNED NOT NULL,
   `measurement_set_id` INT UNSIGNED NOT NULL,

@@ -29,5 +29,10 @@ class SubProjectNotDeletedException(Exception):
 class NoParticipantsException(Exception):
     pass
 
+
 class SubProjectDuplicateException(Exception):
+    pass
+
+
+class ParticipantInconsistencyException(Exception):
     pass

@@ -1,5 +1,6 @@
 FROM tiangolo/uvicorn-gunicorn-fastapi:python3.8
 
+# Copy application to directory which is automatically initialized on start
 COPY . /app
 
 # Install additional deps
