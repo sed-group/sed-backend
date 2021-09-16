@@ -16,6 +16,7 @@ services:
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
       MYSQL_PASSWORD_FILE: /run/secrets/mysql_user_password
       MYSQL_USER: rw
+      MYSQL_DATABASE: seddb
     secrets:
       - mysql_root_password
       - mysql_user_password
