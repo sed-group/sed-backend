@@ -1,7 +1,9 @@
 # Create schema
 CREATE SCHEMA IF NOT EXISTS `seddb` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 
+
 USE seddb;
+
 
 # Create users TABLE
 CREATE TABLE IF NOT EXISTS `seddb`.`users` (
@@ -16,12 +18,14 @@ CREATE TABLE IF NOT EXISTS `seddb`.`users` (
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
   UNIQUE INDEX `username_UNIQUE` (`username` ASC) VISIBLE);
 
+
 # Create projects table
 CREATE TABLE IF NOT EXISTS `seddb`.`projects` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
+
 
 CREATE TABLE IF NOT EXISTS `seddb`.`projects_participants` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -42,6 +46,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`projects_participants` (
     ON DELETE CASCADE
     ON UPDATE NO ACTION);
 
+
 CREATE TABLE IF NOT EXISTS `seddb`.`projects_subprojects` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `application_sid` VARCHAR(255) NOT NULL,
@@ -56,6 +61,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`projects_subprojects` (
   REFERENCES `seddb`.`projects` (`id`)
   ON DELETE CASCADE);
 
+
 # Create individuals table
 CREATE TABLE IF NOT EXISTS `seddb`.`individuals` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -63,6 +69,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`individuals` (
   `is_archetype` TINYINT UNSIGNED NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
+
 
 # Create parameter table
 CREATE TABLE IF NOT EXISTS `seddb`.`individuals_parameters` (
@@ -138,6 +145,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`measurements_results_data` (
     REFERENCES `seddb`.`measurements` (`id`)
     ON DELETE CASCADE
     ON UPDATE NO ACTION);
+
 
 # Measurements result files table
 CREATE TABLE IF NOT EXISTS `seddb`.`measurements_results_files` (
