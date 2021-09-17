@@ -71,5 +71,3 @@ def db_put_file_temp(con: PooledMySQLConnection, file_id: int, temp: bool, curre
 def db_put_filename(con: PooledMySQLConnection, file_id: int, filename_new: str, current_user_id: int) \
         -> models.StoredFileEntry:
     pass
-
-
