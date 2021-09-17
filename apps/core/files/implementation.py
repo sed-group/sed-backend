@@ -68,3 +68,19 @@ def impl_put_file_temp(file_id: int, temp: bool, current_user_id: int):
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"User does not have access to a file with id = {file_id}"
         )
+
+def impl_get_file(file_id: int, current_user_id: int):
+    try:
+        with get_connection() as con:
+            file_path = storage.db_get_file_path(con, file_id, current_user_id)
+
+    except exc.FileNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File could not be found."
+        )
+    except exc_auth.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not have access to requested file."
+        )
