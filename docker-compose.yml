@@ -31,6 +31,8 @@ services:
       context: .
       dockerfile: Dockerfile-backend-api
     restart: on-failure
+    volumes:
+      - uploaded-files:/sed_lab/uploaded_files/
     depends_on:
       - "core-db"
 
@@ -39,6 +41,7 @@ networks:
 
 volumes:
   persistent-volume:  # Stores database even if the containers are restarted
+  uploaded-files:
 
 secrets:
   mysql_root_password:
