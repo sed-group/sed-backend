@@ -69,6 +69,7 @@ def impl_put_file_temp(file_id: int, temp: bool, current_user_id: int):
             detail=f"User does not have access to a file with id = {file_id}"
         )
 
+
 def impl_get_file(file_id: int, current_user_id: int):
     try:
         with get_connection() as con:
