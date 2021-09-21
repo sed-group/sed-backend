@@ -23,7 +23,6 @@ class Environment:
                 Environment.vars[var_name] = var_value
 
         Environment.parsed = True
-        print(Environment.vars)
 
     @staticmethod
     def get_variable(var_name):
