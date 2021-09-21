@@ -6,3 +6,13 @@ COPY . /app
 # Install additional deps
 RUN pip install jose
 RUN pip install -r requirements.txt
+
+# Copy wait-for-it script
+COPY ./deployment/utils/wait-for-it/wait-for-it.sh /etc/scripts/wait-for-it.sh
+RUN chmod +x /etc/scripts/wait-for-it.sh
+
+# Copy launch script
+COPY ./deployment/launch/launch-backend-api.sh /etc/scripts/launch-backend-api.sh
+RUN chmod +x /etc/scripts/launch-backend-api.sh
+
+CMD ["/etc/scripts/launch-backend-api.sh"]

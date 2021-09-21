@@ -11,7 +11,7 @@ services:
       - NGINX_HOST=sedlab.ppd.chalmers.se
       - NGINX_PORT=443
     build:
-      context: ./nginx/
+      context: ./deployment/nginx/
       dockerfile: Dockerfile-tls-termination-proxy
     volumes:
       - C:\Certbot\live\sedlab.ppd.chalmers.se\:/etc/nginx/certs/live/sedlab.ppd.chalmers.se # TLS Certs syslink location
