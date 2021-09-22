@@ -28,14 +28,6 @@ class AccessLevel(IntEnum):
         return [AccessLevel.ADMIN, AccessLevel.OWNER]
 
 
-class Project(BaseModel):
-    id: Optional[int] = None        # Project database ID
-    name: Optional[str] = None      # Name of the project
-    subprojects: List[int] = []     # Mappings to application subproject IDs
-    participants: List[User] = []   # List of users who has any kind of access to this project
-    participants_access: Dict[int, AccessLevel] = dict()   # Maps user_id to access_type
-
-
 class ProjectListing(BaseModel):
     id: int
     name: str
@@ -57,3 +49,11 @@ class SubProject(SubProjectPost):
     id: int
     owner_id: int
     project_id: Optional[int]
+
+
+class Project(BaseModel):
+    id: Optional[int] = None        # Project database ID
+    name: Optional[str] = None      # Name of the project
+    subprojects: List[SubProject] = []     # Mappings to application subproject IDs
+    participants: List[User] = []   # List of users who has any kind of access to this project
+    participants_access: Dict[int, AccessLevel] = dict()   # Maps user_id to access_type

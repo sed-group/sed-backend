@@ -11,6 +11,7 @@ from apps.core.applications.router import router as router_apps
 from apps.core.projects.router import router as router_projects
 from apps.core.individuals.router import router as router_individuals
 from apps.core.measurements.router import router as router_measurements
+from apps.core.files.router import router as router_files
 
 router = APIRouter()
 
@@ -20,6 +21,7 @@ router.include_router(router_apps, prefix='/apps', tags=['applications'], depend
 router.include_router(router_projects, prefix='/projects', tags=['projects'], dependencies=[Security(verify_token)])
 router.include_router(router_individuals, prefix='/individuals', tags=['individuals'], dependencies=[Security(verify_token)])
 router.include_router(router_measurements, prefix='/data', tags=['data'], dependencies=[Security(verify_token)])
+router.include_router(router_files, prefix='/files', tags=['files'], dependencies=[Security(verify_token)])
 
 
 @router.get("/ping",

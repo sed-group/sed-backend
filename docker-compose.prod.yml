@@ -1,0 +1,21 @@
+services:
+  tls-termination-proxy:
+    container_name: tls-termination-proxy
+    image: nginx
+    networks:
+      - sedlab
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - NGINX_HOST=sedlab.ppd.chalmers.se
+      - NGINX_PORT=443
+    build:
+      context: ./deployment/nginx/
+      dockerfile: Dockerfile-tls-termination-proxy
+    volumes:
+      - C:\Certbot\live\sedlab.ppd.chalmers.se\:/etc/nginx/certs/live/sedlab.ppd.chalmers.se # TLS Certs syslink location
+      - C:\Certbot\archive\sedlab.ppd.chalmers.se\:/etc/nginx/certs/archive/sedlab.ppd.chalmers.se # TLS Certs actual location
+    depends_on:
+      - "core-db"
+      - "backend-api"
