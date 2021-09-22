@@ -3,6 +3,7 @@ from typing import List
 from fastapi import HTTPException, status
 
 import apps.core.individuals.exceptions as ind_ex
+import apps.core.individuals.storage as ind_storage
 import apps.core.authentication.exceptions as auth_ex
 import apps.difam.exceptions as ex
 import apps.difam.storage as storage
@@ -85,15 +86,22 @@ def impl_put_project_archetype(difam_project_id: int, individual_archetype_id: i
 def impl_post_generate_individuals(individual_archetype_id: int, doe_generation_request: models.DOEGenerationRequest,
                                    current_user_id: int):
     try:
-        if doe_generation_request.doe_type == 0:
-            parameter_id_list, hypercube = algs.create_hypercube_doe(doe_generation_request)
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_501_NOT_IMPLEMENTED
-            )
-
         with get_connection() as con:
-            res = storage.db_post_generate_individuals(con, individual_archetype_id, parameter_id_list, hypercube, current_user_id)
+            if doe_generation_request.doe_type == 0:
+
+                parameters_id_list = []
+                for range_param in doe_generation_request.range_parameters:
+                    parameters_id_list.append(range_param.parameter_id)
+
+                parameters_dict = ind_storage.db_get_parameters(con, parameters_id_list)
+                hypercube = algs.create_hypercube_doe(doe_generation_request, parameters_dict)
+                res = storage.db_post_generate_individuals(con, individual_archetype_id, parameters_id_list, hypercube,
+                                                           current_user_id)
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_501_NOT_IMPLEMENTED
+                )
+
             con.commit()
             return res
     except ind_ex.IndividualNotFoundException:

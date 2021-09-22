@@ -1,4 +1,4 @@
-from typing import Union, Optional, Any, List
+from typing import Union, Optional, List, Dict
 
 from mysql.connector.pooling import PooledMySQLConnection
 from fastapi.logger import  logger
@@ -144,6 +144,28 @@ def db_get_parameter(con, parameter_id, individual_id) -> models.IndividualParam
     parameter = models.IndividualParameter(**res)
     parameter.value = parameter.get_parsed_value()
     return parameter
+
+
+def db_get_parameters(con: PooledMySQLConnection, parameter_id_list: List[int]) -> Dict[int, models.IndividualParameter]:
+    select_stmnt = MySQLStatementBuilder(con)
+    rs = select_stmnt\
+        .select(INDIVIDUALS_PARAMETERS_TABLE, INDIVIDUALS_PARAMETERS_COLUMNS)\
+        .where("id IN " + MySQLStatementBuilder.placeholder_array(len(parameter_id_list)), parameter_id_list)\
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    if rs is None:
+        raise ex.ParameterNotFoundException
+
+    parameters_dict = {}
+    for res in rs:
+        parameter = models.IndividualParameter(**res)
+        parameter.value = parameter.get_parsed_value()
+        parameters_dict[parameter.id] = parameter
+
+    if len(parameters_dict) == 0:
+        raise ex.ParameterNotFoundException
+
+    return parameters_dict
 
 
 def db_get_parameter_with_name(con: PooledMySQLConnection, individual_id, name) -> models.IndividualParameter:
