@@ -155,6 +155,7 @@ class InteractsWith(Base):
                             ondelete="CASCADE",
                             name="fk_iw_id")
                         )
+    description = Column(String(2000))
 
 class DesignParameter(Base):
     """

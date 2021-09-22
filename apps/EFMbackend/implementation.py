@@ -296,14 +296,16 @@ def create_IW(db: Session,  newIW: schemas.IWnew):
             detail="Both DS for an iw need to be in the same tree"
         )
 
+    # setting treeID since its optional 
+    newIW.treeID = toDS.treeID
+
     # checking whether we're in the same instance (no share 1st lvl FR parent)
     # --> needs to be extended for any level FR parent!
     if toDS.isbID == fromDS.isbID:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail='DS for an iw need to be in the same instance; DS {} and {} share a parent FR'.format(toDS.name, fromDS.name)
+            detail='DS for an iw need to be in the same concept instance; DS {} and {} are exclusive alternatives'.format(toDS.name, fromDS.name)
         )
-
 
     newIW.treeID = toDS.treeID
 

@@ -42,18 +42,19 @@ class Tree(TreeNew):
     class Config:
         orm_mode = True
 
-## INTERACTS WITH
-class iwType(str, Enum):
-    SP = 'spatial'
-    EN = 'energy'
-    MA = 'material flow'
-    IN = 'information'
+# ## INTERACTS WITH
+# class iwType(str, Enum):
+#     SP = 'spatial'
+#     EN = 'energy'
+#     MA = 'material flow'
+#     IN = 'information'
 
 class IWnew(BaseModel):
     treeID: Optional[int]
     fromDsID: int
     toDsID: int
-    iwType: iwType
+    iwType: Optional[str] = 'spatial'
+    description: Optional[str]
 
 class InteractsWith(IWnew):
     id: int

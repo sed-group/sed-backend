@@ -127,3 +127,34 @@ def prune_child_ds(ds: schemas.DesignSolution, dna: List[int]):
                 childDS = prune_child_ds(ds, dna)
 
     return ds
+
+def allChildDS(fr: schemas.FunctionalRequirement, childList = []):
+    '''
+        iterates through all children of an FR and 
+        returns a list of DS 
+    '''
+    newChildList = childList
+
+    for ds in fr.is_solved_by:
+        newChildList.append(ds)
+
+        for fr in ds.requires_functions:
+            newChildList.extend(allChildDS(fr))
+
+    return newChildList
+
+def allChildFR(ds: schemas.DesignSolution, childList = []):
+    '''
+        iterates through all children of a DS and 
+        returns a list of FR
+    '''
+    newChildList = childList
+
+    for fr in ds.requires_functions:
+        newChildList.append(fr)
+        
+        for ds in fr.is_solved_by:
+            newChildList.extend(allChildFR(ds))
+
+    return newChildList
+
