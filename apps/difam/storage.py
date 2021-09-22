@@ -200,7 +200,7 @@ def db_post_generate_individuals(con, individual_archetype_id: int, parameter_id
         ind_storage.db_post_individual(con, individual, is_archetype=False)
 
 
-def populate_difam_project (con, difam_project_database_result):
+def populate_difam_project (con, difam_project_database_result) -> models.DifamProject:
     res = difam_project_database_result
     try:
         archetype = ind_storage.db_get_individual(con, res['individual_archetype_id'], archetype=True)
