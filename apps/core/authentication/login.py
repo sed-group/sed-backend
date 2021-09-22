@@ -8,10 +8,11 @@ from apps.core.users.exceptions import UserNotFoundException, UserDisabledExcept
 from apps.core.authentication.exceptions import InvalidCredentialsException
 from apps.core.authentication.storage import get_user_auth_only
 from apps.core.db import get_connection
+from env import Environment
 
 
 # Key can be created using `openssl rand -hex 32`.
-SECRET_KEY  = "0cf1c4bde4c1e423a5eff96e02febe2a562a8256ad6e854f89afdee37220dd2d"
+SECRET_KEY  = Environment.get_variable('JWT_KEY')
 ALGORITHM   = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

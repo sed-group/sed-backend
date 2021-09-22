@@ -4,13 +4,13 @@ from fastapi import HTTPException, status
 
 from apps.core.authentication.exceptions import UnauthorizedOperationException
 from apps.core.users.exceptions import UserNotFoundException, UserNotUniqueException
-from apps.core.users.models import User, UserPost
+import apps.core.users.models as models
 from apps.core.db import get_connection
 from apps.core.users.storage import (db_get_user_safe_with_id, db_get_user_list, db_insert_user, db_delete_user,
                                      db_get_users_with_ids)
 
 
-def impl_get_users_me(current_user: User):
+def impl_get_users_me(current_user: models.User) -> models.User:
     try:
         with get_connection() as con:
             user_safe = db_get_user_safe_with_id(con, current_user.id)
@@ -22,19 +22,19 @@ def impl_get_users_me(current_user: User):
         )
 
 
-def impl_get_users(segment_length: int, index: int):
+def impl_get_users(segment_length: int, index: int) -> List[models.User]:
     with get_connection() as con:
         user_list = db_get_user_list(con, segment_length, index)
         return user_list
 
 
-def impl_get_users_with_id(user_ids: List[int]):
+def impl_get_users_with_id(user_ids: List[int]) -> List[models.User]:
     with get_connection() as con:
         user_list = db_get_users_with_ids(con, user_ids)
         return user_list
 
 
-def impl_get_user_with_id(user_id: int):
+def impl_get_user_with_id(user_id: int) -> models.User:
     try:
         with get_connection() as con:
             user_safe = db_get_user_safe_with_id(con, user_id)
@@ -51,12 +51,12 @@ def impl_get_user_with_id(user_id: int):
         )
 
 
-def impl_post_user(user: UserPost):
+def impl_post_user(user: models.UserPost) -> models.User:
     try:
         with get_connection() as con:
-            db_insert_user(con, user)
+            res = db_insert_user(con, user)
             con.commit()
-            return "Successfully created user"
+            return res
     except UserNotUniqueException:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -64,12 +64,12 @@ def impl_post_user(user: UserPost):
         )
 
 
-def impl_delete_user_from_db(user_id: int):
+def impl_delete_user_from_db(user_id: int) -> bool:
     try:
         with get_connection() as con:
-            db_delete_user(con, user_id)
+            res = db_delete_user(con, user_id)
             con.commit()
-            return "Successfully deleted user"
+            return res
     except UnauthorizedOperationException:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -1,10 +1,12 @@
 from datetime import datetime
 from typing import Optional, List
 
-from fastapi import APIRouter, Security, Depends, UploadFile, File
+from fastapi import APIRouter, Depends, UploadFile, File
 
 import apps.core.measurements.models as models
 import apps.core.measurements.implementation as impl
+from apps.core.users.models import User
+from apps.core.authentication.utils import get_current_active_user
 
 router = APIRouter()
 
@@ -24,15 +26,13 @@ async def get_measurement_sets(subproject_id: Optional[int] = None):
 
 
 @router.post("/sets/upload",
-             summary="Upload measurement set")
-async def post_upload_set(file: UploadFile = File(...)):
-
-    # Use file.file to read file
-
-    return {
-        "filename": file.filename,
-        "content_type": file.content_type
-    }
+             summary="Upload measurement set",
+             response_model=List[str],
+             description="Upload a measurement set using a CSV or Excel file. Leaving csv_delimiter as None will "
+                         "result in the value being inferred automatically.")
+async def post_upload_set(file: UploadFile = File(...), current_user: User = Depends(get_current_active_user),
+                          csv_delimiter: Optional[str] = None):
+    return impl.impl_post_upload_set(file, current_user.id, csv_delimiter=csv_delimiter)
 
 
 @router.get("/sets/{measurement_set_id}",
