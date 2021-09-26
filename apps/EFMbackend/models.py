@@ -15,36 +15,20 @@ class Tree(Base):
     """
     __tablename__ = "tree"
     id = Column(Integer, primary_key = True)
-    projectID = Column(Integer) # should be a foreignKey to the projects table in core; however, right now, i am unable to fix this
-    # hence, we need to check for the project manually -.-
-                    # ForeignKey('seddb.projects.id',
-                    #     ondelete='CASCADE',
-                    #     name="parentProject"
-                    #     )
-                    # )
+    subproject_id = Column(Integer) # links to core subprojects
     name = Column(String(200))
     description = Column(String(2000))
-    topLvlDSid = Column(Integer, 
+    top_level_ds_id = Column(Integer, 
                     ForeignKey('designsolution.id', 
                         ondelete="SET NULL",
                         name="fk_topLvlDS"
                         ),
                     nullable=True,
                     )
-    # allDS = relationship("DesignSolution", 
-    #                 backref="tree",
-    #                 foreign_keys="designsolution.treeID" 
-    #                 )
-    # allFR = relationship("FunctionalRequirement", 
-    #                 backref="tree", 
-    #                 )
-    # allConcepts = relationship("Concept", 
-    #                 backref="tree", 
-    #                 )
     #### topLvlDS relationship doesn't work because pydantic crashes with circular relations!
-    topLvlDS = relationship('DesignSolution', 
+    top_level_ds = relationship('DesignSolution', 
         uselist=False, 
-        foreign_keys=[topLvlDSid])
+        foreign_keys=[top_level_ds_id])
 
     def __repr__(self):
         return "<Tree(name='%s')>" % (self.name)
@@ -57,17 +41,17 @@ class Concept(Base):
     id = Column(Integer, primary_key = True)
     name = Column(String(200))
     # tree link:
-    treeID = Column(Integer, 
+    tree_id = Column(Integer, 
                         ForeignKey('tree.id', 
                             ondelete="CASCADE", 
                             name="fk_concept_tree")
                         )
     # tree = relationship("Tree", 
     #                 backref="concept", 
-    #                 foreign_keys=[treeID])
+    #                 foreign_keys=[tree_id])
     dna = Column(String(2000)) # List of all IDs of the DS in this concept
     def __repr__(self):
-        return "<Concept(name='%s', treeID='%s', )>" % (self.name, self.treeID)
+        return "<Concept(name='%s', tree_id='%s', )>" % (self.name, self.tree_id)
     
 class DesignSolution(Base):
     """
@@ -78,35 +62,35 @@ class DesignSolution(Base):
     name = Column(String(200))
     description = Column(String(2000))
     # tree link:
-    treeID = Column(Integer, 
+    tree_id = Column(Integer, 
                         ForeignKey('tree.id', 
                             ondelete="CASCADE", 
                             name="fk_ds_tree"), 
                         nullable = True)
     # tree = relationship("Tree", 
     #                     backref="designsolution", 
-    #                     foreign_keys=[treeID])
+    #                     foreign_keys=[tree_id])
     # isb: 
-    isbID = Column(Integer, 
+    isb_id = Column(Integer, 
         ForeignKey('functionalrequirement.id',
                             ondelete="CASCADE", 
                             name="fk_isb_id"),
                         nullable=True)
     requires_functions = relationship("FunctionalRequirement", 
                         backref="rf", 
-                        foreign_keys='[FunctionalRequirement.rfID]')
+                        foreign_keys='[FunctionalRequirement.rf_id]')
     interacts_with = relationship("InteractsWith",
                         backref="fromDS",
-                        foreign_keys='[InteractsWith.fromDsID]')
+                        foreign_keys='[InteractsWith.from_ds_id]')
     design_parameters = relationship("DesignParameter",
                         backref="ds",
-                        foreign_keys='[DesignParameter.dsID]')
+                        foreign_keys='[DesignParameter.ds_id]')
     # identifier if top-level-node of a tree
     #### fix because pydantic doesn't allow circular loops =()
-    is_top_level_DS = Column(Boolean, default=False)
+    is_top_level_ds = Column(Boolean, default=False)
 
     def __repr__(self):
-        return "<DS(name='%s', treeID='%s', isb_parentFRid='%s')>" % (self.name, self.treeID, self.isbID)
+        return "<DS(name='%s', tree_id='%s', isb_parentFRid='%s')>" % (self.name, self.tree_id, self.isb_id)
            
 class FunctionalRequirement(Base):
     """
@@ -117,21 +101,21 @@ class FunctionalRequirement(Base):
     name = Column(String(200))
     description = Column(String(2000))
     # tree link:
-    treeID = Column(Integer, 
+    tree_id = Column(Integer, 
                         ForeignKey('tree.id', 
                             ondelete="CASCADE", 
                             name="fk_fr_tree")
                         )
     # tree = relationship("Tree", 
     #                     backref="functionalrequirement", 
-    #                     foreign_keys=[treeID])
-    rfID = Column(Integer, ForeignKey('designsolution.id', ondelete="CASCADE", name="fk_rf_id"))
+    #                     foreign_keys=[tree_id])
+    rf_id = Column(Integer, ForeignKey('designsolution.id', ondelete="CASCADE", name="fk_rf_id"))
     is_solved_by = relationship("DesignSolution", 
                         backref="isb", 
-                        foreign_keys=[DesignSolution.isbID])
+                        foreign_keys=[DesignSolution.isb_id])
 
     def __repr__(self):
-        return "<FR(name='%s', treeID='%s', rf_parentDSid='%s')>" % (self.name, self.treeID, self.rfID)
+        return "<FR(name='%s', tree_id='%s', rf_parentDSid='%s')>" % (self.name, self.tree_id, self.rf_id)
     
 class InteractsWith(Base):
     """
@@ -139,18 +123,18 @@ class InteractsWith(Base):
     """
     __tablename__ = "interactswith" 
     id = Column(Integer, primary_key = True)
-    fromDsID = Column(Integer, 
+    from_ds_id = Column(Integer, 
                         ForeignKey('designsolution.id', 
                             ondelete="CASCADE",
                             name="fk_iwOut_id")
                         )
-    toDsID = Column(Integer, 
+    to_ds_id = Column(Integer, 
                         ForeignKey('designsolution.id', 
                             ondelete="CASCADE",
                             name="fk_iwIn_id")
                         )
-    iwType = Column(String(20))
-    treeID = Column(Integer,
+    iw_type = Column(String(20))
+    tree_id = Column(Integer,
                         ForeignKey('tree.id',
                             ondelete="CASCADE",
                             name="fk_iw_id")
@@ -167,12 +151,12 @@ class DesignParameter(Base):
     value = Column(String(200))
     unit = Column(String(200))
     # tree link:
-    treeID = Column(Integer, 
+    tree_id = Column(Integer, 
                         ForeignKey('tree.id', 
                             ondelete="CASCADE", 
                             name="fk_dp_tree")
                         )
-    dsID = Column(Integer, 
+    ds_id = Column(Integer, 
                         ForeignKey('designsolution.id', 
                             ondelete="CASCADE",
                             name="fk_dp_ds")

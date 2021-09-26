@@ -2,16 +2,24 @@ from fastapi import APIRouter, Depends, Security
 from sqlalchemy.orm import Session
 from typing import List
 
-# from .models import *
+# EFM modules
 from apps.EFMbackend.database import SessionLocal
 import apps.EFMbackend.implementation as implementation
 import apps.EFMbackend.schemas as schemas
 import apps.EFMbackend.algorithms as algorithms
 
+# authentication / security
+from apps.core.users.models import User
+from apps.core.authentication.utils import get_current_active_user
+from apps.core.projects.dependencies import SubProjectAccessChecker
+from apps.core.projects.models import AccessLevel
+
 # sub-module-routers
 from apps.EFMbackend.parameters.router import router as param_router
 
 router = APIRouter()
+
+EFM_APP_SID = 'MOD.EFM'
 
 # Dependency
 def get_db():
@@ -24,21 +32,20 @@ def get_db():
 ## TREES
 @router.get("/trees/",
             response_model=List[schemas.TreeInfo],
-            summary="Overview over all trees",  
+            summary="Overview over all EFM trees",  
             description="Produces a list of all trees",
-            dependencies=[],
             # needs authentication to filter trees by user scope
             )
-async def get_all_trees(db: Session = Depends(get_db)):
-   return implementation.get_tree_list(db)
+async def get_all_trees(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+   return implementation.get_tree_list_of_user(db, current_user.id)
    
 @router.post("/trees/", 
             response_model=schemas.Tree,
             summary="creating a new tree",
             description="creates a new tree including topLvlDS and returns the tree object",
             )
-async def create_tree(newTree:schemas.TreeNew, db: Session= Depends(get_db)):
-    return implementation.create_tree(db=db, newTree=newTree)
+async def create_tree(new_tree:schemas.TreeNew, db: Session= Depends(get_db)):
+    return implementation.create_tree(db=db, new_tree=new_tree)
 
 @router.get("/trees/{treeID}",
             response_model= schemas.Tree,

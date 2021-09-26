@@ -218,14 +218,14 @@ def edit_EFMobject(db: Session, objType: efmObj, objID: int, objData):
     #     )
 
 ## Specialiced DB Functions
-def tree_set_topLvlDs(db: Session, treeID: int, dsID: int):
+def tree_set_top_lvl_ds(db: Session, treeID: int, dsID: int):
     ''' 
     sets the topLvlDS of an existing tree
     needed in initial creation of a tree 
     '''
     try:
         theTree = db.query(models.Tree).options(lazyload('topLvlDS')).filter(models.Tree.id == treeID).first()
-        theTree.topLvlDSid = dsID
+        theTree.top_level_ds_id = dsID
 
         db.commit()
         pydanticTree = schemas.Tree.from_orm(theTree)
@@ -236,7 +236,7 @@ def tree_set_topLvlDs(db: Session, treeID: int, dsID: int):
             detail="Type error when setting topLvlDSid for tree id:{}".format(treeID)
         )
 
-def get_treeInfoList(db: Session) -> List[schemas.TreeInfo]:
+def get_tree_info_list(db: Session) -> List[schemas.TreeInfo]:
     # fetches all tree items and converts to treeInfo list
     
     ormTreeList = db.query(models.Tree)

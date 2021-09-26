@@ -18,6 +18,7 @@ class TreeNew(BaseModel):
     '''
     name: str
     description: Optional[str]
+    subproject_id: int
 
 class TreeInfo(TreeNew):
     '''
@@ -25,7 +26,7 @@ class TreeInfo(TreeNew):
     no actual tree
     '''
     id: int
-    topLvlDSid: Optional[int]
+    top_level_ds_id: Optional[int]
 
 class Tree(TreeNew):
     """
@@ -36,8 +37,8 @@ class Tree(TreeNew):
     #fr: List[FunctionalRequirementTemp] = []
     #ds: List[DesignSolutionTemp] = []   
     ### circular link to DS not working because of bug see https://github.com/samuelcolvin/pydantic/issues/2279
-    topLvlDS: Optional[DesignSolutionTemp] = None
-    topLvlDSid: Optional[int] = None 
+    top_level_ds: Optional[DesignSolutionTemp] = None
+    top_level_ds_id: Optional[int] = None 
 
     class Config:
         orm_mode = True
@@ -50,10 +51,10 @@ class Tree(TreeNew):
 #     IN = 'information'
 
 class IWnew(BaseModel):
-    treeID: Optional[int]
-    fromDsID: int
-    toDsID: int
-    iwType: Optional[str] = 'spatial'
+    tree_id: Optional[int]
+    from_ds_id: int
+    to_ds_id: int
+    iw_type: Optional[str] = 'spatial'
     description: Optional[str]
 
 class InteractsWith(IWnew):
@@ -68,7 +69,7 @@ class ConceptEdit(BaseModel):
     externally editable information of a concept
     '''
     name: str
-    treeID: Optional[int]
+    tree_id: Optional[int]
 
 class ConceptNew(ConceptEdit):
     ''' 
@@ -96,7 +97,7 @@ class ConceptTree(ConceptEdit):
     however it is pruned to only the DS included in the concept,
     i.e. FR:DS 1:1
     '''
-    topLvlDS: Optional[DesignSolutionTemp]
+    top_level_ds: Optional[DesignSolutionTemp]
 
 ## DESIGNSOLUTIONS
 class DSnew(BaseModel):
@@ -105,8 +106,8 @@ class DSnew(BaseModel):
     '''
     name: str
     description: Optional[str] = None
-    isbID: Optional[int] = None
-    treeID: Optional[int] = None
+    isb_id: Optional[int] = None
+    tree_id: Optional[int] = None
     is_top_level_DS: Optional[bool] = False
 
 class DesignSolution(DSnew):
@@ -155,8 +156,8 @@ class FRNew(BaseModel):
     '''
     name: str
     description: Optional[str] = None
-    treeID: Optional[int] = None
-    rfID: int
+    tree_id: Optional[int] = None
+    rf_id: int
 
 class FunctionalRequirement(FRNew):
     """
@@ -191,7 +192,7 @@ class TreeData(TreeNew):
     data dump of an entire tree
     '''
     id: int
-    topLvlDSid: int
+    top_level_ds_id: int
 
     ds: List[DSinfo] = []
     fr: List[FRinfo] = []

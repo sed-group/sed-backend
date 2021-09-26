@@ -3,56 +3,88 @@ from fastapi import HTTPException, status
 from typing import List
 import json
 
+# efm modules import
 import apps.EFMbackend.models as models
 import apps.EFMbackend.schemas as schemas
 import apps.EFMbackend.storage as storage
 import apps.EFMbackend.algorithms as algorithms
 
 from apps.EFMbackend.exceptions import *
-# from apps.EFMbackend.database import get_connection
-
+from apps.EFMbackend.database import get_connection as efm_connection
 from apps.EFMbackend.utils import not_yet_implemented
 
 # imports from EF-M sub-modules
 from apps.EFMbackend.parameters.schemas import DesignParameter
 from apps.EFMbackend.parameters.storage import get_DP_all
 
+# imports from core
+from apps.core.db import get_connection as core_connection
+import apps.core.projects.storage as proj_storage
+import apps.core.projects.models as proj_models
+
+EFM_APP_SID = 'MOD.EFM'
 
 #### TREES
-def get_tree_list(db: Session, limit:int = 100, offset:int = 0):
+def get_tree_list_of_user(db: Session, user_id: int, limit:int = 100, offset:int = 0) \
+    -> List[schemas.TreeInfo]:
     '''
     list of all tree objects from DB
-    '''
-    treeList = storage.get_EFMobjectAll(db, 'tree', 0, limit, offset)
-    treeInfoList = []
-    for t in treeList:
-        tInfo = schemas.TreeInfo(**t.dict())
-        treeInfoList.append(tInfo)
-    return treeInfoList
+    where user has access to
 
-def create_tree(db: Session, newTree = schemas.TreeNew):
+    :param db: efm database connection
+    :param userID: core user id
+    :param limit: pagination length
+    :param offset: pagination offset
+    :return: list of schemas.TreeInfo
+    '''
+    with core_connection() as con:
+        subproject_list = proj_storage.db_get_user_subprojects_with_application_sid(con, user_id, EFM_APP_SID)
+
+    tree_list = []
+    counter = offset    # For pagination
+    print(subproject_list)
+    while len(subproject_list) > counter and counter < (offset+limit):
+        print(f'fetching subproject tree with id{subproject_list[counter].native_project_id}')
+        try: 
+            tree = storage.get_EFMobject(db, 'tree', subproject_list[counter].native_project_id)
+            tree_list.append(tree)
+        except:
+            print(f'could not find subproject tree with id {subproject_list[counter].native_project_id}')
+        counter = counter + 1
+
+    # tree_list = storage.get_EFMobjectAll(db, 'tree', 0, limit, offset)
+    tree_info_list = []
+
+    # conversion to schemas.TreeInfo
+    for t in tree_list:
+        t_info = schemas.TreeInfo(**t.dict())
+        tree_info_list.append(t_info)
+
+    return tree_info_list
+
+def create_tree(db: Session, new_tree = schemas.TreeNew):
     '''
         creates one new tree based on schemas.treeNew 
         creates a top-level DS and associates its ID to tree.topLvlDSid
     '''
     # create tree without DS:
     
-    theTree = storage.new_EFMobject(db, 'tree', newTree)
+    the_tree = storage.new_EFMobject(db, 'tree', new_tree)
 
     # manufacture a top-levelDS:
-    topDS = schemas.DSnew(
-        name=newTree.name, 
+    top_ds = schemas.DSnew(
+        name=new_tree.name, 
         description="Top-level DS", 
-        treeID = theTree.id, 
+        treeID = the_tree.id, 
         is_top_level_DS = True
         )
 
     # creating the DS in the DB
-    topDS = storage.new_EFMobject(db, 'DS', topDS)
+    top_ds = storage.new_EFMobject(db, 'DS', top_ds)
 
     # setting the tree topLvlDS
-    theTree = storage.tree_set_topLvlDs(db, theTree.id, topDS.id)
-    return theTree
+    the_tree = storage.tree_set_top_lvl_ds(db, the_tree.id, top_ds.id)
+    return the_tree
 
 def edit_tree(db:Session, treeID: int, treeData: schemas.TreeNew):
     return storage.edit_EFMobject(db, 'tree', treeID, treeID)
@@ -62,7 +94,7 @@ def get_tree_details(db: Session, treeID: int):
         returns a tree object with all details
         returns a schemas.Tree
     '''
-    theTree = storage.get_EFMobject(db, 'tree', treeID)
+    the_tree = storage.get_EFMobject(db, 'tree', treeID)
     return theTree
 
 
@@ -79,7 +111,7 @@ def get_tree_data(db: Session, treeID: int, depth:int=0):
     however, there is no sorting applied to the returned objects, so it is difficult to know which elements you get back...
     '''
 
-    theTree = storage.get_EFMobject(db, 'tree', treeID)
+    the_tree = storage.get_EFMobject(db, 'tree', treeID)
 
     treeData = schemas.TreeData(**theTree.dict())
 
@@ -130,7 +162,7 @@ def get_concept_tree(db: Session, cID: int):
     requires algorithms.prune_child_ds() (cause recursive)
     '''
     theConcept = storage.get_EFMobject(db, 'concept', cID)
-    theTree = storage.get_EFMobject(db, 'tree', theConcept.treeID)
+    the_tree = storage.get_EFMobject(db, 'tree', theConcept.treeID)
 
     # pruning:
     prunedDS = algorithms.prune_child_ds(theTree.topLvlDS, theConcept.dnaList())
