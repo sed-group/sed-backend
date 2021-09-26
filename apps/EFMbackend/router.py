@@ -47,50 +47,50 @@ async def get_all_trees(db: Session = Depends(get_db), current_user: User = Depe
 async def create_tree(new_tree:schemas.TreeNew, db: Session= Depends(get_db)):
     return implementation.create_tree(db=db, new_tree=new_tree)
 
-@router.get("/trees/{treeID}",
+@router.get("/trees/{tree_id}",
             response_model= schemas.Tree,
             summary="Returns a single tree by ID"
             )
-async def get_tree(treeID: int, db: Session = Depends(get_db)):
-    return implementation.get_tree_details(db=db, treeID=treeID)
+async def get_tree(tree_id: int, db: Session = Depends(get_db)):
+    return implementation.get_tree_details(db=db, tree_id=tree_id)
 
-@router.delete("/trees/{treeID}",
+@router.delete("/trees/{tree_id}",
             summary="Deletes a single tree by ID"
             )
-async def delete_tree(treeID: int, db: Session = Depends(get_db)):
-    return implementation.delete_tree(db=db, treeID=treeID)
+async def delete_tree(tree_id: int, db: Session = Depends(get_db)):
+    return implementation.delete_tree(db=db, tree_id=tree_id)
 
-@router.put("/trees/{treeID}",
+@router.put("/trees/{tree_id}",
             response_model= schemas.TreeInfo,
             summary="edits the header info of a tree (e.g. name, description) and returns a info object containing only header info"
             )
-async def edit_tree(treeID: int, treeData: schemas.TreeNew, db: Session = Depends(get_db)):
-    return implementation.edit_tree(db, treeID, treeData)
+async def edit_tree(tree_id: int, treeData: schemas.TreeNew, db: Session = Depends(get_db)):
+    return implementation.edit_tree(db, tree_id, treeData)
 
-@router.get("/trees/{treeID}/data",
+@router.get("/trees/{tree_id}/data",
             response_model= schemas.TreeData,
             summary="Returns all information in a tree as a big json dump"
             )
-async def get_tree_data(treeID: int, db: Session = Depends(get_db)):
+async def get_tree_data(tree_id: int, db: Session = Depends(get_db)):
     ''' NOT IMPLEMETED YET '''
-    return implementation.get_tree_data(db= db, treeID = treeID)
+    return implementation.get_tree_data(db= db, tree_id = tree_id)
 
 # CONCEPTS
-@router.get("/trees/{treeID}/instantiate",
+@router.get("/trees/{tree_id}/instantiate",
             response_model= List[schemas.Concept],
             summary = "generates all concepts of a tree and returns a list of them -WIP-",
             description = "Executes the instantiation of all possible concepts of a tree and returns them as a list. Computationally expensive!"
             )
-async def generate_all_concepts(treeID: int, db: Session = Depends(get_db)):
-    await algorithms.run_instantiation(treeID = treeID, db = db)
-    return implementation.get_all_concepts(db = db, treeID = treeID)
+async def generate_all_concepts(tree_id: int, db: Session = Depends(get_db)):
+    await algorithms.run_instantiation(tree_id = tree_id, db = db)
+    return implementation.get_all_concepts(db = db, tree_id = tree_id)
 
-@router.get("/trees/{treeID}/concepts",
+@router.get("/trees/{tree_id}/concepts",
             response_model= List[schemas.Concept],
             summary = "returns all concepts without regenerating them -WIP-",
             )
-async def get_all_concepts(treeID: int, db: Session = Depends(get_db)):
-    return implementation.get_all_concepts(db = db, treeID = treeID)
+async def get_all_concepts(tree_id: int, db: Session = Depends(get_db)):
+    return implementation.get_all_concepts(db = db, tree_id = tree_id)
 
 @router.get("/concepts/{cID}",
             response_model= schemas.Concept,
