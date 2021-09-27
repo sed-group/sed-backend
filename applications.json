@@ -8,5 +8,10 @@
     "name": "Product data reuse tool",
     "description": "Model production outcome using design parameters of existing products.",
     "href_api": "/difam/"
+  },
+  "MOD.CVS": {
+    "name": "Cost and value simulator",
+    "description": "?",
+    "href_api": "/cvs/"
   }
 }
