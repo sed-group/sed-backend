@@ -5,6 +5,10 @@ from fastapi import HTTPException, status
 import apps.core.measurements.models as models
 import apps.core.measurements.storage as storage
 import apps.core.measurements.exceptions as exc
+import apps.core.measurements.algorithms as algs
+import apps.core.files.models as models_files
+import apps.core.files.storage as storage_files
+import apps.core.files.exceptions as exc_files
 from apps.core.db import get_connection
 
 
@@ -113,3 +117,19 @@ def impl_post_measurement_result(measurement_id: int, mr: models.MeasurementResu
         res = storage.db_post_measurement_result(con, measurement_id, mr)
         con.commit()
         return res
+
+
+def impl_post_upload_set(file, current_user_id: int, csv_delimiter: Optional[str] = None) -> List:
+    try:
+        stored_file_post = models_files.StoredFilePost.import_fastapi_file(file, current_user_id)
+        with get_connection() as con:
+            file_entry = storage_files.db_save_file(con, stored_file_post)
+            file_path = storage_files.db_get_file_path(con, file_entry.id, current_user_id)
+            res = algs.get_sheet_headers(file_path, csv_delimiter=csv_delimiter)
+            con.commit()
+            return res
+    except exc_files.FileSizeException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File size too high. Could not be saved"
+        )

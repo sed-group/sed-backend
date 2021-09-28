@@ -59,8 +59,18 @@ However, if you don't want to change anything in the databases, then you could u
 - MySQL server
 
 ### Setup
-- cd to `sed-backend/apps/core`, where you will find the setup.sql file needed to setup the core database.
-- Run `mysql -h localhost -u root -p < setup.sql` (or you could use MySQL Workbench to execute the code inside setup.sql)
+- cd to `sed-backend/sql/`, where you will find the sql files needed to setup the core database.
+- Run `mysql -h localhost -u root -p` (or, use MySQL workbench which is easier) and execute the following code:
+```
+# This code creates a MySQL user with read and write access. 
+# It will be used by the sed-backend to access and edit the database
+
+CREATE USER IF NOT EXISTS 'rw' IDENTIFIED BY 'DONT_USE_IN_PRODUCTION!';
+GRANT SELECT, INSERT, UPDATE, DELETE ON * TO 'rw';
+GRANT EXECUTE ON `seddb`.* TO 'rw'@'%';
+```
+- Exit MySQL
+- Run `mysql -h localhost -u root -p < V1__base.sql` (or you could use MySQL Workbench to execute the code)
 - Run `pip install -r requirements.txt` 
 - You may need to install some requirements, such as uvicorn and jose, manually. To do this, run `pip install uvicorn jose`
 - Run `uvicorn main:app --reload` from project root to launch the application
@@ -82,6 +92,21 @@ Use the following MySQL query to create a user with the admin role:
 - password: secret
 
 # Development
+
+## Module development
+When creating a new module for the SED Lab backend, there are a few things that are good to be aware of.
+
+### Step 1: Create an application description
+Go to `applications.json` in the root directory of the SED-Backend project. Here you'll see a JSON list of all applications currently implemented into the backend. Note that each application has a "key" (e.g. the EF-M module has the key "MOD.EFM"). Create a key for your project, and follow the convention of the existing modules to create a description of your module. The `href_api` should have the same value as your API-prefix (remember this in the next sections).
+
+### Step 2: Create an application module
+Go to the folder `apps/` in the SED-backend catalogue. Here you will find every currently integrated module. Create a folder here with the name of your application module. This folder will contain ALL of your code (with only a few exceptions). This means that you shouldn't ever have to change or add code to other modules, as it is important that they remain unchanged for compatibility purposes. All application modules have the same package structure, as seen in the later chapter of this readme, called "Package structure".
+
+### Step 3: Adding your module API to the backend API
+There is one file outside of your own module that needs to be appended to make your module API accessible, and that is `main_router.py` in the root directory of the project. This contains references to each application API (routers). Look at how other sub-routers have been implemented (e.g. Core and DIFAM), and implement your own sub-router in the same way. Remember to add an API-prefix (same as the one written in step 1), a tag, and the security dependency "verify_token" (this forces the user to be logged in if he/she wants to use your API).
+
+### Step 4: The database
+Unless your module for some reason requires it, all modules use the same database. A connection to this database can be gained through `apps.core.db.get_connection()` This is typically done in the implementation layer, see the section about package structure below. Secondly, to avoid complexity and variation between modules, all interactions with the database are done so using "Prepared statement" calls, rather than using an ORM. Thus, database requests can either be written manually (e.g. ``SELECT username FROM `users` WHERE `id`=?``) or you can use some abstraction layer (e.g. the one provided in `libs.mysqlutils`). Examples of abstracted SQL requests can be found in any `storage.py`-file in the core application module `apps.core` (e.g. `apps.core.projects.storage`)
 
 ## Package structure
 It is important that we are consistent when developing packages, such that 1) problems can easily be identified, 2) each component of the code-base can easily be navigated, 3) prevent degradation of code over time. Th that end, packages are suggested to comply to the following structure:
@@ -110,3 +135,36 @@ logger.error('Something is definitely wrong')
 
 ```  
 By default, the log is saved in the system TEMP directory: `%TEMP%/sed-backend.log`.
+
+
+# Production deployment
+
+## TL;DR
+There are control scripts available on the server to facilitate safe and secure deployment of all 
+assets (you're welcome). The control scripts can be found at `F:\control-scripts`.
+Use those, and as long as it works you shouldn't have to worry.
+
+## How it really works (in case something goes wrong)
+In production (on the SED Server) things are a bit more complicated.
+For starters, we have an extra docker-compose file which needs to be run after the first file for the server to start properly.
+This can be done (BUT IT IS NOT SAFE) by running
+- Go to project root
+- Run `docker-compose -f docker-compose.yml -f docker-compose.prod.yml build`
+- Run `docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d`
+- Done
+
+This is all we need to start the web-server. But, in order to make it safe, we first need to change the contents 
+of all files in the `env/` directory. This ensures that the passwords used are not the same 
+ones that are publically available on github. To ease this, I've created some 
+standardized launch/stop/rebuild-scripts that are available on the server.
+
+
+The reason we need to setup production slightly differently is because we also need docker-compose to use the contents 
+of `docker-compose.prod.yml` which contains setup instructions that are specific to the production environment. 
+In short, `docker-compose.prod.yml` sets up a new docker container, which contains a TLS termination proxy 
+using nginx. Incomming HTTPS traffic is handled by the nginx container, which translates it to HTTP for the 
+FastAPI container. This allows FastAPI to communicate with HTTP within the docker network, 
+while clients connecting to the API can communicate safely with HTTPS. 
+
+
+TLS is achieved using a certbot certificate, which is mounted into the container in `docker-compose.prod.yml`. The `nginx/` directory contains the rest of the necessary files to make this work. Note that the setup requires knowledge of what the domain name is. At the time of writing, it was `sedlab.ppd.chalmers.se`. Attempting to deploy using the production composition on any other domain will not work without minor tweaks to the build code.

@@ -7,22 +7,44 @@ services:
     ports:
       - "3001:3306"
     build:
-      context: ./apps/core/
-      dockerfile: Dockerfile-core-db
+      context: .
+      dockerfile: Dockerfile-mysql-server
     restart: on-failure
+    volumes:
+      - persistent-volume:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
+      MYSQL_PASSWORD_FILE: /run/secrets/mysql_user_password
+      MYSQL_USER: rw
+      MYSQL_DATABASE: seddb
+    secrets:
+      - mysql_root_password
+      - mysql_user_password
 
   backend-api:
     container_name: backend-api
     networks:
       - sedlab
     ports:
-      - "80:80"
+      - "8000:80"
     build:
       context: .
       dockerfile: Dockerfile-backend-api
     restart: on-failure
+    volumes:
+      - uploaded-files:/sed_lab/uploaded_files/
     depends_on:
       - "core-db"
 
 networks:
-  sedlab:
+  sedlab:             # Ensures that all containers can communicate on the same virtual network
+
+volumes:
+  persistent-volume:  # Stores database even if the containers are restarted
+  uploaded-files:
+
+secrets:
+  mysql_root_password:
+    file: env/MYSQL_PWD_ROOT.txt
+  mysql_user_password:
+    file: env/MYSQL_PWD_RW.txt

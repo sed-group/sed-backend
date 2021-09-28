@@ -1,6 +1,7 @@
 from fastapi.logger import logger
 import mysql.connector
 from mysql.connector import errorcode, pooling
+from env import Environment
 
 from contextlib import contextmanager
 
@@ -8,8 +9,8 @@ connection_pool = None
 
 try:
     connection_pool = mysql.connector.pooling.MySQLConnectionPool(
-        user='rw',            # Change for production environments
-        password='DONT_USE_IN_PRODUCTION!',      # Change for production environments
+        user='rw',
+        password=Environment.get_variable('MYSQL_PWD_RW'),
         host='core-db',
         database='seddb',
         port=3306,

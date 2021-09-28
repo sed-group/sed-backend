@@ -3,6 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import main_router as api
 import setup
+import env
+
+
+# Parse environment variables
+env.Environment.parse_env()
 
 
 setup.config_default_logging()
@@ -15,7 +20,6 @@ app = FastAPI(
 
 app.include_router(api.router, prefix="/api")
 
-
 # CORS
 origins = ["http://localhost:8080"]
 app.add_middleware(
@@ -25,6 +29,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
 
 # Misc middleware
 setup.install_middleware(app)
