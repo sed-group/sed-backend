@@ -26,7 +26,7 @@ class TreeInfo(TreeNew):
     '''
     id: int
     top_level_ds_id: Optional[int]
-    subproject_id: int
+    subproject_id: Optional[int]
 
 class Tree(TreeInfo):
     """

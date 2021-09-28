@@ -62,28 +62,54 @@ def get_tree_list_of_user(db: Session, user_id: int, limit:int = 100, offset:int
 
     return tree_info_list
 
-def create_tree(db: Session, new_tree = schemas.TreeNew):
+def create_tree(db: Session, project_id:int, new_tree: schemas.TreeNew, user_id: int):
     '''
-        creates one new tree based on schemas.treeNew 
-        creates a top-level DS and associates its ID to tree.topLvlDSid
+        creates one new tree based on schemas.treeNew
+        creates a new subproject in project_id 
+        creates a top-level DS and associates its ID to tree.top_level_ds_id
     '''
+    # first check whether project exists
+    with core_connection() as con:
+        try:
+            proj_storage.db_get_project_exists(con, project_id)
+        except:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No project with ID {project_id} could be found"
+            )
+
     # create tree without DS:
-    
-    the_tree = storage.new_EFMobject(db, 'tree', new_tree)
+    the_tree = storage.new_efm_object(db, 'tree', new_tree)
 
     # manufacture a top-levelDS:
     top_ds = schemas.DSnew(
         name=new_tree.name, 
         description="Top-level DS", 
         tree_id = the_tree.id, 
-        is_top_level_DS = True
+        is_top_level_ds = True
         )
 
     # creating the DS in the DB
-    top_ds = storage.new_EFMobject(db, 'DS', top_ds)
+    top_ds = storage.new_efm_object(db, 'DS', top_ds)
 
     # setting the tree topLvlDS
     the_tree = storage.tree_set_top_lvl_ds(db, the_tree.id, top_ds.id)
+
+    # create new sub-project on core level:
+    new_subproject_data = proj_models.SubProjectPost(
+        application_sid = EFM_APP_SID,
+        native_project_id = the_tree.id,
+    )
+    with core_connection() as con:
+        new_subproject = proj_storage.db_post_subproject(
+            connection = con, 
+            subproject = new_subproject_data, 
+            current_user_id = user_id,
+            project_id = project_id
+            )
+    the_tree = storage.tree_set_subproject(db, the_tree.id, new_subproject.id)
+
+
     return the_tree
 
 def edit_tree(db:Session, tree_id: int, tree_data: schemas.TreeNew):
@@ -202,7 +228,7 @@ def create_FR(db: Session, newFR: schemas.FRNew):
     parentDS = storage.get_EFMobject(db, 'DS', newFR.rfID)
     newFR.tree_id = parentDS.tree_id
 
-    return storage.new_EFMobject(db, 'FR', newFR)
+    return storage.new_efm_object(db, 'FR', newFR)
     
 def delete_FR(db: Session, FRid: int):
     '''
@@ -266,7 +292,7 @@ def create_DS(db: Session, newDS: schemas.DSnew):
     parentFR = storage.get_EFMobject(db, 'FR', newDS.isbID)
     newDS.tree_id = parentFR.tree_id
 
-    return storage.new_EFMobject(db, 'DS', newDS)
+    return storage.new_efm_object(db, 'DS', newDS)
     
 def delete_DS(db: Session, DSid: int):
     '''
@@ -341,7 +367,7 @@ def create_IW(db: Session,  newIW: schemas.IWnew):
 
     newIW.tree_id = toDS.tree_id
 
-    return storage.new_EFMobject(db, 'iw', newIW)
+    return storage.new_efm_object(db, 'iw', newIW)
 
 def delete_IW(db:Session, IWid: int):
     return storage.delete_EFMobject(db, 'iw', IWid)
@@ -378,7 +404,7 @@ def edit_IW(db: Session, IWid: int, IWdata: schemas.IWnew):
 #         "concepts":[],
 #         "fr":[],
 #         "ds":[],
-#         "topLvlDSid":2
+#         "top_level_ds_id":2
 #         },
 #     "is_solved_by":[
 #         {"name":"ds child",
@@ -393,7 +419,7 @@ def edit_IW(db: Session, IWid: int, IWdata: schemas.IWnew):
 #             "id":2,"concepts":[],
 #             "fr":[],
 #             "ds":[],
-#             "topLvlDSid":2
+#             "top_level_ds_id":2
 #             },
 #         "is_top_level_DS":false}
 #     ]

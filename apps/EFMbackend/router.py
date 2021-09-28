@@ -11,7 +11,7 @@ import apps.EFMbackend.algorithms as algorithms
 # authentication / security
 from apps.core.users.models import User
 from apps.core.authentication.utils import get_current_active_user
-from apps.core.projects.dependencies import SubProjectAccessChecker
+from apps.core.projects.dependencies import ProjectAccessChecker, SubProjectAccessChecker
 from apps.core.projects.models import AccessLevel
 
 # sub-module-routers
@@ -34,63 +34,73 @@ def get_db():
             response_model=List[schemas.TreeInfo],
             summary="Overview over all EFM trees",  
             description="Produces a list of all trees",
-            # needs authentication to filter trees by user scope
             )
 async def get_all_trees(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
    return implementation.get_tree_list_of_user(db, current_user.id)
    
-@router.post("/trees/", 
+@router.post("/{project_id}/newTree/", 
             response_model=schemas.Tree,
             summary="creating a new tree",
-            description="creates a new tree including topLvlDS and returns the tree object",
+            description="creates a new tree including topLvlDS and returns the tree object. Alsoc creates a new subproject in project_id",
+            dependencies=[Depends(ProjectAccessChecker(AccessLevel.list_can_edit()))]
             )
-async def create_tree(new_tree:schemas.TreeNew, db: Session= Depends(get_db)):
-    return implementation.create_tree(db=db, new_tree=new_tree)
+async def create_tree(project_id: int, new_tree:schemas.TreeNew, db: Session= Depends(get_db), current_user: User = Depends(get_current_active_user)):
+    return implementation.create_tree(db=db, project_id = project_id, new_tree=new_tree, user_id = current_user.id)
 
-@router.get("/trees/{tree_id}",
+@router.get("/trees/{native_project_id}",
             response_model= schemas.Tree,
-            summary="Returns a single tree by ID"
+            summary="Returns a single tree by ID",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), EFM_APP_SID))]
             )
-async def get_tree(tree_id: int, db: Session = Depends(get_db)):
-    return implementation.get_tree_details(db=db, tree_id=tree_id)
+async def get_tree(native_project_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+    return implementation.get_tree_details(db=db, tree_id=native_project_id)
 
-@router.delete("/trees/{tree_id}",
-            summary="Deletes a single tree by ID"
+@router.delete("/trees/{native_project_id}",
+            summary="Deletes a single tree by ID",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
-async def delete_tree(tree_id: int, db: Session = Depends(get_db)):
-    return implementation.delete_tree(db=db, tree_id=tree_id)
+async def delete_tree(native_project_id: int, db: Session = Depends(get_db)):
+    return implementation.delete_tree(db=db, tree_id=native_project_id)
 
-@router.put("/trees/{tree_id}",
+@router.put("/trees/{native_project_id}",
             response_model= schemas.TreeInfo,
-            summary="edits the header info of a tree (e.g. name, description) and returns a info object containing only header info"
+            summary="edits the header info of a tree (e.g. name, description) and returns a info object containing only header info",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
-async def edit_tree(tree_id: int, treeData: schemas.TreeNew, db: Session = Depends(get_db)):
-    return implementation.edit_tree(db, tree_id, treeData)
+async def edit_tree(native_project_id: int, tree_data: schemas.TreeNew, db: Session = Depends(get_db)):
+    return implementation.edit_tree(
+        db=db,
+        tree_id=native_project_id,
+        tree_data = tree_data
+    )
 
-@router.get("/trees/{tree_id}/data",
+@router.get("/trees/{native_project_id}/data",
             response_model= schemas.TreeData,
-            summary="Returns all information in a tree as a big json dump"
+            summary="Returns all information in a tree as a big json dump",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), EFM_APP_SID))]
             )
-async def get_tree_data(tree_id: int, db: Session = Depends(get_db)):
+async def get_tree_data(native_project_id: int, db: Session = Depends(get_db)):
     ''' NOT IMPLEMETED YET '''
-    return implementation.get_tree_data(db= db, tree_id = tree_id)
+    return implementation.get_tree_data(db= db, tree_id = native_project_id)
 
 # CONCEPTS
-@router.get("/trees/{tree_id}/instantiate",
+@router.get("/trees/{native_project_id}/instantiate",
             response_model= List[schemas.Concept],
             summary = "generates all concepts of a tree and returns a list of them -WIP-",
-            description = "Executes the instantiation of all possible concepts of a tree and returns them as a list. Computationally expensive!"
+            description = "Executes the instantiation of all possible concepts of a tree and returns them as a list. Computationally expensive!",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
-async def generate_all_concepts(tree_id: int, db: Session = Depends(get_db)):
-    await algorithms.run_instantiation(tree_id = tree_id, db = db)
-    return implementation.get_all_concepts(db = db, tree_id = tree_id)
+async def generate_all_concepts(native_project_id: int, db: Session = Depends(get_db)):
+    await algorithms.run_instantiation(tree_id = native_project_id, db = db)
+    return implementation.get_all_concepts(db = db, tree_id = native_project_id)
 
-@router.get("/trees/{tree_id}/concepts",
+@router.get("/trees/{native_project_id}/concepts",
             response_model= List[schemas.Concept],
-            summary = "returns all concepts without regenerating them -WIP-",
+            summary = "returns all concepts without regenerating them",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), EFM_APP_SID))]
             )
 async def get_all_concepts(tree_id: int, db: Session = Depends(get_db)):
-    return implementation.get_all_concepts(db = db, tree_id = tree_id)
+    return implementation.get_all_concepts(db = db, tree_id = native_project_id)
 
 @router.get("/concepts/{cID}",
             response_model= schemas.Concept,
