@@ -18,7 +18,6 @@ class TreeNew(BaseModel):
     '''
     name: str
     description: Optional[str]
-    subproject_id: int
 
 class TreeInfo(TreeNew):
     '''
@@ -27,18 +26,17 @@ class TreeInfo(TreeNew):
     '''
     id: int
     top_level_ds_id: Optional[int]
+    subproject_id: int
 
-class Tree(TreeNew):
+class Tree(TreeInfo):
     """
     tree class including all fields
     """
-    id: Optional[int]
     concepts: List[ConceptTemp] = []
     #fr: List[FunctionalRequirementTemp] = []
     #ds: List[DesignSolutionTemp] = []   
     ### circular link to DS not working because of bug see https://github.com/samuelcolvin/pydantic/issues/2279
     top_level_ds: Optional[DesignSolutionTemp] = None
-    top_level_ds_id: Optional[int] = None 
 
     class Config:
         orm_mode = True
@@ -108,7 +106,7 @@ class DSnew(BaseModel):
     description: Optional[str] = None
     isb_id: Optional[int] = None
     tree_id: Optional[int] = None
-    is_top_level_DS: Optional[bool] = False
+    is_top_level_ds: Optional[bool] = False
 
 class DesignSolution(DSnew):
     """
@@ -136,7 +134,7 @@ class DSinfo(DSnew):
     interacts_with_id: Optional[List[int]] = []
     design_parameter_id: Optional[List[int]] = []
 
-    is_top_level_DS: Optional[bool] = False
+    is_top_level_ds: Optional[bool] = False
 
     def update(self, originalDS: DesignSolution):
 
@@ -187,13 +185,10 @@ class FRinfo(FRNew):
 
 
 ## TREE DATA
-class TreeData(TreeNew):
+class TreeData(TreeInfo):
     ''' 
     data dump of an entire tree
     '''
-    id: int
-    top_level_ds_id: int
-
     ds: List[DSinfo] = []
     fr: List[FRinfo] = []
     iw: List[InteractsWith] = []
