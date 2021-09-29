@@ -46,13 +46,13 @@ def get_tree_list_of_user(db: Session, user_id: int, limit:int = 100, offset:int
     while len(subproject_list) > counter and counter < (offset+limit):
         print(f'fetching subproject tree with id{subproject_list[counter].native_project_id}')
         try: 
-            tree = storage.get_EFMobject(db, 'tree', subproject_list[counter].native_project_id)
+            tree = storage.get_efm_object(db, 'tree', subproject_list[counter].native_project_id)
             tree_list.append(tree)
         except:
             print(f'could not find subproject tree with id {subproject_list[counter].native_project_id}')
         counter = counter + 1
 
-    # tree_list = storage.get_EFMobjectAll(db, 'tree', 0, limit, offset)
+    # tree_list = storage.get_efm_objects_all_of_tree(db, 'tree', 0, limit, offset)
     tree_info_list = []
 
     # conversion to schemas.TreeInfo
@@ -113,22 +113,43 @@ def create_tree(db: Session, project_id:int, new_tree: schemas.TreeNew, user_id:
     return the_tree
 
 def edit_tree(db:Session, tree_id: int, tree_data: schemas.TreeNew):
-    return storage.edit_EFMobject(db, 'tree', tree_id, tree_id)
+    return storage.edit_efm_object(db, 'tree', tree_id, tree_id)
 
 def get_tree_details(db: Session, tree_id: int):
     ''' 
         returns a tree object with all details
         returns a schemas.Tree
     '''
-    the_tree = storage.get_EFMobject(db, 'tree', tree_id)
+    the_tree = storage.get_efm_object(db, 'tree', tree_id)
     return the_tree
 
 
 def delete_tree(db: Session, tree_id: int):
     '''
         deletes tree based on id 
+        also deletes the related subproject in core
     '''
-    return storage.delete_EFMobject(db, 'tree', tree_id)
+    storage.delete_efm_object(
+        db = db,
+        efm_object_type = 'tree', 
+        object_id = tree_id
+        )
+
+    # deleting the respective sub-project:
+    with core_connection() as con:
+        subproject = proj_storage.db_get_subproject_native(
+            connection = con, 
+            application_sid = EFM_APP_SID, 
+            native_project_id = tree_id
+            )
+        subproject_deleted = proj_storage.db_delete_subproject(
+            connection = con, 
+            project_id = subproject.project_id,
+            subproject_id = subproject.id, 
+            )
+
+        return True
+
 
 def get_tree_data(db: Session, tree_id: int, depth:int=0):
     '''
@@ -137,12 +158,12 @@ def get_tree_data(db: Session, tree_id: int, depth:int=0):
     however, there is no sorting applied to the returned objects, so it is difficult to know which elements you get back...
     '''
 
-    the_tree = storage.get_EFMobject(db, 'tree', tree_id)
+    the_tree = storage.get_efm_object(db, 'tree', tree_id)
 
     tree_data = schemas.TreeData(**the_tree.dict())
 
     # fetch DS
-    all_ds = storage.get_EFMobjectAll(db, 'DS', tree_id, depth)
+    all_ds = storage.get_efm_objects_all_of_tree(db, 'DS', tree_id, depth)
     # all_ds = db.query(models.DesignSolution).filter(models.DesignSolution.tree_id == tree_id).all()
     for ds in all_ds:
         pydantic_ds_tree = schemas.DesignSolution.from_orm(ds)
@@ -151,7 +172,7 @@ def get_tree_data(db: Session, tree_id: int, depth:int=0):
         tree_data.ds.append(the_ds_info)
 
     # fetch FR
-    allFR = storage.get_EFMobjectAll(db, 'FR', tree_id, depth)
+    allFR = storage.get_efm_objects_all_of_tree(db, 'FR', tree_id, depth)
     for fr in allFR:
         pydantic_fr_tree = schemas.FunctionalRequirement.from_orm(fr)
         the_fr_info = schemas.FRinfo(**pydantic_fr_tree.dict())
@@ -159,7 +180,7 @@ def get_tree_data(db: Session, tree_id: int, depth:int=0):
         tree_data.fr.append(the_fr_info)
 
     # fetch iw
-    all_iw = storage.get_EFMobjectAll(db, 'iw', tree_id, depth)
+    all_iw = storage.get_efm_objects_all_of_tree(db, 'iw', tree_id, depth)
     tree_data.iw = all_iw
 
     # fetch DP
@@ -173,13 +194,13 @@ def get_all_concepts(db: Session, tree_id: int, limit:int=100, offset: int = 0):
     '''
     returns a list of all concepts of the tree identified via tree_id
     '''
-    return storage.get_EFMobjectAll(db, 'concept', tree_id, limit, offset)
+    return storage.get_efm_objects_all_of_tree(db, 'concept', tree_id, limit, offset)
 
 def get_concept(db: Session, cID: int):
-    return storage.get_EFMobject(db, 'concept', cID)
+    return storage.get_efm_object(db, 'concept', cID)
 
 def edit_concept(db: Session, cID: int, cData: schemas.ConceptEdit):
-    return storage.edit_EFMobject(db, 'concept', cID, cData)
+    return storage.edit_efm_object(db, 'concept', cID, cData)
 
 def get_concept_tree(db: Session, cID: int):
     '''
@@ -187,8 +208,8 @@ def get_concept_tree(db: Session, cID: int):
     and prunes all DS not in the dna
     requires algorithms.prune_child_ds() (cause recursive)
     '''
-    theConcept = storage.get_EFMobject(db, 'concept', cID)
-    the_tree = storage.get_EFMobject(db, 'tree', theConcept.tree_id)
+    theConcept = storage.get_efm_object(db, 'concept', cID)
+    the_tree = storage.get_efm_object(db, 'tree', theConcept.tree_id)
 
     # pruning:
     prunedDS = algorithms.prune_child_ds(theTree.topLvlDS, theConcept.dnaList())
@@ -205,14 +226,14 @@ def get_FR_tree(db:Session, FRid: int):
         returns a FR object with all details
         and the subsequent tree elements
     '''
-    return storage.get_EFMobject(db, 'FR', FRid)
+    return storage.get_efm_object(db, 'FR', FRid)
 
 def get_FR_info(db:Session, FRid: int):
     ''' 
         returns a FR object with all details
         but instead of relationships only ids
     ''' 
-    theTreeFR = storage.get_EFMobject(db, 'FR', FRid)
+    theTreeFR = storage.get_efm_object(db, 'FR', FRid)
     theInfoFR = schemas.FRinfo(**theTreeFR.dict())
     theInfoFR.update(theTreeFR)
 
@@ -225,7 +246,7 @@ def create_FR(db: Session, newFR: schemas.FRNew):
         associates it to DS with parentID via FR.rfID ("requires function")
     '''
     # first we need to set the tree_id, fetched from the parent DS
-    parentDS = storage.get_EFMobject(db, 'DS', newFR.rfID)
+    parentDS = storage.get_efm_object(db, 'DS', newFR.rfID)
     newFR.tree_id = parentDS.tree_id
 
     return storage.new_efm_object(db, 'FR', newFR)
@@ -234,7 +255,7 @@ def delete_FR(db: Session, FRid: int):
     '''
         deletes FR based on id 
     '''
-    storage.delete_EFMobject(db, 'FR', FRid)
+    storage.delete_efm_object(db, 'FR', FRid)
 
 def edit_FR(db: Session, FRid: int, FRdata: schemas.FRNew):
     '''
@@ -243,10 +264,10 @@ def edit_FR(db: Session, FRid: int, FRdata: schemas.FRNew):
         tree_id is set through parent; therefore, change of tree is theoretically possible
     '''
     # first we need to set the tree_id, fetched from the parent DS
-    parentDS = storage.get_EFMobject(db, 'DS', FRdata.rfID)
+    parentDS = storage.get_efm_object(db, 'DS', FRdata.rfID)
     FRdata.tree_id = parentDS.tree_id
 
-    return storage.edit_EFMobject(db, 'FR', FRid, FRdata)
+    return storage.edit_efm_object(db, 'FR', FRid, FRdata)
     
 def newParent_FR(db: Session, FRid: int, DSid: int):
     '''
@@ -254,14 +275,14 @@ def newParent_FR(db: Session, FRid: int, DSid: int):
     i.e. a change in parent
     '''
     # fetch the FR data
-    fr_data = storage.get_EFMobject(db, 'FR', FRid)
+    fr_data = storage.get_efm_object(db, 'FR', FRid)
     # first we check if the new parent exists
-    new_parent_DS = storage.get_EFMobject(db, 'DS', DSid)
+    new_parent_DS = storage.get_efm_object(db, 'DS', DSid)
     # set new parent ID
     fr_data.rfID = new_parent_DS.id
     
     # store it
-    return storage.edit_EFMobject(db, 'FR', FRid, fr_data)
+    return storage.edit_efm_object(db, 'FR', FRid, fr_data)
 
 
 ### DS
@@ -269,14 +290,14 @@ def get_DS_with_tree(db:Session, DSid: int):
     ''' 
         returns a DS object with all details
     '''
-    return storage.get_EFMobject(db, 'DS', DSid)
+    return storage.get_efm_object(db, 'DS', DSid)
 
 def get_DS_info(db:Session, DSid: int):
     ''' 
         returns a DS object with all details
         but instead of relationships only ids
     '''
-    theDStree = storage.get_EFMobject(db, 'DS', DSid)
+    theDStree = storage.get_efm_object(db, 'DS', DSid)
 
     theInfoDS = schemas.DSinfo(**theDStree.dict())
     theInfoDS.update(theDStree)
@@ -289,7 +310,7 @@ def create_DS(db: Session, newDS: schemas.DSnew):
         associates it to 
     '''
     # first we need to set the tree_id, fetched from the parent FR
-    parentFR = storage.get_EFMobject(db, 'FR', newDS.isbID)
+    parentFR = storage.get_efm_object(db, 'FR', newDS.isbID)
     newDS.tree_id = parentFR.tree_id
 
     return storage.new_efm_object(db, 'DS', newDS)
@@ -298,7 +319,7 @@ def delete_DS(db: Session, DSid: int):
     '''
         deletes DS based on id 
     '''
-    return storage.delete_EFMobject(db, 'DS', DSid)
+    return storage.delete_efm_object(db, 'DS', DSid)
 
 def edit_DS(db: Session, DSid: int, DSdata: schemas.DSnew):
     '''
@@ -308,10 +329,10 @@ def edit_DS(db: Session, DSid: int, DSdata: schemas.DSnew):
         cannot change tree! (tree_id)
     '''
     # first we need to set (correct?) the tree_id, fetched from the parent FR
-    parentFR = storage.get_EFMobject(db, 'FR', DSdata.isbID)
+    parentFR = storage.get_efm_object(db, 'FR', DSdata.isbID)
     DSdata.tree_id = parentFR.tree_id
 
-    return storage.edit_EFMobject(db, 'DS', DSid, DSdata)
+    return storage.edit_efm_object(db, 'DS', DSid, DSdata)
 
 def newParent_DS(db: Session, DSid: int, FRid: int):
     '''
@@ -319,21 +340,21 @@ def newParent_DS(db: Session, DSid: int, FRid: int):
     i.e. a change in parent
     '''
     # fetch the DS data
-    ds_data = storage.get_EFMobject(db, 'DS', DSid)
+    ds_data = storage.get_efm_object(db, 'DS', DSid)
     # first we check if the new parent exists
-    new_parent_FR = storage.get_EFMobject(db, 'FR', FRid)
+    new_parent_FR = storage.get_efm_object(db, 'FR', FRid)
     # set new parent ID
     ds_data.isbID = new_parent_FR.id
     
     # store it
-    return storage.edit_EFMobject(db, 'DS', DSid, ds_data)
+    return storage.edit_efm_object(db, 'DS', DSid, ds_data)
 
 
 
 
 ### iw todo!! 
 def get_IW(db:Session, IWid: int):
-    return storage.get_EFMobject(db, 'iw', IWid)
+    return storage.get_efm_object(db, 'iw', IWid)
 
 def create_IW(db: Session,  newIW: schemas.IWnew):
     '''
@@ -344,8 +365,8 @@ def create_IW(db: Session,  newIW: schemas.IWnew):
         then commits to DB
     '''
 
-    toDS = storage.get_EFMobject(db, 'DS', newIW.toDsID)
-    fromDS = storage.get_EFMobject(db, 'DS', newIW.fromDsID)
+    toDS = storage.get_efm_object(db, 'DS', newIW.toDsID)
+    fromDS = storage.get_efm_object(db, 'DS', newIW.fromDsID)
 
     # checking if we're in the same tree:
     if not toDS.tree_id == fromDS.tree_id:
@@ -370,15 +391,15 @@ def create_IW(db: Session,  newIW: schemas.IWnew):
     return storage.new_efm_object(db, 'iw', newIW)
 
 def delete_IW(db:Session, IWid: int):
-    return storage.delete_EFMobject(db, 'iw', IWid)
+    return storage.delete_efm_object(db, 'iw', IWid)
 
 def edit_IW(db: Session, IWid: int, IWdata: schemas.IWnew):
     '''
         first verifies whether the two DS are in the same tree, 
         then commits to DB
     '''
-    toDS = storage.get_EFMobject(db, 'DS', IWdata.toDsID)
-    fromDS = storage.get_EFMobject(db, 'DS', IWdata.fromDsID)
+    toDS = storage.get_efm_object(db, 'DS', IWdata.toDsID)
+    fromDS = storage.get_efm_object(db, 'DS', IWdata.fromDsID)
 
     if not toDS.tree_id == fromDS.tree_id:
         raise HTTPException(
@@ -388,7 +409,7 @@ def edit_IW(db: Session, IWid: int, IWdata: schemas.IWnew):
 
     IWdata.tree_id = toDS.tree_id
 
-    return storage.edit_EFMobject(db, 'iw', IWid, IWdata)
+    return storage.edit_efm_object(db, 'iw', IWid, IWdata)
 
 
 #  {

@@ -56,7 +56,7 @@ class EfmObjectTypes(str, Enum):
     CONCEPT = 'concept'
 
 ### general GET, POST, DELETE and PUT
-def get_EFMobject(db: Session, efm_object_type: EfmObjectTypes, objID: int):
+def get_efm_object(db: Session, efm_object_type: EfmObjectTypes, object_id: int):
     '''
         fetches an EF-M object via its id from the database
         what kind of object is defined via type
@@ -66,27 +66,27 @@ def get_EFMobject(db: Session, efm_object_type: EfmObjectTypes, objID: int):
     object_data = efm_object_types[efm_object_type]
 
     try:
-        the_object_for_orm = db.query(object_data['model']).filter(object_data['model'].id == objID).first()
+        the_object_for_orm = db.query(object_data['model']).filter(object_data['model'].id == object_id).first()
         if the_object_for_orm:
             the_object_as_pydantic_model = object_data['schema'].from_orm(the_object_for_orm)
             return the_object_as_pydantic_model
         else:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="{} with ID {} does not exist.".format(object_data['str'], objID)
+                detail="{} with ID {} does not exist.".format(object_data['str'], object_id)
             )
     except EfmElementNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="{} with ID {} does not exist.".format(object_data['str'], objID)
+            detail="{} with ID {} does not exist.".format(object_data['str'], object_id)
         )
     except TypeError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="objID needs to be an integer"
+            detail="object_id needs to be an integer"
         )
 
-def get_EFMobjectAll(db: Session, efm_object_type: EfmObjectTypes, tree_id:int=0, limit: int = 100, offset:int = 0, ):
+def get_efm_objects_all_of_tree(db: Session, efm_object_type: EfmObjectTypes, tree_id:int=0, limit: int = 100, offset:int = 0, ):
     '''
         fetches a list of EF-M objects of one type
         from offset to limit; if limit=0 returns all
@@ -152,7 +152,7 @@ def new_efm_object(db: Session, efm_object_type: EfmObjectTypes, object_data):
     #         detail="Database did not accept new {}.".format(object_type_info['str'])
     #     )
 
-def delete_EFMobject(db: Session, efm_object_type: EfmObjectTypes, objID: int):
+def delete_efm_object(db: Session, efm_object_type: EfmObjectTypes, object_id: int):
     '''
     deletes an object by ID
     '''
@@ -160,13 +160,13 @@ def delete_EFMobject(db: Session, efm_object_type: EfmObjectTypes, objID: int):
     object_type_info = efm_object_types[efm_object_type]
 
     try:
-        db.query(object_type_info['model']).filter(object_type_info['model'].id == objID).delete()
+        db.query(object_type_info['model']).filter(object_type_info['model'].id == object_id).delete()
         db.commit()
         return True
     except TypeError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="objID needs to be an integer"
+            detail="object_id needs to be an integer"
         )
     except:
         raise HTTPException(
@@ -174,7 +174,7 @@ def delete_EFMobject(db: Session, efm_object_type: EfmObjectTypes, objID: int):
             detail="Database could not delete {}.".format(object_type_info['str'])
         )
 
-def edit_EFMobject(db: Session, efm_object_type: EfmObjectTypes, objID: int, object_data):
+def edit_efm_object(db: Session, efm_object_type: EfmObjectTypes, object_id: int, object_data):
     '''
     edits an object by ID and object_data
     ## TODO:
@@ -185,7 +185,7 @@ def edit_EFMobject(db: Session, efm_object_type: EfmObjectTypes, objID: int, obj
     object_type_info = efm_object_types[efm_object_type]
 
     # try: 
-    the_object_for_orm = db.query(object_type_info['model']).filter(object_type_info['model'].id == objID).first()
+    the_object_for_orm = db.query(object_type_info['model']).filter(object_type_info['model'].id == object_id).first()
     
     # writing all the info we want to write:
     for key, value in object_data.dict().items():
@@ -214,7 +214,7 @@ def edit_EFMobject(db: Session, efm_object_type: EfmObjectTypes, objID: int, obj
     # except:
     #     raise HTTPException(
     #         status_code=status.HTTP_400_BAD_REQUEST,
-    #         detail="Database could not edit {} with ID {}".format(object_type_info['str'], objID)
+    #         detail="Database could not edit {} with ID {}".format(object_type_info['str'], object_id)
     #     )
 
 ## Specialiced DB Functions
@@ -253,7 +253,6 @@ def tree_set_subproject(db: Session, tree_id: int, new_subproject_id: int) -> sc
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Type error when setting top_lvl_dsid for tree id:{}".format(tree_id)
         )
-
 
 
 def get_tree_info_list(db: Session) -> List[schemas.TreeInfo]:
