@@ -2,7 +2,7 @@ from typing import List
 
 from fastapi import APIRouter, Security, Depends
 
-import algorithms
+import apps.cvs.algorithms as algorithms
 
 router = APIRouter()
 
