@@ -80,7 +80,6 @@ async def edit_tree(native_project_id: int, tree_data: schemas.TreeNew, db: Sess
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), EFM_APP_SID))]
             )
 async def get_tree_data(native_project_id: int, db: Session = Depends(get_db)):
-    ''' NOT IMPLEMETED YET '''
     return implementation.get_tree_data(db= db, tree_id = native_project_id)
 
 # CONCEPTS
@@ -99,143 +98,161 @@ async def generate_all_concepts(native_project_id: int, db: Session = Depends(ge
             summary = "returns all concepts without regenerating them",
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), EFM_APP_SID))]
             )
-async def get_all_concepts(tree_id: int, db: Session = Depends(get_db)):
+async def get_all_concepts(native_project_id: int, db: Session = Depends(get_db)):
     return implementation.get_all_concepts(db = db, tree_id = native_project_id)
 
-@router.get("/concepts/{cID}",
+@router.get("/{native_project_id}/concepts/{cID}",
             response_model= schemas.Concept,
-            summary = "returns one concepts by ID -WIP-",
+            summary = "returns one concept by ID",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), EFM_APP_SID))]
             )
 async def get_one_concept(cID: int, db: Session = Depends(get_db)):
     return implementation.get_concept(db = db, cID = cID)
 
-@router.put("/concepts/{cID}",
+@router.put("/{native_project_id}/concepts/{cID}",
             response_model= schemas.Concept,
             summary = "edits one concepts by ID -WIP-",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
 async def edit_concept(cID: int, cData: schemas.ConceptEdit, db: Session = Depends(get_db)):
     return implementation.edit_concept(db = db, cData= cData, cID = cID)
 
-@router.get("/concepts/{cID}/tree",
+@router.get("/{native_project_id}/concepts/{cID}/tree",
             response_model= schemas.ConceptTree,
             summary = "returns the concept with a tree structure in topLvlDS",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), EFM_APP_SID))]
             )
 async def get_concept_tree(cID: int, db: Session = Depends(get_db)):
     return implementation.get_concept_tree(cID = cID, db = db)
 
 ## DS
-@router.get("/ds/{DSid}/tree",
+@router.get("/{native_project_id}/ds/{DSid}/tree",
             response_model = schemas.DesignSolution,
-            summary="returns a single DS object with all its children and grandchildren"
+            summary="returns a single DS object with all its children and grandchildren",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), EFM_APP_SID))]
             )
 async def get_designSolutionTree(DSid: int, db: Session = Depends(get_db)):
     return implementation.get_DS_with_tree(db=db, DSid = DSid)
 
-@router.get("/ds/{DSid}",
+@router.get("/{native_project_id}/ds/{DSid}",
             response_model = schemas.DSinfo,
-            summary="returns a single DS object"
+            summary="returns a single DS object",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), EFM_APP_SID))]
             )
 async def get_designSolutionInfo(DSid: int, db: Session = Depends(get_db)):
     return implementation.get_DS_info(db=db, DSid = DSid)
 
 
-@router.post("/ds/new",
+@router.post("/{native_project_id}/ds/new",
             response_model = schemas.DesignSolution,
-            summary="creates a new single DS object as a child of FRid"
+            summary="creates a new single DS object as a child of FRid",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
 async def create_designSolution(DSdata: schemas.DSnew, db: Session = Depends(get_db)):
     return implementation.create_DS(db=db, newDS= DSdata)
 
-@router.delete("/ds/{DSid}",
-            summary="delets a new single DS object by id"
+@router.delete("/{native_project_id}/ds/{DSid}",
+            summary="delets a new single DS object by id",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
 async def delete_designSolution(DSid: int, db: Session = Depends(get_db)):
     return implementation.delete_DS(db= db, DSid = DSid)
 
-@router.put("/ds/{DSid}",
+@router.put("/{native_project_id}/ds/{DSid}",
             response_model = schemas.DesignSolution,
-            summary="edits an exisitng DS object via DSdata"
+            summary="edits an exisitng DS object via DSdata",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
 async def edit_designSolution(DSid: int, DSdata: schemas.DSnew, db: Session = Depends(get_db)):
     return implementation.edit_DS(DSid = DSid, DSdata = DSdata, db=db)
 
-@router.put("/ds/{DSid}/isb/",
+@router.put("/{native_project_id}/ds/{DSid}/isb/",
             response_model = schemas.DesignSolution,
-            summary = "sets new parent to DS"
+            summary = "sets new parent to DS",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
 async def newParent_designSolution(DSid: int, newParentID: int, db: Session = Depends(get_db)):
     return implementation.newParent_DS(DSid= DSid, FRid= newParentID, db = db)
 
 
 ## FR
-@router.get("/fr/{FRid}",
+@router.get("/{native_project_id}/fr/{FRid}",
             response_model = schemas.FRinfo,
-            summary="returns a single FR object"
+            summary="returns a single FR object",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), EFM_APP_SID))]
             )
 async def get_functionalRequirement(FRid: int, db: Session = Depends(get_db)):
     return implementation.get_FR_info(db=db, FRid = FRid)
     
-@router.get("/fr/{FRid}/tree",
+@router.get("/{native_project_id}/fr/{FRid}/tree",
             response_model = schemas.FunctionalRequirement,
-            summary="returns a single FR object with all subsequent tree elements"
+            summary="returns a single FR object with all subsequent tree elements",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), EFM_APP_SID))]
             )
 async def get_functionalRequirementTree(FRid: int, db: Session = Depends(get_db)):
     return implementation.get_FR_tree(db=db, FRid = FRid)
 
-@router.post("/fr/new",
+@router.post("/{native_project_id}/fr/new",
             response_model = schemas.FunctionalRequirement,
             summary="creates a new single FR object as a child of DSis",
-            description="the json part of the post also contains the DSid - at some point this redundancy needs to be reduced, but how i do not know yet!"
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
 async def create_functionalRequirement(FRdata: schemas.FRNew, db: Session = Depends(get_db)):
     return implementation.create_FR(db=db, newFR= FRdata)
 
-@router.delete("/fr/{FRid}",
-            summary="delets a new single FR object by id"
+@router.delete("/{native_project_id}/fr/{FRid}",
+            summary="delets a new single FR object by id",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
 async def delete_functionalRequirement(FRid: int, db: Session = Depends(get_db)):
     return implementation.delete_FR(db= db, FRid = FRid)
 
-@router.put("/fr/{FRid}",
+@router.put("/{native_project_id}/fr/{FRid}",
             response_model = schemas.FunctionalRequirement,
-            summary="edits an exisitng FR object via FRdata"
+            summary="edits an exisitng FR object via FRdata",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
 async def edit_functionalRequirement(FRid: int, FRdata: schemas.FRNew, db: Session = Depends(get_db)):
     return implementation.edit_FR(FRid = FRid, FRdata = FRdata, db=db)
 
-@router.put("/fr/{FRid}/rf/",
+@router.put("/{native_project_id}/fr/{FRid}/rf/",
             response_model = schemas.FunctionalRequirement,
-            summary = "sets new parent to FR"
+            summary = "sets new parent to FR",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
 async def newParent_functionalRequirement(FRid: int, newParentID: int, db: Session = Depends(get_db)):
     return implementation.newParent_FR(FRid= FRid, DSid= newParentID, db = db)
 
 
 # iw 
-@router.get("/iw/{IWid}",
+@router.get("/{native_project_id}/iw/{IWid}",
             response_model = schemas.InteractsWith,
-            summary="returns a single iw object -WIP-"
+            summary="returns a single iw object -WIP-",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), EFM_APP_SID))]
             )
 async def get_interactsWith(IWid: int, db: Session = Depends(get_db)):
     return implementation.get_IW(db=db, IWid = IWid)
 
-@router.post("/iw/new",
+@router.post("/{native_project_id}/iw/new",
             response_model = schemas.InteractsWith,
             summary="creates a new iw object via IWdata (json) -WIP-",
-            description="creates a new interactsWith object"
+            description="creates a new interactsWith object",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
 async def create_interactsWith(IWdata: schemas.IWnew, db: Session = Depends(get_db)):
     return implementation.create_IW(db=db, newIW= IWdata)
 
-@router.delete("/iw/{IWid}",
-            summary="deletes an iw object by id -WIP-"
+@router.delete("/{native_project_id}/iw/{IWid}",
+            summary="deletes an iw object by id -WIP-",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
 async def delete_interactsWith(IWid: int, db: Session = Depends(get_db)):
     return implementation.delete_IW(db= db, IWid = IWid)
 
-@router.put("/iw/{IWid}",
+@router.put("/{native_project_id}/iw/{IWid}",
             response_model = schemas.InteractsWith,
-            summary="edits an existing iw object via IWdata (json) -WIP-"
+            summary="edits an existing iw object via IWdata (json) -WIP-",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
 async def edit_interactsWith(IWid: int, IWdata: schemas.IWnew, db: Session = Depends(get_db)):
     return implementation.edit_IW(db=db, IWid= IWid, IWdata=IWdata)

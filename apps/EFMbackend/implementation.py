@@ -142,7 +142,7 @@ def delete_tree(db: Session, tree_id: int):
             application_sid = EFM_APP_SID, 
             native_project_id = tree_id
             )
-        subproject_deleted = proj_storage.db_delete_subproject(
+        proj_storage.db_delete_subproject(
             connection = con, 
             project_id = subproject.project_id,
             subproject_id = subproject.id, 
