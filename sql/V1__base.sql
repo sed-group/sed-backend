@@ -198,3 +198,15 @@ CREATE TABLE IF NOT EXISTS `seddb`.`files` (
   `extension` VARCHAR(25) NOT NULL,
   PRIMARY KEY (`id`),
   INDEX `FILES_TEMP` (`temp` ASC) INVISIBLE);
+
+
+# CVS projects
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_projects` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NULL DEFAULT 'Unnamed project',
+  `description` TEXT NULL DEFAULT NULL,
+  `owner_id` INT UNSIGNED NOT NULL,
+  `datetime_created` DATETIME(3) NOT NULL DEFAULT NOW(3),
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
+
