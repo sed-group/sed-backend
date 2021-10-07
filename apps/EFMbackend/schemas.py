@@ -148,16 +148,16 @@ class DSinfo(DSnew):
             self.design_parameter_id.append(dp.id)
 
 ## FUNCTIONAL REQUIREMENTS
-class FRNew(BaseModel):
+class FRnew(BaseModel):
     '''
     DS class for creation of new DS; contains only minimum viable info
     '''
     name: str
     description: Optional[str] = None
-    tree_id: Optional[int] = None
+    tree_id: Optional[int]
     rf_id: int
 
-class FunctionalRequirement(FRNew):
+class FunctionalRequirement(FRnew):
     """
     FR element for EF-M modelling; contains all basic information
     """
@@ -169,7 +169,7 @@ class FunctionalRequirement(FRNew):
     class Config:
         orm_mode = True
 
-class FRinfo(FRNew):
+class FRinfo(FRnew):
     '''
     a DS class without the list of requires_function FR, but FRids instead
     as such it doesn't carry the entire tree

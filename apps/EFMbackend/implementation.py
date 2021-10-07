@@ -78,36 +78,41 @@ def create_tree(db: Session, project_id:int, new_tree: schemas.TreeNew, user_id:
                 detail=f"No project with ID {project_id} could be found"
             )
 
-    # create tree without DS:
-    the_tree = storage.new_efm_object(db, 'tree', new_tree)
+        # create tree without DS:
+        the_tree = storage.new_efm_object(db, 'tree', new_tree)
 
-    # manufacture a top-levelDS:
-    top_ds = schemas.DSnew(
-        name=new_tree.name, 
-        description="Top-level DS", 
-        tree_id = the_tree.id, 
-        is_top_level_ds = True
+        # manufacture a top-levelDS:
+        top_ds = schemas.DSnew(
+            name=new_tree.name, 
+            description="Top-level DS", 
+            tree_id = the_tree.id, 
+            is_top_level_ds = True
+            )
+
+        # creating the DS in the DB
+        top_ds = storage.new_efm_object(db, 'DS', top_ds)
+
+        # setting the tree topLvlDS
+        the_tree = storage.tree_set_top_lvl_ds(db, the_tree.id, top_ds.id)
+
+        # create new sub-project on core level:
+        new_subproject_data = proj_models.SubProjectPost(
+            application_sid = EFM_APP_SID,
+            native_project_id = the_tree.id,
         )
-
-    # creating the DS in the DB
-    top_ds = storage.new_efm_object(db, 'DS', top_ds)
-
-    # setting the tree topLvlDS
-    the_tree = storage.tree_set_top_lvl_ds(db, the_tree.id, top_ds.id)
-
-    # create new sub-project on core level:
-    new_subproject_data = proj_models.SubProjectPost(
-        application_sid = EFM_APP_SID,
-        native_project_id = the_tree.id,
-    )
-    with core_connection() as con:
+        
         new_subproject = proj_storage.db_post_subproject(
             connection = con, 
             subproject = new_subproject_data, 
             current_user_id = user_id,
             project_id = project_id
             )
+        con.commit()
+
     the_tree = storage.tree_set_subproject(db, the_tree.id, new_subproject.id)
+
+    print(the_tree)
+    print(new_subproject)
 
 
     return the_tree
@@ -122,7 +127,6 @@ def get_tree_details(db: Session, tree_id: int):
     '''
     the_tree = storage.get_efm_object(db, 'tree', tree_id)
     return the_tree
-
 
 def delete_tree(db: Session, tree_id: int):
     '''
@@ -150,7 +154,6 @@ def delete_tree(db: Session, tree_id: int):
 
         return True
 
-
 def get_tree_data(db: Session, tree_id: int, depth:int=0):
     '''
     returns a list of all obejcts related to a specific tree
@@ -172,8 +175,8 @@ def get_tree_data(db: Session, tree_id: int, depth:int=0):
         tree_data.ds.append(the_ds_info)
 
     # fetch FR
-    allFR = storage.get_efm_objects_all_of_tree(db, 'FR', tree_id, depth)
-    for fr in allFR:
+    all_fr = storage.get_efm_objects_all_of_tree(db, 'FR', tree_id, depth)
+    for fr in all_fr:
         pydantic_fr_tree = schemas.FunctionalRequirement.from_orm(fr)
         the_fr_info = schemas.FRinfo(**pydantic_fr_tree.dict())
         the_fr_info.update(pydantic_fr_tree)
@@ -208,215 +211,215 @@ def get_concept_tree(db: Session, cID: int):
     and prunes all DS not in the dna
     requires algorithms.prune_child_ds() (cause recursive)
     '''
-    theConcept = storage.get_efm_object(db, 'concept', cID)
-    the_tree = storage.get_efm_object(db, 'tree', theConcept.tree_id)
+    the_concept = storage.get_efm_object(db, 'concept', cID)
+    the_tree = storage.get_efm_object(db, 'tree', the_concept.tree_id)
 
     # pruning:
-    prunedDS = algorithms.prune_child_ds(theTree.topLvlDS, theConcept.dnaList())
+    ds_pruned = algorithms.prune_child_ds(the_tree.topLvlDS, the_concept.dnaList())
 
-    conceptWithTree = schemas.ConceptTree(**theConcept.dict())
+    concept_with_tree = schemas.ConceptTree(**the_concept.dict())
 
-    conceptWithTree.topLvlDS = prunedDS
+    concept_with_tree.topLvlDS = ds_pruned
 
-    return conceptWithTree
+    return concept_with_tree
 
 ### FR
-def get_FR_tree(db:Session, FRid: int):
+def get_FR_tree(db:Session, fr_id: int):
     ''' 
         returns a FR object with all details
         and the subsequent tree elements
     '''
-    return storage.get_efm_object(db, 'FR', FRid)
+    return storage.get_efm_object(db, 'FR', fr_id)
 
-def get_FR_info(db:Session, FRid: int):
+def get_FR_info(db:Session, fr_id: int):
     ''' 
         returns a FR object with all details
         but instead of relationships only ids
     ''' 
-    theTreeFR = storage.get_efm_object(db, 'FR', FRid)
-    theInfoFR = schemas.FRinfo(**theTreeFR.dict())
-    theInfoFR.update(theTreeFR)
+    the_fr_treeform = storage.get_efm_object(db, 'FR', fr_id)
+    the_fr_infoform = schemas.FRinfo(**the_fr_treeform.dict())
+    the_fr_infoform.update(the_fr_treeform)
 
-    return theInfoFR
+    return the_fr_infoform
 
-
-def create_FR(db: Session, newFR: schemas.FRNew):
+def create_FR(db: Session, fr_new: schemas.FRnew):
     '''
         creates new FR based on schemas.FRnew (name, description) 
-        associates it to DS with parentID via FR.rfID ("requires function")
+        associates it to DS with parentID via FR.rf_id ("requires function")
     '''
-    # first we need to set the tree_id, fetched from the parent DS
-    parentDS = storage.get_efm_object(db, 'DS', newFR.rfID)
-    newFR.tree_id = parentDS.tree_id
-
-    return storage.new_efm_object(db, 'FR', newFR)
+    # checking if parent exists
+    parent_ds = storage.get_efm_object(db, 'DS', fr_new.rf_id)
+    # setting tree_id for fetching
+    fr_new.tree_id = parent_ds.tree_id
     
-def delete_FR(db: Session, FRid: int):
+    return storage.new_efm_object(db, 'FR', fr_new)
+    
+def delete_FR(db: Session, fr_id: int):
     '''
         deletes FR based on id 
     '''
-    storage.delete_efm_object(db, 'FR', FRid)
+    storage.delete_efm_object(db, 'FR', fr_id)
 
-def edit_FR(db: Session, FRid: int, FRdata: schemas.FRNew):
+def edit_FR(db: Session, fr_id: int, fr_data: schemas.FRnew):
     '''
-        overwrites the data in the FR identified with FRid with the data from FRdata
+        overwrites the data in the FR identified with fr_id with the data from fr_data
         can change parent (i.e. isb), name and description
         tree_id is set through parent; therefore, change of tree is theoretically possible
     '''
     # first we need to set the tree_id, fetched from the parent DS
-    parentDS = storage.get_efm_object(db, 'DS', FRdata.rfID)
-    FRdata.tree_id = parentDS.tree_id
+    parent_ds = storage.get_efm_object(db, 'DS', fr_data.rf_id)
+    fr_data.tree_id = parent_ds.tree_id
 
-    return storage.edit_efm_object(db, 'FR', FRid, FRdata)
+    return storage.edit_efm_object(db, 'FR', fr_id, fr_data)
     
-def newParent_FR(db: Session, FRid: int, DSid: int):
+def newParent_FR(db: Session, fr_id: int, ds_id: int):
     '''
-    sets DSid as new rfID for FR
+    sets ds_id as new rf_id for FR
     i.e. a change in parent
     '''
     # fetch the FR data
-    fr_data = storage.get_efm_object(db, 'FR', FRid)
+    fr_data = storage.get_efm_object(db, 'FR', fr_id)
     # first we check if the new parent exists
-    new_parent_DS = storage.get_efm_object(db, 'DS', DSid)
+    new_parent_DS = storage.get_efm_object(db, 'DS', ds_id)
     # set new parent ID
-    fr_data.rfID = new_parent_DS.id
+    fr_data.rf_id = new_parent_DS.id
     
     # store it
-    return storage.edit_efm_object(db, 'FR', FRid, fr_data)
+    return storage.edit_efm_object(db, 'FR', fr_id, fr_data)
 
 
 ### DS
-def get_DS_with_tree(db:Session, DSid: int):
+def get_DS_with_tree(db:Session, ds_id: int):
     ''' 
         returns a DS object with all details
     '''
-    return storage.get_efm_object(db, 'DS', DSid)
+    return storage.get_efm_object(db, 'DS', ds_id)
 
-def get_DS_info(db:Session, DSid: int):
+def get_DS_info(db:Session, ds_id: int):
     ''' 
         returns a DS object with all details
         but instead of relationships only ids
     '''
-    theDStree = storage.get_efm_object(db, 'DS', DSid)
+    the_ds_treeform = storage.get_efm_object(db, 'DS', ds_id)
 
-    theInfoDS = schemas.DSinfo(**theDStree.dict())
-    theInfoDS.update(theDStree)
+    the_ds_infoform = schemas.DSinfo(**the_ds_treeform.dict())
+    the_ds_infoform.update(the_ds_treeform)
 
-    return theInfoDS
+    return the_ds_infoform
 
-def create_DS(db: Session, newDS: schemas.DSnew):
+def create_DS(db: Session, new_ds: schemas.DSnew):
     '''
         creates new DS based on schemas.DSnew (name, description) 
         associates it to 
     '''
     # first we need to set the tree_id, fetched from the parent FR
-    parentFR = storage.get_efm_object(db, 'FR', newDS.isbID)
-    newDS.tree_id = parentFR.tree_id
+    parent_fr = storage.get_efm_object(db, 'FR', new_ds.isb_id)
+    new_ds.tree_id = parent_fr.tree_id
 
-    return storage.new_efm_object(db, 'DS', newDS)
+    return storage.new_efm_object(db, 'DS', new_ds)
     
-def delete_DS(db: Session, DSid: int):
+def delete_DS(db: Session, ds_id: int):
     '''
         deletes DS based on id 
     '''
-    return storage.delete_efm_object(db, 'DS', DSid)
+    return storage.delete_efm_object(db, 'DS', ds_id)
 
-def edit_DS(db: Session, DSid: int, DSdata: schemas.DSnew):
+def edit_DS(db: Session, ds_id: int, ds_data: schemas.DSnew):
     '''
-        overwrites the data in the DS identified with DSid with the data from DSnew
+        overwrites the data in the DS identified with ds_id with the data from DSnew
         can change parent (i.e. isb), name and description
         checks whether the new parent FR is in the same tree
         cannot change tree! (tree_id)
     '''
     # first we need to set (correct?) the tree_id, fetched from the parent FR
-    parentFR = storage.get_efm_object(db, 'FR', DSdata.isbID)
-    DSdata.tree_id = parentFR.tree_id
+    parent_fr = storage.get_efm_object(db, 'FR', ds_data.isb_id)
+    ds_data.tree_id = parent_fr.tree_id
 
-    return storage.edit_efm_object(db, 'DS', DSid, DSdata)
+    return storage.edit_efm_object(db, 'DS', ds_id, ds_data)
 
-def newParent_DS(db: Session, DSid: int, FRid: int):
+def newParent_DS(db: Session, ds_id: int, fr_id: int):
     '''
-    sets FRid as new isbID for DS
+    sets fr_id as new isb_id for DS
     i.e. a change in parent
     '''
     # fetch the DS data
-    ds_data = storage.get_efm_object(db, 'DS', DSid)
+    ds_data = storage.get_efm_object(db, 'DS', ds_id)
     # first we check if the new parent exists
-    new_parent_FR = storage.get_efm_object(db, 'FR', FRid)
+    new_parent_FR = storage.get_efm_object(db, 'FR', fr_id)
     # set new parent ID
-    ds_data.isbID = new_parent_FR.id
+    ds_data.isb_id = new_parent_FR.id
     
     # store it
-    return storage.edit_efm_object(db, 'DS', DSid, ds_data)
+    return storage.edit_efm_object(db, 'DS', ds_id, ds_data)
 
 
 
 
 ### iw todo!! 
-def get_IW(db:Session, IWid: int):
-    return storage.get_efm_object(db, 'iw', IWid)
+def get_IW(db:Session, iw_id: int):
+    return storage.get_efm_object(db, 'iw', iw_id)
 
-def create_IW(db: Session,  newIW: schemas.IWnew):
+def create_IW(db: Session,  iw_new: schemas.IWnew):
     '''
         first verifies whether the two DS are in the same tree, 
-        but don't have the same parentFR
+        but don't have the same parent_fr
             --> this needs to check whether they are _on no level_ in alternative DS; so i'm afraid we need to iterate all the parent DS and check whether one of them are alternatives to each other?? 
             --> NOT IMPLEMENTED
         then commits to DB
     '''
 
-    toDS = storage.get_efm_object(db, 'DS', newIW.toDsID)
-    fromDS = storage.get_efm_object(db, 'DS', newIW.fromDsID)
+    to_ds = storage.get_efm_object(db, 'DS', iw_new.to_ds_id)
+    from_ds = storage.get_efm_object(db, 'DS', iw_new.from_ds_id)
 
     # checking if we're in the same tree:
-    if not toDS.tree_id == fromDS.tree_id:
+    if not to_ds.tree_id == from_ds.tree_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Both DS for an iw need to be in the same tree"
         )
 
     # setting tree_id since its optional 
-    newIW.tree_id = toDS.tree_id
+    iw_new.tree_id = to_ds.tree_id
 
     # checking whether we're in the same instance (no share 1st lvl FR parent)
     # --> needs to be extended for any level FR parent!
-    if toDS.isbID == fromDS.isbID:
+    if to_ds.isb_id == from_ds.isb_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail='DS for an iw need to be in the same concept instance; DS {} and {} are exclusive alternatives'.format(toDS.name, fromDS.name)
+            detail='DS for an iw need to be in the same concept instance; DS {} and {} are exclusive alternatives'.format(to_ds.name, from_ds.name)
         )
 
-    newIW.tree_id = toDS.tree_id
+    iw_new.tree_id = to_ds.tree_id
 
-    return storage.new_efm_object(db, 'iw', newIW)
+    return storage.new_efm_object(db, 'iw', iw_new)
 
-def delete_IW(db:Session, IWid: int):
-    return storage.delete_efm_object(db, 'iw', IWid)
+def delete_IW(db:Session, iw_id: int):
+    return storage.delete_efm_object(db, 'iw', iw_id)
 
-def edit_IW(db: Session, IWid: int, IWdata: schemas.IWnew):
+def edit_IW(db: Session, iw_id: int, iw_data: schemas.IWnew):
     '''
         first verifies whether the two DS are in the same tree, 
         then commits to DB
     '''
-    toDS = storage.get_efm_object(db, 'DS', IWdata.toDsID)
-    fromDS = storage.get_efm_object(db, 'DS', IWdata.fromDsID)
+    to_ds = storage.get_efm_object(db, 'DS', iw_data.to_ds_id)
+    from_ds = storage.get_efm_object(db, 'DS', iw_data.from_ds_id)
 
-    if not toDS.tree_id == fromDS.tree_id:
+    if not to_ds.tree_id == from_ds.tree_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Both DS for an iw need to be in the same tree"
         )
 
-    IWdata.tree_id = toDS.tree_id
+    iw_data.tree_id = to_ds.tree_id
 
-    return storage.edit_efm_object(db, 'iw', IWid, IWdata)
+    return storage.edit_efm_object(db, 'iw', iw_id, iw_data)
 
 
 #  {
 #     "name":"TestFR",
 #     "description":"just a test?",
 #     "tree_id":2,
-#     "rfID":2,
+#     "rf_id":2,
 #     "id":1,
 #     "tree": {
 #         "name": "foobar",
@@ -431,7 +434,7 @@ def edit_IW(db: Session, IWid: int, IWdata: schemas.IWnew):
 #         {"name":"ds child",
 #         "description":"child test 1",
 #         "tree_id":2,
-#         "isbID":1,
+#         "isb_id":1,
 #         "id":4,
 #         "requires_functions":[],
 #         "tree":{
