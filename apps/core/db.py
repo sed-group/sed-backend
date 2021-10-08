@@ -11,7 +11,7 @@ try:
     connection_pool = mysql.connector.pooling.MySQLConnectionPool(
         user='rw',
         password=Environment.get_variable('MYSQL_PWD_RW'),
-        host='localhost',
+        host='core-db',
         database='seddb',
         port=3306,
         autocommit=False,
