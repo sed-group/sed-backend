@@ -1,4 +1,7 @@
+import os.path
+
 from fastapi import HTTPException, status
+from fastapi.logger import logger
 
 from apps.core.db import get_connection
 import apps.core.files.storage as storage
@@ -38,10 +41,24 @@ def impl_delete_file(file_id: int, current_user_id: int) -> bool:
         )
 
 
-def impl_get_file_path(file_id: int, current_user_id: int):
+def impl_get_file_path(file_id: int, current_user_id: int) -> models.StoredFilePath:
     try:
         with get_connection() as con:
-            return storage.db_get_file_path(con, file_id, current_user_id)
+            stored_file_path = storage.db_get_file_path(con, file_id, current_user_id)
+
+            # If we get this far, then the file is registered in the database.
+            # We now need to assert that the file exists on disk.
+            if os.path.exists(stored_file_path.path) is False:
+                logger.error(f'File with id={file_id} at path="{stored_file_path.path}" '
+                             f'is not available on drive, but exists in the database.')
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="The file is missing from persistent storage."
+                )
+
+            # If the file exists, then return the path
+            return stored_file_path
+
     except exc.FileNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
