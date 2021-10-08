@@ -5,6 +5,6 @@ from main import app
 
 
 @pytest.fixture(scope="module")
-def test_app():
+def client() -> TestClient:
     client = TestClient(app)
     yield client
