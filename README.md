@@ -119,7 +119,7 @@ Each application package contains (at least) 3-4 files: `router.py`, `implementa
 - `models.py` contains all data structures needed to provide the functionality of the package. As a rule of thumb, if a new class is needed, it likely belongs in `models.py` (with few exceptions). To elaborate further: If you need a class that will be passed to/from the client through `router.py` then that class definitely belongs in `models.py`.
 - The job of `implementation.py` is to ask for a database connection, and to pass the request on to the appropriate storage methods
 - The job of `storage.py` is to perform the necessary database operations. Note that this package should be the only package that imports database-related packages (such as sqlalchemy or mysql-driver).
-- The job of `algorithms.py` is to perform any detailed operations that is not database related. For instance, it could be a calculation, or a simulation, that for some reason needs to be outsourced to the back-end rather than run on the client side.
+- The job of `algorithms.py` is to perform any detailed operations that is not database related. For instance, it could be a calculation, or a simulation, that for some reason needs to be outsourced to the back-end rather than run on the client side. Temporary sidenote (2021-10-06): we would now like to encourage you to put any algorithm-code in a separate repository, and then import that code into the backend. If you are unsure about this ask Julian or Alejandro.
 - The job of `exceptions.py`, is to contain all exceptions that your package can throw. Having all exceptions gathered in a single file makes them easy to find and import for any code that needs to catch (or "except") them.
 
 
