@@ -21,7 +21,7 @@ def test_create_user(client, admin_headers):
     users_impl.impl_delete_user_from_db(res.json()["id"])
 
 
-def test_delete_user(client, admin_headers):
+def test_delete_user_as_admin(client, admin_headers):
     # Setup
     user = testutils.random_user_post(admin=False, disabled=False)
     new_user = users_impl.impl_post_user(user)
@@ -29,6 +29,18 @@ def test_delete_user(client, admin_headers):
     res = client.delete(f"/api/core/users/{new_user.id}", headers=admin_headers)
     # Assert
     assert res.status_code == 200
+
+
+def test_delete_user(client, std_headers):
+    # Setup
+    user = testutils.random_user_post(admin=False, disabled=False)
+    new_user = users_impl.impl_post_user(user)
+    # Act
+    res = client.delete(f"/api/core/users/{new_user.id}", headers=std_headers)
+    # Assert
+    assert res.status_code == 401
+    # Cleanup
+    users_impl.impl_delete_user_from_db(new_user.id)
 
 
 def test_get_user_as_admin(client, admin_headers):
@@ -45,3 +57,19 @@ def test_get_user_as_admin(client, admin_headers):
     assert res.json()["disabled"] == user.disabled
     # Clean
     users_impl.impl_delete_user_from_db(new_user.id)
+
+
+def test_get_user_me_as_admin(client, admin_headers):
+    # Act
+    res = client.get("/api/core/users/me", headers=admin_headers)
+    # Assert
+    assert res.status_code == 200
+    assert res.json()["username"] is not None
+
+
+def test_get_user_me(client, std_headers):
+    # Act
+    res = client.get("/api/core/users/me", headers=std_headers)
+    # Assert
+    assert res.status_code == 200
+    assert res.json()["username"] is not None
