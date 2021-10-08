@@ -1,12 +1,11 @@
 from mysql.connector.pooling import PooledMySQLConnection
 from fastapi.logger import logger
 
-import apps.core.authentication.exceptions as authorization_exceptions
-import apps.core.exceptions as core_exceptions
+import apps.core.authentication.exceptions as auth_exceptions
 from apps.core.users.storage import db_get_user_safe_with_id
 import apps.core.projects.storage as proj_storage
 
-import apps.cvs.exceptions as exceptions
+import apps.cvs.exceptions as cvs_exceptions
 import apps.cvs.models as models
 
 from libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
@@ -72,30 +71,57 @@ def get_cvs_projects(db_connection: PooledMySQLConnection, segment_length: int, 
     return chunk
 
 
-def get_cvs_project(db_connection: PooledMySQLConnection, project_id: int) -> models.CVSProject:
+def get_cvs_project(db_connection: PooledMySQLConnection, project_id: int, user_id: int) -> models.CVSProject:
     select_statement = MySQLStatementBuilder(db_connection)
-    result = select_statement.select(CVS_TABLE, CVS_COLUMNS) \
+    result = select_statement \
+        .select(CVS_TABLE, CVS_COLUMNS) \
         .where('id = %s', [project_id]) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if result is None:
-        raise exceptions.CVSProjectNotFoundException(f'No CVS project found with id = {project_id}')
+        raise cvs_exceptions.CVSProjectNotFoundException
+
+    if result['owner_id'] != user_id:
+        raise auth_exceptions.UnauthorizedOperationException
 
     return populate_cvs_project(db_connection, result)
 
 
 def create_cvs_project(db_connection: PooledMySQLConnection, project: models.CVSProjectPost,
                        user_id: int) -> models.CVSProject:
-    # Insert CVS project row
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
-        .insert(CVS_TABLE, ['name', 'description', 'owner_id']) \
+        .insert(table=CVS_TABLE, columns=['name', 'description', 'owner_id']) \
         .set_values([project.name, project.description, user_id]) \
         .execute(fetch_type=FetchType.FETCH_NONE)
 
     project_id = insert_statement.last_insert_id
 
-    return get_cvs_project(db_connection, project_id)
+    return get_cvs_project(db_connection, project_id, user_id)
+
+
+def edit_cvs_project(db_connection: PooledMySQLConnection, project_id: int, user_id: int,
+                     new_project: models.CVSProjectPost) -> models.CVSProject:
+    old_project = get_cvs_project(db_connection, project_id, user_id)
+
+    if (old_project.name, old_project.description) == (new_project.name, new_project.description):
+        # No change
+        return old_project
+
+    # Updating
+    update_statement = MySQLStatementBuilder(db_connection)
+    update_statement.update(
+        table=CVS_TABLE,
+        set_statement='name = %s, description = %s',
+        values=[new_project.name, new_project.description],
+    )
+    update_statement.where('id = %s', [project_id])
+    _, rows = update_statement.execute(return_affected_rows=True)
+
+    if rows == 0:
+        raise cvs_exceptions.CVSProjectFailedToUpdateException
+
+    return get_cvs_project(db_connection, project_id, user_id)
 
 
 def delete_cvs_project(db_connection: PooledMySQLConnection, project_id: int, user_id: int) -> bool:
@@ -106,10 +132,10 @@ def delete_cvs_project(db_connection: PooledMySQLConnection, project_id: int, us
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if result is None:
-        raise exceptions.CVSProjectNotFoundException
+        raise cvs_exceptions.CVSProjectNotFoundException
 
     if result['owner_id'] != user_id:
-        raise authorization_exceptions.UnauthorizedOperationException
+        raise auth_exceptions.UnauthorizedOperationException
 
     delete_statement = MySQLStatementBuilder(db_connection)
     result, rows = delete_statement.delete(CVS_TABLE) \
@@ -117,7 +143,7 @@ def delete_cvs_project(db_connection: PooledMySQLConnection, project_id: int, us
         .execute(return_affected_rows=True)
 
     if rows == 0:
-        raise core_exceptions.NoChangeException
+        raise cvs_exceptions.CVSProjectFailedDeletionException
 
     return True
 
