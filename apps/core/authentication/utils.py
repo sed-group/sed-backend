@@ -89,8 +89,6 @@ async def verify_token(security_scopes: SecurityScopes, request: Request, token:
     for scope in token_scopes:
         if scope not in scopes_in_db:
             raise HTTPException(status_code=401, detail="Scope validation failed.")
-        else:
-            print(f"{scope} exists in db")
 
     # Store user ID in request for easy access
     request.state.user_id = user.id
