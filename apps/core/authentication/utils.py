@@ -1,5 +1,6 @@
 from fastapi import Depends, status, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer, SecurityScopes
+from fastapi.logger import logger
 from jose import JWTError, jwt
 from pydantic import ValidationError
 
@@ -48,9 +49,11 @@ async def verify_token(security_scopes: SecurityScopes, request: Request, token:
     if not user:
         raise credentials_exception
 
+    logger.debug(f"Required scopes: {security_scopes.scopes}, user scopes: {token_data.scopes}")
+
     for scope in security_scopes.scopes:
         if scope not in token_data.scopes:
-            print("No.")
+            logger.warning(f'User "{token_data.username}" attempted to access an endpoint without the appropriate scope.')
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Permission denied",
