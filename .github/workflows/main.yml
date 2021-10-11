@@ -33,7 +33,7 @@ jobs:
         run: |
           docker-compose build
 
-      - nama: Run environment
+      - name: Run environment
         run: |
           - docker-compose up -d
 
