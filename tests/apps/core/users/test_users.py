@@ -1,5 +1,4 @@
 import apps.core.users.implementation as users_impl
-import apps.core.users.exceptions as users_exc
 import tests.testutils as testutils
 
 

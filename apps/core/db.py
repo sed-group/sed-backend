@@ -37,7 +37,7 @@ except mysql.connector.Error as err:
     else:
         logger.debug('Unknown database error')
 
-    raise ValueError(f'Malfunctioning database configuration. {user}@{database} at Host: {host}:{port} with password {password} ')
+    raise ValueError(f'Malfunctioning database configuration. {user}@{database} at Host: {host}:{port}')
 
 
 @contextmanager
