@@ -4,7 +4,7 @@ from fastapi import APIRouter, Security, Depends
 
 import apps.core.projects.implementation as impl
 from apps.core.projects.dependencies import ProjectAccessChecker
-from apps.core.authentication.utils import verify_token, get_current_active_user
+from apps.core.authentication.utils import verify_scopes, get_current_active_user
 import apps.core.projects.models as models
 from apps.core.users.models import User
 
@@ -30,7 +30,7 @@ async def get_projects(segment_length: int, index: int, current_user: User = Dep
             summary="Get all projects",
             description="Lists all projects that exist, and is only available to those who have the authority.",
             response_model=List[models.ProjectListing],
-            dependencies=[Security(verify_token, scopes=['admin'])])
+            dependencies=[Security(verify_scopes, scopes=['admin'])])
 async def get_all_projects(segment_length: int, index: int):
     """
     Lists all projects that exists, and is only available to those who have the authority.
@@ -53,7 +53,7 @@ async def get_project(project_id: int):
              summary="Create project",
              description="Create a new empty project. The current user is automatically set as the owner.",
              response_model=models.Project,
-             dependencies=[Security(verify_token, scopes=['admin'])])
+             dependencies=[Security(verify_scopes, scopes=['admin'])])
 async def post_project(project: models.ProjectPost, current_user: User = Depends(get_current_active_user)):
     current_user_id = current_user.id
     return impl.impl_post_project(project, current_user_id)
@@ -122,8 +122,7 @@ async def get_subproject_native(application_sid: str, native_project_id: int):
              summary="Create subproject",
              description="Create a new subproject. Needs to be connected to an existing project.",
              response_model=models.SubProject,
-             dependencies=[Security(verify_token),
-                           Depends(ProjectAccessChecker([models.AccessLevel.OWNER, models.AccessLevel.ADMIN]))])
+             dependencies=[Depends(ProjectAccessChecker([models.AccessLevel.OWNER, models.AccessLevel.ADMIN]))])
 async def post_subproject(project_id: int, subproject: models.SubProjectPost,
                           current_user: User = Depends(get_current_active_user)):
     return impl.impl_post_subproject(subproject, current_user.id, project_id=project_id)
@@ -133,6 +132,6 @@ async def post_subproject(project_id: int, subproject: models.SubProjectPost,
                summary="Delete project",
                description="Delete a project",
                response_model=bool,
-               dependencies=[Security(verify_token, scopes=['admin'])])
+               dependencies=[Security(verify_scopes, scopes=['admin'])])
 async def delete_subproject(project_id: int, subproject_id: int):
     return impl.impl_delete_subproject(project_id, subproject_id)
