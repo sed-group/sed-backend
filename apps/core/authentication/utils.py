@@ -1,5 +1,6 @@
 from fastapi import Depends, status, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer, SecurityScopes
+from fastapi.logger import logger
 from jose import JWTError, jwt
 from pydantic import ValidationError
 
@@ -11,6 +12,41 @@ from apps.core.users.models import User
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="/api/core/auth/token",
 )
+
+
+async def verify_scopes(security_scopes: SecurityScopes, token: str = Depends(oauth2_scheme)):
+    if security_scopes.scopes is None or len(security_scopes.scopes) == 0:
+        return
+
+    authenticate_value = f'Bearer scope="{security_scopes.scope_str}"'
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid authentication credentials",
+        headers={"WWW-Authenticate": authenticate_value}
+    )
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        token_scopes = payload.get("scopes", [])
+        token_data = TokenData(scopes=token_scopes, username=username)
+    except (JWTError, ValidationError):
+        raise credentials_exception
+
+    logger.debug(f"VERIFY SCOPE: Required scopes: {security_scopes.scopes}, user scopes: {token_data.scopes}")
+
+    for scope in security_scopes.scopes:
+        if scope not in token_data.scopes:
+            logger.warning(f'VERIFY SCOPE: User "{token_data.username}" attempted to access an endpoint without the appropriate scope.')
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Permission denied",
+                headers={"WWW-Authenticate": authenticate_value}
+            )
+
+    return True
 
 
 async def verify_token(security_scopes: SecurityScopes, request: Request, token: str = Depends(oauth2_scheme)):
@@ -48,14 +84,11 @@ async def verify_token(security_scopes: SecurityScopes, request: Request, token:
     if not user:
         raise credentials_exception
 
-    for scope in security_scopes.scopes:
-        if scope not in token_data.scopes:
-            print("No.")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Permission denied",
-                headers={"WWW-Authenticate": authenticate_value}
-            )
+    # Assert that the user has the scopes it claims it has
+    scopes_in_db = set(parse_scopes(user.scopes))
+    for scope in token_scopes:
+        if scope not in scopes_in_db:
+            raise HTTPException(status_code=401, detail="Scope validation failed.")
 
     # Store user ID in request for easy access
     request.state.user_id = user.id
