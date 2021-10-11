@@ -136,6 +136,38 @@ logger.error('Something is definitely wrong')
 ```  
 By default, the log is saved in the system TEMP directory: `%TEMP%/sed-backend.log`.
 
+# Automated tests
+To execute automated tests, you need to have __pytest__ installed (`pip install pytest`).
+To run the automated tests manually, go to the project root and run `pytest`. This will automatically find and 
+run all available tests in the project.
+
+## Write tests
+All tests are found in the tests-directory. The tests directory mirrors the directory-structure of the 
+rest of the project. For instance, tests related to `apps/core/users` are located in 
+`tests/apps/core/users/users_tests.py`. Tests are typically divided into 4 steps: 
+
+- __Setup__: Set the stage for the test
+- __Act__: Perform the action you want to test
+- __Assert__: Check if your action had the intended results/consequences
+- __Cleanup__: Reset the database and application state to as it was before the test started
+
+During the __setup__ stage, you build the necessary state in the application needed to run a test. This could for 
+instance be that you need to create a user, or a project, which you then want to perform a test on.
+The __act__ stage is where you perform the action you want to test. For instance, you try to delete the project you 
+created in the setup stage. During the __assert__ stage you check if your act actually had the intended results.
+For instance, if your act was to delete a project, then in this step you check if the project still exists in 
+the database. During the __cleanup__ stage you reset the state of the application to what it was before the test. This is 
+critical, as not performing cleanup can cause other tests to fail. An example of cleanup is that you have a test that
+creates a new User. You then test to assert that the user exists, then you delete the user during the cleanup stage.
+
+Tests should ideally be written for all new functionality. Before you start I recommend that you study existing tests 
+and how they work before writing your own tests. Some simple tests can be found in 
+`tests/apps/core/users/test_users.py`.
+
+One last thing: As a general rule of thumb, before pushing a new change to the remote repository, 
+all tests should have passed. This helps us ensure that our application remains of adequate quality.
+
+More reading, if you are interested: https://fastapi.tiangolo.com/tutorial/testing/
 
 # Production deployment
 
