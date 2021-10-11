@@ -38,4 +38,5 @@ jobs:
 
       - name: Run tests
         run: |
+          sleep 20
           docker exec backend-api pytest
