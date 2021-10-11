@@ -35,8 +35,8 @@ jobs:
 
       - name: Run environment
         run: |
-          - docker-compose up -d
+          docker-compose up -d
 
       - name: Run tests
         run: |
-          - docker exec backend-api pytest
+          docker exec backend-api pytest
