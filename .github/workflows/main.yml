@@ -39,4 +39,4 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest
+          - docker exec backend-api pytest
