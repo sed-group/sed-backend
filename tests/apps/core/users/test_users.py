@@ -59,20 +59,20 @@ def test_get_user_as_admin(client, admin_headers):
     users_impl.impl_delete_user_from_db(new_user.id)
 
 
-def test_get_user_me_as_admin(client, admin_headers):
+def test_get_user_me_as_admin(client, admin_headers, admin_user):
     # Act
     res = client.get("/api/core/users/me", headers=admin_headers)
     # Assert
     assert res.status_code == 200
-    assert res.json()["username"] is not None
+    assert res.json()["username"] == admin_user.username
 
 
-def test_get_user_me(client, std_headers):
+def test_get_user_me(client, std_headers, std_user, request):
     # Act
     res = client.get("/api/core/users/me", headers=std_headers)
     # Assert
     assert res.status_code == 200
-    assert res.json()["username"] is not None
+    assert res.json()["username"] == std_user.username
 
 
 def test_get_users_unauthenticated(client):

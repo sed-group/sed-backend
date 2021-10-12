@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Security, Depends
 
@@ -16,7 +16,7 @@ router = APIRouter()
             summary="Lists all projects",
             description="Lists all projects in alphabetical order",
             response_model=List[models.ProjectListing])
-async def get_projects(segment_length: int, index: int, current_user: User = Depends(get_current_active_user)):
+async def get_projects(segment_length: int = None, index: int = None, current_user: User = Depends(get_current_active_user)):
     """
     Lists all projects that the current user has access to
     :param segment_length:
@@ -31,7 +31,7 @@ async def get_projects(segment_length: int, index: int, current_user: User = Dep
             description="Lists all projects that exist, and is only available to those who have the authority.",
             response_model=List[models.ProjectListing],
             dependencies=[Security(verify_scopes, scopes=['admin'])])
-async def get_all_projects(segment_length: int, index: int):
+async def get_all_projects(segment_length: Optional[int] = None, index: Optional[int] = None):
     """
     Lists all projects that exists, and is only available to those who have the authority.
     :param segment_length:
