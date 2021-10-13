@@ -1,5 +1,6 @@
 import apps.core.users.implementation as users_impl
-import tests.testutils as testutils
+import tests.testutils as tu
+import tests.apps.core.users.testutils as tu_users
 
 
 def test_create_user(client, admin_headers):
@@ -7,11 +8,11 @@ def test_create_user(client, admin_headers):
     res = client.post("/api/core/users/",
                       headers=admin_headers,
                       json={
-                          "username": testutils.random_str(3, 40),
-                          "email": testutils.random_str(3, 40) + "@gmail.com",
-                          "full_name": testutils.random_str(3, 40) + " " + testutils.random_str(3,40),
+                          "username": tu.random_str(3, 40),
+                          "email": tu.random_str(3, 40) + "@gmail.com",
+                          "full_name": tu.random_str(3, 40) + " " + tu.random_str(3,40),
                           "disabled": False,
-                          "password": testutils.random_str(8, 40),
+                          "password": tu.random_str(8, 40),
                           "scopes": "user"
                       })
     # Assert
@@ -23,7 +24,7 @@ def test_create_user(client, admin_headers):
 
 def test_delete_user_as_admin(client, admin_headers):
     # Setup
-    user = testutils.random_user_post(admin=False, disabled=False)
+    user = tu_users.random_user_post(admin=False, disabled=False)
     new_user = users_impl.impl_post_user(user)
     # Act
     res = client.delete(f"/api/core/users/{new_user.id}", headers=admin_headers)
@@ -33,7 +34,7 @@ def test_delete_user_as_admin(client, admin_headers):
 
 def test_delete_user(client, std_headers):
     # Setup
-    user = testutils.random_user_post(admin=False, disabled=False)
+    user = tu_users.random_user_post(admin=False, disabled=False)
     new_user = users_impl.impl_post_user(user)
     # Act
     res = client.delete(f"/api/core/users/{new_user.id}", headers=std_headers)
@@ -45,7 +46,7 @@ def test_delete_user(client, std_headers):
 
 def test_get_user_as_admin(client, admin_headers):
     # Setup
-    user = testutils.random_user_post(admin=False, disabled=False)
+    user = tu_users.random_user_post(admin=False, disabled=False)
     new_user = users_impl.impl_post_user(user)
     # Act
     res = client.get(f"/api/core/users/{new_user.id}", headers=admin_headers)
@@ -86,11 +87,11 @@ def test_post_user_unauthenticated(client):
     # Act
     res = client.post("/api/core/users/",
                       json={
-                          "username": testutils.random_str(3, 40),
-                          "email": testutils.random_str(3, 40) + "@gmail.com",
-                          "full_name": testutils.random_str(3, 40) + " " + testutils.random_str(3, 40),
+                          "username": tu.random_str(3, 40),
+                          "email": tu.random_str(3, 40) + "@gmail.com",
+                          "full_name": tu.random_str(3, 40) + " " + tu.random_str(3, 40),
                           "disabled": False,
-                          "password": testutils.random_str(8, 40),
+                          "password": tu.random_str(8, 40),
                           "scopes": "user"
                       })
     # Assert
@@ -106,7 +107,7 @@ def test_get_me_unauthenticated(client):
 
 def test_get_user_unauthenticated(client):
     # Setup
-    user = testutils.random_user_post(admin=False, disabled=False)
+    user = tu_users.random_user_post(admin=False, disabled=False)
     new_user = users_impl.impl_post_user(user)
 
     # Act
@@ -121,7 +122,7 @@ def test_get_user_unauthenticated(client):
 
 def test_delete_user_unauthenticated(client):
     # Setup
-    user = testutils.random_user_post(admin=False, disabled=False)
+    user = tu_users.random_user_post(admin=False, disabled=False)
     new_user = users_impl.impl_post_user(user)
 
     # Act
