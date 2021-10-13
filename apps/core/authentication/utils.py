@@ -41,7 +41,7 @@ async def verify_scopes(security_scopes: SecurityScopes, token: str = Depends(oa
         if scope not in token_data.scopes:
             logger.warning(f'VERIFY SCOPE: User "{token_data.username}" attempted to access an endpoint without the appropriate scope.')
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
+                status_code=status.HTTP_403_FORBIDDEN,
                 detail="Permission denied",
                 headers={"WWW-Authenticate": authenticate_value}
             )

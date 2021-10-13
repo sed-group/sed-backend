@@ -30,7 +30,7 @@ def test_get_all_projects(client, std_headers):
     # Act
     res = client.get('/api/core/projects/all?segment_length=10&index=0', headers=std_headers)
     # Assert
-    assert res.status_code == 401
+    assert res.status_code == 403
 
 
 def test_get_all_projects_as_admin(client, admin_headers, admin_user):

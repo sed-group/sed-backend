@@ -38,7 +38,7 @@ def test_delete_user(client, std_headers):
     # Act
     res = client.delete(f"/api/core/users/{new_user.id}", headers=std_headers)
     # Assert
-    assert res.status_code == 401
+    assert res.status_code == 403
     # Cleanup
     users_impl.impl_delete_user_from_db(new_user.id)
 
