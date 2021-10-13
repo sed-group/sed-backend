@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 
 import tests.testutils as tu
 import apps.core.projects.models as models
@@ -47,6 +47,19 @@ def seed_random_projects(owner_id, amount=10) -> List[models.Project]:
         project_list.append(impl.impl_post_project(p, owner_id))
 
     return project_list
+
+
+def seed_random_project(owner_id, participants: Dict[int, models.AccessLevel] = None):
+    p = random_project()
+
+    if participants is not None:
+        for participant_id in participants.keys():
+            p.participants.append(participant_id)
+
+        p.participants_access = participants
+
+    new_p = impl.impl_post_project(p, owner_id)
+    return new_p
 
 
 def delete_projects(projects_list):

@@ -44,7 +44,8 @@ async def get_all_projects(segment_length: Optional[int] = None, index: Optional
 @router.get("/{project_id}",
             summary="Get project",
             response_model=models.Project,
-            description="Get a specific project using project ID")
+            description="Get a specific project using project ID",
+            dependencies=[Depends(ProjectAccessChecker(models.AccessLevel.list_can_read()))])
 async def get_project(project_id: int):
     return impl.impl_get_project(project_id)
 
