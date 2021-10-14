@@ -5,6 +5,7 @@ from fastapi import HTTPException
 
 import apps.core.users.implementation as impl_users
 import apps.core.projects.implementation as impl
+import tests.testutils as tu
 import tests.apps.core.projects.testutils as tu_projects
 import tests.apps.core.users.testutils as tu_users
 import apps.core.projects.models as models
@@ -202,9 +203,9 @@ def test_add_participant_as_non_admin(client, std_headers, std_user):
     owner_user_post = tu_users.random_user_post(admin=False, disabled=False)
     owner_user = impl_users.impl_post_user(owner_user_post)
 
-    curent_user = impl_users.impl_get_user_with_username(std_user.username)
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
     p = tu_projects.seed_random_project(owner_user.id, participants={
-        curent_user.id: models.AccessLevel.EDITOR
+        current_user.id: models.AccessLevel.EDITOR
     })
     access_level = models.AccessLevel.EDITOR
     # Act
@@ -225,19 +226,85 @@ def test_add_participant_as_non_admin(client, std_headers, std_user):
     impl.impl_delete_project(p.id)
 
 
-"""
 def test_remove_participant_as_admin(client, std_headers, std_user):
-    pass
+    # Setup
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    participant_user = tu_users.seed_random_user(admin=False, disabled=False)
+    p = tu_projects.seed_random_project(current_user.id, participants={participant_user.id: models.AccessLevel.EDITOR})
+    # Act
+    res = client.delete(f'/api/core/projects/{p.id}/participants/{participant_user.id}', headers=std_headers)
+    p_updated = impl.impl_get_project(p.id)
+    participant_id_list = []
+    for participant in p_updated.participants:
+        participant_id_list.append(participant.id)
+    # Assert
+    assert res.status_code == 200
+    assert participant_user.id not in p_updated.participants_access
+    assert participant_user.id not in participant_id_list
+    # Cleanup
+    impl_users.impl_delete_user_from_db(participant_user.id)
+    impl.impl_delete_project(p.id)
 
 
 def test_remove_participant_as_non_admin(client, std_headers, std_user):
-    pass
+    # Setup
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    owner_user = tu_users.seed_random_user(admin=False, disabled=False)
+    participant_user = tu_users.seed_random_user(admin=False, disabled=False)
+    p = tu_projects.seed_random_project(owner_user.id,
+                                        participants={
+                                            participant_user.id: models.AccessLevel.EDITOR,
+                                            current_user.id: models.AccessLevel.EDITOR
+                                        })
+    # Act
+    res = client.delete(f'/api/core/projects/{p.id}/participants/{participant_user.id}', headers=std_headers)
+    p_updated = impl.impl_get_project(p.id)
+    participant_id_list = []
+    for participant in p_updated.participants:
+        participant_id_list.append(participant.id)
+    # Assert
+    assert res.status_code == 403
+    assert participant_user.id in p_updated.participants_access
+    assert participant_user.id in participant_id_list
+    # Cleanup
+    impl_users.impl_delete_user_from_db(participant_user.id)
+    impl_users.impl_delete_user_from_db(owner_user.id)
+    impl.impl_delete_project(p.id)
 
 
 def test_change_name_as_admin(client, std_headers, std_user):
-    pass
+    # Setup
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    p = tu_projects.seed_random_project(current_user.id)
+    old_name = p.name
+    new_name = tu.random_str(5, 50)
+    # Act
+    res = client.put(f'/api/core/projects/{p.id}/name?name={new_name}', headers=std_headers)
+    p_updated = impl.impl_get_project(p.id)
+    # Assert
+    assert res.status_code == 200
+    assert p_updated.name == new_name
+    assert p_updated.name != old_name
+    # Cleanup
+    impl.impl_delete_project(p.id)
 
 
 def test_change_name_as_non_admin(client, std_headers, std_user):
-    pass
-"""
+    # Setup
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    owner_user = tu_users.seed_random_user(admin=False, disabled=False)
+    p = tu_projects.seed_random_project(owner_user.id, participants={
+        current_user.id: models.AccessLevel.EDITOR
+    })
+    old_name = p.name
+    new_name = tu.random_str(5, 50)
+    # Act
+    res = client.put(f'/api/core/projects/{p.id}/name?name={new_name}', headers=std_headers)
+    p_updated = impl.impl_get_project(p.id)
+    # Assert
+    assert res.status_code == 403
+    assert p_updated.name == old_name
+    assert p_updated.name != new_name
+    # Cleanup
+    impl.impl_delete_project(p.id)
+    impl_users.impl_delete_user_from_db(owner_user.id)
