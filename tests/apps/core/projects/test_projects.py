@@ -1,5 +1,8 @@
 import random as r
 
+import pytest
+from fastapi import HTTPException
+
 import apps.core.users.implementation as impl_users
 import apps.core.projects.implementation as impl
 import tests.apps.core.projects.testutils as tu_projects
@@ -111,9 +114,81 @@ def test_get_project_as_nonparticipant(client, std_headers):
     impl_users.impl_delete_user_from_db(owner_user.id)
 
 
-def test_delete_project_as_owner(client, std_headers):
+def test_delete_project_as_non_admin(client, std_headers, std_user):
+    # Setup
+    owner_user_post = tu_users.random_user_post(admin=False, disabled=False)
+    owner_user = impl_users.impl_post_user(owner_user_post)
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    p = tu_projects.seed_random_project(owner_user.id, participants={
+        current_user.id: models.AccessLevel.EDITOR
+    })
+    # Act
+    res = client.delete(f'/api/core/projects/{p.id}', headers=std_headers)
+    res2 = client.get(f'/api/core/projects/{p.id}', headers=std_headers)
+    # Assert
+    assert res.status_code == 403
+    assert res2.status_code == 200
+    # Cleanup
+    impl.impl_delete_project(p.id)
+    impl_users.impl_delete_user_from_db(owner_user.id)
+
+
+def test_delete_project_as_admin(client, std_headers, std_user):
+    # Setup
+    owner_user_post = tu_users.random_user_post(admin=False, disabled=False)
+    owner_user = impl_users.impl_post_user(owner_user_post)
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    p = tu_projects.seed_random_project(owner_user.id, participants={
+        current_user.id: models.AccessLevel.ADMIN
+    })
+    # Act
+    res = client.delete(f'/api/core/projects/{p.id}', headers=std_headers)
+    res2 = client.get(f'/api/core/projects/{p.id}', headers=std_headers)
+    # Assert
+    assert res.status_code == 200
+    with pytest.raises(HTTPException):
+        impl.impl_get_project(p.id)
+    assert res2.status_code == 404
+    # Cleanup
+    impl_users.impl_delete_user_from_db(owner_user.id)
+
+
+def test_delete_project_as_unauthenticated(client):
+    # Setup
+    owner_user_post = tu_users.random_user_post(admin=False, disabled=False)
+    owner_user = impl_users.impl_post_user(owner_user_post)
+    p = tu_projects.seed_random_project(owner_user.id)
+    # Act
+    res = client.delete(f'/api/core/projects/{p.id}')
+    # Assert
+    assert res.status_code == 401
+    project = impl.impl_get_project(p.id)
+    assert project is not None
+    assert project.id == p.id
+    # Cleanup
+    impl.impl_delete_project(p.id)
+    impl_users.impl_delete_user_from_db(owner_user.id)
+
+
+def test_add_participant_as_admin(client, std_header, std_user):
     pass
 
 
-def test_delete_project_as_nonadmin(client, std_headers):
+def test_add_participant_as_non_admin(client, std_header, std_user):
+    pass
+
+
+def test_remove_participant_as_admin(client, std_header, std_user):
+    pass
+
+
+def test_remove_participant_as_non_admin(client, std_header, std_user):
+    pass
+
+
+def test_change_name_as_admin(client, std_header, std_user):
+    pass
+
+
+def test_change_name_as_non_admin(client, std_header, std_user):
     pass
