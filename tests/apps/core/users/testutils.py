@@ -1,4 +1,5 @@
 import apps.core.users.models as models
+import apps.core.users.implementation as impl
 import tests.testutils as tu
 
 
@@ -19,4 +20,10 @@ def random_user_post(admin=False, disabled=False) -> models.UserPost:
     else:
         user.scopes = 'user'
 
+    return user
+
+
+def seed_random_user(admin=False, disabled=False) -> models.User:
+    user_post = random_user_post(admin=admin, disabled=disabled)
+    user = impl.impl_post_user(user_post)
     return user
