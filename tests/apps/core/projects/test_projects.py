@@ -170,25 +170,74 @@ def test_delete_project_as_unauthenticated(client):
     impl_users.impl_delete_user_from_db(owner_user.id)
 
 
-def test_add_participant_as_admin(client, std_header, std_user):
+def test_add_participant_as_admin(client, std_headers, std_user):
+    # Setup
+    participant_user_post = tu_users.random_user_post(admin=False, disabled=False)
+    participant_user = impl_users.impl_post_user(participant_user_post)
+    owner_user = impl_users.impl_get_user_with_username(std_user.username)
+    p = tu_projects.seed_random_project(owner_user.id)
+    access_level = models.AccessLevel.EDITOR
+    # Act
+    res = client.post(f'/api/core/projects/{p.id}/participants/'
+                      f'?user_id={participant_user.id}'
+                      f'&access_level={access_level.value}', headers=std_headers)
+    p_updated = impl.impl_get_project(p.id)
+    participant_id_list = []
+    for participant in p_updated.participants:
+        participant_id_list.append(participant.id)
+    # Assert
+    assert res.status_code == 200
+    assert participant_user.id in participant_id_list
+    assert p_updated.participants_access[participant_user.id] == access_level
+    # Cleanup
+    impl_users.impl_delete_user_from_db(participant_user.id)
+    impl.impl_delete_project(p.id)
+
+
+def test_add_participant_as_non_admin(client, std_headers, std_user):
+    # Setup
+    participant_user_post = tu_users.random_user_post(admin=False, disabled=False)
+    participant_user = impl_users.impl_post_user(participant_user_post)
+
+    owner_user_post = tu_users.random_user_post(admin=False, disabled=False)
+    owner_user = impl_users.impl_post_user(owner_user_post)
+
+    curent_user = impl_users.impl_get_user_with_username(std_user.username)
+    p = tu_projects.seed_random_project(owner_user.id, participants={
+        curent_user.id: models.AccessLevel.EDITOR
+    })
+    access_level = models.AccessLevel.EDITOR
+    # Act
+    res = client.post(f'/api/core/projects/{p.id}/participants/'
+                      f'?user_id={participant_user.id}'
+                      f'&access_level={access_level.value}', headers=std_headers)
+    p_updated = impl.impl_get_project(p.id)
+    participant_id_list = []
+    for participant in p_updated.participants:
+        participant_id_list.append(participant.id)
+    # Assert
+    assert res.status_code == 403
+    assert participant_user.id not in participant_id_list
+    assert participant_user.id not in p_updated.participants_access
+    # Cleanup
+    impl_users.impl_delete_user_from_db(participant_user.id)
+    impl_users.impl_delete_user_from_db(owner_user.id)
+    impl.impl_delete_project(p.id)
+
+
+"""
+def test_remove_participant_as_admin(client, std_headers, std_user):
     pass
 
 
-def test_add_participant_as_non_admin(client, std_header, std_user):
+def test_remove_participant_as_non_admin(client, std_headers, std_user):
     pass
 
 
-def test_remove_participant_as_admin(client, std_header, std_user):
+def test_change_name_as_admin(client, std_headers, std_user):
     pass
 
 
-def test_remove_participant_as_non_admin(client, std_header, std_user):
+def test_change_name_as_non_admin(client, std_headers, std_user):
     pass
-
-
-def test_change_name_as_admin(client, std_header, std_user):
-    pass
-
-
-def test_change_name_as_non_admin(client, std_header, std_user):
-    pass
+"""
