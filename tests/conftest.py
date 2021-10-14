@@ -1,7 +1,7 @@
 import pytest
 from starlette.testclient import TestClient
 
-import tests.testutils as testutils
+import tests.apps.core.users.testutils as tu_users
 from main import app
 import apps.core.users.implementation as impl_users
 import apps.core.users.models as models_users
@@ -15,7 +15,7 @@ def client() -> TestClient:
 
 @pytest.fixture(scope='session')
 def admin_user() -> models_users.UserPost:
-    user = testutils.random_user_post(admin=True, disabled=False)
+    user = tu_users.random_user_post(admin=True, disabled=False)
     new_user = impl_users.impl_post_user(user)
     yield user
     impl_users.impl_delete_user_from_db(new_user.id)
@@ -23,7 +23,7 @@ def admin_user() -> models_users.UserPost:
 
 @pytest.fixture(scope='session')
 def std_user() -> models_users.UserPost:
-    user = testutils.random_user_post(admin=False, disabled=False)
+    user = tu_users.random_user_post(admin=False, disabled=False)
     new_user = impl_users.impl_post_user(user)
     yield user
     impl_users.impl_delete_user_from_db(new_user.id)

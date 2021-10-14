@@ -26,7 +26,9 @@ async def verify_scopes(security_scopes: SecurityScopes, token: str = Depends(oa
     )
 
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        # The payload is a dict. It contains "sub" which is the username, "scopes", which is a list of scopes,
+        # and "exp" which is a timestamp representing the time when the token expires.
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM]) # dict contains 'sub', wh
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
@@ -41,7 +43,7 @@ async def verify_scopes(security_scopes: SecurityScopes, token: str = Depends(oa
         if scope not in token_data.scopes:
             logger.warning(f'VERIFY SCOPE: User "{token_data.username}" attempted to access an endpoint without the appropriate scope.')
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
+                status_code=status.HTTP_403_FORBIDDEN,
                 detail="Permission denied",
                 headers={"WWW-Authenticate": authenticate_value}
             )
