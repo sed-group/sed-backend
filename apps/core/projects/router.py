@@ -95,7 +95,7 @@ async def put_participant_name(project_id: int, name: str):
     return impl.impl_put_name(project_id, name)
 
 
-@router.get("/{project_id}/subproject/",
+@router.get("/{project_id}/subprojects/",
             summary="Get subprojects in project",
             dependencies=[Depends(ProjectAccessChecker(models.AccessLevel.list_can_read()))],
             response_model=List[models.SubProject])
@@ -103,7 +103,7 @@ async def get_subprojects(project_id: int):
     return impl.impl_get_subprojects(project_id)
 
 
-@router.get("/{project_id}/subproject/{subproject_id}",
+@router.get("/{project_id}/subprojects/{subproject_id}",
             summary="Get subproject",
             response_model=models.SubProject,
             description="Get a specific project using subproject ID")
@@ -111,7 +111,7 @@ async def get_subproject(project_id: int, subproject_id: int):
     return impl.impl_get_subproject(project_id, subproject_id)
 
 
-@router.get("/application-native-subproject/",
+@router.get("/application-native-subprojects/",
             summary="Get subproject using application native ID",
             response_model=models.SubProject,
             description="Get subproject using application native ID and application string ID")
@@ -119,7 +119,7 @@ async def get_subproject_native(application_sid: str, native_project_id: int):
     return impl.impl_get_subproject_native(application_sid, native_project_id)
 
 
-@router.post("/{project_id}/subproject/",
+@router.post("/{project_id}/subprojects/",
              summary="Create subproject",
              description="Create a new subproject. Needs to be connected to an existing project.",
              response_model=models.SubProject,
@@ -129,7 +129,7 @@ async def post_subproject(project_id: int, subproject: models.SubProjectPost,
     return impl.impl_post_subproject(subproject, current_user.id, project_id=project_id)
 
 
-@router.delete("/{project_id}/subproject/{subproject_id}",
+@router.delete("/{project_id}/subprojects/{subproject_id}",
                summary="Delete project",
                description="Delete a project",
                response_model=bool,
