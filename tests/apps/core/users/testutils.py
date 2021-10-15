@@ -1,3 +1,5 @@
+from typing import List
+
 import apps.core.users.models as models
 import apps.core.users.implementation as impl
 import tests.testutils as tu
@@ -27,3 +29,8 @@ def seed_random_user(admin=False, disabled=False) -> models.User:
     user_post = random_user_post(admin=admin, disabled=disabled)
     user = impl.impl_post_user(user_post)
     return user
+
+
+def delete_users(users: List[models.User]):
+    for u in users:
+        impl.impl_delete_user_from_db(u.id)
