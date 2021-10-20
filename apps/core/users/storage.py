@@ -16,7 +16,7 @@ def db_get_user_safe_with_username(connection, user_name: str) -> models.User:
     cols = ['id', 'username', 'email', 'full_name']
     user_data = mysql_statement\
         .select(USERS_TABLE, cols)\
-        .where('username = %s', [user_name])\
+        .where('username = ?', [user_name])\
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if user_data is None:
