@@ -227,7 +227,7 @@ async def newParent_functionalRequirement(fr_id: int, newParentID: int, db: Sess
 # iw 
 @router.get("/{native_project_id}/iw/{iw_id}",
             response_model = schemas.InteractsWith,
-            summary="returns a single iw object -WIP-",
+            summary="returns a single iw object",
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), EFM_APP_SID))]
             )
 async def get_interactsWith(iw_id: int, db: Session = Depends(get_db)):
@@ -235,7 +235,7 @@ async def get_interactsWith(iw_id: int, db: Session = Depends(get_db)):
 
 @router.post("/{native_project_id}/iw/new",
             response_model = schemas.InteractsWith,
-            summary="creates a new iw object via iw_data (json) -WIP-",
+            summary="creates a new iw object via iw_data (json) ",
             description="creates a new interactsWith object",
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
@@ -243,7 +243,7 @@ async def create_interactsWith(iw_data: schemas.IWnew, db: Session = Depends(get
     return implementation.create_IW(db=db, iw_new= iw_data)
 
 @router.delete("/{native_project_id}/iw/{iw_id}",
-            summary="deletes an iw object by id -WIP-",
+            summary="deletes an iw object by id ",
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
 async def delete_interactsWith(iw_id: int, db: Session = Depends(get_db)):
@@ -251,11 +251,44 @@ async def delete_interactsWith(iw_id: int, db: Session = Depends(get_db)):
 
 @router.put("/{native_project_id}/iw/{iw_id}",
             response_model = schemas.InteractsWith,
-            summary="edits an existing iw object via iw_data (json) -WIP-",
+            summary="edits an existing iw object via iw_data (json)",
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
 async def edit_interactsWith(iw_id: int, iw_data: schemas.IWnew, db: Session = Depends(get_db)):
     return implementation.edit_IW(db=db, iw_id= iw_id, iw_data=iw_data)
+
+# constraints
+@router.get("/{native_project_id}/c/{c_id}",
+            response_model = schemas.Constraint,
+            summary="returns a single constraint object",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), EFM_APP_SID))]
+            )
+async def get_constraint(c_id: int, db: Session = Depends(get_db)):
+    return implementation.get_c(db=db, c_id = c_id)
+
+@router.post("/{native_project_id}/c/new",
+            response_model = schemas.Constraint,
+            summary="creates a new constraint object via c_data (json)",
+            description="creates a new constraint object",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
+            )
+async def create_constraint(c_data: schemas.ConstraintNew, db: Session = Depends(get_db)):
+    return implementation.create_constraint(db = db, c_new = c_data)
+
+@router.delete("/{native_project_id}/c/{c_id}",
+            summary="deletes a constraint object by id",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
+            )
+async def delete_constraint(c_id: int, db: Session = Depends(get_db)):
+    return implementation.delete_constraint(db= db, c_id = c_id)
+
+@router.put("/{native_project_id}/c/{c_id}",
+            response_model = schemas.Constraint,
+            summary="edits an existing constraint object via iw_data (json)",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
+            )
+async def edit_interactsWith(c_id: int, c_data: schemas.ConstraintNew, db: Session = Depends(get_db)):
+    return implementation.edit_constraint(db = db, c_id = c_id, c_data = c_data)
 
 
 router.include_router(param_router, prefix="/param", tags=['EF-M parameters'])

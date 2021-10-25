@@ -190,6 +190,10 @@ def get_tree_data(db: Session, tree_id: int, depth:int=0):
     all_dp = get_DP_all(db, tree_id, depth)
     tree_data.dp = all_dp
 
+    # fetch constraints
+    all_c = storage.get_efm_objects_all_of_tree(db, 'c', tree_id, depth)
+    tree_data.c = all_c
+
     return tree_data
 
 ### CONCEPTS
@@ -281,6 +285,8 @@ def newParent_FR(db: Session, fr_id: int, ds_id: int):
     fr_data = storage.get_efm_object(db, 'FR', fr_id)
     # first we check if the new parent exists
     new_parent_DS = storage.get_efm_object(db, 'DS', ds_id)
+    # convert to FRnew object to avoid writing child relations
+    fr_data = schemas.FRnew(**fr_data.dict())
     # set new parent ID
     fr_data.rf_id = new_parent_DS.id
     
@@ -344,8 +350,11 @@ def newParent_DS(db: Session, ds_id: int, fr_id: int):
     '''
     # fetch the DS data
     ds_data = storage.get_efm_object(db, 'DS', ds_id)
+    
     # first we check if the new parent exists
     new_parent_FR = storage.get_efm_object(db, 'FR', fr_id)
+    # convert to DSnew object to avoid writing child relations
+    ds_data = schemas.DSnew(**ds_data.dict())
     # set new parent ID
     ds_data.isb_id = new_parent_FR.id
     
@@ -355,7 +364,7 @@ def newParent_DS(db: Session, ds_id: int, fr_id: int):
 
 
 
-### iw todo!! 
+### iw 
 def get_IW(db:Session, iw_id: int):
     return storage.get_efm_object(db, 'iw', iw_id)
 
@@ -414,37 +423,49 @@ def edit_IW(db: Session, iw_id: int, iw_data: schemas.IWnew):
 
     return storage.edit_efm_object(db, 'iw', iw_id, iw_data)
 
+## constraints
+def get_constraint(db:Session, c_id: int):
+    return storage.get_efm_object(db, 'c', c_id)
 
-#  {
-#     "name":"TestFR",
-#     "description":"just a test?",
-#     "tree_id":2,
-#     "rf_id":2,
-#     "id":1,
-#     "tree": {
-#         "name": "foobar",
-#         "description":"The Foo Barters",
-#         "id":2,
-#         "concepts":[],
-#         "fr":[],
-#         "ds":[],
-#         "top_level_ds_id":2
-#         },
-#     "is_solved_by":[
-#         {"name":"ds child",
-#         "description":"child test 1",
-#         "tree_id":2,
-#         "isb_id":1,
-#         "id":4,
-#         "requires_functions":[],
-#         "tree":{
-#             "name":"foobar",
-#             "description":"The Foo Barters",
-#             "id":2,"concepts":[],
-#             "fr":[],
-#             "ds":[],
-#             "top_level_ds_id":2
-#             },
-#         "is_top_level_DS":false}
-#     ]
-# }
+def create_constraint(db: Session,  c_new: schemas.ConstraintNew):
+    '''
+        commits new constraint to DB
+    '''
+
+    icb_ds = storage.get_efm_object(db, 'DS', c_new.icb_id)
+
+    # setting tree_id since its optional (backwards compatibility ^^)
+    c_new.tree_id = icb_ds.tree_id
+
+    return storage.new_efm_object(db, 'c', c_new)
+
+def delete_constraint(db: Session, c_id = int):
+    '''
+        deletes one constraint from db
+        returns true or raises error
+    '''
+    # check if constraint exists
+    constraint = storage.get_efm_object(
+        db = db, 
+        efm_object_type = 'c',
+        object_id = c_id
+        )
+    return storage.delete_efm_object(
+        db = db, 
+        efm_object_type = 'c', 
+        object_id = constraint.id
+        )
+
+def edit_constraint(db: Session, c_id: int, c_data: schemas.ConstraintNew):
+    '''
+        sets all values of constraint with c_id in db with data of c_data
+        returns edited constraint
+    '''
+    return storage.edit_efm_object(
+        db = db,
+        efm_object_type = 'c',
+        object_id = c_id,
+        object_data = c_data
+        )
+    
+    

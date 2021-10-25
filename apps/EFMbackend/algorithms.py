@@ -73,12 +73,12 @@ async def run_instantiation(db: Session, tree_id: int):
     does not overwrite existing ones if they are included in the new instantiation
     '''    
     # fetch the old concepts, if available:
-    all_old_concepts = storage.get_EFMobjectAll(db, 'concept', tree_id, 0) # will get deleted later
+    all_old_concepts = storage.get_efm_objects_all_of_tree(db, 'concept', tree_id, 0) # will get deleted later
     all_new_concepts = []                           # will get added later
 
-    the_tree = storage.get_EFMobject(db, 'tree', tree_id)
+    the_tree = storage.get_efm_object(db, 'tree', tree_id)
 
-    all_dna = alternative_configurations(the_tree.topLvlDS)
+    all_dna = alternative_configurations(the_tree.top_level_ds)
 
     concept_counter = len(all_old_concepts) # for naming only - there might be better approaches to this
 
@@ -95,21 +95,23 @@ async def run_instantiation(db: Session, tree_id: int):
                 all_new_concepts.append(old_concept)
                 # and we don't need to create a new object for it, so we jump
                 next()
-
-        new_concept = schemas.ConceptNew()
-        new_concept.name = f"Concept {concept_counter}"
-        new_concept.dna = dna_string
-        new_concept.tree_id = tree_id
+        c_name = f"Concept {concept_counter}"
+        c_data = {
+            'name': c_name, 
+            'dna': dna_string, 
+            'tree_id': tree_id
+        }
+        new_concept = schemas.ConceptNew(**c_data)
         
         # add to DB:
-        storage.new_EFMobject(db, 'concept', new_concept)
+        storage.new_efm_object(db, 'concept', new_concept)
 
         all_new_concepts.append(new_concept)
         concept_counter = concept_counter + 1
 
     # delete old concepts:
     for oC in all_old_concepts:
-        storage.delete_EFMobject(db, 'concept', oC.id)
+        storage.delete_efm_object(db, 'concept', oC.id)
         
     return all_new_concepts
 

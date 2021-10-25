@@ -46,6 +46,11 @@ efm_object_types = {
         'schema': schemas.InteractsWith,
         'str': 'interacts with'
     },
+    'c': {
+        'model': models.Constraint,
+        'schema': schemas.Constraint,
+        'str': 'Constraint'
+    },
     
 }
 
@@ -181,12 +186,14 @@ def edit_efm_object(db: Session, efm_object_type: EfmObjectTypes, object_id: int
     validation of object data to object_type_info['schema']
     ##
     '''
+    print(f"efit_efm_object: type: {efm_object_type}; id: {object_id}; data: {object_data}")
 
     object_type_info = efm_object_types[efm_object_type]
 
     # try: 
     the_object_for_orm = db.query(object_type_info['model']).filter(object_type_info['model'].id == object_id).first()
-    
+    print(the_object_for_orm)
+
     # writing all the info we want to write:
     for key, value in object_data.dict().items():
         print(key, value)

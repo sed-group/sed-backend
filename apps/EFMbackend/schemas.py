@@ -10,6 +10,7 @@ from apps.EFMbackend.parameters.schemas import DesignParameter
 FunctionalRequirementTemp = ForwardRef('FunctionalRequirement')
 DesignSolutionTemp = ForwardRef('DesignSolution')
 ConceptTemp = ForwardRef('Concept')
+ConstraintTemp = ForwardRef('Constraint')
 
 class TreeNew(BaseModel):
     '''
@@ -119,6 +120,7 @@ class DesignSolution(DSnew):
 
     interacts_with: List[InteractsWith] = []
     design_parameters: List[DesignParameter] = []
+    constraints: List[ConstraintTemp] = []
         
     class Config:
         orm_mode = True
@@ -133,6 +135,7 @@ class DSinfo(DSnew):
     requires_functions_id: Optional[List[int]] = []
     interacts_with_id: Optional[List[int]] = []
     design_parameter_id: Optional[List[int]] = []
+    constraints_id: Optional[List[int]] = []
 
     is_top_level_ds: Optional[bool] = False
 
@@ -147,13 +150,16 @@ class DSinfo(DSnew):
         for dp in originalDS.design_parameters:
             self.design_parameter_id.append(dp.id)
 
+        for c in originalDS.constraints:
+            self.constraints_id.append(c.id)
+            
 ## FUNCTIONAL REQUIREMENTS
 class FRnew(BaseModel):
     '''
     DS class for creation of new DS; contains only minimum viable info
     '''
     name: str
-    description: Optional[str] = None
+    description: Optional[str] = ""
     tree_id: Optional[int]
     rf_id: int
 
@@ -183,6 +189,21 @@ class FRinfo(FRnew):
         for ds in originalFR.is_solved_by:
             self.is_solved_by_id.append(ds.id)
 
+class ConstraintNew(BaseModel): 
+    name: str
+    description: Optional[str] = ""
+    tree_id: Optional[int]
+    icb_id: int
+
+class Constraint(ConstraintNew):
+    '''
+        symbolic constraint element for use in UI
+    '''
+    id: int
+    
+    class Config:
+        orm_mode = True
+
 
 ## TREE DATA
 class TreeData(TreeInfo):
@@ -193,6 +214,7 @@ class TreeData(TreeInfo):
     fr: List[FRinfo] = []
     iw: List[InteractsWith] = []
     dp: List[DesignParameter] = []
+    c: List[Constraint] = []
     
     class Config:
         orm_mode = True

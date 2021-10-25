@@ -85,6 +85,9 @@ class DesignSolution(Base):
     design_parameters = relationship("DesignParameter",
                         backref="ds",
                         foreign_keys='[DesignParameter.ds_id]')
+    constraints = relationship("Constraint",
+                        backref="icb_ds",
+                        foreign_keys='[Constraint.icb_id]')
     # identifier if top-level-node of a tree
     #### fix because pydantic doesn't allow circular loops =()
     is_top_level_ds = Column(Boolean, default=False)
@@ -160,4 +163,23 @@ class DesignParameter(Base):
                         ForeignKey('designsolution.id', 
                             ondelete="CASCADE",
                             name="fk_dp_ds")
+                        )
+
+class Constraint(Base):
+    """
+    constraints on a DS, simply symbolic
+    """
+    __tablename__ = "constraints"    
+    id = Column(Integer, primary_key = True)
+    name = Column(String(200))
+    description = Column(String(2000))
+    tree_id = Column(Integer, 
+                        ForeignKey('tree.id', 
+                            ondelete="CASCADE", 
+                            name="fk_co_tree")
+                        )
+    icb_id = Column(Integer, 
+                        ForeignKey('designsolution.id', 
+                            ondelete="CASCADE",
+                            name="fk_co_ds")
                         )
