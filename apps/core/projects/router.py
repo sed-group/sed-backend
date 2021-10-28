@@ -3,7 +3,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Security, Depends
 
 import apps.core.projects.implementation as impl
-from apps.core.projects.dependencies import ProjectAccessChecker
+from apps.core.projects.dependencies import ProjectAccessChecker, SubProjectAccessChecker
 from apps.core.authentication.utils import verify_scopes, get_current_active_user
 import apps.core.projects.models as models
 from apps.core.users.models import User
@@ -111,14 +111,6 @@ async def get_subproject(project_id: int, subproject_id: int):
     return impl.impl_get_subproject(project_id, subproject_id)
 
 
-@router.get("/application-native-subprojects/",
-            summary="Get subproject using application native ID",
-            response_model=models.SubProject,
-            description="Get subproject using application native ID and application string ID")
-async def get_subproject_native(application_sid: str, native_project_id: int):
-    return impl.impl_get_subproject_native(application_sid, native_project_id)
-
-
 @router.post("/{project_id}/subprojects/",
              summary="Create subproject",
              description="Create a new subproject. Needs to be connected to an existing project.",
@@ -133,6 +125,13 @@ async def post_subproject(project_id: int, subproject: models.SubProjectPost,
                summary="Delete project",
                description="Delete a project",
                response_model=bool,
-               dependencies=[Security(verify_scopes, scopes=['admin'])])
+               dependencies=[Depends(ProjectAccessChecker(models.AccessLevel.list_are_admins()))])
 async def delete_subproject(project_id: int, subproject_id: int):
     return impl.impl_delete_subproject(project_id, subproject_id)
+
+
+@router.get("/apps/{app_id}/native-subprojects/{native_project_id}",
+            summary="Get application specific native subproject",
+            response_model=models.SubProject)
+async def get_app_native_project(app_id, native_project_id):
+    return impl.impl_get_subproject_native(app_id, native_project_id)
