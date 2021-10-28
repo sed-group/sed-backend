@@ -1,12 +1,17 @@
 import random
 
+from random import randint
+import pytest
+from fastapi import HTTPException
+
 import tests.apps.core.projects.testutils as tu_projects
 import tests.apps.core.users.testutils as tu_users
 import apps.core.users.implementation as impl_users
 import apps.core.projects.models as models
+import apps.core.projects.implementation as impl
 
 
-def test_get_subproject(client, std_headers, std_user):
+def test_get_subprojects(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     secondary_user = tu_users.seed_random_user(admin=False, disabled=False)
@@ -92,3 +97,68 @@ def test_delete_subproject(client, std_headers, std_user):
     # Cleanup
     tu_projects.delete_projects([p])
 
+
+def test_get_subproject(client, std_headers, std_user):
+    # Setup
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    p = tu_projects.seed_random_project(current_user.id)
+    sp = tu_projects.seed_random_subproject(current_user.id, p.id)
+    # Act
+    res = client.get(f'/api/core/projects/{p.id}/subprojects/{sp.id}', headers=std_headers)
+    sp_res = models.SubProject(**res.json())
+    # Assert
+    assert res.status_code == 200
+    assert sp_res.id == sp.id
+    assert sp_res.project_id == p.id
+    assert sp_res.owner_id == current_user.id
+    # Cleanup
+    tu_projects.delete_subprojects([sp])
+    tu_projects.delete_projects([p])
+
+
+def test_subproject_project_cascade(client, std_headers):
+    """
+    If a project is deleted, then all nested subproject should also be deleted.
+    """
+    # Setup
+    owner = tu_users.seed_random_user(admin=False, disabled=False)
+    p = tu_projects.seed_random_project(owner.id)
+    sp = tu_projects.seed_random_subproject(owner.id, p.id)
+    # Act
+    res1 = client.get(f'/api/core/projects/{p.id}/subprojects/{sp.id}', headers=std_headers)
+    proj = impl.impl_get_project(p.id)
+    subproj = impl.impl_get_subproject(proj.id, sp.id)
+    impl.impl_delete_project(proj.id)
+    res2 = client.get(f'/api/core/projects/{p.id}/subprojects/{sp.id}', headers=std_headers)
+    # Assert
+    assert res1.status_code == 200
+    assert proj.id == p.id
+    assert subproj.id == sp.id
+    with pytest.raises(HTTPException):
+        impl.impl_get_project(p.id)
+    with pytest.raises(HTTPException):
+        impl.impl_get_subproject(p.id, sp.id)
+    assert res2.status_code == 404
+    # Cleanup
+    tu_users.delete_users([owner])
+
+
+def test_get_native_subproject(client, std_headers, std_user):
+    # Setup
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    rand_id = randint(0, 100000)
+    app_id = "MOD.EFM"
+    spp = models.SubProjectPost(application_sid=app_id, native_project_id=rand_id)
+    sp = impl.impl_post_subproject(spp, current_user.id, project_id=None)
+    # Act
+    res = client.get(f'/api/core/projects/apps/{app_id}/native-subprojects/{rand_id}', headers=std_headers)
+    subproj = models.SubProject(**res.json())
+    # Assert
+    assert res.status_code == 200
+    assert subproj.id == sp.id
+    assert subproj.native_project_id == rand_id
+    assert subproj.application_sid == app_id
+    assert subproj.owner_id == current_user.id
+    assert subproj.project_id is None
+    # Cleanup
+    impl.impl_delete_subproject_native(app_id, rand_id)
