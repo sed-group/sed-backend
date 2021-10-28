@@ -1,3 +1,5 @@
+import random
+
 import tests.apps.core.projects.testutils as tu_projects
 import tests.apps.core.users.testutils as tu_users
 import apps.core.users.implementation as impl_users
@@ -45,3 +47,31 @@ def test_get_subproject(client, std_headers, std_user):
     tu_projects.delete_subprojects(subprojects)
     tu_projects.delete_projects([p1, p2, p3])
     tu_users.delete_users([secondary_user, third_user])
+
+
+def test_create_subproject(client, std_headers, std_user):
+    # Setup
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    p = tu_projects.seed_random_project(current_user.id)
+    random_native_project_id = random.randint(0, 99999)
+    app_sid = "MOD.EFM"
+    # Act
+    res = client.post(f'/api/core/projects/{p.id}/subprojects/',
+                      headers=std_headers,
+                      json={
+                          "application_sid": app_sid,
+                          "native_project_id": random_native_project_id
+                      })
+    res_sp = models.SubProject(**res.json())
+    # Assert
+    assert res.status_code == 200
+    assert res_sp.project_id == p.id
+    assert res_sp.application_sid == app_sid
+    assert res_sp.owner_id == current_user.id
+    assert res_sp.native_project_id == random_native_project_id
+    # Cleanup
+    tu_projects.delete_subprojects([res_sp])
+    tu_projects.delete_projects([p])
+
+
+
