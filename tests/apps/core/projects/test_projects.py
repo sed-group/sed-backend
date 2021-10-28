@@ -71,6 +71,8 @@ def test_get_project_as_owner(client, std_headers, std_user):
     assert fetched_project.id == p.id
     assert fetched_project.name == p.name
     assert found_owner is True
+    # Cleanup
+    tu_projects.delete_projects([p])
 
 
 def test_get_project_as_participant(client, std_headers, std_user):
