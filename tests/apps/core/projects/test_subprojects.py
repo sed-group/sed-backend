@@ -74,4 +74,21 @@ def test_create_subproject(client, std_headers, std_user):
     tu_projects.delete_projects([p])
 
 
+def test_delete_subproject(client, std_headers, std_user):
+    # Setup
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    p = tu_projects.seed_random_project(current_user.id)
+    sp = tu_projects.seed_random_subproject(current_user.id, p.id)
+    # Act
+    res1 = client.get(f'/api/core/projects/{p.id}/subprojects/{sp.id}', headers=std_headers)
+    res2 = client.delete(f'/api/core/projects/{p.id}/subprojects/{sp.id}', headers=std_headers)
+    res3 = client.get(f'/api/core/projects/{p.id}/subprojects/{sp.id}', headers=std_headers)
+
+    # Assert
+    assert res1.status_code == 200
+    assert res2.status_code == 200
+    assert res3.status_code == 404
+
+    # Cleanup
+    tu_projects.delete_projects([p])
 
