@@ -361,9 +361,6 @@ def newParent_DS(db: Session, ds_id: int, fr_id: int):
     # store it
     return storage.edit_efm_object(db, 'DS', ds_id, ds_data)
 
-
-
-
 ### iw 
 def get_IW(db:Session, iw_id: int):
     return storage.get_efm_object(db, 'iw', iw_id)
@@ -468,4 +465,51 @@ def edit_constraint(db: Session, c_id: int, c_data: schemas.ConstraintNew):
         object_data = c_data
         )
     
-    
+## helper functions
+async def run_instantiation(db: Session, tree_id: int):
+    '''
+    creates all instance concepts of a tree
+    does not overwrite existing ones if they are included in the new instantiation
+    '''    
+    # fetch the old concepts, if available:
+    all_old_concepts = storage.get_efm_objects_all_of_tree(db, 'concept', tree_id, 0) # will get deleted later
+    all_new_concepts = []                           # will get added later
+
+    the_tree = storage.get_efm_object(db, 'tree', tree_id)
+
+    all_dna = algorithms.alternative_configurations(the_tree.top_level_ds)
+
+    concept_counter = len(all_old_concepts) # for naming only - there might be better approaches to this
+
+    for dna in all_dna:
+        
+        dna_string = str(dna) #json.dumps(dna)
+
+        # check if concept with same DNA already exists, then jump:
+        for old_concept in all_old_concepts:
+            if old_concept.dna == dna:
+                # remove from list so it won't get deleted:
+                all_old_concepts.remove(old_concept)
+                # add to list of all Concepts:
+                all_new_concepts.append(old_concept)
+                # and we don't need to create a new object for it, so we jump
+                next()
+        c_name = f"Concept {concept_counter}"
+        c_data = {
+            'name': c_name, 
+            'dna': dna_string, 
+            'tree_id': tree_id
+        }
+        new_concept = schemas.ConceptNew(**c_data)
+        
+        # add to DB:
+        storage.new_efm_object(db, 'concept', new_concept)
+
+        all_new_concepts.append(new_concept)
+        concept_counter = concept_counter + 1
+
+    # delete old concepts:
+    for oC in all_old_concepts:
+        storage.delete_efm_object(db, 'concept', oC.id)
+        
+    return all_new_concepts

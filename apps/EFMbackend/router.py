@@ -90,7 +90,7 @@ async def get_tree_data(native_project_id: int, db: Session = Depends(get_db)):
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
 async def generate_all_concepts(native_project_id: int, db: Session = Depends(get_db)):
-    await algorithms.run_instantiation(tree_id = native_project_id, db = db)
+    await implementation.run_instantiation(tree_id = native_project_id, db = db)
     return implementation.get_all_concepts(db = db, tree_id = native_project_id)
 
 @router.get("/trees/{native_project_id}/concepts",

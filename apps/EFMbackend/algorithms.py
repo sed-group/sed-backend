@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 from typing import List
 
 import apps.EFMbackend.schemas as schemas
-import apps.EFMbackend.storage as storage
 
 def alternative_solutions(the_fr: schemas.FunctionalRequirement):
     ## function for recursive generation of alternative concepts
@@ -40,7 +39,6 @@ def alternative_solutions(the_fr: schemas.FunctionalRequirement):
 
     # returns the collector of all DNA:
     return all_dna
-
 def alternative_configurations(the_ds: schemas.DesignSolution):
     ## function for recursive generation of alternative concepts
 
@@ -65,55 +63,6 @@ def alternative_configurations(the_ds: schemas.DesignSolution):
     # print(all_configurations)
 
     return all_configurations
-
-
-async def run_instantiation(db: Session, tree_id: int):
-    '''
-    creates all instance concepts of a tree
-    does not overwrite existing ones if they are included in the new instantiation
-    '''    
-    # fetch the old concepts, if available:
-    all_old_concepts = storage.get_efm_objects_all_of_tree(db, 'concept', tree_id, 0) # will get deleted later
-    all_new_concepts = []                           # will get added later
-
-    the_tree = storage.get_efm_object(db, 'tree', tree_id)
-
-    all_dna = alternative_configurations(the_tree.top_level_ds)
-
-    concept_counter = len(all_old_concepts) # for naming only - there might be better approaches to this
-
-    for dna in all_dna:
-        
-        dna_string = str(dna) #json.dumps(dna)
-
-        # check if concept with same DNA already exists, then jump:
-        for old_concept in all_old_concepts:
-            if old_concept.dna == dna:
-                # remove from list so it won't get deleted:
-                all_old_concepts.remove(old_concept)
-                # add to list of all Concepts:
-                all_new_concepts.append(old_concept)
-                # and we don't need to create a new object for it, so we jump
-                next()
-        c_name = f"Concept {concept_counter}"
-        c_data = {
-            'name': c_name, 
-            'dna': dna_string, 
-            'tree_id': tree_id
-        }
-        new_concept = schemas.ConceptNew(**c_data)
-        
-        # add to DB:
-        storage.new_efm_object(db, 'concept', new_concept)
-
-        all_new_concepts.append(new_concept)
-        concept_counter = concept_counter + 1
-
-    # delete old concepts:
-    for oC in all_old_concepts:
-        storage.delete_efm_object(db, 'concept', oC.id)
-        
-    return all_new_concepts
 
 def prune_child_ds(ds: schemas.DesignSolution, dna: List[int]):
     '''
@@ -144,7 +93,6 @@ def allChildDS(fr: schemas.FunctionalRequirement, childList = []):
             new_child_list.extend(allChildDS(fr))
 
     return new_child_list
-
 def allChildFR(ds: schemas.DesignSolution, childList = []):
     '''
         iterates through all children of a DS and 
