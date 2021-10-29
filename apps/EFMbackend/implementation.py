@@ -42,9 +42,9 @@ def get_tree_list_of_user(db: Session, user_id: int, limit:int = 100, offset:int
 
     tree_list = []
     counter = offset    # For pagination
-    print(subproject_list)
+    # print(subproject_list)
     while len(subproject_list) > counter and counter < (offset+limit):
-        print(f'fetching subproject tree with id{subproject_list[counter].native_project_id}')
+        # print(f'fetching subproject tree with id{subproject_list[counter].native_project_id}')
         try: 
             tree = storage.get_efm_object(db, 'tree', subproject_list[counter].native_project_id)
             tree_list.append(tree)
