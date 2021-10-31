@@ -135,7 +135,7 @@ def delete_tree(db: Session, tree_id: int):
     '''
     storage.delete_efm_object(
         db = db,
-        efm_object_type = 'tree', 
+        efm_object_type = 'tree',
         object_id = tree_id
         )
 
@@ -143,14 +143,15 @@ def delete_tree(db: Session, tree_id: int):
     with core_connection() as con:
         subproject = proj_storage.db_get_subproject_native(
             connection = con, 
-            application_sid = EFM_APP_SID, 
+            application_sid = EFM_APP_SID,
             native_project_id = tree_id
             )
         proj_storage.db_delete_subproject(
-            connection = con, 
+            connection = con,
             project_id = subproject.project_id,
-            subproject_id = subproject.id, 
+            subproject_id = subproject.id,
             )
+        con.commit()
 
         return True
 
@@ -276,7 +277,7 @@ def edit_FR(db: Session, fr_id: int, fr_data: schemas.FRnew):
 
     return storage.edit_efm_object(db, 'FR', fr_id, fr_data)
     
-def newParent_FR(db: Session, fr_id: int, ds_id: int):
+def new_parent_FR(db: Session, fr_id: int, ds_id: int):
     '''
     sets ds_id as new rf_id for FR
     i.e. a change in parent
@@ -343,7 +344,7 @@ def edit_DS(db: Session, ds_id: int, ds_data: schemas.DSnew):
 
     return storage.edit_efm_object(db, 'DS', ds_id, ds_data)
 
-def newParent_DS(db: Session, ds_id: int, fr_id: int):
+def new_parent_DS(db: Session, ds_id: int, fr_id: int):
     '''
     sets fr_id as new isb_id for DS
     i.e. a change in parent
@@ -464,7 +465,35 @@ def edit_constraint(db: Session, c_id: int, c_data: schemas.ConstraintNew):
         object_id = c_id,
         object_data = c_data
         )
-    
+def new_parent_constraint(db: Session, c_id: int, new_parent_id: int):
+    ''' 
+        sets the DS with new_parent_id as icb_id for the constraint with c_id
+    '''
+    # check if constraint exists
+    old_c = storage.get_efm_object(
+        db = db, 
+        efm_object_type = 'c', 
+        object_id = c_id
+    )
+    # check if new parent exists
+    new_parent_ds = storage.get_efm_object(
+        db = db, 
+        efm_object_type = 'ds', 
+        object_id = new_parent_id
+    )
+    # check same tree
+    if same_tree(old_c, new_parent_ds):
+        new_c = schemas.ConstraintNew(old_c)
+        new_c.icb_id = new_parent_ds.id
+
+        # commit to DB
+        return storage.edit_efm_object(
+            db = db,
+            efm_object_type = 'c', 
+            object_id = c_id, 
+            object_data = new_c
+        )
+
 ## helper functions
 async def run_instantiation(db: Session, tree_id: int):
     '''
@@ -513,3 +542,12 @@ async def run_instantiation(db: Session, tree_id: int):
         storage.delete_efm_object(db, 'concept', oC.id)
         
     return all_new_concepts
+
+def same_tree(obj_a, obj_b):
+    if (obj_a.tree_id == obj_b.tree_id):
+        return True
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{obj_a.name} and {obj_b.name} need to be in the same tree"
+        )

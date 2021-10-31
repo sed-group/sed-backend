@@ -12,8 +12,6 @@ import env
 env.Environment.parse_env()
 
 
-
-
 # setup.config_default_logging()
 
 app = FastAPI(

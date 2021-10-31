@@ -20,7 +20,7 @@ except:
     print(" /!\\ could not create EFM databases")
 
 # information dict for multi-type fetch/post functions
-efm_object_types = {
+EFM_OBJECT_TYPES = {
     'DS': {
         'model': models.DesignSolution,
         'schema': schemas.DesignSolution,
@@ -51,7 +51,6 @@ efm_object_types = {
         'schema': schemas.Constraint,
         'str': 'Constraint'
     },
-    
 }
 
 class EfmObjectTypes(str, Enum):
@@ -68,7 +67,7 @@ def get_efm_object(db: Session, efm_object_type: EfmObjectTypes, object_id: int)
         returns schemas.object or raises exception
     '''
 
-    object_data = efm_object_types[efm_object_type]
+    object_data = EFM_OBJECT_TYPES[efm_object_type]
 
     try:
         the_object_for_orm = db.query(object_data['model']).filter(object_data['model'].id == object_id).first()
@@ -99,7 +98,7 @@ def get_efm_objects_all_of_tree(db: Session, efm_object_type: EfmObjectTypes, tr
         returns List[schemas.object] or raises exception
     '''
 
-    object_data = efm_object_types[efm_object_type]
+    object_data = EFM_OBJECT_TYPES[efm_object_type]
 
     try:
         if tree_id:
@@ -142,7 +141,7 @@ def new_efm_object(db: Session, efm_object_type: EfmObjectTypes, object_data):
     ##
     '''
 
-    object_type_info = efm_object_types[efm_object_type]
+    object_type_info = EFM_OBJECT_TYPES[efm_object_type]
 
     # try: 
     the_object_for_orm = object_type_info['model'](**object_data.dict())
@@ -162,7 +161,7 @@ def delete_efm_object(db: Session, efm_object_type: EfmObjectTypes, object_id: i
     deletes an object by ID
     '''
 
-    object_type_info = efm_object_types[efm_object_type]
+    object_type_info = EFM_OBJECT_TYPES[efm_object_type]
 
     try:
         db.query(object_type_info['model']).filter(object_type_info['model'].id == object_id).delete()
@@ -188,7 +187,7 @@ def edit_efm_object(db: Session, efm_object_type: EfmObjectTypes, object_id: int
     '''
     print(f"efit_efm_object: type: {efm_object_type}; id: {object_id}; data: {object_data}")
 
-    object_type_info = efm_object_types[efm_object_type]
+    object_type_info = EFM_OBJECT_TYPES[efm_object_type]
 
     # try: 
     the_object_for_orm = db.query(object_type_info['model']).filter(object_type_info['model'].id == object_id).first()

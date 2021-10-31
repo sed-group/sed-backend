@@ -171,8 +171,8 @@ async def edit_designSolution(ds_id: int, ds_data: schemas.DSnew, db: Session = 
             summary = "sets new parent to DS",
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
-async def newParent_designSolution(ds_id: int, newParentID: int, db: Session = Depends(get_db)):
-    return implementation.newParent_DS(ds_id= ds_id, fr_id= newParentID, db = db)
+async def new_parent_designSolution(ds_id: int, new_parent_id: int, db: Session = Depends(get_db)):
+    return implementation.new_parent_DS(ds_id= ds_id, fr_id= new_parent_id, db = db)
 
 
 ## FR
@@ -220,8 +220,8 @@ async def edit_functionalRequirement(fr_id: int, fr_data: schemas.FRnew, db: Ses
             summary = "sets new parent to FR",
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
-async def newParent_functionalRequirement(fr_id: int, newParentID: int, db: Session = Depends(get_db)):
-    return implementation.newParent_FR(fr_id= fr_id, ds_id= newParentID, db = db)
+async def new_parent_functionalRequirement(fr_id: int, new_parent_id: int, db: Session = Depends(get_db)):
+    return implementation.new_parent_FR(fr_id= fr_id, ds_id= new_parent_id, db = db)
 
 
 # iw 
@@ -289,6 +289,14 @@ async def delete_constraint(c_id: int, db: Session = Depends(get_db)):
             )
 async def edit_interactsWith(c_id: int, c_data: schemas.ConstraintNew, db: Session = Depends(get_db)):
     return implementation.edit_constraint(db = db, c_id = c_id, c_data = c_data)
+
+@router.put("/{native_project_id}/c/{c_id}/icb/",
+            response_model = schemas.Constraint,
+            summary = "sets new parent to a constraint",
+            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
+            )
+async def new_parent_constraint(ds_id: int, new_parent_id: int, db: Session = Depends(get_db)):
+    return implementation.new_parent_DS(ds_id= ds_id, fr_id= new_parent_id, db = db)
 
 
 router.include_router(param_router, prefix="/param", tags=['EF-M parameters'])
