@@ -315,3 +315,16 @@ def db_get_project_exists(connection: PooledMySQLConnection, project_id: int) ->
         raise exc.ProjectNotFoundException
 
     return True
+
+
+def db_delete_subproject_native(connection: PooledMySQLConnection, application_id: str, native_project_id: int):
+    delete_stmnt = MySQLStatementBuilder(connection)
+    res, row_count = delete_stmnt\
+        .delete(SUBPROJECTS_TABLE)\
+        .where("application_sid = ? AND native_project_id = ?", [application_id, native_project_id])\
+        .execute(fetch_type=FetchType.FETCH_NONE, return_affected_rows=True)
+
+    if row_count == 0:
+        raise exc.SubProjectNotFoundException
+
+    return True
