@@ -5,6 +5,7 @@ from jose import jwt
 from passlib.context import CryptContext
 
 from apps.core.users.exceptions import UserNotFoundException, UserDisabledException
+from apps.core.authentication.models import UserAuth
 from apps.core.authentication.exceptions import InvalidCredentialsException
 from apps.core.authentication.storage import get_user_auth_only
 from apps.core.db import get_connection
@@ -47,7 +48,7 @@ def authenticate_user(username: str, password: str):
     return user, scopes
 
 
-def get_user_with_pwd_from_db(username: str):
+def get_user_with_pwd_from_db(username: str) -> UserAuth:
     """
     Only for use when authenticating a user
     :param username: Username

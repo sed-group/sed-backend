@@ -2,7 +2,7 @@ from apps.core.authentication.models import UserAuth
 from apps.core.users.exceptions import UserNotFoundException
 
 
-def get_user_auth_only(connection, user_name: str):
+def get_user_auth_only(connection, user_name: str) -> UserAuth:
     """
     Get a fully populated user model. This is unsafe to use anywhere but during authorization.
     :param connection: MySQL connection

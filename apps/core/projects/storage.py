@@ -17,13 +17,20 @@ PROJECTS_PARTICIPANTS_TABLE = 'projects_participants'
 PROJECTS_PARTICIPANTS_COLUMNS = ['id', 'user_id', 'project_id', 'access_level']
 
 
-def db_get_projects(connection, segment_length: int, index: int) -> List[models.ProjectListing]:
+def db_get_projects(connection, segment_length: int = None, index: int = None) -> List[models.ProjectListing]:
     mysql_statement = MySQLStatementBuilder(connection)
-    projects = mysql_statement \
-        .select('projects', PROJECTS_COLUMNS) \
-        .limit(segment_length) \
-        .offset(segment_length * index) \
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+    stmnt = mysql_statement \
+        .select('projects', PROJECTS_COLUMNS)
+
+    if segment_length is not None:
+        stmnt = stmnt.limit(segment_length)
+        if index is not None:
+            stmnt = stmnt.offset(segment_length * index)
+
+    rs = stmnt.execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+    projects = []
+    for res in rs:
+        projects.append(models.ProjectListing(**res))
 
     return projects
 
@@ -306,5 +313,18 @@ def db_get_project_exists(connection: PooledMySQLConnection, project_id: int) ->
 
     if res is None:
         raise exc.ProjectNotFoundException
+
+    return True
+
+
+def db_delete_subproject_native(connection: PooledMySQLConnection, application_id: str, native_project_id: int):
+    delete_stmnt = MySQLStatementBuilder(connection)
+    res, row_count = delete_stmnt\
+        .delete(SUBPROJECTS_TABLE)\
+        .where("application_sid = ? AND native_project_id = ?", [application_id, native_project_id])\
+        .execute(fetch_type=FetchType.FETCH_NONE, return_affected_rows=True)
+
+    if row_count == 0:
+        raise exc.SubProjectNotFoundException
 
     return True
