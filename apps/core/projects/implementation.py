@@ -183,3 +183,16 @@ def impl_delete_subproject(project_id: int, subproject_id: int) -> bool:
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
         )
+
+
+def impl_delete_subproject_native(application_id: str, native_project_id: int):
+    try:
+        with get_connection() as con:
+            res = storage.db_delete_subproject_native(con, application_id, native_project_id)
+            con.commit()
+            return res
+    except exc.SubProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No such subproject"
+        )

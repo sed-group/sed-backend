@@ -1,4 +1,5 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
+import random
 
 import tests.testutils as tu
 import apps.core.projects.models as models
@@ -49,7 +50,7 @@ def seed_random_projects(owner_id, amount=10) -> List[models.Project]:
     return project_list
 
 
-def seed_random_project(owner_id, participants: Dict[int, models.AccessLevel] = None):
+def seed_random_project(owner_id: int, participants: Dict[int, models.AccessLevel] = None):
     p = random_project()
 
     if participants is not None:
@@ -62,7 +63,7 @@ def seed_random_project(owner_id, participants: Dict[int, models.AccessLevel] = 
     return new_p
 
 
-def delete_projects(projects_list):
+def delete_projects(projects_list: List[models.Project]):
     id_list = []
     for p in projects_list:
         id_list.append(p.id)
@@ -70,7 +71,26 @@ def delete_projects(projects_list):
     delete_projects_with_ids(id_list)
 
 
-def delete_projects_with_ids(project_id_list):
+def delete_projects_with_ids(project_id_list: List[int]):
     for pid in project_id_list:
         impl.impl_delete_project(pid)
     return
+
+
+def random_subproject_post():
+    spp = models.SubProjectPost(
+        application_sid="MOD.EFM",
+        native_project_id=random.randint(0, 100000)
+    )
+    return spp
+
+
+def seed_random_subproject(owner_id: int, project_id: Optional[int] = None):
+    sp_post = random_subproject_post()
+    sp = impl.impl_post_subproject(sp_post, owner_id, project_id=project_id)
+    return sp
+
+
+def delete_subprojects(subprojects: List[models.SubProject]):
+    for sp in subprojects:
+        impl.impl_delete_subproject(sp.project_id, sp.id)
