@@ -298,51 +298,12 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_need2driver`
     UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE
 );
 
-CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_iso_processes`
-(
-    `id`       INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `name`     VARCHAR(255) NOT NULL,
-    `category` VARCHAR(255) NOT NULL,
-    PRIMARY KEY (`id`),
-    UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE
-);
-
-# Creating default ISO 15288 processes
-INSERT IGNORE INTO cvs_vcs_iso_processes(id, name, category)
-VALUES (1, 'Acquisition', 'Agreement Processes'),
-       (2, 'Supply', 'Agreement Processes'),
-
-       (3, 'Life-cycle model management', 'Organizational project-enabling processes'),
-       (4, 'Infrastructure management', 'Organizational project-enabling processes'),
-       (5, 'Project portfolio management', 'Organizational project-enabling processes'),
-       (6, 'Human resource management', 'Organizational project-enabling processes'),
-       (7, 'Quality management', 'Organizational project-enabling processes'),
-
-       (8, 'Project planning', 'Project processes'),
-       (9, 'Project assessment and control', 'Project processes'),
-       (10, 'Decision management', 'Project processes'),
-       (11, 'Risk management', 'Project processes'),
-       (12, 'Configuration management', 'Project processes'),
-       (13, 'Information management', 'Project processes'),
-       (14, 'Measurement', 'Project processes'),
-
-       (15, 'Stakeholder requirements definition', 'Technical processes'),
-       (16, 'Requirements analysis', 'Technical processes'),
-       (17, 'Architectual design', 'Technical processes'),
-       (18, 'Implementation', 'Technical processes'),
-       (19, 'Integration', 'Technical processes'),
-       (20, 'Verification', 'Technical processes'),
-       (21, 'Transition', 'Technical processes'),
-       (22, 'Validation', 'Technical processes'),
-       (23, 'Operation', 'Technical processes'),
-       (24, 'Maintenance', 'Technical processes'),
-       (25, 'Disposal', 'Technical processes');
-
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_subprocesses`
 (
     `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `name`              VARCHAR(255) NOT NULL,
     `parent_process_id` INT UNSIGNED NOT NULL,
+    `project_id`        INT UNSIGNED NOT NULL,
     PRIMARY KEY (`id`),
     UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE
 );

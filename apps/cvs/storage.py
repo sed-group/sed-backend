@@ -16,12 +16,28 @@ from libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
 from libs.datastructures.pagination import ListChunk
 
 CVS_APPLICATION_SID = 'MOD.CVS'
+
 CVS_PROJECT_TABLE = 'cvs_projects'
 CVS_PROJECT_COLUMNS = ['id', 'name', 'description', 'owner_id', 'datetime_created']
+
 CVS_VCS_TABLE = 'cvs_vcss'
 CVS_VCS_COLUMNS = ['id', 'name', 'description', 'project_id', 'datetime_created', 'year_from', 'year_to']
+
 CVS_VCS_VALUE_DRIVER_TABLE = 'cvs_vcs_value_drivers'
 CVS_VCS_VALUE_DRIVER_COLUMNS = ['id', 'name', 'project_id']
+
+CVS_VCS_SUBPROCESS_TABLE = 'cvs_vcs_subprocesses'
+CVS_VCS_SUBPROCESS_COLUMNS = ['id', 'name', 'parent_process_id', 'project_id']
+
+CVS_VCS_TABLE_ROWS_TABLE = 'cvs_vcs_table_rows'
+CVS_VCS_TABLE_ROWS_COLUMNS = ['id', 'vcs_id', 'isoprocess_id', 'subprocess_id', 'stakeholder',
+                              'stakeholder_expectations']
+
+CVS_VCS_STAKEHOLDER_NEED_TABLE = 'cvs_vcs_stakeholder_needs'
+CVS_VCS_STAKEHOLDER_NEED_COLUMNS = ['id', 'vcs_row_id', 'need', 'stakeholder_expectations', 'rank_weight']
+
+CVS_VCS_NEED2DRIVER_TABLE = 'cvs_vcs_need2driver'
+CVS_VCS_NEED2DRIVER_COLUMNS = ['id', 'stakeholder_need_id', 'value_driver_id']
 
 
 # ======================================================================================================================
@@ -29,9 +45,7 @@ CVS_VCS_VALUE_DRIVER_COLUMNS = ['id', 'name', 'project_id']
 # ======================================================================================================================
 
 def get_all_cvs_project(db_connection: PooledMySQLConnection, user_id: int) -> ListChunk[models.CVSProject]:
-    """ Returns list of all projects in which the current user is a participant. """
-
-    logger.debug(f'Fetching all CVS projects for user with id = {user_id}.')
+    logger.debug(f'Fetching all CVS projects for user with id={user_id}.')
 
     where_statement = f'owner_id = %s'
     where_values = [user_id]
@@ -57,9 +71,7 @@ def get_all_cvs_project(db_connection: PooledMySQLConnection, user_id: int) -> L
 
 def get_segment_cvs_project(db_connection: PooledMySQLConnection, index: int, segment_length: int,
                             user_id: int) -> ListChunk[models.CVSProject]:
-    """ Returns segment of projects in which the current user is a participant. """
-
-    logger.debug(f'Fetching CVS projects for user with id = {user_id}.')
+    logger.debug(f'Fetching segment of CVS projects for user with id={user_id}.')
 
     where_statement = f'owner_id = %s'
     where_values = [user_id]
@@ -86,28 +98,27 @@ def get_segment_cvs_project(db_connection: PooledMySQLConnection, index: int, se
 
 
 def get_cvs_project(db_connection: PooledMySQLConnection, project_id: int, user_id: int) -> models.CVSProject:
-    print('-> project 1')
+    logger.debug(f'Fetching CVS project with id={project_id}.')
+
     select_statement = MySQLStatementBuilder(db_connection)
-    print('-> project 2')
     result = select_statement \
         .select(CVS_PROJECT_TABLE, CVS_PROJECT_COLUMNS) \
         .where('id = %s', [project_id]) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-    print('-> project 3')
 
     if result is None:
         raise cvs_exceptions.CVSProjectNotFoundException
-    print('-> project 4')
 
     if result['owner_id'] != user_id:
         raise auth_exceptions.UnauthorizedOperationException
-    print('-> project 5')
 
     return populate_cvs_project(db_connection, result)
 
 
 def create_cvs_project(db_connection: PooledMySQLConnection, project: models.CVSProjectPost,
                        user_id: int) -> models.CVSProject:
+    logger.debug(f'Creating a CVS project for user with id={user_id}.')
+
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
         .insert(table=CVS_PROJECT_TABLE, columns=['name', 'description', 'owner_id']) \
@@ -121,6 +132,8 @@ def create_cvs_project(db_connection: PooledMySQLConnection, project: models.CVS
 
 def edit_cvs_project(db_connection: PooledMySQLConnection, project_id: int, user_id: int,
                      new_project: models.CVSProjectPost) -> models.CVSProject:
+    logger.debug(f'Editing CVS project with id={project_id}.')
+
     old_project = get_cvs_project(db_connection, project_id, user_id)
 
     if (old_project.name, old_project.description) == (new_project.name, new_project.description):
@@ -144,6 +157,8 @@ def edit_cvs_project(db_connection: PooledMySQLConnection, project_id: int, user
 
 
 def delete_cvs_project(db_connection: PooledMySQLConnection, project_id: int, user_id: int) -> bool:
+    logger.debug(f'Deleting CVS project with id={project_id}.')
+
     select_statement = MySQLStatementBuilder(db_connection)
     result = select_statement \
         .select(CVS_PROJECT_TABLE, ['owner_id']) \
@@ -157,7 +172,7 @@ def delete_cvs_project(db_connection: PooledMySQLConnection, project_id: int, us
         raise auth_exceptions.UnauthorizedOperationException
 
     delete_statement = MySQLStatementBuilder(db_connection)
-    result, rows = delete_statement.delete(CVS_PROJECT_TABLE) \
+    _, rows = delete_statement.delete(CVS_PROJECT_TABLE) \
         .where('id = %s', [project_id]) \
         .execute(return_affected_rows=True)
 
@@ -168,8 +183,6 @@ def delete_cvs_project(db_connection: PooledMySQLConnection, project_id: int, us
 
 
 def populate_cvs_project(db_connection: PooledMySQLConnection, db_result) -> models.CVSProject:
-    print('-> project 6')
-    print(f'{db_result = }')
     return models.CVSProject(
         id=db_result['id'],
         name=db_result['name'],
@@ -184,12 +197,10 @@ def populate_cvs_project(db_connection: PooledMySQLConnection, db_result) -> mod
 # ======================================================================================================================
 
 def get_all_vcs(db_connection: PooledMySQLConnection, project_id: int, user_id: int) -> ListChunk[models.VCS]:
-    """ Returns a list of all VCSs of a project. """
+    logger.debug(f'Fetching all VCSs for project with id={project_id}.')
 
-    logger.debug(f'Fetching all VCSs for project with id = {project_id} (user id = {user_id}).')
-
-    where_values = [project_id]
     where_statement = f'project_id = %s'
+    where_values = [project_id]
 
     select_statement = MySQLStatementBuilder(db_connection)
     results = select_statement.select(CVS_VCS_TABLE, CVS_VCS_COLUMNS) \
@@ -212,12 +223,10 @@ def get_all_vcs(db_connection: PooledMySQLConnection, project_id: int, user_id: 
 
 def get_segment_vcs(db_connection: PooledMySQLConnection, project_id: int, segment_length: int, index: int,
                     user_id: int) -> ListChunk[models.VCS]:
-    """ Returns a list of a selected segment of VCSs of a project. """
+    logger.debug(f'Fetching VCS segment for project with id={project_id}.')
 
-    logger.debug(f'Fetching VCS segment for project with id = {project_id} (user id = {user_id}).')
-
-    where_values = [project_id]
     where_statement = f'project_id = %s'
+    where_values = [project_id]
 
     select_statement = MySQLStatementBuilder(db_connection)
     results = select_statement.select(CVS_VCS_TABLE, CVS_VCS_COLUMNS) \
@@ -241,6 +250,8 @@ def get_segment_vcs(db_connection: PooledMySQLConnection, project_id: int, segme
 
 
 def get_vcs(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int, user_id: int) -> models.VCS:
+    logger.debug(f'Fetching VCS with id={vcs_id}.')
+
     select_statement = MySQLStatementBuilder(db_connection)
     result = select_statement \
         .select(CVS_VCS_TABLE, CVS_VCS_COLUMNS) \
@@ -258,6 +269,8 @@ def get_vcs(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int, 
 
 def create_vcs(db_connection: PooledMySQLConnection, vcs_post: models.VCSPost, project_id: int,
                user_id: int) -> models.VCS:
+    logger.debug(f'Creating a VCS in project with id={project_id}.')
+
     get_cvs_project(db_connection, project_id, user_id)  # performs checks for existing project and correct user
 
     insert_statement = MySQLStatementBuilder(db_connection)
@@ -272,6 +285,8 @@ def create_vcs(db_connection: PooledMySQLConnection, vcs_post: models.VCSPost, p
 
 def edit_vcs(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int, user_id: int,
              new_vcs: models.VCSPost) -> models.VCS:
+    logger.debug(f'Editing VCS with id={vcs_id}.')
+
     old_vcs = get_vcs(db_connection, vcs_id, project_id, user_id)
 
     o = (old_vcs.name, old_vcs.description, old_vcs.year_from, old_vcs.year_to)
@@ -296,6 +311,8 @@ def edit_vcs(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int,
 
 
 def delete_vcs(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int, user_id: int) -> bool:
+    logger.debug(f'Deleting VCS with id={vcs_id}.')
+
     select_statement = MySQLStatementBuilder(db_connection)
 
     result = select_statement \
@@ -312,7 +329,7 @@ def delete_vcs(db_connection: PooledMySQLConnection, vcs_id: int, project_id: in
     get_cvs_project(db_connection, project_id, user_id)  # performs checks for existing project and correct user
 
     delete_statement = MySQLStatementBuilder(db_connection)
-    result, rows = delete_statement.delete(CVS_VCS_TABLE) \
+    _, rows = delete_statement.delete(CVS_VCS_TABLE) \
         .where('id = %s', [vcs_id]) \
         .execute(return_affected_rows=True)
 
@@ -340,15 +357,14 @@ def populate_vcs(db_connection: PooledMySQLConnection, db_result, project_id: in
 
 def get_all_value_driver(db_connection: PooledMySQLConnection, project_id: int,
                          user_id: int) -> ListChunk[models.VCSValueDriver]:
-    """ Returns a list of all value drivers of a project. """
+    logger.debug(f'Fetching all value drivers for project with id={project_id}.')
 
-    logger.debug(f'Fetching all value drivers for project with id = {project_id} (user id = {user_id}).')
-
-    where_values = [project_id]
     where_statement = f'project_id = %s'
+    where_values = [project_id]
 
     select_statement = MySQLStatementBuilder(db_connection)
-    results = select_statement.select(CVS_VCS_VALUE_DRIVER_TABLE, CVS_VCS_VALUE_DRIVER_COLUMNS) \
+    results = select_statement \
+        .select(CVS_VCS_VALUE_DRIVER_TABLE, CVS_VCS_VALUE_DRIVER_COLUMNS) \
         .where(where_statement, where_values) \
         .order_by(['id'], Sort.ASCENDING) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
@@ -358,7 +374,8 @@ def get_all_value_driver(db_connection: PooledMySQLConnection, project_id: int,
         value_driver_list.append(populate_value_driver(db_connection, result, project_id, user_id))
 
     count_statement = MySQLStatementBuilder(db_connection)
-    result = count_statement.count(CVS_VCS_VALUE_DRIVER_TABLE) \
+    result = count_statement \
+        .count(CVS_VCS_VALUE_DRIVER_TABLE) \
         .where(where_statement, where_values) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
     chunk = ListChunk[models.VCSValueDriver](chunk=value_driver_list, length_total=result['count'])
@@ -368,6 +385,8 @@ def get_all_value_driver(db_connection: PooledMySQLConnection, project_id: int,
 
 def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int, project_id: int,
                      user_id: int) -> models.VCSValueDriver:
+    logger.debug(f'Fetching value driver with id={value_driver_id}.')
+
     select_statement = MySQLStatementBuilder(db_connection)
     result = select_statement \
         .select(CVS_VCS_VALUE_DRIVER_TABLE, CVS_VCS_VALUE_DRIVER_COLUMNS) \
@@ -385,6 +404,8 @@ def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int,
 
 def create_value_driver(db_connection: PooledMySQLConnection, value_driver_post: models.VCSValueDriverPost,
                         project_id: int, user_id: int) -> models.VCSValueDriver:
+    logger.debug(f'Creating a value driver in project with id={project_id}.')
+
     get_cvs_project(db_connection, project_id, user_id)  # performs checks for existing project and correct user
 
     insert_statement = MySQLStatementBuilder(db_connection)
@@ -399,6 +420,8 @@ def create_value_driver(db_connection: PooledMySQLConnection, value_driver_post:
 
 def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int, project_id: int, user_id: int,
                       new_value_driver: models.VCSValueDriverPost) -> models.VCSValueDriver:
+    logger.debug(f'Editing value driver with id={value_driver_id}.')
+
     old_value_driver = get_value_driver(db_connection, value_driver_id, project_id, user_id)
 
     if old_value_driver.name == new_value_driver.name:  # No change
@@ -422,6 +445,8 @@ def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int
 
 def delete_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int, project_id: int,
                         user_id: int) -> bool:
+    logger.debug(f'Deleting value driver with id={value_driver_id}.')
+
     get_cvs_project(db_connection, project_id, user_id)  # performs checks for existing project and correct user
 
     select_statement = MySQLStatementBuilder(db_connection)
@@ -437,7 +462,7 @@ def delete_value_driver(db_connection: PooledMySQLConnection, value_driver_id: i
         raise auth_exceptions.UnauthorizedOperationException
 
     delete_statement = MySQLStatementBuilder(db_connection)
-    result, rows = delete_statement.delete(CVS_VCS_VALUE_DRIVER_TABLE) \
+    _, rows = delete_statement.delete(CVS_VCS_VALUE_DRIVER_TABLE) \
         .where('id = %s', [value_driver_id]) \
         .execute(return_affected_rows=True)
 
@@ -453,4 +478,162 @@ def populate_value_driver(db_connection: PooledMySQLConnection, db_result, proje
         id=db_result['id'],
         name=db_result['name'],
         project=get_cvs_project(db_connection, project_id=project_id, user_id=user_id),
+    )
+
+
+# ======================================================================================================================
+# VCS ISO Processes
+# ======================================================================================================================
+
+
+def get_all_iso_process() -> ListChunk[models.VCSISOProcess]:
+    logger.debug(f'Fetching all ISO processes.')
+
+    iso_processes = [models.VCSISOProcess(p.id, p.name, p.category) for p in models.VCSISOProcesses]
+    chunk = ListChunk[models.VCSISOProcess](chunk=iso_processes, length_total=len(iso_processes))
+
+    return chunk
+
+
+def get_iso_process(iso_process_id: int) -> models.VCSISOProcess:
+    logger.debug(f'Fetching ISO process with id={iso_process_id}.')
+
+    for p in models.VCSISOProcesses:
+        if p.id == iso_process_id:
+            return models.VCSISOProcess(iso_process_id, p.name, p.category)
+
+    raise cvs_exceptions.ISOProcessNotFoundException
+
+
+# ======================================================================================================================
+# VCS Subprocesses
+# ======================================================================================================================
+
+def get_all_subprocess(db_connection: PooledMySQLConnection, project_id: int,
+                       user_id: int) -> ListChunk[models.VCSSubprocess]:
+    logger.debug(f'Fetching all subprocesses for project with id={project_id}.')
+
+    where_statement = f'project_id = %s'
+    where_values = [project_id]
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    results = select_statement \
+        .select(CVS_VCS_SUBPROCESS_TABLE, CVS_VCS_SUBPROCESS_COLUMNS) \
+        .where(where_statement, where_values) \
+        .order_by(['id'], Sort.ASCENDING) \
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    subprocess_list = [populate_subprocess(db_connection, result, project_id, user_id) for result in results]
+
+    count_statement = MySQLStatementBuilder(db_connection)
+    result = count_statement \
+        .count(CVS_VCS_SUBPROCESS_TABLE) \
+        .where(where_statement, where_values) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+    chunk = ListChunk[models.VCSSubprocess](chunk=subprocess_list, length_total=result['count'])
+
+    return chunk
+
+
+def get_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, project_id: int,
+                   user_id: int) -> models.VCSSubprocess:
+    logger.debug(f'Fetching subprocess with id={subprocess_id}.')
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    result = select_statement \
+        .select(CVS_VCS_SUBPROCESS_TABLE, CVS_VCS_SUBPROCESS_COLUMNS) \
+        .where('id = %s', [subprocess_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if result is None:
+        raise cvs_exceptions.SubprocessNotFoundException
+
+    if result['project_id'] != project_id:
+        raise auth_exceptions.UnauthorizedOperationException
+
+    return populate_subprocess(db_connection, result, project_id, user_id)
+
+
+def create_subprocess(db_connection: PooledMySQLConnection, subprocess_post: models.VCSSubprocessPost,
+                      project_id: int, user_id: int) -> models.VCSSubprocess:
+    logger.debug(f'Creating a subprocesses in project with id={project_id}.')
+
+    get_cvs_project(db_connection, project_id, user_id)  # performs checks for existing project and correct user
+    get_iso_process(subprocess_post.parent_process_id)  # performs checks for existing iso process
+
+    insert_statement = MySQLStatementBuilder(db_connection)
+    insert_statement \
+        .insert(table=CVS_VCS_SUBPROCESS_TABLE, columns=['name', 'parent_process_id', 'project_id']) \
+        .set_values([subprocess_post.name, subprocess_post.parent_process_id, project_id]) \
+        .execute(fetch_type=FetchType.FETCH_NONE)
+    subprocess_id = insert_statement.last_insert_id
+
+    return get_subprocess(db_connection, subprocess_id, project_id, user_id)
+
+
+def edit_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, project_id: int, user_id: int,
+                    new_subprocess: models.VCSSubprocessPost) -> models.VCSSubprocess:
+    logger.debug(f'Editing subprocesses with id={subprocess_id}.')
+
+    old_subprocess = get_subprocess(db_connection, subprocess_id, project_id, user_id)
+    o = (old_subprocess.name, old_subprocess.parent_process.id)
+    n = (new_subprocess.name, new_subprocess.parent_process_id)
+    if o == n:  # No change
+        return old_subprocess
+
+    get_cvs_project(db_connection, project_id, user_id)  # performs checks for existing project and correct user
+    get_iso_process(new_subprocess.parent_process_id)  # performs checks for existing iso process
+
+    # Updating
+    update_statement = MySQLStatementBuilder(db_connection)
+    update_statement.update(
+        table=CVS_VCS_SUBPROCESS_TABLE,
+        set_statement='name = %s, parent_process_id = %s',
+        values=[new_subprocess.name, new_subprocess.parent_process_id],
+    )
+    update_statement.where('id = %s', [project_id])
+    _, rows = update_statement.execute(return_affected_rows=True)
+
+    if rows == 0:
+        raise cvs_exceptions.SubprocessFailedToUpdateException
+
+    return get_subprocess(db_connection, subprocess_id, project_id, user_id)
+
+
+def delete_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, project_id: int,
+                      user_id: int) -> bool:
+    logger.debug(f'Deleting subprocesses with id={subprocess_id}.')
+
+    get_cvs_project(db_connection, project_id, user_id)  # performs checks for existing project and correct user
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    result = select_statement \
+        .select(CVS_VCS_SUBPROCESS_TABLE, CVS_VCS_SUBPROCESS_COLUMNS) \
+        .where('id = %s', [subprocess_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if result is None:
+        raise cvs_exceptions.SubprocessNotFoundException
+
+    if result['project_id'] != project_id:
+        raise auth_exceptions.UnauthorizedOperationException
+
+    delete_statement = MySQLStatementBuilder(db_connection)
+    _, rows = delete_statement.delete(CVS_VCS_SUBPROCESS_TABLE) \
+        .where('id = %s', [subprocess_id]) \
+        .execute(return_affected_rows=True)
+
+    if rows == 0:
+        raise cvs_exceptions.SubprocessFailedDeletionException
+
+    return True
+
+
+def populate_subprocess(db_connection: PooledMySQLConnection, db_result, project_id: int,
+                        user_id: int) -> models.VCSSubprocess:
+    return models.VCSSubprocess(
+        id=db_result['id'],
+        name=db_result['name'],
+        parent_process=get_iso_process(db_result['parent_process_id']),
+        project=get_cvs_project(db_connection, project_id, user_id)
     )

@@ -15,7 +15,7 @@ class CVSProjectFailedDeletionException(Exception):
 
 
 # ======================================================================================================================
-# VCS - Value Creation Strategy
+# VCS (Value Creation Strategy)
 # ======================================================================================================================
 
 class VCSNotFoundException(Exception):
@@ -31,7 +31,7 @@ class VCSFailedDeletionException(Exception):
 
 
 # ======================================================================================================================
-# VCS - Value Creation Strategy
+# VCS Value driver
 # ======================================================================================================================
 
 class ValueDriverNotFoundException(Exception):
@@ -43,4 +43,28 @@ class ValueDriverFailedToUpdateException(Exception):
 
 
 class ValueDriverFailedDeletionException(Exception):
+    pass
+
+
+# ======================================================================================================================
+# VCS ISO Processes
+# ======================================================================================================================
+
+class ISOProcessNotFoundException(Exception):
+    pass
+
+
+# ======================================================================================================================
+# VCS Subprocesses
+# ======================================================================================================================
+
+class SubprocessNotFoundException(Exception):
+    pass
+
+
+class SubprocessFailedToUpdateException(Exception):
+    pass
+
+
+class SubprocessFailedDeletionException(Exception):
     pass

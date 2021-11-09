@@ -326,3 +326,127 @@ def delete_value_driver(value_driver_id: int, project_id: int, user_id: int) -> 
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
+
+
+# ======================================================================================================================
+# VCS ISO Processes
+# ======================================================================================================================
+
+def get_all_iso_process() -> ListChunk[models.VCSISOProcess]:
+    return storage.get_all_iso_process()
+
+
+# ======================================================================================================================
+# VCS Subprocesses
+# ======================================================================================================================
+
+def get_all_subprocess(project_id: int, user_id: int) -> ListChunk[models.VCSSubprocess]:
+    with get_connection() as con:
+        return storage.get_all_subprocess(con, project_id, user_id)
+
+
+def get_subprocess(subprocess_id: int, project_id: int, user_id: int) -> models.VCSSubprocess:
+    try:
+        with get_connection() as con:
+            return storage.get_subprocess(con, subprocess_id, project_id, user_id)
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    except cvs_exceptions.SubprocessNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Could not find subprocess with id={subprocess_id}.',
+        )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
+
+
+def create_subprocess(subprocess_post: models.VCSSubprocessPost, project_id: int,
+                      user_id: int) -> models.VCSSubprocess:
+    try:
+        with get_connection() as db_connection:
+            result = storage.create_subprocess(db_connection, subprocess_post, project_id, user_id)
+            db_connection.commit()
+            return result
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    except cvs_exceptions.ISOProcessNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not ISO process with id={subprocess_post.parent_process_id}.',
+        )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
+
+
+def edit_subprocess(subprocess_id: int, project_id: int, user_id: int,
+                    subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
+    try:
+        with get_connection() as db_connection:
+            result = storage.edit_subprocess(db_connection, subprocess_id, project_id, user_id, subprocess_post)
+            db_connection.commit()
+            return result
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    except cvs_exceptions.SubprocessNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find subprocess with id={subprocess_id}.',
+        )
+    except cvs_exceptions.ISOProcessNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not ISO process with id={subprocess_post.parent_process_id}.',
+        )
+    except cvs_exceptions.SubprocessFailedToUpdateException:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Failed to edit subprocess with id={subprocess_id}.',
+        )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
+
+
+def delete_subprocess(subprocess_id: int, project_id: int, user_id: int) -> bool:
+    try:
+        with get_connection() as con:
+            res = storage.delete_subprocess(con, subprocess_id, project_id, user_id)
+            con.commit()
+            return res
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    except cvs_exceptions.SubprocessNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find subprocess with id={subprocess_id}.',
+        )
+    except cvs_exceptions.SubprocessFailedDeletionException:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Failed to remove subprocess with id={subprocess_id}.',
+        )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )

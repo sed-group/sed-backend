@@ -191,3 +191,70 @@ async def edit_value_driver(value_driver_id: int, project_id: int, vcs_post: mod
 async def delete_value_driver(value_driver_id: int, project_id: int,
                               user: User = Depends(get_current_active_user)) -> bool:
     return impl.delete_value_driver(value_driver_id, project_id, user.id)
+
+
+# ======================================================================================================================
+# VCS ISO Processes
+# ======================================================================================================================
+
+@router.get(
+    '/vcs/iso-processes/get/all/',
+    summary='Returns all ISO processes',
+    response_model=ListChunk[models.VCSISOProcess],
+)
+async def get_all_iso_process() -> ListChunk[models.VCSISOProcess]:
+    return impl.get_all_iso_process()
+
+
+# ======================================================================================================================
+# VCS Subprocesses
+# ======================================================================================================================
+
+@router.get(
+    '/project/{project_id}/subprocess/get/all/',
+    summary='Returns all subprocesses of a project',
+    response_model=ListChunk[models.VCSSubprocess],
+)
+async def get_all_subprocess(project_id: int,
+                             user: User = Depends(get_current_active_user)) -> ListChunk[models.VCSSubprocess]:
+    return impl.get_all_subprocess(project_id, user.id)
+
+
+@router.get(
+    '/project/{project_id}/subprocess/get/{subprocess_id}',
+    summary='Returns a subprocess',
+    response_model=ListChunk[models.VCSSubprocess],
+)
+async def get_subprocess(subprocess_id: int, project_id: int,
+                         user: User = Depends(get_current_active_user)) -> models.VCSSubprocess:
+    return impl.get_subprocess(subprocess_id, project_id, user.id)
+
+
+@router.post(
+    '/project/{project_id}/subprocess/create/',
+    summary='Creates a new subprocess',
+    response_model=models.VCSSubprocess,
+)
+async def create_subprocess(vcs_post: models.VCSSubprocessPost, project_id: int,
+                            user: User = Depends(get_current_active_user)) -> models.VCSSubprocess:
+    return impl.create_subprocess(vcs_post, project_id, user.id)
+
+
+@router.put(
+    '/project/{project_id}/subprocess/{subprocess_id}/edit/',
+    summary='Edits a subprocess',
+    response_model=models.VCSSubprocess,
+)
+async def edit_subprocess(subprocess_id: int, project_id: int, vcs_post: models.VCSSubprocessPost,
+                          user: User = Depends(get_current_active_user)) -> models.VCSSubprocess:
+    return impl.edit_subprocess(subprocess_id, project_id, user.id, vcs_post)
+
+
+@router.delete(
+    '/project/{project_id}/subprocess/{subprocess_id}/delete/',
+    summary='Deletes a subprocess',
+    response_model=bool,
+)
+async def delete_subprocess(subprocess_id: int, project_id: int,
+                            user: User = Depends(get_current_active_user)) -> bool:
+    return impl.delete_subprocess(subprocess_id, project_id, user.id)
