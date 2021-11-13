@@ -1,11 +1,11 @@
 from fastapi import HTTPException, Depends, status
-from sqlalchemy.orm import Session, lazyload, eagerload
 from typing import List
 from enum import Enum
-from sqlalchemy import inspect
+import weakref
+from mysql.connector.pooling import PooledMySQLConnection
 
 from apps.EFMbackend.exceptions import EfmElementNotFoundException
-import apps.EFMbackend.models as models
+# import apps.EFMbackend.models as models
 import apps.EFMbackend.schemas as schemas
 
 
@@ -19,78 +19,155 @@ try:
 except:
     print(" /!\\ could not create EFM databases")
 
-# information dict for multi-type fetch/post functions
-EFM_OBJECT_TYPES = {
-    'DS': {
-        'model': models.DesignSolution,
-        'schema': schemas.DesignSolution,
-        'str': 'Design Solution'
-    },
-    'FR': {
-        'model': models.FunctionalRequirement,
-        'schema': schemas.FunctionalRequirement,
-        'str': 'Functional Requirement'
-    },
-    'tree': {
-        'model': models.Tree,
-        'schema': schemas.Tree,
-        'str': 'EF-M tree'
-    },
-    'concept': {
-        'model': models.Concept,
-        'schema': schemas.Concept,
-        'str': 'EF-M concept'
-    },
-    'iw': {
-        'model': models.InteractsWith,
-        'schema': schemas.InteractsWith,
-        'str': 'interacts with'
-    },
-    'c': {
-        'model': models.Constraint,
-        'schema': schemas.Constraint,
-        'str': 'Constraint'
-    },
-}
+# information object for multi-type fetch/post functions
+class EFM_OBJECT_TYPES():
+    # class which provides object information for the "get_all" and "get_one" function
+    # use EFM_OBJECT_TYPESs.get_by_name('name')
+    _instances = set()
+    def __init__(self, name:str, table_name: str, schema_in, schema_out, schema_edit=None, to_string: str = ''):
+        self.name = name
+        self.schema_in = schema_in
+        self.schema_out = schema_out
+        if schema_edit:
+            self.schemEdit = schema_edit
+        else: 
+            self.schema_edit = schema_in
+
+        if to_string == '':
+            self.to_string = self.name
+        else:
+            self.to_string = to_string
+        self.table_name = table_name
+        self._instances.add(weakref.ref(self))
+
+    @classmethod
+    def getinstances(cls):
+        dead = set()
+        for ref in cls._instances:
+            obj = ref()
+            if obj is not None:
+                yield obj
+            else:
+                dead.add(ref)
+        cls._instances -= dead
+
+    @classmethod
+    def get_by_name(cls, name:str):
+        for obj in cls.getinstances():
+            if obj.name == name:
+                return obj
+
+DESIGNSOLUTION = EFM_OBJECT_TYPES(
+    name = 'DS', 
+    table_name = 'efm_designsolution', 
+    schema_in = schemas.DSnew, 
+    schema_out = schemas.DesignSolution,
+    schema_edit = schemas.DSnew,
+    to_string = 'Design Solution'
+    )
+FUNCTIONALREQUIREMENT = EFM_OBJECT_TYPES(
+    name = 'FR', 
+    table_name = 'efm_functionalrequirement', 
+    schema_in = schemas.FRnew, 
+    schema_out = schemas.FunctionalRequirement,
+    schema_edit = schemas.FRnew,
+    to_string = 'Functional Requirement'
+    )
+
+TREE = EFM_OBJECT_TYPES(
+    name = 'tree', 
+    table_name = 'efm_trees', 
+    schema_in = schemas.TreeNew, 
+    schema_out = schemas.TreeInfo,
+    schema_edit = schemas.TreeNew,
+    to_string = 'EFM Tree'
+    )
+
+INTERACTSWITH = EFM_OBJECT_TYPES(
+    name = 'iw', 
+    table_name = 'efm_interactswith', 
+    schema_in = schemas.IWnew, 
+    schema_out = schemas.InteractsWith,
+    schema_edit = schemas.IWnew,
+    to_string = 'Interacts With'
+    )
+    
+CONSTRAINT = EFM_OBJECT_TYPES(
+    name = 'c', 
+    table_name = 'efm_constraints', 
+    schema_in = schemas.ConstraintNew, 
+    schema_out = schemas.Constraint,
+    schema_edit = schemas.ConstraintNew,
+    to_string = 'Constraint'
+    )
+
+CONCEPT = EFM_OBJECT_TYPES(
+    name = 'concept', 
+    table_name = 'efm_concepts', 
+    schema_in = schemas.ConceptNew, 
+    schema_out = schemas.Concept,
+    schema_edit = schemas.ConceptEdit,
+    to_string = 'Design Concept'
+    )
 
 class EfmObjectTypes(str, Enum):
     DS = 'DS'
     FR = 'FR'
     TREE = 'tree'
+    CONSTRAINT = 'c'
     CONCEPT = 'concept'
 
 ### general GET, POST, DELETE and PUT
-def get_efm_object(db: Session, efm_object_type: EfmObjectTypes, object_id: int):
+def get_efm_object(db: PooledMySQLConnection, efm_object_type: EfmObjectTypes, object_id: int):
     '''
         fetches an EF-M object via its id from the database
         what kind of object is defined via type
         returns schemas.object or raises exception
     '''
 
-    object_data = EFM_OBJECT_TYPES[efm_object_type]
+    object_data = EFM_OBJECT_TYPES.get_by_name(efm_object_type)
 
-    try:
-        the_object_for_orm = db.query(object_data['model']).filter(object_data['model'].id == object_id).first()
-        if the_object_for_orm:
-            the_object_as_pydantic_model = object_data['schema'].from_orm(the_object_for_orm)
-            return the_object_as_pydantic_model
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="{} with ID {} does not exist.".format(object_data['str'], object_id)
-            )
-    except EfmElementNotFoundException:
+    # try:
+    sql_select_Query =\
+        f'SELECT * FROM {object_data.table_name} ' + \
+        f'WHERE id = {object_id}'
+    print(sql_select_Query)
+    cursor = db.cursor()
+    cursor.execute(sql_select_Query)
+    # get the record
+    db_response = cursor.fetchone()
+
+    if not db_response:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="{} with ID {} does not exist.".format(object_data['str'], object_id)
-        )
-    except TypeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="object_id needs to be an integer"
+            detail=f"{object_data.to_string} with ID {object_id} does not exist."
         )
 
-def get_efm_objects_all_of_tree(db: Session, efm_object_type: EfmObjectTypes, tree_id:int=0, limit: int = 100, offset:int = 0, ):
+    # convert to dictionary:
+    db_response = dict(zip(cursor.column_names, db_response))
+
+    response_object = object_data.schema_out(**db_response)
+    
+    return response_object
+
+    # except EfmElementNotFoundException:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_404_NOT_FOUND,
+    #         detail=f"{object_data.to_string} with ID {object_id} does not exist."
+    #     )
+    # except TypeError:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_400_BAD_REQUEST,
+    #         detail="object_id needs to be an integer"
+    #     )
+
+def get_efm_objects_all_of_tree(
+    db: PooledMySQLConnection,
+    efm_object_type: EfmObjectTypes,
+    tree_id:int=0,
+    limit: int = 100,
+    offset:int = 0,
+    ):
     '''
         fetches a list of EF-M objects of one type
         from offset to limit; if limit=0 returns all
@@ -98,75 +175,137 @@ def get_efm_objects_all_of_tree(db: Session, efm_object_type: EfmObjectTypes, tr
         returns List[schemas.object] or raises exception
     '''
 
-    object_data = EFM_OBJECT_TYPES[efm_object_type]
+    object_data = EFM_OBJECT_TYPES.get_by_name(efm_object_type)
 
     try:
+
+        sql_select_Query = "SELECT * " + \
+            f"FROM {object_data.table_name} "
+
         if tree_id:
-            the_object_for_ormList = db.query(object_data['model']).filter(object_data['model'].tree_id == tree_id)
-        else:
-            the_object_for_ormList = db.query(object_data['model'])
+            sql_select_Query = sql_select_Query + \
+                f"WHERE tree_id = {tree_id} "
 
         if limit:
-            the_object_for_ormList = the_object_for_ormList.offset(offset).limit(limit)
-        else:
-            the_object_for_ormList = the_object_for_ormList.all()
+            sql_select_Query = sql_select_Query + \
+                f"LIMIT {limit} " + \
+                f"OFFSET {offset} "
+        
+        sql_select_Query = sql_select_Query + ';'
+
+        cursor = db.cursor()
+        cursor.execute(sql_select_Query)
+
+        db_response = cursor.fetchall()
+
+        # converting database result to dict
+        dict_array = []
+        for row in db_response:
+            dict_array.append(dict(zip(cursor.column_names, row)))
+        db_response = dict_array
         
         # rewrite to schema:
-        the_object_as_pydantic_modelList = []
+        the_object_as_pydantic_model_list = []
 
-        for o in the_object_for_ormList:
-            the_object_as_pydantic_model = object_data['schema'].from_orm(o)
-            the_object_as_pydantic_modelList.append(the_object_as_pydantic_model)
+        for db_row in db_response:
+            the_object_as_pydantic_model = object_data.schema_out(db_row)
+            the_object_as_pydantic_model_list.append(the_object_as_pydantic_model)
 
-        return the_object_as_pydantic_modelList
-    
-    except EfmElementNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Could not load {}".format(object_data['str'])
-        )
+        return the_object_as_pydantic_model_list
 
     except TypeError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Type exception when trying to fetch {}".format(object_data['str'])
+            detail = f"Type exception when trying to fetch {object_data.to_string}"
         )
 
-def new_efm_object(db: Session, efm_object_type: EfmObjectTypes, object_data):
+def new_efm_object(
+    db: PooledMySQLConnection,
+    efm_object_type: EfmObjectTypes,
+    object_data,
+    commit: bool = True
+    ):
     '''
     stores object_data as a new object depending on efm_object_type in the database
     returns a schemas.efm_object_type
-    ## TODO:
-    validation of object data to object_type_info['schema']
     ##
     '''
 
-    object_type_info = EFM_OBJECT_TYPES[efm_object_type]
+    object_type_info = EFM_OBJECT_TYPES.get_by_name(efm_object_type)
 
-    # try: 
-    the_object_for_orm = object_type_info['model'](**object_data.dict())
-    db.add(the_object_for_orm)
-    db.commit()
+    # checking input data
+    try:
+        object_pydantic = object_type_info.schema_in(**object_data.dict())
+    except TypeError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail = f"Type exception when trying to write {object_type_info.to_string}"
+        )
+    # try:
+    # building sql statement:
+    sql_insert_query = f'INSERT INTO {object_type_info.table_name} '
+    sql_col_names = []
+    sql_values = []
+    for key, val in object_pydantic.dict().items():
+        sql_col_names.append(key)
+        # check for string, then we need "'"
+        if isinstance(val, str):
+            sql_values.append(f"'{val}'")
+        elif val == None:
+            sql_values.append('NULL')
+        else:
+            sql_values.append(str(val))
+    sql_insert_query = sql_insert_query + \
+        f"({', '.join(sql_col_names)}) " + \
+        f"VALUES ({', '.join(sql_values)})"
+    
+    print(sql_insert_query)
 
-    the_object_as_pydantic_model = object_type_info['schema'].from_orm(the_object_for_orm)
-    return the_object_as_pydantic_model
+    cursor = db.cursor()
+    cursor.execute(sql_insert_query)
+
+    new_object_id = cursor.lastrowid
+
+    if commit:
+        db.commit()
+        # fetching the object to return
+        object_to_return = get_efm_object(
+            db = db, 
+            efm_object_type = efm_object_type, 
+            object_id = new_object_id
+            )
+        return object_to_return
+    else:
+        return new_object_id
     # except:
     #     raise HTTPException(
     #         status_code=status.HTTP_400_BAD_REQUEST,
-    #         detail="Database did not accept new {}.".format(object_type_info['str'])
+    #         detail=f"Failed to enter new {object_type_info.to_string} into database."
     #     )
 
-def delete_efm_object(db: Session, efm_object_type: EfmObjectTypes, object_id: int):
+def delete_efm_object(
+    db: PooledMySQLConnection,
+    efm_object_type: EfmObjectTypes,
+    object_id: int,
+    commit: bool = True,
+    ):
     '''
     deletes an object by ID
     '''
 
-    object_type_info = EFM_OBJECT_TYPES[efm_object_type]
+    object_type_info = EFM_OBJECT_TYPES.get_by_name(efm_object_type)
 
     try:
-        db.query(object_type_info['model']).filter(object_type_info['model'].id == object_id).delete()
-        db.commit()
+        sql_delete_query = "DELETE FROM " + \
+            f"{object_type_info.table_name} WHERE id = {object_id}"
+
+        cursor = db.cursor()
+        cursor.execute(sql_delete_query)
+
+        if commit:
+            db.commit()
         return True
+
     except TypeError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -175,98 +314,90 @@ def delete_efm_object(db: Session, efm_object_type: EfmObjectTypes, object_id: i
     except:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Database could not delete {}.".format(object_type_info['str'])
+            detail=f"Database could not delete {object_type_info.to_string}"
         )
 
-def edit_efm_object(db: Session, efm_object_type: EfmObjectTypes, object_id: int, object_data):
+def edit_efm_object(
+    db: PooledMySQLConnection,
+    efm_object_type: EfmObjectTypes, 
+    object_id: int, 
+    object_data,
+    commit: bool = True,
+    ):
     '''
     edits an object by ID and object_data
-    ## TODO:
-    validation of object data to object_type_info['schema']
-    ##
     '''
     print(f"efit_efm_object: type: {efm_object_type}; id: {object_id}; data: {object_data}")
 
-    object_type_info = EFM_OBJECT_TYPES[efm_object_type]
+    object_type_info = EFM_OBJECT_TYPES.get_by_name(efm_object_type)
 
-    # try: 
-    the_object_for_orm = db.query(object_type_info['model']).filter(object_type_info['model'].id == object_id).first()
-    print(the_object_for_orm)
+    # checking input data
+    try:
+        object_pydantic = object_data.schema_in(object_data)
+    except TypeError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail = f"Type exception when trying to write {object_type_info.to_string}"
+        )
 
-    # writing all the info we want to write:
-    for key, value in object_data.dict().items():
-        print(key, value)
-        # the_object_for_orm.__dict__[key] = value
-        # print(the_object_for_orm.__dict__[key])
-        setattr(the_object_for_orm, key, value)
+    try:
+        sql_update_query = f"UPDATE {object_type_info.table_name} SET "
 
-    print(the_object_for_orm)
+        for key, val in object_pydantic.dict().items():
+            sql_update_string = sql_update_string + \
+                f"{key} = {value} "
 
-    # # write values
-    # theDPorm.name = DPdata.name
-    # theDPorm.value = DPdata.value
-    # theDPorm.unit = DPdata.unit
-    # theDPorm.dsID = DPdata.dsID
-    # theDPorm.tree_id = DPdata.tree_id
+        sql_update_string = sql_update_string + \
+            f"WHERE id = {object_id}"
 
-    # and write back to DB
-    db.commit()
+        cursor = db.cursor()
+        cursor.execute(sql_update_query)
 
-    print(the_object_for_orm)
+        if commit:
+            db.commit()
+            # fetching the object to return
+            object_to_return = get_efm_object(
+                db = db, 
+                efm_object_type = efm_object_type, 
+                object_id = object_id
+                )
+            return object_to_return
 
-    # convert to pydantic
-    the_object_as_pydantic_model = object_type_info['schema'].from_orm(the_object_for_orm)
-    return the_object_as_pydantic_model
-    # except:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_400_BAD_REQUEST,
-    #         detail="Database could not edit {} with ID {}".format(object_type_info['str'], object_id)
-    #     )
+        else:
+            return object_id
+
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Could not edit database entry for {} with ID {}".format(object_type_info.to_string, object_id)
+        )
+
 
 ## Specialiced DB Functions
-def tree_set_top_lvl_ds(db: Session, tree_id: int, dsID: int):
+def tree_set_top_lvl_ds(db: PooledMySQLConnection, tree_id: int, ds_id: int):
     ''' 
     sets the top_lvl_ds of an existing tree
     needed in initial creation of a tree 
     '''
+    object_type_info = EFM_OBJECT_TYPES.get_by_name('tree')
     try:
-        the_tree = db.query(models.Tree).options(lazyload('top_level_ds')).filter(models.Tree.id == tree_id).first()
-        the_tree.top_level_ds_id = dsID
+        sql_update_string = f"UPDATE {object_type_info.table_name} " + \
+            f"SET top_level_ds_id = {ds_id} " + \
+            f"WHERE id = {tree_id}"
+        
+        cursor = db.cursor()
+        cursor.execute(sql_update_string)
 
-        db.commit()
-        pydantic_tree = schemas.Tree.from_orm(the_tree)
-        return pydantic_tree
+        return tree_id
+
     except TypeError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Type error when setting top level DS id for tree id:{}".format(tree_id)
         )
-
-def tree_set_subproject(db: Session, tree_id: int, new_subproject_id: int) -> schemas.Tree:
-    ''' 
-    sets the subproject id of an existing tree
-    needed in initial creation of a tree 
-    '''
-    try:
-        the_tree = db.query(models.Tree).filter(models.Tree.id == tree_id).first()
-        the_tree.subproject_id = new_subproject_id
-
-        db.commit()
-        pydantic_tree = schemas.Tree.from_orm(the_tree)
-        return pydantic_tree
-    except TypeError:
+    except:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Type error when setting top_lvl_dsid for tree id:{}".format(tree_id)
+            detail=f"Failed to set top lvl DS id for tree {tree_id}"
         )
 
-
-def get_tree_info_list(db: Session) -> List[schemas.TreeInfo]:
-    # fetches all tree items and converts to treeInfo list
-    
-    ormTreeList = db.query(models.Tree)
-    returnList = []
-    for t in ormTreeList:
-        treeInfo = schemas.TreeInfo(t)
-        returnList.append(treeInfo)
-    return returnList

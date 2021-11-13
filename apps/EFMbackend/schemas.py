@@ -1,4 +1,3 @@
-from datetime import datetime
 from enum import Enum
 
 from pydantic import BaseModel, HttpUrl
@@ -6,11 +5,6 @@ from typing import List, Optional, ForwardRef
 
 ## importing from EF-M submodules
 from apps.EFMbackend.parameters.schemas import DesignParameter
-
-FunctionalRequirementTemp = ForwardRef('FunctionalRequirement')
-DesignSolutionTemp = ForwardRef('DesignSolution')
-ConceptTemp = ForwardRef('Concept')
-ConstraintTemp = ForwardRef('Constraint')
 
 class TreeNew(BaseModel):
     '''
@@ -22,32 +16,10 @@ class TreeNew(BaseModel):
 
 class TreeInfo(TreeNew):
     '''
-    tree class only containing header info, 
-    no actual tree
+    tree class only containing header info
     '''
     id: int
     top_level_ds_id: Optional[int]
-    subproject_id: Optional[int]
-
-class Tree(TreeInfo):
-    """
-    tree class including all fields
-    """
-    concepts: List[ConceptTemp] = []
-    #fr: List[FunctionalRequirementTemp] = []
-    #ds: List[DesignSolutionTemp] = []   
-    ### circular link to DS not working because of bug see https://github.com/samuelcolvin/pydantic/issues/2279
-    top_level_ds: Optional[DesignSolutionTemp] = None
-
-    class Config:
-        orm_mode = True
-
-# ## INTERACTS WITH
-# class iwType(str, Enum):
-#     SP = 'spatial'
-#     EN = 'energy'
-#     MA = 'material flow'
-#     IN = 'information'
 
 class IWnew(BaseModel):
     tree_id: Optional[int]
@@ -58,9 +30,6 @@ class IWnew(BaseModel):
 
 class InteractsWith(IWnew):
     id: int
-    
-    class Config:
-        orm_mode = True
     
 ## CONCEPTS
 class ConceptEdit(BaseModel):
@@ -76,27 +45,15 @@ class ConceptNew(ConceptEdit):
     '''
     dna: str
 
-class Concept(ConceptEdit):
+class Concept(ConceptNew):
     """
-    one instance of a tree of a tree
+    one instance of a concept of a tree
     """
     id: Optional[int]
-    dna: str
-    #tree: Tree
-    
-    class Config:
-        orm_mode = True
     
     def dnaList(self):
         return self.dna.split(',')
 
-class ConceptTree(ConceptEdit):
-    '''
-    contains a tree structure in topLvlDS like a project tree
-    however it is pruned to only the DS included in the concept,
-    i.e. FR:DS 1:1
-    '''
-    top_level_ds: Optional[DesignSolutionTemp]
 
 ## DESIGNSOLUTIONS
 class DSnew(BaseModel):
@@ -114,44 +71,6 @@ class DesignSolution(DSnew):
     DS element for EF-M modelling; contains all basic information
     """
     id: Optional[int] = None
-    #isb: Optional[FunctionalRequirementTemp]
-    requires_functions: List[FunctionalRequirementTemp] = []
-    #tree: Tree
-
-    interacts_with: List[InteractsWith] = []
-    design_parameters: List[DesignParameter] = []
-    constraints: List[ConstraintTemp] = []
-        
-    class Config:
-        orm_mode = True
-
-class DSinfo(DSnew):
-    '''
-    a DS class without the list of requires_function FR, but FRids instead
-    as such it doesn't carry the entire tree
-    same for iw and DP
-    '''
-    id: int
-    requires_functions_id: Optional[List[int]] = []
-    interacts_with_id: Optional[List[int]] = []
-    design_parameter_id: Optional[List[int]] = []
-    constraints_id: Optional[List[int]] = []
-
-    is_top_level_ds: Optional[bool] = False
-
-    def update(self, originalDS: DesignSolution):
-
-        for fr in originalDS.requires_functions:
-            self.requires_functions_id.append(fr.id)
-
-        for iw in originalDS.interacts_with:
-            self.interacts_with_id.append(iw.id)
-
-        for dp in originalDS.design_parameters:
-            self.design_parameter_id.append(dp.id)
-
-        for c in originalDS.constraints:
-            self.constraints_id.append(c.id)
             
 ## FUNCTIONAL REQUIREMENTS
 class FRnew(BaseModel):
@@ -168,26 +87,6 @@ class FunctionalRequirement(FRnew):
     FR element for EF-M modelling; contains all basic information
     """
     id: Optional[int] = None
-    #tree: Tree
-    #rf: DesignSolution
-    is_solved_by: List[DesignSolution] = []
-        
-    class Config:
-        orm_mode = True
-
-class FRinfo(FRnew):
-    '''
-    a DS class without the list of requires_function FR, but FRids instead
-    as such it doesn't carry the entire tree
-    same for iw and DP
-    '''
-    id: int
-    is_solved_by_id: Optional[List[int]] = []
-
-    def update(self, originalFR: FunctionalRequirement):
-
-        for ds in originalFR.is_solved_by:
-            self.is_solved_by_id.append(ds.id)
 
 class ConstraintNew(BaseModel): 
     name: str
@@ -200,29 +99,20 @@ class Constraint(ConstraintNew):
         symbolic constraint element for use in UI
     '''
     id: int
-    
-    class Config:
-        orm_mode = True
-
 
 ## TREE DATA
 class TreeData(TreeInfo):
     ''' 
     data dump of an entire tree
     '''
-    ds: List[DSinfo] = []
-    fr: List[FRinfo] = []
+    ds: List[DesignSolution] = []
+    fr: List[FunctionalRequirement] = []
     iw: List[InteractsWith] = []
     dp: List[DesignParameter] = []
     c: List[Constraint] = []
-    
-    class Config:
-        orm_mode = True
 
-# to be able to use "FunctionalRequirement" (etc) in DS, Tree before defining it, we need to update the forward references:
-DesignSolution.update_forward_refs()
-Tree.update_forward_refs()
-ConceptTree.update_forward_refs()
+
+
 
 
 

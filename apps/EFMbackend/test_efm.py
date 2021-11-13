@@ -17,6 +17,58 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
 
+# test data: 
+TEST_TREE = {
+    'name': 'efm test tree',
+    'description': 'A EFM test tree for pytest',
+    'top_level_ds_id': None,
+    'subproject_id': None,
+    'id': None,
+}
+
+FR_1 = {
+    'name': 'Function 1',
+    'description': 'a test function the product has to perform',
+    id: None,
+    'tree_id': None,
+    'rf_id': None,
+}
+
+FR_2 = {
+    'name': 'Function 2',
+    'description': 'another test function the product has to perform',
+    id: None,
+    'tree_id': None,
+    'rf_id': None,
+}
+
+DS_1A = {
+    'name': 'Design Solution A for FR 1',
+    'description': 'this is just a test DS, alternative A',
+    'id': None,
+    'tree_id': None,
+    'is_top_level_ds': False,
+    'isb_id': None,
+}
+
+DS_1B = {
+    'name': 'Design Solution B for FR 1',
+    'description': 'this is just a test DS, alternative A',
+    'id': None,
+    'tree_id': None,
+    'is_top_level_ds': False,
+    'isb_id': None,
+}
+
+IW_1A_1B = {
+    'description': 'interaction between DS 1A and 1B',
+    'id': None,
+    'tree_id': None,
+    'from_ds_id': None,
+    'to_ds_id': None,
+    'iw_type': 'energy',
+}
+
 # override testDB
 def override_get_db():
     try:
@@ -41,47 +93,38 @@ allDSID = []
 ### BASIC TESTS ##################################################
 # create tree
 def test_create_tree():
-    global testTreeID
+    global TEST_TREE    
     
     # test tree
     response = client.post(
         urlPrefix + "/trees/",
-        json={"name": "foobar",  "description": "The Foo Barters"}
+        json={  
+            "name": TEST_TREE['name'], 
+            "description": TEST_TREE['description']
+            }
     )
     assert response.status_code == 200
 
     testTreeData = response.json()
-    testTreeID = testTreeData['id']
+    TEST_TREE['id'] = testTreeData['id']
 
-    testTopLevelDSid = testTreeData['topLvlDSid']
+    TEST_TREE['top_level_ds_id'] = testTreeData['top_level_ds_id']
+    TEST_TREE['subproject_id'] = testTreeData['subproject_id']
 
     assert testTreeData == {
-        "name": "foobar",
-        "description": "The Foo Barters",
-        "id": testTreeID,
-        "concepts": [],
-        # "fr": [],
-        # "ds": [],
-        "topLvlDSid": testTopLevelDSid,
-        "topLvlDS":  {
-            'id': testTopLevelDSid,
-            'name': 'foobar',
-            'description': 'Top-level DS',
-            'is_top_level_DS': True,
-            'treeID': testTreeID,
-            'isbID': None,
-            'requires_functions': [],
-            "interacts_with": [],
-            "design_parameters": []
-        }
+        "name": TEST_TREE['name'],
+        "description":TEST_TREE['description'],
+        "id": TEST_TREE['id'],
+        "top_level_ds_id": TEST_TREE['top_level_ds_id'],
+        'subproject_id': TEST_TREE['subproject_id']   
     }
 
     # test Top level DS:
-    topLvlDS = client.get(urlPrefix + '/ds/' + str(testTopLevelDSid))
+    topLvlDS = client.get(urlPrefix + '/ds/' + str(TEST_TREE['top_level_ds_id']))
 
     assert topLvlDS.status_code == 200
 
-# access non-existent tree
+# access non-existent tree & other objects
 def test_acces_nonexistent_objects():
 
     # tree via string
@@ -117,9 +160,11 @@ def test_acces_nonexistent_objects():
 
 # create FR, DS
 def test_create_basic_objects():
-    global testTreeID
-    global allFRID
-    global allDSID
+    global TEST_TREE    
+    global DS_1A
+    global DS_1B
+    global FR_1
+    global FR2
     
     # create FR in testTree, as child of topLvlDS
     # first we need to get the topLvlDS ID:
