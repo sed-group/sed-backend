@@ -5,20 +5,27 @@ from env import Environment
 
 from contextlib import contextmanager
 
+
 connection_pool = None
+
+user = 'rw'
+password = Environment.get_variable('MYSQL_PWD_RW')
+# host = 'core-db'
+host = 'localhost'
+database = 'seddb'
+port = 3306
 
 try:
     connection_pool = mysql.connector.pooling.MySQLConnectionPool(
-        user='rw',
-        password=Environment.get_variable('MYSQL_PWD_RW'),
-        # host='core-db',
-        host='localhost',
-        database='seddb',
-        port=3306,
+        user=user,
+        password=password,
+        host=host,
+        database=database,
+        port=port,
         autocommit=False,
         get_warnings=True,                      # Change for production environments (True in dev)
         raise_on_warnings=True,                 # Change for production environments (True in dev)
-        pool_size=1,                            # Change for production environments (as few as possible in dev)
+        pool_size=4,                            # Change for production environments (as few as possible in dev)
         connection_timeout=10                   # Might want to increase this for production
     )
 except mysql.connector.Error as err:
@@ -31,7 +38,7 @@ except mysql.connector.Error as err:
     else:
         logger.debug('Unknown database error')
 
-    raise ValueError('Malfunctioning database configuration')
+    raise ValueError(f'Malfunctioning database configuration. {user}@{database} at Host: {host}:{port}')
 
 
 @contextmanager

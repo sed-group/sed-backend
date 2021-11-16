@@ -9,7 +9,7 @@ from apps.core.users.models import User
 router = APIRouter()
 
 
-@router.post("/download",
+@router.get("/{file_id}/download",
              summary="Download file",
              response_class=FileResponse)
 async def get_file(file_id: int, current_user: User = Depends(get_current_active_user)):
