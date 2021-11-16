@@ -190,27 +190,29 @@ def get_tree_data(tree_id: int, depth:int=0):
         # fetch DS
         all_ds = storage.get_efm_objects_all_of_tree(db, 'DS', tree_id, depth)
         # all_ds = db.query(models.DesignSolution).filter(models.DesignSolution.tree_id == tree_id).all()
-        for ds in all_ds:
-            pydantic_ds_tree = schemas.DesignSolution.from_orm(ds)
-            the_ds_info = schemas.DesignSolution(**pydantic_ds_tree.dict())
-            the_ds_info.update(pydantic_ds_tree)
-            tree_data.ds.append(the_ds_info)
+        # for ds in all_ds:
+        #     pydantic_ds_tree = schemas.DesignSolution.from_orm(ds)
+        #     the_ds_info = schemas.DesignSolution(**pydantic_ds_tree.dict())
+        #     the_ds_info.update(pydantic_ds_tree)
+        #     tree_data.ds.append(the_ds_info)
+        tree_data.ds = all_ds
 
         # fetch FR
         all_fr = storage.get_efm_objects_all_of_tree(db, 'FR', tree_id, depth)
-        for fr in all_fr:
-            pydantic_fr_tree = schemas.FunctionalRequirement.from_orm(fr)
-            the_fr_info = schemas.FunctionalRequirement(**pydantic_fr_tree.dict())
-            the_fr_info.update(pydantic_fr_tree)
-            tree_data.fr.append(the_fr_info)
+        # for fr in all_fr:
+        #     pydantic_fr_tree = schemas.FunctionalRequirement.from_orm(fr)
+        #     the_fr_info = schemas.FunctionalRequirement(**pydantic_fr_tree.dict())
+        #     the_fr_info.update(pydantic_fr_tree)
+        #     tree_data.fr.append(the_fr_info)
+        tree_data.fr = all_fr
 
         # fetch iw
         all_iw = storage.get_efm_objects_all_of_tree(db, 'iw', tree_id, depth)
         tree_data.iw = all_iw
 
         # fetch DP
-        all_dp = get_DP_all(db, tree_id, depth)
-        tree_data.dp = all_dp
+        # all_dp = get_DP_all(db, tree_id, depth)
+        # tree_data.dp = all_dp
 
         # fetch constraints
         all_c = storage.get_efm_objects_all_of_tree(db, 'c', tree_id, depth)
@@ -234,45 +236,14 @@ def edit_concept(cID: int, cData: schemas.ConceptEdit):
     with get_connection() as db:
         return storage.edit_efm_object(db, 'concept', cID, cData)
 
-# def get_concept_tree(cID: int):
-#     '''
-#     takes the tree of which the concept has been instantiated
-#     and prunes all DS not in the dna
-#     requires algorithms.prune_child_ds() (cause recursive)
-#     '''
-#     with get_connection() as db:
-#         the_concept = storage.get_efm_object(db, 'concept', cID)
-#         the_tree = storage.get_efm_object(db, 'tree', the_concept.tree_id)
-
-#         # pruning:
-#         ds_pruned = algorithms.prune_child_ds(the_tree.topLvlDS, the_concept.dnaList())
-
-#         concept_with_tree = schemas.ConceptTree(**the_concept.dict())
-
-#         concept_with_tree.topLvlDS = ds_pruned
-
-#         return concept_with_tree
-
 ### FR
-def get_FR_tree(fr_id: int):
-    ''' 
-        returns a FR object with all details
-        and the subsequent tree elements
-    '''
-    with get_connection() as db:
-        return storage.get_efm_object(db, 'FR', fr_id)
-
 def get_FR_info(fr_id: int):
     ''' 
         returns a FR object with all details
         but instead of relationships only ids
     ''' 
-    with get_connection() as db:
-        the_fr_treeform = storage.get_efm_object(db, 'FR', fr_id)
-        the_fr_infoform = schemas.FunctionalRequirement(**the_fr_treeform.dict())
-        the_fr_infoform.update(the_fr_treeform)
-
-        return the_fr_infoform
+    with get_connection() as db:    
+        return storage.get_efm_object(db, 'FR', fr_id)
 
 def create_FR(fr_new: schemas.FRnew):
     '''
@@ -317,6 +288,12 @@ def new_parent_FR(fr_id: int, ds_id: int):
         fr_data = storage.get_efm_object(db, 'FR', fr_id)
         # first we check if the new parent exists
         new_parent_DS = storage.get_efm_object(db, 'DS', ds_id)
+        
+        # check for same tree
+        same_tree(fr_data, new_parent_DS)
+        # check whether new parent is eligible
+        new_parent_loop_prevention(db, fr_data, new_parent_DS)
+
         # convert to FRnew object to avoid writing child relations
         fr_data = schemas.FRnew(**fr_data.dict())
         # set new parent ID
@@ -327,25 +304,13 @@ def new_parent_FR(fr_id: int, ds_id: int):
 
 
 ### DS
-def get_DS_with_tree(ds_id: int):
-    ''' 
-        returns a DS object with all details
-    '''
-    with get_connection() as db:
-        return storage.get_efm_object(db, 'DS', ds_id)
-
 def get_DS_info(ds_id: int):
     ''' 
         returns a DS object with all details
         but instead of relationships only ids
-    '''
+    '''    
     with get_connection() as db:
-        the_ds_treeform = storage.get_efm_object(db, 'DS', ds_id)
-
-        the_ds_infoform = schemas.DesignSolution(**the_ds_treeform.dict())
-        the_ds_infoform.update(the_ds_treeform)
-
-        return the_ds_infoform
+        return storage.get_efm_object(db, 'DS', ds_id)
 
 def create_DS(new_ds: schemas.DSnew):
     '''
@@ -391,8 +356,18 @@ def new_parent_DS(ds_id: int, fr_id: int):
         
         # first we check if the new parent exists
         new_parent_FR = storage.get_efm_object(db, 'FR', fr_id)
+        # check for same tree
+        same_tree(ds_data, new_parent_FR)
+        # check whether new parent is eligible
+        new_parent_loop_prevention(db, ds_data, new_parent_FR)
+
+        # i.e. new_parent is not among children
+        new_parent_loop_prevention(db, ds_data, new_parent_FR)
+
         # convert to DSnew object to avoid writing child relations
         ds_data = schemas.DSnew(**ds_data.dict())
+
+
         # set new parent ID
         ds_data.isb_id = new_parent_FR.id
         
@@ -414,15 +389,14 @@ def create_IW( iw_new: schemas.IWnew):
     '''
 
     with get_connection() as db:
+        # getting parent elements for checks
         to_ds = storage.get_efm_object(db, 'DS', iw_new.to_ds_id)
         from_ds = storage.get_efm_object(db, 'DS', iw_new.from_ds_id)
 
         # checking if we're in the same tree:
-        if not to_ds.tree_id == from_ds.tree_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Both DS for an iw need to be in the same tree"
-            )
+        same_tree(to_ds, from_ds)
+        # checking if iw are not related
+        iw_not_related(db, from_ds, to_ds)
 
         # setting tree_id since its optional 
         iw_new.tree_id = to_ds.tree_id
@@ -451,12 +425,11 @@ def edit_IW(iw_id: int, iw_data: schemas.IWnew):
     with get_connection() as db:
         to_ds = storage.get_efm_object(db, 'DS', iw_data.to_ds_id)
         from_ds = storage.get_efm_object(db, 'DS', iw_data.from_ds_id)
-
-        if not to_ds.tree_id == from_ds.tree_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Both DS for an iw need to be in the same tree"
-            )
+        
+        # checking if we're in the same tree:
+        same_tree(to_ds, from_ds)
+        # checking if parent DS are not related
+        iw_not_related(db, from_ds, to_ds)
 
         iw_data.tree_id = to_ds.tree_id
 
@@ -510,6 +483,7 @@ def edit_constraint(c_id: int, c_data: schemas.ConstraintNew):
             object_id = c_id,
             object_data = c_data
             )
+
 def new_parent_constraint(c_id: int, new_parent_id: int):
     ''' 
         sets the DS with new_parent_id as icb_id for the constraint with c_id
@@ -529,7 +503,7 @@ def new_parent_constraint(c_id: int, new_parent_id: int):
         )
         # check same tree
         if same_tree(old_c, new_parent_ds):
-            new_c = schemas.ConstraintNew(old_c)
+            new_c = schemas.ConstraintNew(**old_c.dict())
             new_c.icb_id = new_parent_ds.id
 
             # commit to DB
@@ -591,6 +565,10 @@ async def run_instantiation(tree_id: int):
         return all_new_concepts
 
 def same_tree(obj_a, obj_b):
+    '''
+        checks wheter obj_a and obj_b have the same tree_id
+        returns true if yes, raises error otherwise
+    '''
     if (obj_a.tree_id == obj_b.tree_id):
         return True
     else:
@@ -598,3 +576,130 @@ def same_tree(obj_a, obj_b):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"{obj_a.name} and {obj_b.name} need to be in the same tree"
         )
+
+def all_parents(db, theObject, all_parents_list = []):
+    '''
+        object must be as from db
+        returns a list of all parent objects of object
+    '''
+    # first we need to find the parent id
+    # since we don't know the type of "object"
+    new_parents_list = all_parents_list
+    try:
+        # case DS
+        parent_id = theObject.isb_id
+        parent_type = 'FR'
+    except:
+        try:
+            #case FR
+            parent_id = theObject.rf_id
+            parent_type = 'DS'
+        except:
+            try:
+                # case iw
+                parent_id = theObject.from_ds_id
+                parent_type = 'DS'
+            except:
+                try:
+                    #case constraint
+                    parent_id = theObject.icb_id
+                    parent_type = 'DS'
+                except:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Could not identify parent of object {theObject.type()}"
+                    )
+
+    if parent_id:
+        new_parent = storage.get_efm_object(
+            db = db, 
+            efm_object_type = parent_type,
+            object_id = parent_id
+            )
+        new_parents_list.append(new_parent)
+
+        # recursive call
+        new_parents_list = all_parents(
+            db = db, 
+            theObject = new_parent,
+            all_parents_list= new_parents_list
+            )
+        return new_parents_list
+    else:
+        # case we reached the top of the tree
+        return new_parents_list
+
+def all_children(db, the_object, all_children_list = []):
+    ''' 
+        function only for DS and FR
+        returns list of all DS and FR below in the tree
+    '''
+    
+    new_children = storage.get_efm_children(
+        db = db,
+        efm_object_type = the_object.efmType(),
+        object_id = the_object.id
+        )
+    new_children_list = all_children_list
+    new_children_list.extend(new_children)
+
+    # recursive call
+    for c in new_children:
+        new_children_list.extend(all_children(
+            db = db, 
+            the_object = c, 
+            all_children_list = new_children_list
+            )
+        )
+    
+    return new_children_list
+
+def iw_not_related(db: PooledMySQLConnection, from_ds: schemas.DesignSolution, to_ds: schemas.DesignSolution):
+    '''
+        verifies that from_ds and to_ds are not in exclusively alternative concepts
+        check is perfomred via having a different parent-DS with the same isb (same FR parent)
+        returns true if not related,
+        otherwise raises error
+    '''
+    from_parents = all_parents(db = db, theObject = from_ds)
+
+    to_parents = all_parents(db = db, theObject = to_ds)
+
+    # first search for FR where the two branches converge
+    for fr_from_parent in from_parents:
+        # check if it's an FR
+        if fr_from_parent.efm_type() == 'FR':
+            # check if it is shared among to and from parents
+            if fr_from_parent in to_parents:
+                # now, if to_parents and from_parents DO NOT share the same child of fr_parent, they are definite alternatives:
+
+                # first we need to find the child DS of said DS in the from_parents
+                fr_from_parent_child = next((ds for ds in from_parents if ds.isb_id == fr_from_parent.id), None)
+
+                # now we find the child DS of said shared FR in the to_parents list
+                fr_to_parent_child = next((ds for ds in to_parents if ds.isb_id == fr_from_parent.id), None)
+
+                if fr_to_parent_child != fr_from_parent_child:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"{from_ds.name} is an exclusive alternative of {to_ds.name}, therefore they cannot share an iw! The respective (parent-) DS {fr_to_parent_child.name} and {fr_from_parent_child.name} are direct alternatives."
+                    )
+    
+    return True
+
+def new_parent_loop_prevention(db: PooledMySQLConnection, child, parent):
+    '''
+        verifies whether the parent is not among the children of child
+        prevents loops when assigning new parents to DS or FR
+        returns true or raises error
+    '''
+
+    grand_children = all_children(db = db, the_object = child)
+
+    if parent in grand_children:
+         raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{parent.name} cannot be new parent of {child.name}, since it would create a loop! ({paret.name} is already a child of {child.name}.)"
+        )
+    else:
+        return True

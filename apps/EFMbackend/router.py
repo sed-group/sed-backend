@@ -123,14 +123,6 @@ async def edit_concept(cID: int, cData: schemas.ConceptEdit):
 #     return implementation.get_concept_tree(cID = cID)
 
 ## DS
-@router.get("/{native_project_id}/ds/{ds_id}/tree",
-            response_model = schemas.DesignSolution,
-            summary="returns a single DS object with all its children and grandchildren",
-            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), EFM_APP_SID))]
-            )
-async def get_designSolutionTree(ds_id: int):
-    return implementation.get_DS_with_tree( ds_id = ds_id)
-
 @router.get("/{native_project_id}/ds/{ds_id}",
             response_model = schemas.DesignSolution,
             summary="returns a single DS object",
@@ -180,14 +172,6 @@ async def new_parent_designSolution(ds_id: int, new_parent_id: int):
             )
 async def get_functionalRequirement(fr_id: int):
     return implementation.get_FR_info( fr_id = fr_id)
-    
-@router.get("/{native_project_id}/fr/{fr_id}/tree",
-            response_model = schemas.FunctionalRequirement,
-            summary="returns a single FR object with all subsequent tree elements",
-            dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), EFM_APP_SID))]
-            )
-async def get_functionalRequirementTree(fr_id: int):
-    return implementation.get_FR_tree( fr_id = fr_id)
 
 @router.post("/{native_project_id}/fr/new",
             response_model = schemas.FunctionalRequirement,
@@ -261,7 +245,7 @@ async def edit_interactsWith(iw_id: int, iw_data: schemas.IWnew):
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), EFM_APP_SID))]
             )
 async def get_constraint(c_id: int):
-    return implementation.get_c( c_id = c_id)
+    return implementation.get_constraint( c_id = c_id)
 
 @router.post("/{native_project_id}/c/new",
             response_model = schemas.Constraint,
@@ -284,7 +268,7 @@ async def delete_constraint(c_id: int):
             summary="edits an existing constraint object via iw_data (json)",
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
-async def edit_interactsWith(c_id: int, c_data: schemas.ConstraintNew):
+async def edit_constraint(c_id: int, c_data: schemas.ConstraintNew):
     return implementation.edit_constraint(c_id = c_id, c_data = c_data)
 
 @router.put("/{native_project_id}/c/{c_id}/icb/",

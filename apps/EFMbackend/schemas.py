@@ -14,6 +14,9 @@ class TreeNew(BaseModel):
     name: str
     description: Optional[str]
 
+    def efm_type(self):
+        return "tree"
+
 class TreeInfo(TreeNew):
     '''
     tree class only containing header info
@@ -28,6 +31,9 @@ class IWnew(BaseModel):
     iw_type: Optional[str] = 'spatial'
     description: Optional[str]
 
+    def efm_type(self):
+        return "iw"
+
 class InteractsWith(IWnew):
     id: int
     
@@ -39,11 +45,17 @@ class ConceptEdit(BaseModel):
     name: str
     tree_id: Optional[int]
 
+    def efm_type(self):
+        return "concept"
+
 class ConceptNew(ConceptEdit):
     ''' 
     used in create all instances to create new concept (with new DNA)
     '''
     dna: str
+
+    def efm_type(self):
+        return "concept"
 
 class Concept(ConceptNew):
     """
@@ -66,10 +78,14 @@ class DSnew(BaseModel):
     tree_id: Optional[int] = None
     is_top_level_ds: Optional[bool] = False
 
+    def efm_type(self):
+        return "DS"
+
 class DesignSolution(DSnew):
     """
     DS element for EF-M modelling; contains all basic information
     """
+    # requires_functions_id: Optional[List[int]]  = []
     id: Optional[int] = None
             
 ## FUNCTIONAL REQUIREMENTS
@@ -82,10 +98,14 @@ class FRnew(BaseModel):
     tree_id: Optional[int]
     rf_id: int
 
+    def efm_type(self):
+        return "FR"
+
 class FunctionalRequirement(FRnew):
     """
     FR element for EF-M modelling; contains all basic information
     """
+    # is_solved_by_id: Optional[List[int]] = []
     id: Optional[int] = None
 
 class ConstraintNew(BaseModel): 
@@ -93,6 +113,9 @@ class ConstraintNew(BaseModel):
     description: Optional[str] = ""
     tree_id: Optional[int]
     icb_id: int
+
+    def efm_type(self):
+        return "C"
 
 class Constraint(ConstraintNew):
     '''
