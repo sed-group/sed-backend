@@ -109,7 +109,7 @@ INTERACTSWITH = EFM_OBJECT_INFO(
     table_name = 'efm_interactswith', 
     schema_in = schemas.IWnew, 
     schema_out = schemas.InteractsWith,
-    schema_edit = schemas.IWnew,
+    schema_edit = schemas.IWedit,
     to_string = 'Interacts With'
     )
     

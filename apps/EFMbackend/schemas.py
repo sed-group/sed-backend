@@ -24,15 +24,18 @@ class TreeInfo(TreeNew):
     id: int
     top_level_ds_id: Optional[int]
 
-class IWedit(BaseModel):
+class IWbase(BaseModel):
     tree_id: Optional[int]
     iw_type: Optional[str] = 'spatial'
     description: Optional[str]
 
     def efm_type(self):
         return "iw"
+class IWedit(IWbase):
+    from_ds_id: Optional[int]
+    to_ds_id: Optional[int]
 
-class IWnew(IWedit):
+class IWnew(IWbase):
     from_ds_id: int
     to_ds_id: int
 

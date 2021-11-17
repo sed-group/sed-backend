@@ -262,7 +262,7 @@ async def delete_interactsWith(iw_id: int):
             summary="edits an existing iw object via iw_data (json)",
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
-async def edit_interactsWith(iw_id: int, iw_data: schemas.IWnew):
+async def edit_interactsWith(iw_id: int, iw_data: schemas.IWedit):
     with get_connection() as db:
         return implementation.edit_IW(db=db, iw_id= iw_id, iw_data=iw_data)
 

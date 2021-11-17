@@ -516,13 +516,27 @@ def create_IW(db: PooledMySQLConnection, iw_new: schemas.IWnew):
 def delete_IW(db: PooledMySQLConnection, iw_id: int):
     return storage.delete_efm_object(db, 'iw', iw_id)
 
-def edit_IW(db: PooledMySQLConnection, iw_id: int, iw_data: schemas.IWnew):
+def edit_IW(db: PooledMySQLConnection, iw_id: int, iw_data: schemas.IWedit):
     '''
         first verifies whether the two DS are in the same tree, 
         then commits to DB
     '''
+    # check if iw actually exists
+    old_iw = storage.get_efm_object(
+        db = db,
+        efm_object_type = 'iw',
+        object_id = iw_id
+        )
+
+    # check if we want to reset connections
+    if not iw_data.to_ds_id:
+        iw_data.to_ds_id = old_iw.to_ds_id
+    if not iw_data.from_ds_id:
+        iw_data.from_ds_id = old_iw.from_ds_id
+
     to_ds = storage.get_efm_object(db, 'DS', iw_data.to_ds_id)
     from_ds = storage.get_efm_object(db, 'DS', iw_data.from_ds_id)
+    
     
     # checking if we're in the same tree:
     same_tree(to_ds, from_ds)
