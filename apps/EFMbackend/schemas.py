@@ -24,15 +24,17 @@ class TreeInfo(TreeNew):
     id: int
     top_level_ds_id: Optional[int]
 
-class IWnew(BaseModel):
+class IWedit(BaseModel):
     tree_id: Optional[int]
-    from_ds_id: int
-    to_ds_id: int
     iw_type: Optional[str] = 'spatial'
     description: Optional[str]
 
     def efm_type(self):
         return "iw"
+
+class IWnew(IWedit):
+    from_ds_id: int
+    to_ds_id: int
 
 class InteractsWith(IWnew):
     id: int

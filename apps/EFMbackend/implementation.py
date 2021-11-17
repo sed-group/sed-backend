@@ -11,7 +11,6 @@ import apps.EFMbackend.storage as storage
 import apps.EFMbackend.algorithms as algorithms
 
 from apps.EFMbackend.exceptions import *
-from apps.EFMbackend.database import get_connection as efm_connection
 from apps.EFMbackend.utils import not_yet_implemented
 
 # imports from EF-M sub-modules
@@ -26,7 +25,7 @@ import apps.core.projects.models as proj_models
 EFM_APP_SID = 'MOD.EFM'
 
 #### TREES
-def get_tree_list_of_user(user_id: int, limit:int = 100, offset:int = 0) \
+def get_tree_list_of_user(db: PooledMySQLConnection, user_id: int, limit:int = 100, offset:int = 0) \
     -> List[schemas.TreeInfo]:
     '''
     list of all tree objects from DB
@@ -38,187 +37,293 @@ def get_tree_list_of_user(user_id: int, limit:int = 100, offset:int = 0) \
     :param offset: pagination offset
     :return: list of schemas.TreeInfo
     '''
-    with get_connection() as db:
-        subproject_list = proj_storage.db_get_user_subprojects_with_application_sid(db, user_id, EFM_APP_SID)
+    subproject_list = proj_storage.db_get_user_subprojects_with_application_sid(db, user_id, EFM_APP_SID)
 
-        tree_list = []
-        counter = offset    # For pagination
-        # print(subproject_list)
-        while len(subproject_list) > counter and counter < (offset+limit):
-            # print(f'fetching subproject tree with id{subproject_list[counter].native_project_id}')
-            try: 
-                tree = storage.get_efm_object(db, 'tree', subproject_list[counter].native_project_id)
-                tree_list.append(tree)
-            except:
-                print(f'could not find subproject tree with id {subproject_list[counter].native_project_id}')
-            counter = counter + 1
+    tree_list = []
+    counter = offset    # For pagination
+    # print(subproject_list)
+    while len(subproject_list) > counter and counter < (offset+limit):
+        # print(f'fetching subproject tree with id{subproject_list[counter].native_project_id}')
+        try: 
+            tree = storage.get_efm_object(db, 'tree', subproject_list[counter].native_project_id)
+            tree_list.append(tree)
+        except:
+            print(f'could not find subproject tree with id {subproject_list[counter].native_project_id}')
+        counter = counter + 1
 
-        # tree_list = storage.get_efm_objects_all_of_tree(db, 'tree', 0, limit, offset)
-        tree_info_list = []
+    # tree_list = storage.get_efm_objects_all_of_tree(db, 'tree', 0, limit, offset)
+    tree_info_list = []
 
-        # conversion to schemas.TreeInfo
-        for t in tree_list:
-            t_info = schemas.TreeInfo(**t.dict())
-            tree_info_list.append(t_info)
+    # conversion to schemas.TreeInfo
+    for t in tree_list:
+        t_info = schemas.TreeInfo(**t.dict())
+        tree_info_list.append(t_info)
 
-        return tree_info_list
+    return tree_info_list
 
-def create_tree(project_id:int, new_tree: schemas.TreeNew, user_id: int):
+def create_tree(db: PooledMySQLConnection, project_id:int, new_tree: schemas.TreeNew, user_id: int):
     '''
         creates one new tree based on schemas.treeNew
         creates a new subproject in project_id 
         creates a top-level DS and associates its ID to tree.top_level_ds_id
     '''
-    with get_connection() as db:
-        # first check whether project exists
-        try:
-            proj_storage.db_get_project_exists(db, project_id)
-        except:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"No project with ID {project_id} could be found"
-            )
-
-        # create tree without DS:
-        the_tree_id = storage.new_efm_object(
-            db = db,
-            efm_object_type='tree',
-            object_data= new_tree, 
-            commit=False
-            )
-
-        # manufacture a top-levelDS:
-        top_ds = schemas.DSnew(
-            name=new_tree.name, 
-            description="Top-level DS", 
-            tree_id = the_tree_id, 
-            is_top_level_ds = True,
-            )
-
-        # creating the DS in the DB
-        top_ds_id = storage.new_efm_object(
-            db = db,
-            efm_object_type='DS',
-            object_data= top_ds,
-            commit=False
-            )
-
-        # setting the tree topLvlDS
-        storage.tree_set_top_lvl_ds(
-            db= db,
-            tree_id = the_tree_id,
-            ds_id= top_ds_id,
-            )
-
-        # create new sub-project on core level:
-        new_subproject_data = proj_models.SubProjectPost(
-            application_sid = EFM_APP_SID,
-            native_project_id = the_tree_id,
+    # first check whether project exists
+    try:
+        proj_storage.db_get_project_exists(db, project_id)
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No project with ID {project_id} could be found"
         )
-        
-        new_subproject = proj_storage.db_post_subproject(
-            connection = db, 
-            subproject = new_subproject_data,
-            current_user_id = user_id,
-            project_id = project_id
-            )
-        
-        db.commit()
 
-        # fetch tree to return
-        the_tree = storage.get_efm_object(
-            db = db,
-            efm_object_type = 'tree',
-            object_id = the_tree_id,
-            )
+    # create tree without DS:
+    the_tree_id = storage.new_efm_object(
+        db = db,
+        efm_object_type='tree',
+        object_data= new_tree, 
+        commit=False
+        )
 
-        return the_tree
+    # manufacture a top-levelDS:
+    top_ds = schemas.DSnew(
+        name=new_tree.name, 
+        description="Top-level DS", 
+        tree_id = the_tree_id, 
+        is_top_level_ds = True,
+        )
 
-def edit_tree(tree_id: int, tree_data: schemas.TreeNew):
-    with get_connection() as db:
-        return storage.edit_efm_object(db, 'tree', tree_id, tree_id)
+    # creating the DS in the DB
+    top_ds_id = storage.new_efm_object(
+        db = db,
+        efm_object_type='DS',
+        object_data= top_ds,
+        commit=False
+        )
 
-def get_tree_details(tree_id: int):
+    # setting the tree topLvlDS
+    storage.tree_set_top_lvl_ds(
+        db= db,
+        tree_id = the_tree_id,
+        ds_id= top_ds_id,
+        )
+
+    # create new sub-project on core level:
+    new_subproject_data = proj_models.SubProjectPost(
+        application_sid = EFM_APP_SID,
+        native_project_id = the_tree_id,
+    )
+    
+    new_subproject = proj_storage.db_post_subproject(
+        connection = db, 
+        subproject = new_subproject_data,
+        current_user_id = user_id,
+        project_id = project_id
+        )
+    
+    db.commit()
+
+    # fetch tree to return
+    the_tree = storage.get_efm_object(
+        db = db,
+        efm_object_type = 'tree',
+        object_id = the_tree_id,
+        )
+
+    return the_tree
+
+def edit_tree(db: PooledMySQLConnection, tree_id: int, tree_data: schemas.TreeNew):
+    return storage.edit_efm_object(
+        db = db, 
+        efm_object_type='tree',
+        object_id= tree_id,
+        object_data= tree_data
+        )
+
+def get_tree_details(db: PooledMySQLConnection, tree_id: int):
     ''' 
         returns a tree object with all details
         returns a schemas.Tree
     '''
-    with get_connection() as db:
-        the_tree = storage.get_efm_object(db, 'tree', tree_id)
+    the_tree = storage.get_efm_object(db, 'tree', tree_id)
     return the_tree
 
-def delete_tree(tree_id: int):
+def delete_tree(db: PooledMySQLConnection, tree_id: int):
     '''
         deletes tree based on id 
         also deletes the related subproject in core
     '''
     
-    with get_connection() as db:
-        storage.delete_efm_object(
-            db = db,
-            efm_object_type = 'tree',
-            object_id = tree_id
-            )
-
+    return_value = storage.delete_efm_object(
+        db = db,
+        efm_object_type = 'tree',
+        object_id = tree_id
+        )
+    print(return_value)
     # deleting the respective sub-project:
-        subproject = proj_storage.db_get_subproject_native(
-            connection = db, 
-            application_sid = EFM_APP_SID,
-            native_project_id = tree_id
-            )
-        proj_storage.db_delete_subproject(
-            connection = db,
-            project_id = subproject.project_id,
-            subproject_id = subproject.id,
-            )
-        db.commit()
+    # try:
+    #     subproject = proj_storage.db_get_subproject_native(
+    #         connection = db, 
+    #         application_sid = EFM_APP_SID,
+    #         native_project_id = tree_id
+    #         )
+    #     proj_storage.db_delete_subproject(
+    #         connection = db,
+    #         project_id = subproject.project_id,
+    #         subproject_id = subproject.id,
+    #         )
+    # except:
+    #     return_value = False
+    db.commit()
 
-        return True
+    return return_value
 
-def get_tree_data(tree_id: int, depth:int=0):
+def get_tree_data(db: PooledMySQLConnection, tree_id: int, depth:int=0):
     '''
     returns a list of all obejcts related to a specific tree
     depth = 0 makes it return _all_ objects - can be quite big then!
     however, there is no sorting applied to the returned objects, so it is difficult to know which elements you get back...
     '''
+    the_tree = storage.get_efm_object(db, 'tree', tree_id)
 
-    with get_connection() as db:
-        the_tree = storage.get_efm_object(db, 'tree', tree_id)
+    tree_data = schemas.TreeData(**the_tree.dict())
 
-        tree_data = schemas.TreeData(**the_tree.dict())
+    # fetch DS
+    all_ds = storage.get_efm_objects_all_of_tree(db, 'DS', tree_id, depth)
+    # all_ds = db.query(models.DesignSolution).filter(models.DesignSolution.tree_id == tree_id).all()
+    # for ds in all_ds:
+    #     pydantic_ds_tree = schemas.DesignSolution.from_orm(ds)
+    #     the_ds_info = schemas.DesignSolution(**pydantic_ds_tree.dict())
+    #     the_ds_info.update(pydantic_ds_tree)
+    #     tree_data.ds.append(the_ds_info)
+    tree_data.ds = all_ds
 
-        # fetch DS
-        all_ds = storage.get_efm_objects_all_of_tree(db, 'DS', tree_id, depth)
-        # all_ds = db.query(models.DesignSolution).filter(models.DesignSolution.tree_id == tree_id).all()
-        # for ds in all_ds:
-        #     pydantic_ds_tree = schemas.DesignSolution.from_orm(ds)
-        #     the_ds_info = schemas.DesignSolution(**pydantic_ds_tree.dict())
-        #     the_ds_info.update(pydantic_ds_tree)
-        #     tree_data.ds.append(the_ds_info)
-        tree_data.ds = all_ds
+    # fetch FR
+    all_fr = storage.get_efm_objects_all_of_tree(db, 'FR', tree_id, depth)
+    # for fr in all_fr:
+    #     pydantic_fr_tree = schemas.FunctionalRequirement.from_orm(fr)
+    #     the_fr_info = schemas.FunctionalRequirement(**pydantic_fr_tree.dict())
+    #     the_fr_info.update(pydantic_fr_tree)
+    #     tree_data.fr.append(the_fr_info)
+    tree_data.fr = all_fr
 
-        # fetch FR
-        all_fr = storage.get_efm_objects_all_of_tree(db, 'FR', tree_id, depth)
-        # for fr in all_fr:
-        #     pydantic_fr_tree = schemas.FunctionalRequirement.from_orm(fr)
-        #     the_fr_info = schemas.FunctionalRequirement(**pydantic_fr_tree.dict())
-        #     the_fr_info.update(pydantic_fr_tree)
-        #     tree_data.fr.append(the_fr_info)
-        tree_data.fr = all_fr
+    # fetch iw
+    all_iw = storage.get_efm_objects_all_of_tree(db, 'iw', tree_id, depth)
+    tree_data.iw = all_iw
 
-        # fetch iw
-        all_iw = storage.get_efm_objects_all_of_tree(db, 'iw', tree_id, depth)
-        tree_data.iw = all_iw
+    # fetch DP
+    # all_dp = get_DP_all(db, tree_id, depth)
+    # tree_data.dp = all_dp
 
-        # fetch DP
-        # all_dp = get_DP_all(db, tree_id, depth)
-        # tree_data.dp = all_dp
+    # fetch constraints
+    all_c = storage.get_efm_objects_all_of_tree(db, 'c', tree_id, depth)
+    tree_data.c = all_c
 
-        # fetch constraints
-        all_c = storage.get_efm_objects_all_of_tree(db, 'c', tree_id, depth)
-        tree_data.c = all_c
+    return tree_data
 
-        return tree_data
+def create_tree_from_json(db: PooledMySQLConnection, project_id:int, tree_data: schemas.TreeData, user_id: int ):
+    '''
+        creates an entirely new tree based on the provided json data
+    '''
+    # first create tree
+    tree_new = schemas.TreeNew(**tree_info.dict())
+
+    the_tree = create_tree(
+        db = db,
+        project_id = project_id,
+        new_tree = tree_new,
+        user_id = user_id
+        )
+
+    # an array to collect if something goes wrong:
+    tree_creation_errors = []
+
+    '''
+    naming convention:
+        input_ to hold the data from the original json
+        _data converted for input format
+        created_ to hold the newly created object as in DB
+    '''
+    # edit top-lvl-ds
+    input_top_lvl_ds = next((ds for ds in tree_data.ds if ds.is_top_level_ds), None)
+    top_lvl_ds_data = schemas.DSnew(**input_top_lvl_ds.dict())
+    
+    created_top_lvl_ds = edit_DS(
+        db = db,
+        ds_id = the_tree.top_level_ds_id,
+        ds_data = top_lvl_ds_data
+        )
+    # remove created elements from input list
+    if created_top_lvl_ds:
+        tree_data.ds.remove(input_top_lvl_ds)
+
+    tree_data = create_tree_recursively(
+        db = db,
+        efm_element_list = tree_data,
+        ds_from_list = input_top_lvl_ds,
+        ds_from_db = created_top_lvl_ds,
+        )
+    
+    for constraint in left_over_elements.c:
+        # creating all constraints
+
+        #*#*#*#*#*#*#*
+            # requires a capture of all new DS and FR ids in the tree_data list
+            # TO BE IMPLEMENTED....
+        #*#*#*#**#*#*#
+        pass
+
+def create_tree_recursively(
+    db: PooledMySQLConnection,
+    efm_element_list: schemas.TreeData,
+    ds_from_list: schemas.DesignSolution,
+    ds_from_db: schemas.DesignSolution
+    ):
+    '''
+        iterates through efm_element_list and creates all DS and FR recursively
+        returns efm_element_list with all used DS and FR removed
+    '''
+
+    # return list
+    left_over_elements = efm_element_list
+    # filtering for the children FR of DS
+    input_fr_list = [fr for fr in efm_element_list.fr if fr.isb_id == ds_from_list.id]
+
+    for input_fr in input_fr_list:
+        data_fr = schemas.FRnew(**input_fr.dict())
+        data_fr.rf_id = ds_from_db.id
+
+        created_fr = storage.new_efm_object(
+            db = db,
+            efm_object_type = 'FR',
+            object_data = data_fr
+            )
+        if created_fr:
+            efm_element_list.fr.remove(input_fr)
+
+            # now the subsequent DS:
+            # filtering for children
+            input_ds_list = [ds for ds in efm_element_list.ds if ds.rf_id == input_fr.id]
+             
+            for input_ds in input_ds_list:
+                data_ds = schemas.DSnew(**input_ds.dict())
+                data_ds.rf_id = created_fr.id
+
+                created_ds = storage.new_efm_object(
+                    db = db,
+                    efm_object_type = 'DS',
+                    object_data = data_ds
+                    )
+                if created_ds:
+                    efm_element_list.ds.remove(input_ds)
+
+                    # recursive call for child elements:
+                    left_over_elements = create_tree_recursively(
+                        db = db,
+                        efm_element_list = efm_element_list,
+                        ds_from_list = input_ds, ds_from_db = created_ds
+                        )
+
+    return left_over_elements
 
 ### CONCEPTS
 def get_all_concepts(tree_id: int, limit:int=100, offset: int = 0):
@@ -312,17 +417,16 @@ def get_DS_info(ds_id: int):
     with get_connection() as db:
         return storage.get_efm_object(db, 'DS', ds_id)
 
-def create_DS(new_ds: schemas.DSnew):
+def create_DS(db: PooledMySQLConnection, new_ds: schemas.DSnew):
     '''
         creates new DS based on schemas.DSnew (name, description) 
         associates it to 
     '''
-    with get_connection() as db:
-        # first we need to set the tree_id, fetched from the parent FR
-        parent_fr = storage.get_efm_object(db, 'FR', new_ds.isb_id)
-        new_ds.tree_id = parent_fr.tree_id
+    # first we need to set the tree_id, fetched from the parent FR
+    parent_fr = storage.get_efm_object(db, 'FR', new_ds.isb_id)
+    new_ds.tree_id = parent_fr.tree_id
 
-        return storage.new_efm_object(db, 'DS', new_ds)
+    return storage.new_efm_object(db, 'DS', new_ds)
     
 def delete_DS(ds_id: int):
     '''
@@ -331,19 +435,18 @@ def delete_DS(ds_id: int):
     with get_connection() as db:
         return storage.delete_efm_object(db, 'DS', ds_id)
 
-def edit_DS(ds_id: int, ds_data: schemas.DSnew):
+def edit_DS(db: PooledMySQLConnection, ds_id: int, ds_data: schemas.DSnew):
     '''
         overwrites the data in the DS identified with ds_id with the data from DSnew
         can change parent (i.e. isb), name and description
         checks whether the new parent FR is in the same tree
         cannot change tree! (tree_id)
     '''
-    with get_connection() as db:
-        # first we need to set (correct?) the tree_id, fetched from the parent FR
-        parent_fr = storage.get_efm_object(db, 'FR', ds_data.isb_id)
-        ds_data.tree_id = parent_fr.tree_id
+    # first we need to set (correct?) the tree_id, fetched from the parent FR
+    parent_fr = storage.get_efm_object(db, 'FR', ds_data.isb_id)
+    ds_data.tree_id = parent_fr.tree_id
 
-        return storage.edit_efm_object(db, 'DS', ds_id, ds_data)
+    return storage.edit_efm_object(db, 'DS', ds_id, ds_data)
 
 def new_parent_DS(ds_id: int, fr_id: int):
     '''
@@ -375,11 +478,10 @@ def new_parent_DS(ds_id: int, fr_id: int):
         return storage.edit_efm_object(db, 'DS', ds_id, ds_data)
 
 ### iw 
-def get_IW(iw_id: int):
-    with get_connection() as db:
-        return storage.get_efm_object(db, 'iw', iw_id)
+def get_IW(db: PooledMySQLConnection, iw_id: int):
+    return storage.get_efm_object(db, 'iw', iw_id)
 
-def create_IW( iw_new: schemas.IWnew):
+def create_IW(db: PooledMySQLConnection, iw_new: schemas.IWnew):
     '''
         first verifies whether the two DS are in the same tree, 
         but don't have the same parent_fr
@@ -387,102 +489,102 @@ def create_IW( iw_new: schemas.IWnew):
             --> NOT IMPLEMENTED
         then commits to DB
     '''
+    # getting parent elements for checks
+    to_ds = storage.get_efm_object(db, 'DS', iw_new.to_ds_id)
+    from_ds = storage.get_efm_object(db, 'DS', iw_new.from_ds_id)
 
-    with get_connection() as db:
-        # getting parent elements for checks
-        to_ds = storage.get_efm_object(db, 'DS', iw_new.to_ds_id)
-        from_ds = storage.get_efm_object(db, 'DS', iw_new.from_ds_id)
+    # checking if we're in the same tree:
+    same_tree(to_ds, from_ds)
+    # checking if iw are not related
+    iw_not_related(db, from_ds, to_ds)
 
-        # checking if we're in the same tree:
-        same_tree(to_ds, from_ds)
-        # checking if iw are not related
-        iw_not_related(db, from_ds, to_ds)
+    # setting tree_id since its optional 
+    iw_new.tree_id = to_ds.tree_id
 
-        # setting tree_id since its optional 
-        iw_new.tree_id = to_ds.tree_id
+    # checking whether we're in the same instance (no share 1st lvl FR parent)
+    # --> needs to be extended for any level FR parent!
+    if to_ds.isb_id == from_ds.isb_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='DS for an iw need to be in the same concept instance; DS {} and {} are exclusive alternatives'.format(to_ds.name, from_ds.name)
+        )
 
-        # checking whether we're in the same instance (no share 1st lvl FR parent)
-        # --> needs to be extended for any level FR parent!
-        if to_ds.isb_id == from_ds.isb_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail='DS for an iw need to be in the same concept instance; DS {} and {} are exclusive alternatives'.format(to_ds.name, from_ds.name)
-            )
+    iw_new.tree_id = to_ds.tree_id
 
-        iw_new.tree_id = to_ds.tree_id
+    return storage.new_efm_object(db, 'iw', iw_new)
 
-        return storage.new_efm_object(db, 'iw', iw_new)
+def delete_IW(db: PooledMySQLConnection, iw_id: int):
+    return storage.delete_efm_object(db, 'iw', iw_id)
 
-def delete_IW(iw_id: int):
-    with get_connection() as db:
-        return storage.delete_efm_object(db, 'iw', iw_id)
-
-def edit_IW(iw_id: int, iw_data: schemas.IWnew):
+def edit_IW(db: PooledMySQLConnection, iw_id: int, iw_data: schemas.IWnew):
     '''
         first verifies whether the two DS are in the same tree, 
         then commits to DB
     '''
-    with get_connection() as db:
-        to_ds = storage.get_efm_object(db, 'DS', iw_data.to_ds_id)
-        from_ds = storage.get_efm_object(db, 'DS', iw_data.from_ds_id)
-        
-        # checking if we're in the same tree:
-        same_tree(to_ds, from_ds)
-        # checking if parent DS are not related
-        iw_not_related(db, from_ds, to_ds)
+    to_ds = storage.get_efm_object(db, 'DS', iw_data.to_ds_id)
+    from_ds = storage.get_efm_object(db, 'DS', iw_data.from_ds_id)
+    
+    # checking if we're in the same tree:
+    same_tree(to_ds, from_ds)
+    # checking if parent DS are not related
+    iw_not_related(db, from_ds, to_ds)
 
-        iw_data.tree_id = to_ds.tree_id
+    iw_data.tree_id = to_ds.tree_id
 
-        return storage.edit_efm_object(db, 'iw', iw_id, iw_data)
+    return storage.edit_efm_object(db, 'iw', iw_id, iw_data)
 
 ## constraints
-def get_constraint(c_id: int):
-    with get_connection() as db:
-        return storage.get_efm_object(db, 'c', c_id)
+def get_constraint(db: PooledMySQLConnection, c_id: int):
+    return storage.get_efm_object(db, 'c', c_id)
 
-def create_constraint( c_new: schemas.ConstraintNew):
+def create_constraint(db: PooledMySQLConnection,  c_new: schemas.ConstraintNew):
     '''
         commits new constraint to DB
     '''
-    with get_connection() as db:
+    icb_ds = storage.get_efm_object(db, 'DS', c_new.icb_id)
 
-        icb_ds = storage.get_efm_object(db, 'DS', c_new.icb_id)
+    # setting tree_id since its optional (backwards compatibility ^^)
+    c_new.tree_id = icb_ds.tree_id
 
-        # setting tree_id since its optional (backwards compatibility ^^)
-        c_new.tree_id = icb_ds.tree_id
+    return storage.new_efm_object(db, 'c', c_new)
 
-        return storage.new_efm_object(db, 'c', c_new)
-
-def delete_constraint(c_id = int):
+def delete_constraint(db: PooledMySQLConnection, c_id = int):
     '''
         deletes one constraint from db
         returns true or raises error
     '''
-    with get_connection() as db:
-        # check if constraint exists
-        constraint = storage.get_efm_object(
-            db = db, 
-            efm_object_type = 'c',
-            object_id = c_id
-            )
-        return storage.delete_efm_object(
-            db = db, 
-            efm_object_type = 'c', 
-            object_id = constraint.id
+    # check if constraint exists
+    constraint = storage.get_efm_object(
+        db = db, 
+        efm_object_type = 'c',
+        object_id = c_id
+        )
+    return storage.delete_efm_object(
+        db = db, 
+        efm_object_type = 'c', 
+        object_id = constraint.id
             )
 
-def edit_constraint(c_id: int, c_data: schemas.ConstraintNew):
+def edit_constraint(db: PooledMySQLConnection, c_id: int, c_data: schemas.ConstraintNew):
     '''
         sets all values of constraint with c_id in db with data of c_data
         returns edited constraint
     '''
-    with get_connection() as db:
-        return storage.edit_efm_object(
-            db = db,
-            efm_object_type = 'c',
-            object_id = c_id,
-            object_data = c_data
-            )
+    # check if constraint exists
+    constraint = storage.get_efm_object(
+        db = db, 
+        efm_object_type = 'c',
+        object_id = c_id,
+        )
+    # overwrite tree_id for consistency
+    c_data.tree_id = constraint.tree_id
+
+    return storage.edit_efm_object(
+        db = db,
+        efm_object_type = 'c',
+        object_id = c_id,
+        object_data = c_data
+        )
 
 def new_parent_constraint(c_id: int, new_parent_id: int):
     ''' 
@@ -637,7 +739,7 @@ def all_children(db, the_object, all_children_list = []):
     
     new_children = storage.get_efm_children(
         db = db,
-        efm_object_type = the_object.efmType(),
+        efm_object_type = the_object.efm_type(),
         object_id = the_object.id
         )
     new_children_list = all_children_list
@@ -674,10 +776,10 @@ def iw_not_related(db: PooledMySQLConnection, from_ds: schemas.DesignSolution, t
                 # now, if to_parents and from_parents DO NOT share the same child of fr_parent, they are definite alternatives:
 
                 # first we need to find the child DS of said DS in the from_parents
-                fr_from_parent_child = next((ds for ds in from_parents if ds.isb_id == fr_from_parent.id), None)
+                fr_from_parent_child = next((ds for ds in from_parents if (ds.efm_type() == 'DS' and ds.isb_id == fr_from_parent.id)), None)
 
                 # now we find the child DS of said shared FR in the to_parents list
-                fr_to_parent_child = next((ds for ds in to_parents if ds.isb_id == fr_from_parent.id), None)
+                fr_to_parent_child = next((ds for ds in to_parents if (ds.efm_type() == 'DS' and ds.isb_id == fr_from_parent.id)), None)
 
                 if fr_to_parent_child != fr_from_parent_child:
                     raise HTTPException(

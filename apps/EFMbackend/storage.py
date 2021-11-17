@@ -334,12 +334,13 @@ def delete_efm_object(
         sql_delete_query = "DELETE FROM " + \
             f"{object_type_info.table_name} WHERE id = {object_id}"
 
+        print(sql_delete_query)
         cursor = db.cursor()
         cursor.execute(sql_delete_query)
 
         if commit:
             db.commit()
-        return True
+        return cursor.rowcount
 
     except TypeError:
         raise HTTPException(
@@ -453,7 +454,7 @@ def get_efm_children(db: PooledMySQLConnection, efm_object_type: str, object_id:
         isb for FR
         rf for DS
     '''
-    
+
     object_type_info = EFM_OBJECT_INFO.get_by_name(efm_object_type)
 
     sql_select_query = f'SELECT c.* ' + \
