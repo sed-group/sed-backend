@@ -71,6 +71,7 @@ GRANT EXECUTE ON `seddb`.* TO 'rw'@'%';
 ```
 - Exit MySQL
 - Run `mysql -h localhost -u root -p < V1__base.sql` (or you could use MySQL Workbench to execute the code)
+- Run `mysql -h localhost -u root -p < create_efm_database.sql` (or you could use MySQL Workbench to execute the code) to setup the EFM database
 - Run `pip install -r requirements.txt` 
 - You may need to install some requirements, such as uvicorn and jose, manually. To do this, run `pip install uvicorn jose`
 - Run `uvicorn main:app --reload` from project root to launch the application
