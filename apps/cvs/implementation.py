@@ -1,4 +1,5 @@
 from fastapi import HTTPException, status
+from typing import List
 
 from libs.datastructures.pagination import ListChunk
 
@@ -42,18 +43,10 @@ def get_cvs_project(project_id: int, user_id: int) -> models.CVSProject:
 
 
 def create_cvs_project(project_post: models.CVSProjectPost, user_id: int) -> models.CVSProject:
-    try:
-        with get_connection() as db_connection:
-            result = storage.create_cvs_project(db_connection, project_post, user_id)
-            db_connection.commit()
-            return result
-    except ind_ex.IndividualNotFoundException:
-        # todo: dont think this exception is ever raised. need to check for user exist in storage. fix also for all
-        #  other creates in this file.
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'No user with id = {user_id} found.',
-        )
+    with get_connection() as db_connection:
+        result = storage.create_cvs_project(db_connection, project_post, user_id)
+        db_connection.commit()
+        return result
 
 
 def edit_cvs_project(project_id: int, user_id: int, project_post: models.CVSProjectPost) -> models.CVSProject:
@@ -336,6 +329,16 @@ def get_all_iso_process() -> ListChunk[models.VCSISOProcess]:
     return storage.get_all_iso_process()
 
 
+def get_iso_process(iso_process_id: int) -> models.VCSISOProcess:
+    try:
+        return storage.get_iso_process(iso_process_id)
+    except cvs_exceptions.ISOProcessNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Could not find ISO process with id={iso_process_id}.',
+        )
+
+
 # ======================================================================================================================
 # VCS Subprocesses
 # ======================================================================================================================
@@ -450,3 +453,12 @@ def delete_subprocess(subprocess_id: int, project_id: int, user_id: int) -> bool
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
+
+
+# ======================================================================================================================
+# VCS Table
+# ======================================================================================================================
+
+def get_vcs_table(vcs_id: int, project_id: int, user_id: int) -> List[int]:
+    with get_connection() as con:
+        return storage.get_vcs_table(con, vcs_id, project_id, user_id)

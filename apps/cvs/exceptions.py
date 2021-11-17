@@ -68,3 +68,27 @@ class SubprocessFailedToUpdateException(Exception):
 
 class SubprocessFailedDeletionException(Exception):
     pass
+
+
+# ======================================================================================================================
+# VCS Table Row
+# ======================================================================================================================
+
+class VCSTableRowNotFoundException(Exception):
+    pass
+
+
+class VCSTableRowFailedToUpdateException(Exception):
+    pass
+
+
+class VCSTableRowFailedDeletionException(Exception):
+    pass
+
+
+class VCSTableRowProcessNotProvided(Exception):
+    pass
+
+
+class VCSTableRowProcessAmbiguity(Exception):
+    pass

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 import enum
 
 from datetime import datetime
@@ -50,11 +50,10 @@ class VCSPost(BaseModel):
 # ======================================================================================================================
 
 
-class VCSISOProcess:
-    def __init__(self, id: int, name: str, category: str):
-        self.id = id
-        self.name = name
-        self.category = category
+class VCSISOProcess(BaseModel):
+    id: int
+    name: str
+    category: str
 
 
 class VCSISOProcesses(enum.Enum):  # processes in ISO 15288
@@ -109,7 +108,7 @@ class VCSSubprocessPost(BaseModel):
 
 
 # ======================================================================================================================
-# VCS Stakeholder need
+# VCS Table Row
 # ======================================================================================================================
 
 class VCSTableRow(BaseModel):
@@ -156,3 +155,32 @@ class VCSValueDriver(BaseModel):
 
 class VCSValueDriverPost(BaseModel):
     name: str
+
+
+# ======================================================================================================================
+# VCS Table
+# ======================================================================================================================
+
+class ValueDriver(BaseModel):
+    id: int
+    name: str
+
+
+class StakeholderNeed(BaseModel):
+    id: int
+    need: str
+    rank_weight: int
+    value_drivers: List[ValueDriver] = []
+
+
+class TableRow(BaseModel):
+    id: int
+    iso_process: Optional[VCSISOProcess] = None
+    subprocess: Optional[VCSSubprocess] = None
+    stakeholder: str
+    stakeholder_expectations: Optional[str] = None
+    stakeholder_needs = List[StakeholderNeed] = []
+
+
+class Table(BaseModel):
+    table_rows: List[VCSTableRow] = []

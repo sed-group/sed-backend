@@ -1,6 +1,7 @@
 from libs.datastructures.pagination import ListChunk
 
 from fastapi import APIRouter, Depends
+from typing import List
 
 from apps.core.users.models import User
 from apps.core.authentication.utils import get_current_active_user
@@ -235,9 +236,9 @@ async def get_subprocess(subprocess_id: int, project_id: int,
     summary='Creates a new subprocess',
     response_model=models.VCSSubprocess,
 )
-async def create_subprocess(vcs_post: models.VCSSubprocessPost, project_id: int,
+async def create_subprocess(subprocess_post: models.VCSSubprocessPost, project_id: int,
                             user: User = Depends(get_current_active_user)) -> models.VCSSubprocess:
-    return impl.create_subprocess(vcs_post, project_id, user.id)
+    return impl.create_subprocess(subprocess_post, project_id, user.id)
 
 
 @router.put(
@@ -258,3 +259,16 @@ async def edit_subprocess(subprocess_id: int, project_id: int, vcs_post: models.
 async def delete_subprocess(subprocess_id: int, project_id: int,
                             user: User = Depends(get_current_active_user)) -> bool:
     return impl.delete_subprocess(subprocess_id, project_id, user.id)
+
+
+# ======================================================================================================================
+# VCS Table
+# ======================================================================================================================
+
+@router.get(
+    '/project/{project_id}/vcs-table/get/{vcs_id}',
+    summary='Returns a VCS table',
+    response_model=List[int],
+)
+async def get_subprocess(vcs_id: int, project_id: int, user: User = Depends(get_current_active_user)) -> List[int]:
+    return impl.get_vcs_table(vcs_id, project_id, user.id)
