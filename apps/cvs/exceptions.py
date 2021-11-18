@@ -35,7 +35,8 @@ class VCSFailedDeletionException(Exception):
 # ======================================================================================================================
 
 class ValueDriverNotFoundException(Exception):
-    pass
+    def __init__(self, value_driver_id: int = None):
+        self.value_driver_id = value_driver_id
 
 
 class ValueDriverFailedToUpdateException(Exception):
@@ -71,7 +72,7 @@ class SubprocessFailedDeletionException(Exception):
 
 
 # ======================================================================================================================
-# VCS Table Row
+# VCS Table
 # ======================================================================================================================
 
 class VCSTableRowNotFoundException(Exception):
@@ -83,12 +84,10 @@ class VCSTableRowFailedToUpdateException(Exception):
 
 
 class VCSTableRowFailedDeletionException(Exception):
-    pass
+    def __init__(self, table_row_id):
+        self.table_row_id = table_row_id
 
 
-class VCSTableRowProcessNotProvided(Exception):
-    pass
-
-
-class VCSTableRowProcessAmbiguity(Exception):
-    pass
+class VCSTableProcessAmbiguity(Exception):
+    def __init__(self, table_row_id):
+        self.table_row_id = table_row_id

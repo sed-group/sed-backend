@@ -43,17 +43,17 @@ def get_cvs_project(project_id: int, user_id: int) -> models.CVSProject:
 
 
 def create_cvs_project(project_post: models.CVSProjectPost, user_id: int) -> models.CVSProject:
-    with get_connection() as db_connection:
-        result = storage.create_cvs_project(db_connection, project_post, user_id)
-        db_connection.commit()
+    with get_connection() as con:
+        result = storage.create_cvs_project(con, project_post, user_id)
+        con.commit()
         return result
 
 
 def edit_cvs_project(project_id: int, user_id: int, project_post: models.CVSProjectPost) -> models.CVSProject:
     try:
-        with get_connection() as db_connection:
-            result = storage.edit_cvs_project(db_connection, project_id, user_id, project_post)
-            db_connection.commit()
+        with get_connection() as con:
+            result = storage.edit_cvs_project(con, project_id, user_id, project_post)
+            con.commit()
             return result
     except cvs_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
@@ -143,9 +143,9 @@ def get_vcs(vcs_id: int, project_id: int, user_id: int) -> models.VCS:
 
 def create_vcs(vcs_post: models.VCSPost, project_id: int, user_id: int) -> models.VCS:
     try:
-        with get_connection() as db_connection:
-            result = storage.create_vcs(db_connection, vcs_post, project_id, user_id)
-            db_connection.commit()
+        with get_connection() as con:
+            result = storage.create_vcs(con, vcs_post, project_id, user_id)
+            con.commit()
             return result
     except cvs_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
@@ -161,9 +161,9 @@ def create_vcs(vcs_post: models.VCSPost, project_id: int, user_id: int) -> model
 
 def edit_vcs(vcs_id: int, project_id: int, user_id: int, vcs_post: models.VCSPost) -> models.VCS:
     try:
-        with get_connection() as db_connection:
-            result = storage.edit_vcs(db_connection, vcs_id, project_id, user_id, vcs_post)
-            db_connection.commit()
+        with get_connection() as con:
+            result = storage.edit_vcs(con, vcs_id, project_id, user_id, vcs_post)
+            con.commit()
             return result
     except cvs_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
@@ -248,9 +248,9 @@ def get_value_driver(value_driver_id: int, project_id: int, user_id: int) -> mod
 def create_value_driver(value_driver_post: models.VCSValueDriverPost, project_id: int,
                         user_id: int) -> models.VCSValueDriver:
     try:
-        with get_connection() as db_connection:
-            result = storage.create_value_driver(db_connection, value_driver_post, project_id, user_id)
-            db_connection.commit()
+        with get_connection() as con:
+            result = storage.create_value_driver(con, value_driver_post, project_id, user_id)
+            con.commit()
             return result
     except cvs_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
@@ -267,9 +267,9 @@ def create_value_driver(value_driver_post: models.VCSValueDriverPost, project_id
 def edit_value_driver(value_driver_id: int, project_id: int, user_id: int,
                       value_driver_post: models.VCSValueDriverPost) -> models.VCSValueDriver:
     try:
-        with get_connection() as db_connection:
-            result = storage.edit_value_driver(db_connection, value_driver_id, project_id, user_id, value_driver_post)
-            db_connection.commit()
+        with get_connection() as con:
+            result = storage.edit_value_driver(con, value_driver_id, project_id, user_id, value_driver_post)
+            con.commit()
             return result
     except cvs_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
@@ -372,9 +372,9 @@ def get_subprocess(subprocess_id: int, project_id: int, user_id: int) -> models.
 def create_subprocess(subprocess_post: models.VCSSubprocessPost, project_id: int,
                       user_id: int) -> models.VCSSubprocess:
     try:
-        with get_connection() as db_connection:
-            result = storage.create_subprocess(db_connection, subprocess_post, project_id, user_id)
-            db_connection.commit()
+        with get_connection() as con:
+            result = storage.create_subprocess(con, subprocess_post, project_id, user_id)
+            con.commit()
             return result
     except cvs_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
@@ -384,7 +384,7 @@ def create_subprocess(subprocess_post: models.VCSSubprocessPost, project_id: int
     except cvs_exceptions.ISOProcessNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not ISO process with id={subprocess_post.parent_process_id}.',
+            detail=f'Could not find ISO process with id={subprocess_post.parent_process_id}.',
         )
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
@@ -396,9 +396,9 @@ def create_subprocess(subprocess_post: models.VCSSubprocessPost, project_id: int
 def edit_subprocess(subprocess_id: int, project_id: int, user_id: int,
                     subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
     try:
-        with get_connection() as db_connection:
-            result = storage.edit_subprocess(db_connection, subprocess_id, project_id, user_id, subprocess_post)
-            db_connection.commit()
+        with get_connection() as con:
+            result = storage.edit_subprocess(con, subprocess_id, project_id, user_id, subprocess_post)
+            con.commit()
             return result
     except cvs_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
@@ -413,7 +413,7 @@ def edit_subprocess(subprocess_id: int, project_id: int, user_id: int,
     except cvs_exceptions.ISOProcessNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not ISO process with id={subprocess_post.parent_process_id}.',
+            detail=f'Could not find ISO process with id={subprocess_post.parent_process_id}.',
         )
     except cvs_exceptions.SubprocessFailedToUpdateException:
         raise HTTPException(
@@ -459,6 +459,43 @@ def delete_subprocess(subprocess_id: int, project_id: int, user_id: int) -> bool
 # VCS Table
 # ======================================================================================================================
 
-def get_vcs_table(vcs_id: int, project_id: int, user_id: int) -> List[int]:
-    with get_connection() as con:
-        return storage.get_vcs_table(con, vcs_id, project_id, user_id)
+def get_vcs_table(vcs_id: int, project_id: int, user_id: int) -> models.Table:
+    # todo: handle exceptions
+    try:
+        with get_connection() as con:
+            return storage.get_vcs_table(con, vcs_id, project_id, user_id)
+    except cvs_exceptions.SubprocessNotFoundException:
+        pass  # todo: remove it
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
+
+
+def create_vcs_table(new_table: models.TablePost, vcs_id: int, project_id: int, user_id: int) -> bool:
+    try:
+        with get_connection() as con:
+            result = storage.create_vcs_table(con, new_table, vcs_id, project_id, user_id)
+            con.commit()
+            return result
+    except cvs_exceptions.VCSTableRowFailedDeletionException as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Failed to remove VCS table row with id={e.table_row_id}.',
+        )
+    except cvs_exceptions.VCSTableProcessAmbiguity as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Both ISO process and subprocess was provided for table row with index={e.table_row_id}.',
+        )
+    except cvs_exceptions.ValueDriverNotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find value driver with id={e.value_driver_id}.',
+        )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )

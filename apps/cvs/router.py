@@ -1,3 +1,5 @@
+import time
+
 from libs.datastructures.pagination import ListChunk
 
 from fastapi import APIRouter, Depends
@@ -266,9 +268,21 @@ async def delete_subprocess(subprocess_id: int, project_id: int,
 # ======================================================================================================================
 
 @router.get(
-    '/project/{project_id}/vcs-table/get/{vcs_id}',
-    summary='Returns a VCS table',
-    response_model=List[int],
+    '/project/{project_id}/vcs/{vcs_id}/get/table',
+    summary='Returns the table of a a VCS',
+    response_model=models.Table,
 )
-async def get_subprocess(vcs_id: int, project_id: int, user: User = Depends(get_current_active_user)) -> List[int]:
+async def get_vcs_table(vcs_id: int, project_id: int, user: User = Depends(get_current_active_user)) -> models.Table:
+    impl.get_vcs(vcs_id, project_id, user.id)  # perfoming necessary controls
     return impl.get_vcs_table(vcs_id, project_id, user.id)
+
+
+@router.post(
+    '/project/{project_id}/vcs/{vcs_id}/create/table',
+    summary='Creates the table for a VCS',
+    response_model=bool,
+)
+async def create_vcs_table(new_table: models.TablePost, vcs_id: int, project_id: int,
+                           user: User = Depends(get_current_active_user)) -> bool:
+    impl.get_vcs(vcs_id, project_id, user.id)  # perfoms necessary controls
+    return impl.create_vcs_table(new_table, vcs_id, project_id, user.id)

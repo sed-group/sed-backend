@@ -270,7 +270,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_table_rows`
 (
     `id`                       INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `vcs_id`                   INT UNSIGNED NOT NULL,
-    `isoprocess_id`            INT UNSIGNED NULL DEFAULT NULL,
+    `iso_process_id`           INT UNSIGNED NULL DEFAULT NULL,
     `subprocess_id`            INT UNSIGNED NULL DEFAULT NULL,
     `stakeholder`              VARCHAR(255) NOT NULL,
     `stakeholder_expectations` TEXT         NULL DEFAULT NULL,
@@ -286,15 +286,15 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_table_rows`
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_stakeholder_needs`
 (
-    `id`                       INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `vcs_row_id`               INT UNSIGNED NOT NULL,
-    `need`                     VARCHAR(255) NOT NULL,
-    `rank_weight`              INT UNSIGNED NOT NULL DEFAULT 0,
+    `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `table_row_id` INT UNSIGNED NOT NULL,
+    `need`         VARCHAR(255) NOT NULL,
+    `rank_weight`  INT UNSIGNED NOT NULL DEFAULT 0,
     PRIMARY KEY (`id`),
     UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
-    INDEX `vcs_table_row_cascade_idx` (`vcs_row_id` ASC) VISIBLE,
+    INDEX `vcs_table_row_cascade_idx` (`table_row_id` ASC) VISIBLE,
     CONSTRAINT `vcs_table_row_cascade`
-        FOREIGN KEY (`vcs_row_id`)
+        FOREIGN KEY (`table_row_id`)
             REFERENCES `seddb`.`cvs_vcs_table_rows` (`id`)
             ON DELETE CASCADE
             ON UPDATE NO ACTION

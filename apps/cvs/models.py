@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import List, Optional
 import enum
 
 from datetime import datetime
@@ -170,7 +170,7 @@ class StakeholderNeed(BaseModel):
     id: int
     need: str
     rank_weight: int
-    value_drivers: List[ValueDriver] = []
+    value_drivers: List[ValueDriver] = None
 
 
 class TableRow(BaseModel):
@@ -179,8 +179,26 @@ class TableRow(BaseModel):
     subprocess: Optional[VCSSubprocess] = None
     stakeholder: str
     stakeholder_expectations: Optional[str] = None
-    stakeholder_needs = List[StakeholderNeed] = []
+    stakeholder_needs: List[StakeholderNeed] = None
 
 
 class Table(BaseModel):
-    table_rows: List[VCSTableRow] = []
+    table_rows: List[TableRow]
+
+
+class StakeholderNeedPost(BaseModel):
+    need: str
+    rank_weight: Optional[int] = 0
+    value_driver_ids: Optional[List[int]] = None
+
+
+class TableRowPost(BaseModel):
+    iso_process_id: Optional[int] = None
+    subprocess_id: Optional[int] = None
+    stakeholder: str
+    stakeholder_expectations: Optional[str] = None
+    stakeholder_needs: List[StakeholderNeedPost] = None
+
+
+class TablePost(BaseModel):
+    table_rows: List[TableRowPost]
