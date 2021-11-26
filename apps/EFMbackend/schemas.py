@@ -31,6 +31,7 @@ class IWbase(BaseModel):
 
     def efm_type(self):
         return "iw"
+        
 class IWedit(IWbase):
     from_ds_id: Optional[int]
     to_ds_id: Optional[int]

@@ -8,17 +8,6 @@ from apps.EFMbackend.exceptions import EfmElementNotFoundException
 # import apps.EFMbackend.models as models
 import apps.EFMbackend.schemas as schemas
 
-
-# EFM database setup
-## EXPERIMENTARY
-try:
-    from apps.EFMbackend.database import engine as efmEngine
-    from apps.EFMbackend.models import Base as efmBase
-    efmBase.metadata.create_all(bind=efmEngine)
-    print(" EFM databases created")
-except:
-    print(" /!\\ could not create EFM databases")
-
 # information object for multi-type fetch/post functions
 class EFM_OBJECT_INFO():
     # class which provides object information for the "get_all" and "get_one" function
@@ -79,6 +68,7 @@ DESIGNSOLUTION = EFM_OBJECT_INFO(
         'table': 'efm_functionalrequirements',
         # 'key': 'requires_functions_id',
         'child_key': 'rf_id',  # key in the child element refering to the DS     
+        'child_type': 'FR',
         }
     )
 FUNCTIONALREQUIREMENT = EFM_OBJECT_INFO(
@@ -91,7 +81,8 @@ FUNCTIONALREQUIREMENT = EFM_OBJECT_INFO(
     children = {
         'table': 'efm_designsolutions',
         # 'key': 'is_solved_by_id',   
-        'child_key': 'isb_id',  # key in the child element refering to FR       
+        'child_key': 'isb_id',  # key in the child element refering to FR    
+        'child_type': 'DS',   
         }
     )
 
@@ -166,7 +157,7 @@ def get_efm_object(db: PooledMySQLConnection, efm_object_type: EfmObjectTypes, o
         #         f" FROM {object_data.children['table']}) c" + \
         #         f" ON c.id = p.id"
 
-        print(sql_select_query)
+        # print(sql_select_query)
         cursor = db.cursor()
         cursor.execute(sql_select_query)
         # get the record
@@ -294,7 +285,7 @@ def new_efm_object(
         f"({', '.join(sql_col_names)}) " + \
         f"VALUES ({', '.join(sql_values)})"
     
-    print(sql_insert_query)
+    # print(sql_insert_query)
 
     cursor = db.cursor()
     cursor.execute(sql_insert_query)
@@ -334,7 +325,7 @@ def delete_efm_object(
         sql_delete_query = "DELETE FROM " + \
             f"{object_type_info.table_name} WHERE id = {object_id}"
 
-        print(sql_delete_query)
+        # print(sql_delete_query)
         cursor = db.cursor()
         cursor.execute(sql_delete_query)
 
@@ -363,7 +354,7 @@ def edit_efm_object(
     '''
     edits an object by ID and object_data
     '''
-    print(f"edit_efm_object: type: {efm_object_type}; id: {object_id}; data: {object_data}")
+    # print(f"edit_efm_object: type: {efm_object_type}; id: {object_id}; data: {object_data}")
 
     object_type_info = EFM_OBJECT_INFO.get_by_name(efm_object_type)
 
@@ -395,7 +386,7 @@ def edit_efm_object(
     sql_update_query = sql_update_query + \
         f" WHERE id = {object_id}"
 
-    print(sql_update_query)
+    # print(sql_update_query)
 
     cursor = db.cursor()
     cursor.execute(sql_update_query)
@@ -456,6 +447,7 @@ def get_efm_children(db: PooledMySQLConnection, efm_object_type: str, object_id:
     '''
 
     object_type_info = EFM_OBJECT_INFO.get_by_name(efm_object_type)
+    child_type_info = EFM_OBJECT_INFO.get_by_name(object_type_info.children['child_type'])
 
     sql_select_query = f'SELECT c.* ' + \
         f" FROM {object_type_info.children['table']} c " + \
@@ -476,7 +468,8 @@ def get_efm_children(db: PooledMySQLConnection, efm_object_type: str, object_id:
     the_object_as_pydantic_model_list = []
 
     for db_row in db_response:
-        the_object_as_pydantic_model = object_type_info.schema_out(**db_row)
+        # print(db_row)
+        the_object_as_pydantic_model = child_type_info.schema_out(**db_row)
         the_object_as_pydantic_model_list.append(the_object_as_pydantic_model)
 
     return the_object_as_pydantic_model_list

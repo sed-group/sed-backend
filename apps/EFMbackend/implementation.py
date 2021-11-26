@@ -1,6 +1,7 @@
 from fastapi import HTTPException, status
 from typing import List
 import json
+import itertools #for permutations in concept DNA
 
 from mysql.connector.pooling import PooledMySQLConnection
 
@@ -158,7 +159,7 @@ def delete_tree(db: PooledMySQLConnection, tree_id: int):
         efm_object_type = 'tree',
         object_id = tree_id
         )
-    print(return_value)
+    # print(return_value)
     # deleting the respective sub-project:
     # try:
     #     subproject = proj_storage.db_get_subproject_native(
@@ -247,58 +248,69 @@ def create_tree_from_json(db: PooledMySQLConnection, project_id:int, tree_data: 
     input_top_lvl_ds = next((ds for ds in tree_data.ds if ds.is_top_level_ds), None)
     top_lvl_ds_data = schemas.DSnew(**input_top_lvl_ds.dict())
     
+    # dict to match the input ids with databas ids
+    # {originalID: databasID}
+    id_matching_list = {}
+
     created_top_lvl_ds = edit_DS(
         db = db,
         ds_id = the_tree.top_level_ds_id,
         ds_data = top_lvl_ds_data
         )
-    # remove created elements from input list
-    if created_top_lvl_ds:
-        tree_data.ds.remove(input_top_lvl_ds)
+    
+    # push into id list
+    id_matching_list[input_top_lvl_ds.id] = create_top_lvl_ds.id
 
-    tree_data = create_tree_recursively(
+    id_matching_list = create_tree_recursively(
         db = db,
         efm_element_list = tree_data,
         ds_from_list = input_top_lvl_ds,
         ds_from_db = created_top_lvl_ds,
+        id_list = id_matching_list
         )
     
-    for constraint in left_over_elements.c:
-        # creating all constraints
+    # creating CONSTRAINTS
+    for input_c in tree_data.c:
+        data_c = schemas.ConstraintNew(**input_c.dict())
 
-        #*#*#*#*#*#*#*
-            # requires a capture of all new DS and FR ids in the tree_data list
-            # TO BE IMPLEMENTED....
-        #*#*#*#**#*#*#
-        pass
+        # substitute icb_id 
+        data_c.icb_id = id_matching_list[input_c.icb_id]
 
+        created_c = create_constraint(db = db, c_new = data_)
+    
+    # creating IW
+    for input_iw in tree_data.iw:
+        data_iw = schemas.IWnew(**input_iw.dict())
+
+        # substitute ids
+        data_iw.from_ds_id = id_matching_list[input_iw.from_ds_id]
+        data_iw.to_ds_id = id_matching_list[input_iw.to_ds_id]
+
+        created_iw = create_IW(db=db, iw_new=data_iw)
+    
 def create_tree_recursively(
     db: PooledMySQLConnection,
     efm_element_list: schemas.TreeData,
     ds_from_list: schemas.DesignSolution,
-    ds_from_db: schemas.DesignSolution
+    ds_from_db: schemas.DesignSolution,
+    id_list: dict
     ):
     '''
         iterates through efm_element_list and creates all DS and FR recursively
         returns efm_element_list with all used DS and FR removed
     '''
 
-    # return list
-    left_over_elements = efm_element_list
     # filtering for the children FR of DS
     input_fr_list = [fr for fr in efm_element_list.fr if fr.isb_id == ds_from_list.id]
 
     for input_fr in input_fr_list:
         data_fr = schemas.FRnew(**input_fr.dict())
         data_fr.rf_id = ds_from_db.id
+        
+        created_fr = create_FR(data_fr)
 
-        created_fr = storage.new_efm_object(
-            db = db,
-            efm_object_type = 'FR',
-            object_data = data_fr
-            )
         if created_fr:
-            efm_element_list.fr.remove(input_fr)
+            id_list[input_fr.id] = created_fr.id
 
             # now the subsequent DS:
             # filtering for children
@@ -308,114 +320,104 @@ def create_tree_recursively(
                 data_ds = schemas.DSnew(**input_ds.dict())
                 data_ds.rf_id = created_fr.id
 
-                created_ds = storage.new_efm_object(
-                    db = db,
-                    efm_object_type = 'DS',
-                    object_data = data_ds
-                    )
+                created_ds = create_DS(db=db, new_ds = data_ds)
+                
                 if created_ds:
                     efm_element_list.ds.remove(input_ds)
+                    id_list[input_ds.id] = created_ds.id
 
                     # recursive call for child elements:
                     left_over_elements = create_tree_recursively(
                         db = db,
                         efm_element_list = efm_element_list,
-                        ds_from_list = input_ds, ds_from_db = created_ds
+                        ds_from_list = input_ds, ds_from_db = created_ds,
+                        id_list = id_list,
                         )
 
     return left_over_elements
 
 ### CONCEPTS
-def get_all_concepts(tree_id: int, limit:int=100, offset: int = 0):
+def get_all_concepts(db: PooledMySQLConnection, tree_id: int, limit:int=100, offset: int = 0):
     '''
     returns a list of all concepts of the tree identified via tree_id
     '''
-    with get_connection() as db:
-        return storage.get_efm_objects_all_of_tree(db, 'concept', tree_id, limit, offset)
+    return storage.get_efm_objects_all_of_tree(db, 'concept', tree_id, limit, offset)
 
-def get_concept(cID: int):
-    with get_connection() as db:
-        return storage.get_efm_object(db, 'concept', cID)
+def get_concept(db: PooledMySQLConnection, cID: int):
+    return storage.get_efm_object(db, 'concept', cID)
 
-def edit_concept(cID: int, cData: schemas.ConceptEdit):
-    with get_connection() as db:
-        return storage.edit_efm_object(db, 'concept', cID, cData)
+def edit_concept(db: PooledMySQLConnection, cID: int, cData: schemas.ConceptEdit):
+    return storage.edit_efm_object(db, 'concept', cID, cData)
 
 ### FR
-def get_FR_info(fr_id: int):
+def get_FR_info(db: PooledMySQLConnection, fr_id: int):
     ''' 
         returns a FR object with all details
         but instead of relationships only ids
     ''' 
-    with get_connection() as db:    
-        return storage.get_efm_object(db, 'FR', fr_id)
+    return storage.get_efm_object(db, 'FR', fr_id)
 
-def create_FR(fr_new: schemas.FRnew):
+def create_FR(db: PooledMySQLConnection, fr_new: schemas.FRnew):
     '''
         creates new FR based on schemas.FRnew (name, description) 
         associates it to DS with parentID via FR.rf_id ("requires function")
     '''
-    with get_connection() as db:
-        # checking if parent exists
-        parent_ds = storage.get_efm_object(db, 'DS', fr_new.rf_id)
-        # setting tree_id for fetching
-        fr_new.tree_id = parent_ds.tree_id
-        
-        return storage.new_efm_object(db, 'FR', fr_new)
+    # checking if parent exists
+    parent_ds = storage.get_efm_object(db, 'DS', fr_new.rf_id)
+    # setting tree_id for fetching
+    fr_new.tree_id = parent_ds.tree_id
     
-def delete_FR(fr_id: int):
+    return storage.new_efm_object(db, 'FR', fr_new)
+    
+def delete_FR(db: PooledMySQLConnection, fr_id: int):
     '''
         deletes FR based on id 
     '''
-    with get_connection() as db:
-        return storage.delete_efm_object(db, 'FR', fr_id)
+    return storage.delete_efm_object(db, 'FR', fr_id)
 
-def edit_FR(fr_id: int, fr_data: schemas.FRnew):
+def edit_FR(db: PooledMySQLConnection, fr_id: int, fr_data: schemas.FRnew):
     '''
         overwrites the data in the FR identified with fr_id with the data from fr_data
         can change parent (i.e. isb), name and description
         tree_id is set through parent; therefore, change of tree is theoretically possible
     '''
-    with get_connection() as db:
-        # first we need to set the tree_id, fetched from the parent DS
-        parent_ds = storage.get_efm_object(db, 'DS', fr_data.rf_id)
-        fr_data.tree_id = parent_ds.tree_id
+    # first we need to set the tree_id, fetched from the parent DS
+    parent_ds = storage.get_efm_object(db, 'DS', fr_data.rf_id)
+    fr_data.tree_id = parent_ds.tree_id
 
-        return storage.edit_efm_object(db, 'FR', fr_id, fr_data)
+    return storage.edit_efm_object(db, 'FR', fr_id, fr_data)
     
-def new_parent_FR(fr_id: int, ds_id: int):
+def new_parent_FR(db: PooledMySQLConnection, fr_id: int, ds_id: int):
     '''
     sets ds_id as new rf_id for FR
     i.e. a change in parent
     '''
-    with get_connection() as db:
-        # fetch the FR data
-        fr_data = storage.get_efm_object(db, 'FR', fr_id)
-        # first we check if the new parent exists
-        new_parent_DS = storage.get_efm_object(db, 'DS', ds_id)
-        
-        # check for same tree
-        same_tree(fr_data, new_parent_DS)
-        # check whether new parent is eligible
-        new_parent_loop_prevention(db, fr_data, new_parent_DS)
+    # fetch the FR data
+    fr_data = storage.get_efm_object(db, 'FR', fr_id)
+    # first we check if the new parent exists
+    new_parent_DS = storage.get_efm_object(db, 'DS', ds_id)
+    
+    # check for same tree
+    same_tree(fr_data, new_parent_DS)
+    # check whether new parent is eligible
+    new_parent_loop_prevention(db, fr_data, new_parent_DS)
 
-        # convert to FRnew object to avoid writing child relations
-        fr_data = schemas.FRnew(**fr_data.dict())
-        # set new parent ID
-        fr_data.rf_id = new_parent_DS.id
-        
-        # store it
-        return storage.edit_efm_object(db, 'FR', fr_id, fr_data)
+    # convert to FRnew object to avoid writing child relations
+    fr_data = schemas.FRnew(**fr_data.dict())
+    # set new parent ID
+    fr_data.rf_id = new_parent_DS.id
+    
+    # store it
+    return storage.edit_efm_object(db, 'FR', fr_id, fr_data)
 
 
 ### DS
-def get_DS_info(ds_id: int):
+def get_DS_info(db: PooledMySQLConnection, ds_id: int):
     ''' 
         returns a DS object with all details
         but instead of relationships only ids
     '''    
-    with get_connection() as db:
-        return storage.get_efm_object(db, 'DS', ds_id)
+    return storage.get_efm_object(db, 'DS', ds_id)
 
 def create_DS(db: PooledMySQLConnection, new_ds: schemas.DSnew):
     '''
@@ -428,12 +430,11 @@ def create_DS(db: PooledMySQLConnection, new_ds: schemas.DSnew):
 
     return storage.new_efm_object(db, 'DS', new_ds)
     
-def delete_DS(ds_id: int):
+def delete_DS(db: PooledMySQLConnection, ds_id: int):
     '''
         deletes DS based on id 
     '''
-    with get_connection() as db:
-        return storage.delete_efm_object(db, 'DS', ds_id)
+    return storage.delete_efm_object(db, 'DS', ds_id)
 
 def edit_DS(db: PooledMySQLConnection, ds_id: int, ds_data: schemas.DSnew):
     '''
@@ -448,34 +449,33 @@ def edit_DS(db: PooledMySQLConnection, ds_id: int, ds_data: schemas.DSnew):
 
     return storage.edit_efm_object(db, 'DS', ds_id, ds_data)
 
-def new_parent_DS(ds_id: int, fr_id: int):
+def new_parent_DS(db: PooledMySQLConnection, ds_id: int, fr_id: int):
     '''
     sets fr_id as new isb_id for DS
     i.e. a change in parent
     '''
-    with get_connection() as db:
-        # fetch the DS data
-        ds_data = storage.get_efm_object(db, 'DS', ds_id)
-        
-        # first we check if the new parent exists
-        new_parent_FR = storage.get_efm_object(db, 'FR', fr_id)
-        # check for same tree
-        same_tree(ds_data, new_parent_FR)
-        # check whether new parent is eligible
-        new_parent_loop_prevention(db, ds_data, new_parent_FR)
+    # fetch the DS data
+    ds_data = storage.get_efm_object(db, 'DS', ds_id)
+    
+    # first we check if the new parent exists
+    new_parent_FR = storage.get_efm_object(db, 'FR', fr_id)
+    # check for same tree
+    same_tree(ds_data, new_parent_FR)
+    # check whether new parent is eligible
+    new_parent_loop_prevention(db, ds_data, new_parent_FR)
 
-        # i.e. new_parent is not among children
-        new_parent_loop_prevention(db, ds_data, new_parent_FR)
+    # i.e. new_parent is not among children
+    new_parent_loop_prevention(db, ds_data, new_parent_FR)
 
-        # convert to DSnew object to avoid writing child relations
-        ds_data = schemas.DSnew(**ds_data.dict())
+    # convert to DSnew object to avoid writing child relations
+    ds_data = schemas.DSnew(**ds_data.dict())
 
 
-        # set new parent ID
-        ds_data.isb_id = new_parent_FR.id
-        
-        # store it
-        return storage.edit_efm_object(db, 'DS', ds_id, ds_data)
+    # set new parent ID
+    ds_data.isb_id = new_parent_FR.id
+    
+    # store it
+    return storage.edit_efm_object(db, 'DS', ds_id, ds_data)
 
 ### iw 
 def get_IW(db: PooledMySQLConnection, iw_id: int):
@@ -631,54 +631,128 @@ def new_parent_constraint(c_id: int, new_parent_id: int):
             )
 
 ## helper functions
-async def run_instantiation(tree_id: int):
+async def run_instantiation(db: PooledMySQLConnection, tree_id: int):
     '''
     creates all instance concepts of a tree
     does not overwrite existing ones if they are included in the new instantiation
     '''    
-    with get_connection() as db:
-        # fetch the old concepts, if available:
-        all_old_concepts = storage.get_efm_objects_all_of_tree(db, 'concept', tree_id, 0) # will get deleted later
-        all_new_concepts = []                           # will get added later
+    # fetch the old concepts, if available:
+    all_old_concepts = storage.get_efm_objects_all_of_tree(db, 'concept', tree_id, 0) # will get deleted later
+    all_new_concepts = []                           # will get added later
 
-        the_tree = storage.get_efm_object(db, 'tree', tree_id)
+    the_tree = storage.get_efm_object(db, 'tree', tree_id)
+    top_lvl_ds = storage.get_efm_object(db, 'DS', the_tree.top_level_ds_id)
 
-        all_dna = algorithms.alternative_configurations(the_tree.top_level_ds)
+    all_dna = alternative_configurations(db, top_lvl_ds)
 
-        concept_counter = len(all_old_concepts) # for naming only - there might be better approaches to this
+    concept_counter = len(all_old_concepts) # for naming only - there might be better approaches to this
 
-        for dna in all_dna:
-            
-            dna_string = str(dna) #json.dumps(dna)
+    for dna in all_dna:
+        
+        dna_string = str(dna) #json.dumps(dna)
 
-            # check if concept with same DNA already exists, then jump:
-            for old_concept in all_old_concepts:
-                if old_concept.dna == dna:
-                    # remove from list so it won't get deleted:
-                    all_old_concepts.remove(old_concept)
-                    # add to list of all Concepts:
-                    all_new_concepts.append(old_concept)
-                    # and we don't need to create a new object for it, so we jump
-                    next()
-            c_name = f"Concept {concept_counter}"
-            c_data = {
-                'name': c_name, 
-                'dna': dna_string, 
-                'tree_id': tree_id
-            }
-            new_concept = schemas.ConceptNew(**c_data)
-            
-            # add to DB:
-            storage.new_efm_object(db, 'concept', new_concept)
+        # check if concept with same DNA already exists, then jump:
+        for old_concept in all_old_concepts:
+            if old_concept.dna == dna:
+                # remove from list so it won't get deleted:
+                all_old_concepts.remove(old_concept)
+                # add to list of all Concepts:
+                all_new_concepts.append(old_concept)
+                # and we don't need to create a new object for it, so we jump
+                next()
+        c_name = f"Concept {concept_counter}"
+        c_data = {
+            'name': c_name, 
+            'dna': dna_string, 
+            'tree_id': tree_id
+        }
+        new_concept = schemas.ConceptNew(**c_data)
+        
+        # add to DB:
+        storage.new_efm_object(db, 'concept', new_concept)
 
-            all_new_concepts.append(new_concept)
-            concept_counter = concept_counter + 1
+        all_new_concepts.append(new_concept)
+        concept_counter = concept_counter + 1
 
-        # delete old concepts:
-        for oC in all_old_concepts:
-            storage.delete_efm_object(db, 'concept', oC.id)
-            
-        return all_new_concepts
+    # delete old concepts:
+    for oC in all_old_concepts:
+        storage.delete_efm_object(db, 'concept', oC.id)
+        
+    return all_new_concepts
+
+def alternative_solutions(db: PooledMySQLConnection, the_fr: schemas.FunctionalRequirement):
+    ## function for recursive generation of alternative concepts
+
+    # returns a list of dicts with each DNA, including the_fr
+    # each dna includes all DS IDs of an instance
+    # compiles all DS' alternatives (adding all the DS dna to the all_dna list, and adding thisFR:respectiveDS on top.
+
+    # all_dna collect's all the alternative's DNA, one alternative per entry in the list:
+    all_dna = []
+
+    # fethching child DS from DB
+    is_solved_by = storage.get_efm_children(
+        db = db,
+        efm_object_type = 'FR',
+        object_id = the_fr.id
+        )
+
+    for d in is_solved_by:
+        # cerating the individual dna sequence for this FR:DS pair (but only their names):
+        #print(d)
+        this_dna = d.id
+        # checking if there are any sub-configs for this DS, then we need to add the individual sequence to the end of EACH of the configuration's dna:
+        if alternative_configurations(db, d):
+            for ds_dna in alternative_configurations(d):
+                # print("ds_dna: {}; this_dna: {}".format(ds_dna, this_dna))
+                # add tp the respective sequence:
+                ds_dna.append(this_dna)
+                # print("ds_dna, combined: {}".format(ds_dna))
+                # add the sequnce to the collectors:
+                all_dna.append(ds_dna)
+            # print('we append sth; all_dna: {}'.format(all_dna))
+        else:
+            # if we are at the bottom of the tree, i.e. the DS has no FR below it, it doesn't return an array.
+            # so we need to make a new line DNA sequence!
+            all_dna.append(this_dna)
+
+    # returns the collector of all DNA:
+    return all_dna
+
+def alternative_configurations(db: PooledMySQLConnection, the_ds: schemas.DesignSolution):
+    ## function for recursive generation of alternative concepts
+
+    # creates the permutations of all child-FR alternative configurations
+    # FR1 [dnaA, dnaB, dnaC]; FR2 [dna1, dna2]; FR3 [DNA]
+    # --> [(dnaA, dna1, DNA), (dnaB, dna1, DNA), (dnaC, dna1, DNA),
+    #      (dnaA, dna2, DNA), (dnaB, dna2, DNA), (dnaC, dna2, DNA)]
+    all_dna = []
+    all_configurations = []
+
+    # fethching child DS from DB
+    requires_functions = storage.get_efm_children(
+        db = db,
+        efm_object_type = 'DS',
+        object_id = the_ds.id
+        )
+
+    for f in requires_functions:
+        # creating a list of all DNA from each FR; one entry per FR
+        # this will later be combinatorially multiplied (cross product)
+        # f.linkToCC()
+        new_dna = alternative_solutions(db, f)
+        if len(new_dna):
+            all_dna.append(new_dna)
+        # print(" all_dna of {}: {}; fr:{}, altS: {}".format(self, all_dna, f, f.alternative_solutions()))
+
+        # generating the combinatorial
+        # the first "list" makes it put out a list instead of a map object
+        # the map(list, ) makes it put out lists instead of tuples, needed for further progression on this...
+            all_configurations = list(map(list, itertools.product(*all_dna)))
+
+    # print(all_configurations)
+
+    return all_configurations
 
 def same_tree(obj_a, obj_b):
     '''

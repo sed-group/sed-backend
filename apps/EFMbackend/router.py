@@ -113,8 +113,9 @@ async def create_tree_from_json(
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
 async def generate_all_concepts(native_project_id: int):
-    await implementation.run_instantiation(tree_id = native_project_id)
-    return implementation.get_all_concepts(tree_id = native_project_id)
+    with get_connection() as db: 
+        await implementation.run_instantiation(db = db, tree_id = native_project_id)
+        return implementation.get_all_concepts(db = db, tree_id = native_project_id)
 
 @router.get("/trees/{native_project_id}/concepts",
             response_model= List[schemas.Concept],
@@ -122,7 +123,8 @@ async def generate_all_concepts(native_project_id: int):
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), EFM_APP_SID))]
             )
 async def get_all_concepts(native_project_id: int):
-    return implementation.get_all_concepts(tree_id = native_project_id)
+    with get_connection() as db:
+        return implementation.get_all_concepts(db = db, tree_id = native_project_id)
 
 @router.get("/{native_project_id}/concepts/{cID}",
             response_model= schemas.Concept,
@@ -130,7 +132,8 @@ async def get_all_concepts(native_project_id: int):
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), EFM_APP_SID))]
             )
 async def get_one_concept(cID: int):
-    return implementation.get_concept(cID = cID)
+    with get_connection() as db:
+        return implementation.get_concept(db = db, cID = cID)
 
 @router.put("/{native_project_id}/concepts/{cID}",
             response_model= schemas.Concept,
@@ -138,7 +141,8 @@ async def get_one_concept(cID: int):
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
 async def edit_concept(cID: int, cData: schemas.ConceptEdit):
-    return implementation.edit_concept(cData= cData, cID = cID)
+    with get_connection() as db:
+        return implementation.edit_concept(db = db, cData= cData, cID = cID)
 
 ## DS
 @router.get("/{native_project_id}/ds/{ds_id}",
@@ -147,7 +151,8 @@ async def edit_concept(cID: int, cData: schemas.ConceptEdit):
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), EFM_APP_SID))]
             )
 async def get_designSolutionInfo(ds_id: int):
-    return implementation.get_DS_info( ds_id = ds_id)
+    with get_connection() as db:
+        return implementation.get_DS_info(db = db, ds_id = ds_id)
 
 @router.post("/{native_project_id}/ds/new",
             response_model = schemas.DesignSolution,
@@ -164,7 +169,7 @@ async def create_designSolution(ds_data: schemas.DSnew):
             )
 async def delete_designSolution(ds_id: int):
     with get_connection() as db:
-        return implementation.delete_DS( ds_id = ds_id)
+        return implementation.delete_DS(db = db, ds_id = ds_id)
 
 @router.put("/{native_project_id}/ds/{ds_id}",
             response_model = schemas.DesignSolution,
@@ -185,7 +190,8 @@ async def edit_designSolution(ds_id: int, ds_data: schemas.DSnew):
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
 async def new_parent_designSolution(ds_id: int, new_parent_id: int):
-    return implementation.new_parent_DS(ds_id= ds_id, fr_id= new_parent_id)
+    with get_connection() as db:
+        return implementation.new_parent_DS(db = db, ds_id= ds_id, fr_id= new_parent_id)
 
 
 ## FR
@@ -195,7 +201,8 @@ async def new_parent_designSolution(ds_id: int, new_parent_id: int):
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), EFM_APP_SID))]
             )
 async def get_functionalRequirement(fr_id: int):
-    return implementation.get_FR_info( fr_id = fr_id)
+    with get_connection() as db:
+        return implementation.get_FR_info(db = db, fr_id = fr_id)
 
 @router.post("/{native_project_id}/fr/new",
             response_model = schemas.FunctionalRequirement,
@@ -203,14 +210,16 @@ async def get_functionalRequirement(fr_id: int):
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
 async def create_functionalRequirement(fr_data: schemas.FRnew):
-    return implementation.create_FR( fr_new= fr_data)
+    with get_connection() as db:
+        return implementation.create_FR(db = db, fr_new= fr_data)
 
 @router.delete("/{native_project_id}/fr/{fr_id}",
             summary="delets a new single FR object by id",
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
 async def delete_functionalRequirement(fr_id: int):
-    return implementation.delete_FR( fr_id = fr_id)
+    with get_connection() as db:
+        return implementation.delete_FR(db = db, fr_id = fr_id)
 
 @router.put("/{native_project_id}/fr/{fr_id}",
             response_model = schemas.FunctionalRequirement,
@@ -218,7 +227,8 @@ async def delete_functionalRequirement(fr_id: int):
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
 async def edit_functionalRequirement(fr_id: int, fr_data: schemas.FRnew):
-    return implementation.edit_FR(fr_id = fr_id, fr_data = fr_data)
+    with get_connection() as db:
+        return implementation.edit_FR(db = db, fr_id = fr_id, fr_data = fr_data)
 
 @router.put("/{native_project_id}/fr/{fr_id}/rf/",
             response_model = schemas.FunctionalRequirement,
@@ -226,7 +236,8 @@ async def edit_functionalRequirement(fr_id: int, fr_data: schemas.FRnew):
             dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), EFM_APP_SID))]
             )
 async def new_parent_functionalRequirement(fr_id: int, new_parent_id: int):
-    return implementation.new_parent_FR(fr_id= fr_id, ds_id= new_parent_id)
+    with get_connection() as db:
+        return implementation.new_parent_FR(db = db, fr_id= fr_id, ds_id= new_parent_id)
 
 
 # iw 
