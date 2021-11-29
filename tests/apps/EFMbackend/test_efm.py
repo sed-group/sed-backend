@@ -213,236 +213,236 @@ def test_create_tree(client, std_headers, std_user):
 def test_full_tree_insertion():
     pass
 
-# access non-existent tree & other objects
-def test_acces_nonexistent_objects(client, std_headers, std_user):
+# # access non-existent tree & other objects
+# def test_acces_nonexistent_objects(client, std_headers, std_user):
 
-    # setup (project generation)
-    current_user = impl_users.impl_get_user_with_username(std_user.username)
-    p = tu_projects.seed_random_project(current_user.id, participants={
-        current_user.id: proj_models.AccessLevel.ADMIN
-    })
+#     # setup (project generation)
+#     current_user = impl_users.impl_get_user_with_username(std_user.username)
+#     p = tu_projects.seed_random_project(current_user.id, participants={
+#         current_user.id: proj_models.AccessLevel.ADMIN
+#     })
 
-    # tree via string
-    response = client.get(urlPrefix + '/trees/' + "test")
-    assert response.status_code == 422
-    # tree via nonexisting ID
-    response = client.get(urlPrefix + '/trees/' + str(99))
-    assert response.status_code == 404
-    # tree via nonexisting ID (0)
-    response = client.get(urlPrefix + '/trees/' + str(0))
-    assert response.status_code == 404
+#     # tree via string
+#     response = client.get(urlPrefix + '/trees/' + "test")
+#     assert response.status_code == 422
+#     # tree via nonexisting ID
+#     response = client.get(urlPrefix + '/trees/' + str(99))
+#     assert response.status_code == 404
+#     # tree via nonexisting ID (0)
+#     response = client.get(urlPrefix + '/trees/' + str(0))
+#     assert response.status_code == 404
 
-    ## DS via string
-    response = client.get(urlPrefix + '/ds/' + "wrong")
-    assert response.status_code == 422 # bad request
-    ## DS via nonexisting ID
-    response = client.get(urlPrefix + '/ds/' + str(99))
-    assert response.status_code == 404 # not found
-    ## DS via nonexisting ID (0)
-    response = client.get(urlPrefix + '/ds/' + str(0))
-    assert response.status_code == 404
+#     ## DS via string
+#     response = client.get(urlPrefix + '/ds/' + "wrong")
+#     assert response.status_code == 422 # bad request
+#     ## DS via nonexisting ID
+#     response = client.get(urlPrefix + '/ds/' + str(99))
+#     assert response.status_code == 404 # not found
+#     ## DS via nonexisting ID (0)
+#     response = client.get(urlPrefix + '/ds/' + str(0))
+#     assert response.status_code == 404
 
 
-    # FR via nonexisting string
-    response = client.get(urlPrefix + '/fr/' + "fr")
-    assert response.status_code == 422
-    # FR via nonexisting ID
-    response = client.get(urlPrefix + '/fr/' + str(99))
-    assert response.status_code == 404
-    # FR via nonexisting ID (0)
-    response = client.get(urlPrefix + '/fr/' + str(0))
-    assert response.status_code == 404
+#     # FR via nonexisting string
+#     response = client.get(urlPrefix + '/fr/' + "fr")
+#     assert response.status_code == 422
+#     # FR via nonexisting ID
+#     response = client.get(urlPrefix + '/fr/' + str(99))
+#     assert response.status_code == 404
+#     # FR via nonexisting ID (0)
+#     response = client.get(urlPrefix + '/fr/' + str(0))
+#     assert response.status_code == 404
 
-# create FR, DS
-def test_create_basic_objects():
-    global TEST_TREE    
-    global DS_1A
-    global DS_1B
-    global FR_1
-    global FR2
+# # create FR, DS
+# def test_create_basic_objects():
+#     global TEST_TREE    
+#     global DS_1A
+#     global DS_1B
+#     global FR_1
+#     global FR2
     
-    # create FR in testTree, as child of top_lvl_ds
-    # first we need to get the top_lvl_ds ID:
-    print("test_create_basic_objects testTreeID:" + str(testTreeID)) 
-    testTreeUrl = urlPrefix + '/trees/' +str(testTreeID)
-    testTree =  client.get(testTreeUrl)
+#     # create FR in testTree, as child of top_lvl_ds
+#     # first we need to get the top_lvl_ds ID:
+#     print("test_create_basic_objects testTreeID:" + str(testTreeID)) 
+#     testTreeUrl = urlPrefix + '/trees/' +str(testTreeID)
+#     testTree =  client.get(testTreeUrl)
 
-    assert testTree.status_code == 200
-    response_tree = testTree.json()
+#     assert testTree.status_code == 200
+#     response_tree = testTree.json()
 
-    print("testing TREE: url {}, RESPONSE: status: {}, json: {}".format(testTreeUrl, testTree.status_code, response_tree))
+#     print("testing TREE: url {}, RESPONSE: status: {}, json: {}".format(testTreeUrl, testTree.status_code, response_tree))
 
-    testTopLevelDSid = response_tree['top_lvl_dsid']
-
-
-    # creating three top lvl FR:
-    for i in range(1,4):
-        newFRdata = {
-            "name": f"Test function {i}",
-            "description": f"Top level function number {i}",
-            "treeID": testTreeID,
-            "rfID": testTopLevelDSid
-            }
-        newFRurl = urlPrefix + "/fr/new"
-        responseFR = client.post(
-            newFRurl,
-            json = newFRdata,
-            )
-
-        print("testing FR: url {}, json: {}".format(newFRurl, newFRdata))
-        print(responseFR.json() )
-
-        assert responseFR.status_code == 200
-        theFRdata = responseFR.json()
-        theFRid = theFRdata['id']
-        assert theFRdata == {
-            "name": f"Test function {i}",
-            "id": theFRid,
-            "description": f"Top level function number {i}",
-            "treeID": testTreeID,
-            "rfID": testTopLevelDSid,
-            "is_solved_by": []
-        }
-
-        allFRID.append(theFRid)
-
-        # check whether top_lvl_ds now has theFR as a "requires_function"
-        requestTopLvlDS = client.get(urlPrefix + '/ds/' + str(testTopLevelDSid))
-        top_lvl_dsdata = requestTopLvlDS.json()
-        assert theFRid in top_lvl_dsdata['requires_functions_id']
-
-        # create DS as child of FR above
-        for ii in range(1,i+1):
-            theDSdata = {
-                "name": f"DS {ii} for FR {i}",
-                "description": f"One of {i} alternatives solutions",
-                "treeID": testTreeID,
-                "isbID": theFRid
-            }
-            responseDS = client.post(
-                urlPrefix + '/ds/new',
-                json = theDSdata,
-            )
+#     testTopLevelDSid = response_tree['top_lvl_dsid']
 
 
-            assert responseDS.status_code == 200
-            theDSdata = responseDS.json()
-            theDSid = theDSdata['id']
-            assert theDSdata == {
-                "id": theDSid,
-                "name": f"DS {ii} for FR {i}",
-                "description": f"One of {i} alternatives solutions",
-                "treeID": testTreeID,
-                "isbID": theFRid,
-                "is_top_level_DS": False,
-                "requires_functions": [],
-                'interacts_with': [],
-                'design_parameters': []
-            }
+#     # creating three top lvl FR:
+#     for i in range(1,4):
+#         newFRdata = {
+#             "name": f"Test function {i}",
+#             "description": f"Top level function number {i}",
+#             "treeID": testTreeID,
+#             "rfID": testTopLevelDSid
+#             }
+#         newFRurl = urlPrefix + "/fr/new"
+#         responseFR = client.post(
+#             newFRurl,
+#             json = newFRdata,
+#             )
 
-            # check whether theFR now has theDS as a "is_solved_by"
-            requestFR2 = client.get(urlPrefix + '/fr/' + str(theFRid))
-            FR2data = requestFR2.json()
-            assert theDSid in FR2data['is_solved_by_id']
+#         print("testing FR: url {}, json: {}".format(newFRurl, newFRdata))
+#         print(responseFR.json() )
 
-            allDSID.append(theDSid)
+#         assert responseFR.status_code == 200
+#         theFRdata = responseFR.json()
+#         theFRid = theFRdata['id']
+#         assert theFRdata == {
+#             "name": f"Test function {i}",
+#             "id": theFRid,
+#             "description": f"Top level function number {i}",
+#             "treeID": testTreeID,
+#             "rfID": testTopLevelDSid,
+#             "is_solved_by": []
+#         }
 
-# create iw
-def test_create_iw():
-    global testTreeID
-    global allDSID
+#         allFRID.append(theFRid)
 
-    # pick the first 2 DS frim allDSID
-    DS1id = allDSID[0]
-    DS2id = allDSID[2]
+#         # check whether top_lvl_ds now has theFR as a "requires_function"
+#         requestTopLvlDS = client.get(urlPrefix + '/ds/' + str(testTopLevelDSid))
+#         top_lvl_dsdata = requestTopLvlDS.json()
+#         assert theFRid in top_lvl_dsdata['requires_functions_id']
 
-    theNewIWdata = {
-        'fromDsID': DS1id,
-        'toDsID': DS2id,
-        'iwType': 'spatial'
-    }
+#         # create DS as child of FR above
+#         for ii in range(1,i+1):
+#             theDSdata = {
+#                 "name": f"DS {ii} for FR {i}",
+#                 "description": f"One of {i} alternatives solutions",
+#                 "treeID": testTreeID,
+#                 "isbID": theFRid
+#             }
+#             responseDS = client.post(
+#                 urlPrefix + '/ds/new',
+#                 json = theDSdata,
+#             )
 
-    response = client.post(
-                urlPrefix + '/iw/new',
-                json = theNewIWdata,
-                )
+
+#             assert responseDS.status_code == 200
+#             theDSdata = responseDS.json()
+#             theDSid = theDSdata['id']
+#             assert theDSdata == {
+#                 "id": theDSid,
+#                 "name": f"DS {ii} for FR {i}",
+#                 "description": f"One of {i} alternatives solutions",
+#                 "treeID": testTreeID,
+#                 "isbID": theFRid,
+#                 "is_top_level_DS": False,
+#                 "requires_functions": [],
+#                 'interacts_with': [],
+#                 'design_parameters': []
+#             }
+
+#             # check whether theFR now has theDS as a "is_solved_by"
+#             requestFR2 = client.get(urlPrefix + '/fr/' + str(theFRid))
+#             FR2data = requestFR2.json()
+#             assert theDSid in FR2data['is_solved_by_id']
+
+#             allDSID.append(theDSid)
+
+# # create iw
+# def test_create_iw():
+#     global testTreeID
+#     global allDSID
+
+#     # pick the first 2 DS frim allDSID
+#     DS1id = allDSID[0]
+#     DS2id = allDSID[2]
+
+#     theNewIWdata = {
+#         'fromDsID': DS1id,
+#         'toDsID': DS2id,
+#         'iwType': 'spatial'
+#     }
+
+#     response = client.post(
+#                 urlPrefix + '/iw/new',
+#                 json = theNewIWdata,
+#                 )
     
-    ## assert status
-    assert response.status_code ==200
-    responseData = response.json()
-    theIWid = responseData['id']
+#     ## assert status
+#     assert response.status_code ==200
+#     responseData = response.json()
+#     theIWid = responseData['id']
     
-    ## assert returndata
-    assert responseData == {
-        'id': theIWid,
-        'treeID': testTreeID,
-        'fromDsID': DS1id,
-        'toDsID': DS2id,
-        'iwType': 'spatial'
-    }
+#     ## assert returndata
+#     assert responseData == {
+#         'id': theIWid,
+#         'treeID': testTreeID,
+#         'fromDsID': DS1id,
+#         'toDsID': DS2id,
+#         'iwType': 'spatial'
+#     }
 
-    ## assert that the iw is listed in the DS:
-    theDS1response = client.get(urlPrefix + '/ds/'+ str(DS1id))
-    theDS1 = theDS1response.json()
-    assert theIWid in theDS1['interacts_with_id']
+#     ## assert that the iw is listed in the DS:
+#     theDS1response = client.get(urlPrefix + '/ds/'+ str(DS1id))
+#     theDS1 = theDS1response.json()
+#     assert theIWid in theDS1['interacts_with_id']
 
-# create iw in alternative instances (--> 400)
-def test_create_bad_iw():
-    global testTreeID
-    global allFRID
+# # create iw in alternative instances (--> 400)
+# def test_create_bad_iw():
+#     global testTreeID
+#     global allFRID
 
-    # allFRID[1] should have two alternative DS
-    theFRresponse = client.get(urlPrefix + '/fr/' + str(allFRID[1]))
-    # assert theFRresponse.status_code == 200
+#     # allFRID[1] should have two alternative DS
+#     theFRresponse = client.get(urlPrefix + '/fr/' + str(allFRID[1]))
+#     # assert theFRresponse.status_code == 200
 
-    theFR = theFRresponse.json()
+#     theFR = theFRresponse.json()
 
-    DS1id = theFR['is_solved_by_id'][0]
-    DS2id = theFR['is_solved_by_id'][1]
+#     DS1id = theFR['is_solved_by_id'][0]
+#     DS2id = theFR['is_solved_by_id'][1]
     
-    theNewIWdata = {
-        'fromDsID': DS1id,
-        'toDsID': DS2id,
-        'iwType': 'spatial'
-    }
+#     theNewIWdata = {
+#         'fromDsID': DS1id,
+#         'toDsID': DS2id,
+#         'iwType': 'spatial'
+#     }
 
-    iwResponse = client.post(
-        urlPrefix + '/iw/new',
-        json = theNewIWdata,
-    )
+#     iwResponse = client.post(
+#         urlPrefix + '/iw/new',
+#         json = theNewIWdata,
+#     )
 
-    assert iwResponse.status_code == 400
+#     assert iwResponse.status_code == 400
 
-# edit tree
-def test_edit_tree():
-    global testTreeID
-    newTreeData = {
-        'name': 'a new tree name',
-        'description': 'an edited description'
-    }
+# # edit tree
+# def test_edit_tree():
+#     global testTreeID
+#     newTreeData = {
+#         'name': 'a new tree name',
+#         'description': 'an edited description'
+#     }
 
-    response = client.put(urlPrefix + '/trees/' + str(testTreeID), newTreeData)
+#     response = client.put(urlPrefix + '/trees/' + str(testTreeID), newTreeData)
 
-    assert response.status_code == 200
+#     assert response.status_code == 200
 
-    responseData = response.json()
-    top_lvl_dsid = responseData['top_lvl_dsid']
+#     responseData = response.json()
+#     top_lvl_dsid = responseData['top_lvl_dsid']
     
-    assert responseData == {
-        'id': testTreeID,
-        'name': 'a new tree name',
-        'description': 'an edited description',
-        'top_lvl_dsid': top_lvl_dsid
-    }
+#     assert responseData == {
+#         'id': testTreeID,
+#         'name': 'a new tree name',
+#         'description': 'an edited description',
+#         'top_lvl_dsid': top_lvl_dsid
+#     }
 
-# edit FR
+# # edit FR
 
-# edit DS
+# # edit DS
 
-# delete FR
-def test_delete_FR():
-    global testTreeID
-    pass
+# # delete FR
+# def test_delete_FR():
+#     global testTreeID
+#     pass
 
 
 # delete DS
