@@ -317,7 +317,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_value_drivers`
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_needs_divers_map`
 (
-    `id`                  INT UNSIGNED NOT NULL AUTO_INCREMENT, # needed?
+    `id`                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `stakeholder_need_id` INT UNSIGNED NOT NULL,
     `value_driver_id`     INT UNSIGNED NOT NULL,
     PRIMARY KEY (`id`),
