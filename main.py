@@ -1,8 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from fastapi.middleware.cors import CORSMiddleware
-
 import main_router as api
 import setup
 import env
@@ -12,7 +10,7 @@ import env
 env.Environment.parse_env()
 
 
-# setup.config_default_logging()
+setup.config_default_logging()
 
 app = FastAPI(
     title="SED lab API",
@@ -34,17 +32,4 @@ app.add_middleware(
 
 
 # Misc middleware
-# setup.install_middleware(app)
-
-origins = [
-    "http://localhost:8080",
-    "http://localhost:8081",
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+setup.install_middleware(app)

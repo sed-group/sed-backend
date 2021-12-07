@@ -32,7 +32,6 @@ class ProjectListing(BaseModel):
     id: int
     name: str
     access_level: AccessLevel = AccessLevel.NONE
-    subprojects: List[int] = []
 
 
 class ProjectPost(BaseModel):
