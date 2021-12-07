@@ -4,7 +4,7 @@ from pydantic import BaseModel, HttpUrl
 from typing import List, Optional, ForwardRef
 
 ## importing from EF-M submodules
-from apps.EFMbackend.parameters.schemas import DesignParameter
+# from apps.EFMbackend.parameters.schemas import DesignParameter
 
 class TreeNew(BaseModel):
     '''
@@ -137,7 +137,7 @@ class TreeData(TreeInfo):
     ds: List[DesignSolution] = []
     fr: List[FunctionalRequirement] = []
     iw: List[InteractsWith] = []
-    dp: List[DesignParameter] = []
+    # dp: List[DesignParameter] = []
     c: List[Constraint] = []
 
 

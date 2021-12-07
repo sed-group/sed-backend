@@ -15,8 +15,8 @@ from apps.EFMbackend.exceptions import *
 from apps.EFMbackend.utils import not_yet_implemented
 
 # imports from EF-M sub-modules
-from apps.EFMbackend.parameters.schemas import DesignParameter
-from apps.EFMbackend.parameters.storage import get_DP_all
+# from apps.EFMbackend.parameters.schemas import DesignParameter
+# from apps.EFMbackend.parameters.storage import get_DP_all
 
 # imports from core
 from apps.core.db import get_connection
