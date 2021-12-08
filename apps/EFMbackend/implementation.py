@@ -259,7 +259,7 @@ def create_tree_from_json(db: PooledMySQLConnection, project_id:int, tree_data: 
         )
     
     # push into id list
-    id_matching_list[input_top_lvl_ds.id] = created_top_lvl_ds.id
+    id_matching_list[input_top_lvl_ds.id] = create_top_lvl_ds.id
 
     id_matching_list = create_tree_recursively(
         db = db,
