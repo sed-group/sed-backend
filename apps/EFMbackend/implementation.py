@@ -259,7 +259,7 @@ def create_tree_from_json(db: PooledMySQLConnection, project_id:int, tree_data: 
         )
     
     # push into id list
-    id_matching_list[input_top_lvl_ds.id] = create_top_lvl_ds.id
+    id_matching_list[input_top_lvl_ds.id] = created_top_lvl_ds.id
 
     id_matching_list = create_tree_recursively(
         db = db,
@@ -889,7 +889,7 @@ def new_parent_loop_prevention(db: PooledMySQLConnection, child, parent):
     if parent in grand_children:
          raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"{parent.name} cannot be new parent of {child.name}, since it would create a loop! ({paret.name} is already a child of {child.name}.)"
+            detail=f"{parent.name} cannot be new parent of {child.name}, since it would create a loop! ({parent.name} is already a child of {child.name}.)"
         )
     else:
         return True
