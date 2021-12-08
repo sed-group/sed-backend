@@ -55,6 +55,10 @@ class MySQLStatementBuilder:
         self.query += create_select_statement(table, columns)
         return self
 
+    def select_all(self, table: str):
+        self.query += create_select_all_statement(table)
+        return self
+
     def count(self, table: str):
         self.query += create_count_statement(table)
         self.default_fetchtype = FetchType.FETCH_ONE

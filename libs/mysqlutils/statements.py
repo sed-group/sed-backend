@@ -22,6 +22,10 @@ def create_select_statement(table, columns: List[str]):
     return f"SELECT {','.join(wrap_in_backticks(columns))} FROM {table} "   # SELECT col1, col2 FROM table
 
 
+def create_select_all_statement(table):
+    return f"SELECT * FROM {table} "   # SELECT col1, col2 FROM table
+
+
 def create_count_statement(table):
     return f"SELECT COUNT(*) as count FROM {table} "
 
