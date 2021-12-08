@@ -258,16 +258,16 @@ def get_tree_data(db: PooledMySQLConnection, tree_id: int, depth:int=0):
 #         ds_data = top_lvl_ds_data
 #         )
     
-#     # push into id list
-#     id_matching_list[input_top_lvl_ds.id] = create_top_lvl_ds.id
+    # push into id list
+    id_matching_list[input_top_lvl_ds.id] = created_top_lvl_ds.id
 
-#     id_matching_list = create_tree_recursively(
-#         db = db,
-#         efm_element_list = tree_data,
-#         ds_from_list = input_top_lvl_ds,
-#         ds_from_db = created_top_lvl_ds,
-#         id_list = id_matching_list
-#         )
+    id_matching_list = create_tree_recursively(
+        db = db,
+        efm_element_list = tree_data,
+        ds_from_list = input_top_lvl_ds,
+        ds_from_db = created_top_lvl_ds,
+        id_list = id_matching_list
+        )
     
 #     # creating CONSTRAINTS
 #     for input_c in tree_data.c:
@@ -889,7 +889,7 @@ def new_parent_loop_prevention(db: PooledMySQLConnection, child, parent):
     if parent in grand_children:
          raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"{parent.name} cannot be new parent of {child.name}, since it would create a loop! ({paret.name} is already a child of {child.name}.)"
+            detail=f"{parent.name} cannot be new parent of {child.name}, since it would create a loop! ({parent.name} is already a child of {child.name}.)"
         )
     else:
         return True
