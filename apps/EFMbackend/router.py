@@ -19,7 +19,7 @@ from apps.core.projects.dependencies import ProjectAccessChecker, SubProjectAcce
 from apps.core.projects.models import AccessLevel
 
 # sub-module-routers
-from apps.EFMbackend.parameters.router import router as param_router
+# from apps.EFMbackend.parameters.router import router as param_router
 
 router = APIRouter()
 
@@ -324,4 +324,4 @@ async def new_parent_constraint(ds_id: int, new_parent_id: int):
         return implementation.new_parent_DS(db = db, ds_id= ds_id, fr_id= new_parent_id)
 
 
-router.include_router(param_router, prefix="/param", tags=['EF-M parameters'])
+# router.include_router(param_router, prefix="/param", tags=['EF-M parameters'])
