@@ -21,7 +21,9 @@ app = FastAPI(
 app.include_router(api.router, prefix="/api")
 
 # CORS
-origins = ["http://localhost:8080"]
+origins = ["http://localhost:8080",
+    "https://boring-nobel-325204.netlify.app", # netlify efm frontend
+    ]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
