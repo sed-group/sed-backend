@@ -15,7 +15,7 @@ This setup guide will take you through how to get the sed-backend application an
 - Go to the root directory of the project. There should be a file called docker-compose.yml in that directory.
 - Run `docker-compose build`
 - Run `docker-compose up -d`
-- Check if it is working by surfing to `http://localhost/docs`
+- Check if it is working by surfing to `http://localhost:8000/docs`
 
 That's it. If you change anything in the FastAPI application, then you need to rebuild. 
 But before you build it is advisable to first shut down your containers. These operations can be done like this:
