@@ -4,6 +4,7 @@
 # Development directories
 venv/
 .idea/
+.vscode/
 
 # Cache files
 *.pyc
