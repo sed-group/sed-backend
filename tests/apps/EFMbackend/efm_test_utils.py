@@ -115,7 +115,11 @@ def create_tree(db: PooledMySQLConnection):
     p = tu_projects.seed_random_project(current_user.id, participants={
         current_user.id: proj_models.AccessLevel.ADMIN
     })
-    
+
+
+    # generate test tree data
+    tree_data = schemas.TreeNew(**TEST_TREE_DATA)
+        
     tree = implementation.create_tree(
         db = db,
         project_id = p.id,
@@ -123,8 +127,6 @@ def create_tree(db: PooledMySQLConnection):
         user_id = current_user.id
         )
 
-    # generate test tree data
-    tree_data = schemas.TreeNew(**TEST_TREE_DATA)
 
     return {
         'tree_data': tree,
@@ -132,7 +134,17 @@ def create_tree(db: PooledMySQLConnection):
         'top_lvl_ds_id': tree.top_level_ds_id,
         'project_id': p.id,
         'user_id': current_user.id,
-    }
+      }
 
 def delete_tree(db: PooledMySQLConnection, tree_id: int):
-    pass
+    return implementation.delete_tree(tree_id)
+
+def populate_tree_with_FR(db: PooledMySQLConnection, tree_id: int):
+  '''
+    populates a tree (tree_id) with 2 FR on top lvl
+    returns [FR1, FR2]
+  '''
+
+  tree = implementation.get_tree_details(tree_id)
+
+  
