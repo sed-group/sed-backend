@@ -3,8 +3,9 @@ from typing import List
 from enum import Enum
 import weakref
 from mysql.connector.pooling import PooledMySQLConnection
+from fastapi.logger import logger
 
-from apps.EFMbackend.exceptions import EfmElementNotFoundException
+from apps.EFMbackend.exceptions import EfmElementNotFoundException, EfmDatabaseException
 # import apps.EFMbackend.models as models
 import apps.EFMbackend.schemas as schemas
 
@@ -71,6 +72,7 @@ DESIGNSOLUTION = EFM_OBJECT_INFO(
         'child_type': 'FR',
         }
     )
+
 FUNCTIONALREQUIREMENT = EFM_OBJECT_INFO(
     name = 'FR', 
     table_name = 'efm_functionalrequirements', 
@@ -138,7 +140,7 @@ def get_efm_object(db: PooledMySQLConnection, efm_object_type: EfmObjectTypes, o
     '''
 
     object_data = EFM_OBJECT_INFO.get_by_name(efm_object_type)
-
+    logger.debug(f"Attepmt to fetch {object_data.to_string} with ID {object_id}")
     try:
         sql_select_query = f'SELECT p.* ' 
         
@@ -164,10 +166,9 @@ def get_efm_object(db: PooledMySQLConnection, efm_object_type: EfmObjectTypes, o
         db_response = cursor.fetchone()
 
         if not db_response:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"{object_data.to_string} with ID {object_id} does not exist."
-            )
+            # could not find object in DB:
+            raise EfmElementNotFoundException(object_id, object_data.to_string)
+            
 
         # convert to dictionary:
         db_response = dict(zip(cursor.column_names, db_response))
@@ -176,16 +177,9 @@ def get_efm_object(db: PooledMySQLConnection, efm_object_type: EfmObjectTypes, o
         
         return response_object
 
-    except EfmElementNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"{object_data.to_string} with ID {object_id} does not exist."
-        )
     except TypeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="object_id needs to be an integer"
-        )
+        logger.error(f"Type error when fetching EFM object {object_data.to_string} with ID {object_id}")
+        raise
 
 def get_efm_objects_all_of_tree(
     db: PooledMySQLConnection,
@@ -202,48 +196,49 @@ def get_efm_objects_all_of_tree(
     '''
 
     object_data = EFM_OBJECT_INFO.get_by_name(efm_object_type)
-
-    # try:
-
-    sql_select_query = "SELECT * " + \
-        f"FROM {object_data.table_name} "
-
-    if tree_id:
-        sql_select_query = sql_select_query + \
-            f"WHERE tree_id = {tree_id} "
-
-    if limit:
-        sql_select_query = sql_select_query + \
-            f"LIMIT {limit} " + \
-            f"OFFSET {offset} "
     
-    sql_select_query = sql_select_query + ';'
+    logger.debug(f"Attempt to fetch all EFM object {object_data.to_string} with from tree with ID {tree_id}")
 
-    cursor = db.cursor()
-    cursor.execute(sql_select_query)
+    try:
 
-    db_response = cursor.fetchall()
+        sql_select_query = "SELECT * " + \
+            f"FROM {object_data.table_name} "
 
-    # converting database result to dict
-    dict_array = []
-    for row in db_response:
-        dict_array.append(dict(zip(cursor.column_names, row)))
-    db_response = dict_array
-    
-    # rewrite to schema:
-    the_object_as_pydantic_model_list = []
+        if tree_id:
+            sql_select_query = sql_select_query + \
+                f"WHERE tree_id = {tree_id} "
 
-    for db_row in db_response:
-        the_object_as_pydantic_model = object_data.schema_out(**db_row)
-        the_object_as_pydantic_model_list.append(the_object_as_pydantic_model)
+        if limit:
+            sql_select_query = sql_select_query + \
+                f"LIMIT {limit} " + \
+                f"OFFSET {offset} "
+        
+        sql_select_query = sql_select_query + ';'
 
-    return the_object_as_pydantic_model_list
+        cursor = db.cursor()
+        cursor.execute(sql_select_query)
 
-    # except TypeError:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_400_BAD_REQUEST,
-    #         detail = f"Type exception when trying to fetch {object_data.to_string}"
-    #     )
+        db_response = cursor.fetchall()
+
+        # converting database result to dict
+        dict_array = []
+        for row in db_response:
+            dict_array.append(dict(zip(cursor.column_names, row)))
+        db_response = dict_array
+        
+        # rewrite to schema:
+        the_object_as_pydantic_model_list = []
+
+        for db_row in db_response:
+            the_object_as_pydantic_model = object_data.schema_out(**db_row)
+            the_object_as_pydantic_model_list.append(the_object_as_pydantic_model)
+
+        return the_object_as_pydantic_model_list
+
+  
+    except TypeError:
+        logger.error(f"Type error when fetching EFM object {object_data.to_string} with from tree ID {tree_id}")
+        raise
 
 def new_efm_object(
     db: PooledMySQLConnection,
@@ -258,56 +253,59 @@ def new_efm_object(
     '''
 
     object_type_info = EFM_OBJECT_INFO.get_by_name(efm_object_type)
+    logger.debug(f"Attempt to create new EFM object {object_data.to_string}.")
 
     # checking input data
     try:
         object_pydantic = object_type_info.schema_in(**object_data.dict())
-    except TypeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail = f"Type exception when trying to create {object_type_info.to_string}"
-        )
-    # try:
-    # building sql statement:
-    sql_insert_query = f'INSERT INTO {object_type_info.table_name} '
-    sql_col_names = []
-    sql_values = []
-    for key, val in object_pydantic.dict().items():
-        sql_col_names.append(key)
-        # check for string, then we need "'"
-        if isinstance(val, str):
-            sql_values.append(f"'{val}'")
-        elif val == None:
-            sql_values.append('NULL')
-        else:
-            sql_values.append(str(val))
-    sql_insert_query = sql_insert_query + \
-        f"({', '.join(sql_col_names)}) " + \
-        f"VALUES ({', '.join(sql_values)})"
     
-    # print(sql_insert_query)
+    except TypeError:
+        logger.error(f"Type error in input data for new EFM object {object_data.to_string}")
+        raise
 
-    cursor = db.cursor()
-    cursor.execute(sql_insert_query)
+    try:
+        # building sql statement:
+        sql_insert_query = f'INSERT INTO {object_type_info.table_name} '
+        sql_col_names = []
+        sql_values = []
+        for key, val in object_pydantic.dict().items():
+            sql_col_names.append(key)
+            # check for string, then we need "'"
+            if isinstance(val, str):
+                sql_values.append(f"'{val}'")
+            elif val == None:
+                sql_values.append('NULL')
+            else:
+                sql_values.append(str(val))
+        sql_insert_query = sql_insert_query + \
+            f"({', '.join(sql_col_names)}) " + \
+            f"VALUES ({', '.join(sql_values)})"
 
-    new_object_id = cursor.lastrowid
+        # print(sql_insert_query)
 
-    if commit:
-        db.commit()
-        # fetching the object to return
-        object_to_return = get_efm_object(
-            db = db, 
-            efm_object_type = efm_object_type, 
-            object_id = new_object_id
-            )
-        return object_to_return
-    else:
-        return new_object_id
-    # except:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_400_BAD_REQUEST,
-    #         detail=f"Failed to enter new {object_type_info.to_string} into database."
-    #     )
+        cursor = db.cursor()
+        cursor.execute(sql_insert_query)
+
+        new_object_id = cursor.lastrowid
+
+        logger.debug(f"Created new EFM object {object_data.to_string} with ID {new_object_id}")
+
+        if commit:
+            db.commit()
+            # fetching the object to return
+            object_to_return = get_efm_object(
+                db = db, 
+                efm_object_type = efm_object_type, 
+                object_id = new_object_id
+                )
+            return object_to_return
+        else:
+            return new_object_id
+    except:
+
+        logger.error(f"Failed to enter new EFM object{object_type_info.to_string} into database.")
+
+        raise EfmDatabaseException(f"Failed to enter EFM object {object_type_info.to_string} into database.")
 
 def delete_efm_object(
     db: PooledMySQLConnection,
@@ -320,6 +318,8 @@ def delete_efm_object(
     '''
 
     object_type_info = EFM_OBJECT_INFO.get_by_name(efm_object_type)
+    
+    logger.debug(f"Attempt to delete EFM object {object_type_info.to_string} with ID {object_id}")
 
     try:
         sql_delete_query = "DELETE FROM " + \
@@ -334,15 +334,10 @@ def delete_efm_object(
         return cursor.rowcount
 
     except TypeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="object_id needs to be an integer"
-        )
+        logger.error(f"Type error when deleting EFM object {object_type_info.to_string} with ID {object_id}")
+        raise
     except:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Database could not delete {object_type_info.to_string}"
-        )
+        raise EfmDatabaseException('Could not delete EFM object {object_type_info.to_string} with ID {object_id}')
 
 def edit_efm_object(
     db: PooledMySQLConnection,
@@ -357,58 +352,58 @@ def edit_efm_object(
     # print(f"edit_efm_object: type: {efm_object_type}; id: {object_id}; data: {object_data}")
 
     object_type_info = EFM_OBJECT_INFO.get_by_name(efm_object_type)
+    
+    logger.debug(f"Attempt to edit EFM object {object_data.to_string} with ID {object_id}")
 
     # checking input data
     try:
         object_pydantic = object_type_info.schema_edit(**object_data.dict())
+    
     except TypeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail = f"Type exception when trying to edit {object_type_info.to_string}"
-        )
+        logger.error(f"Type error when editing EFM object {object_data.to_string} with ID {object_id}")
+        raise
 
-    # try:
-    sql_update_query = f"UPDATE {object_type_info.table_name} SET "
+    try:
+        sql_update_query = f"UPDATE {object_type_info.table_name} SET "
 
-    for key, val in object_pydantic.dict().items():
-        if isinstance(val, str):
-            update_val_string = f"{key} = '{val}', "
-        elif val == None:
-            update_val_string = f"{key} = NULL, "
+        for key, val in object_pydantic.dict().items():
+            if isinstance(val, str):
+                update_val_string = f"{key} = '{val}', "
+            elif val == None:
+                update_val_string = f"{key} = NULL, "
+            else:
+                update_val_string = f"{key} = {val}, "
+            
+            sql_update_query = sql_update_query + update_val_string
+
+        # remove trailing ","
+        sql_update_query = sql_update_query.rstrip(', ')
+
+        sql_update_query = sql_update_query + \
+            f" WHERE id = {object_id}"
+
+        # print(sql_update_query)
+
+        cursor = db.cursor()
+        cursor.execute(sql_update_query)
+
+        if commit:
+            db.commit()
+            # fetching the object to return
+            object_to_return = get_efm_object(
+                db = db, 
+                efm_object_type = efm_object_type, 
+                object_id = object_id
+                )
+            return object_to_return
+
         else:
-            update_val_string = f"{key} = {val}, "
-        
-        sql_update_query = sql_update_query + update_val_string
+            return object_id
 
-    # remove trailing ","
-    sql_update_query = sql_update_query.rstrip(', ')
+    except:
+        logger.error("Could not edit database entry for EFM object {} with ID {}".format(object_type_info.to_string, object_id))
 
-    sql_update_query = sql_update_query + \
-        f" WHERE id = {object_id}"
-
-    # print(sql_update_query)
-
-    cursor = db.cursor()
-    cursor.execute(sql_update_query)
-
-    if commit:
-        db.commit()
-        # fetching the object to return
-        object_to_return = get_efm_object(
-            db = db, 
-            efm_object_type = efm_object_type, 
-            object_id = object_id
-            )
-        return object_to_return
-
-    else:
-        return object_id
-
-    # except:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_400_BAD_REQUEST,
-    #         detail="Could not edit database entry for {} with ID {}".format(object_type_info.to_string, object_id)
-    #     )
+        raise EfmDatabaseException("Could not edit database entry for EFM object {} with ID {}".format(object_type_info.to_string, object_id))
 
 
 ## Specialiced DB Functions
@@ -418,6 +413,9 @@ def tree_set_top_lvl_ds(db: PooledMySQLConnection, tree_id: int, ds_id: int):
     needed in initial creation of a tree 
     '''
     object_type_info = EFM_OBJECT_INFO.get_by_name('tree')
+    
+    logger.debug(f"Attempt to set top lvl DS with ID {ds_id} for tree with ID {tree_id}")
+
     try:
         sql_update_query = f"UPDATE {object_type_info.table_name} " + \
             f"SET top_level_ds_id = {ds_id} " + \
@@ -427,17 +425,15 @@ def tree_set_top_lvl_ds(db: PooledMySQLConnection, tree_id: int, ds_id: int):
         cursor.execute(sql_update_query)
 
         return tree_id
-
+  
     except TypeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Type error when setting top level DS id for tree id:{}".format(tree_id)
-        )
+        logger.error(f"Type error when trying to set top lvl DS id for tree {tree_id}")
+        raise
+
     except:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to set top lvl DS id for tree {tree_id}"
-        )
+        logger.error(f"Failed to set top lvl DS id for tree {tree_id}")
+
+        raise EfmDatabaseException(f"Failed to set top lvl DS id for tree {tree_id}")
 
 def get_efm_children(db: PooledMySQLConnection, efm_object_type: str, object_id: int):
     ''' 

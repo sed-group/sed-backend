@@ -1,4 +1,5 @@
 from fastapi import HTTPException, status
+from fastapi.logger import logger
 from typing import List
 import json
 import itertools #for permutations in concept DNA
@@ -26,7 +27,7 @@ import apps.core.projects.models as proj_models
 EFM_APP_SID = 'MOD.EFM'
 
 #### TREES
-def get_tree_list_of_user(db: PooledMySQLConnection, user_id: int, limit:int = 100, offset:int = 0) \
+def get_tree_list_of_user(user_id: int, limit:int = 100, offset:int = 0) \
     -> List[schemas.TreeInfo]:
     '''
     list of all tree objects from DB
@@ -38,93 +39,108 @@ def get_tree_list_of_user(db: PooledMySQLConnection, user_id: int, limit:int = 1
     :param offset: pagination offset
     :return: list of schemas.TreeInfo
     '''
-    subproject_list = proj_storage.db_get_user_subprojects_with_application_sid(db, user_id, EFM_APP_SID)
+    
+    with get_connection() as db:
+        subproject_list = proj_storage.db_get_user_subprojects_with_application_sid(db, user_id, EFM_APP_SID)
 
-    tree_list = []
-    counter = offset    # For pagination
-    # print(subproject_list)
-    while len(subproject_list) > counter and counter < (offset+limit):
-        # print(f'fetching subproject tree with id{subproject_list[counter].native_project_id}')
-        try: 
-            tree = storage.get_efm_object(db, 'tree', subproject_list[counter].native_project_id)
-            tree_list.append(tree)
-        except:
-            print(f'could not find subproject tree with id {subproject_list[counter].native_project_id}')
-        counter = counter + 1
+        tree_list = []
+        counter = offset    # For pagination
+        # print(subproject_list)
+        while len(subproject_list) > counter and counter < (offset+limit):
+            logger.debug(f'fetching subproject tree with id{subproject_list[counter].native_project_id}')
+            try: 
+                tree = storage.get_efm_object(db, 'tree', subproject_list[counter].native_project_id)
+                tree_list.append(tree)
+            except EfmElementNotFoundException:
+                logger.debug(f'could not find subproject tree with id {subproject_list[counter].native_project_id}')
+            counter = counter + 1
 
-    # tree_list = storage.get_efm_objects_all_of_tree(db, 'tree', 0, limit, offset)
-    tree_info_list = []
+        # tree_list = storage.get_efm_objects_all_of_tree(db, 'tree', 0, limit, offset)
+        tree_info_list = []
 
-    # conversion to schemas.TreeInfo
-    for t in tree_list:
-        t_info = schemas.TreeInfo(**t.dict())
-        tree_info_list.append(t_info)
+        # conversion to schemas.TreeInfo
+        for t in tree_list:
+            t_info = schemas.TreeInfo(**t.dict())
+            tree_info_list.append(t_info)
 
-    return tree_info_list
+        return tree_info_list
 
-def create_tree(db: PooledMySQLConnection, project_id:int, new_tree: schemas.TreeNew, user_id: int):
+def create_tree(project_id:int, new_tree: schemas.TreeNew, user_id: int):
     '''
         creates one new tree based on schemas.treeNew
         creates a new subproject in project_id 
         creates a top-level DS and associates its ID to tree.top_level_ds_id
     '''
-    # first check whether project exists
-    try:
-        proj_storage.db_get_project_exists(db, project_id)
-    except:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No project with ID {project_id} could be found"
-        )
+    with get_connection() as db:
+        # first check whether project exists
+        try:
+            proj_storage.db_get_project_exists(db, project_id)
+        except:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No project with ID {project_id} could be found"
+            )
 
-    # create tree without DS:
-    the_tree_id = storage.new_efm_object(
-        db = db,
-        efm_object_type='tree',
-        object_data= new_tree, 
-        commit=False
-        )
+        # create tree without DS:
+        the_tree_id = storage.new_efm_object(
+            db = db,
+            efm_object_type='tree',
+            object_data= new_tree, 
+            commit=False
+            )
 
-    # manufacture a top-levelDS:
-    top_ds = schemas.DSnew(
-        name=new_tree.name, 
-        description="Top-level DS", 
-        tree_id = the_tree_id, 
-        is_top_level_ds = True,
-        )
+        # manufacture a top-levelDS:
+        top_ds = schemas.DSnew(
+            name=new_tree.name, 
+            description="Top-level DS", 
+            tree_id = the_tree_id, 
+            is_top_level_ds = True,
+            )
 
-    # creating the DS in the DB
-    top_ds_id = storage.new_efm_object(
-        db = db,
-        efm_object_type='DS',
-        object_data= top_ds,
-        commit=False
-        )
+        # creating the DS in the DB
+        top_ds_id = storage.new_efm_object(
+            db = db,
+            efm_object_type='DS',
+            object_data= top_ds,
+            commit=False
+            )
 
-    # setting the tree topLvlDS
-    storage.tree_set_top_lvl_ds(
-        db= db,
-        tree_id = the_tree_id,
-        ds_id= top_ds_id,
-        )
+        # setting the tree topLvlDS
+        try:
+            storage.tree_set_top_lvl_ds(
+            db= db,
+            tree_id = the_tree_id,
+            ds_id= top_ds_id,
+            )
+        except EfmDatabaseException as e:
+            raise HTTPException(
+                status_code=status.HTTP_409,
+                detail=e
+            )
 
-    # create new sub-project on core level:
-    new_subproject_data = proj_models.SubProjectPost(
-        application_sid = EFM_APP_SID,
-        native_project_id = the_tree_id,
-    )
-    
-    new_subproject = proj_storage.db_post_subproject(
-        connection = db, 
-        subproject = new_subproject_data,
-        current_user_id = user_id,
-        project_id = project_id
+        # create new sub-project on core level:
+        new_subproject_data = proj_models.SubProjectPost(
+            application_sid = EFM_APP_SID,
+            native_project_id = the_tree_id,
         )
-    
-    db.commit()
+        
+        try:
+            new_subproject = proj_storage.db_post_subproject(
+            connection = db, 
+            subproject = new_subproject_data,
+            current_user_id = user_id,
+            project_id = project_id
+            )
+        except SubProjectDuplicateException as e:
+            raise HTTPException(
+                status_code=status.HTTP_409,
+                detail = f'failed to create subproject: {e}'
+            )
 
-    # fetch tree to return
-    the_tree = storage.get_efm_object(
+        db.commit()
+
+        # fetch tree to return
+        the_tree = storage.get_efm_object(
         db = db,
         efm_object_type = 'tree',
         object_id = the_tree_id,
@@ -132,94 +148,179 @@ def create_tree(db: PooledMySQLConnection, project_id:int, new_tree: schemas.Tre
 
     return the_tree
 
-def edit_tree(db: PooledMySQLConnection, tree_id: int, tree_data: schemas.TreeNew):
-    return storage.edit_efm_object(
-        db = db, 
-        efm_object_type='tree',
-        object_id= tree_id,
-        object_data= tree_data
-        )
+def edit_tree(tree_id: int, tree_data: schemas.TreeNew):
+    with get_connection() as db:
+        # first fetch to check if element exits
+        try:
+            storage.get_efm_object(
+                db=db, 
+                efm_object_type = 'tree', 
+                object_id= tree_id
+            )
+        except EfmElementNotFoundException:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No EFM tree with ID {tree_id} in database."
+            )
+    
+        # editing process
+        try: 
+            return storage.edit_efm_object(
+                db = db, 
+                efm_object_type='tree',
+                object_id= tree_id,
+                object_data= tree_data
+            )
+            db.commit()
 
-def get_tree_details(db: PooledMySQLConnection, tree_id: int):
+        except TypeError:
+            raise HTTPException(
+                status_code=status.HTTP_409,
+                detail = f'Type Error when editing tree with ID {tree_id}'
+            )
+        except EfmDatabaseException:
+            raise HTTPException(
+                status_code=status.HTTP_409,
+                detail = f'Database error when editing tree with ID {tree_id}'
+            )
+
+def get_tree_details(tree_id: int):
     ''' 
         returns a tree object with all details
         returns a schemas.Tree
     '''
-    the_tree = storage.get_efm_object(db, 'tree', tree_id)
-    return the_tree
+    with get_connection() as db:
+        try:
+            storage.get_efm_object(
+                db=db, 
+                efm_object_type = 'tree', 
+                object_id= tree_id
+            )
+        except EfmElementNotFoundException:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No EFM tree with ID {tree_id} in database."
+            )
 
-def delete_tree(db: PooledMySQLConnection, tree_id: int):
+def delete_tree(tree_id: int):
     '''
         deletes tree based on id 
         also deletes the related subproject in core
     '''
     
-    return_value = storage.delete_efm_object(
-        db = db,
-        efm_object_type = 'tree',
-        object_id = tree_id
-        )
-    # print(return_value)
-    # deleting the respective sub-project:
-    # try:
-    #     subproject = proj_storage.db_get_subproject_native(
-    #         connection = db, 
-    #         application_sid = EFM_APP_SID,
-    #         native_project_id = tree_id
-    #         )
-    #     proj_storage.db_delete_subproject(
-    #         connection = db,
-    #         project_id = subproject.project_id,
-    #         subproject_id = subproject.id,
-    #         )
-    # except:
-    #     return_value = False
-    db.commit()
+    with get_connection() as db:
+        
+        # first fetch to check if element exits
+        try:
+            storage.get_efm_object(
+                db=db, 
+                efm_object_type = 'tree', 
+                object_id= tree_id
+            )
+        except EfmElementNotFoundException:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No EFM tree with ID {tree_id} in database."
+            )
 
-    return return_value
+        # now we delete:
+        try:
+            return_value = storage.delete_efm_object(
+                db = db,
+                efm_object_type = 'tree',
+                object_id = tree_id
+            )
+        
+        except TypeError:
+            raise HTTPException(
+                status_code=status.HTTP_409,
+                detail = f'Type Error when deleting tree with ID {tree_id}'
+            )
+        except EfmDatabaseException:
+            raise HTTPException(
+                status_code=status.HTTP_409,
+                detail = f'Database error when deleting tree with ID {tree_id}'
+            )
 
-def get_tree_data(db: PooledMySQLConnection, tree_id: int, depth:int=0):
+        # deleting the respective sub-project:
+        try:
+            subproject = proj_storage.db_get_subproject_native(
+                connection = db, 
+                application_sid = EFM_APP_SID,
+                native_project_id = tree_id
+                )
+            proj_storage.db_delete_subproject(
+                connection = db,
+                project_id = subproject.project_id,
+                subproject_id = subproject.id,
+                )
+        except:
+            return_value = False
+            raise HTTPException(
+                status_code=status.HTTP_409,
+                detail = f'Could not delete subproject related to EFM tree {tree_id}'
+            )
+        
+        db.commit()
+
+        return return_value
+
+def get_tree_data(tree_id: int, depth:int=0):
     '''
     returns a list of all obejcts related to a specific tree
     depth = 0 makes it return _all_ objects - can be quite big then!
     however, there is no sorting applied to the returned objects, so it is difficult to know which elements you get back...
     '''
-    the_tree = storage.get_efm_object(db, 'tree', tree_id)
+    
+    with get_connection() as db:
 
-    tree_data = schemas.TreeData(**the_tree.dict())
+        #  first fetch to the tree
+        try:
+            the_tree = storage.get_efm_object(
+                db=db, 
+                efm_object_type = 'tree', 
+                object_id= tree_id
+            )
+        except EfmElementNotFoundException:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No EFM tree with ID {tree_id} in database."
+            )
 
-    # fetch DS
-    all_ds = storage.get_efm_objects_all_of_tree(db, 'DS', tree_id, depth)
-    # all_ds = db.query(models.DesignSolution).filter(models.DesignSolution.tree_id == tree_id).all()
-    # for ds in all_ds:
-    #     pydantic_ds_tree = schemas.DesignSolution.from_orm(ds)
-    #     the_ds_info = schemas.DesignSolution(**pydantic_ds_tree.dict())
-    #     the_ds_info.update(pydantic_ds_tree)
-    #     tree_data.ds.append(the_ds_info)
-    tree_data.ds = all_ds
+        tree_data = schemas.TreeData(**the_tree.dict())
 
-    # fetch FR
-    all_fr = storage.get_efm_objects_all_of_tree(db, 'FR', tree_id, depth)
-    # for fr in all_fr:
-    #     pydantic_fr_tree = schemas.FunctionalRequirement.from_orm(fr)
-    #     the_fr_info = schemas.FunctionalRequirement(**pydantic_fr_tree.dict())
-    #     the_fr_info.update(pydantic_fr_tree)
-    #     tree_data.fr.append(the_fr_info)
-    tree_data.fr = all_fr
+        try:
+            # fetch DS
+            all_ds = storage.get_efm_objects_all_of_tree(db, 'DS', tree_id, depth)
+            tree_data.ds = all_ds
 
-    # fetch iw
-    all_iw = storage.get_efm_objects_all_of_tree(db, 'iw', tree_id, depth)
-    tree_data.iw = all_iw
+            # fetch FR
+            all_fr = storage.get_efm_objects_all_of_tree(db, 'FR', tree_id, depth)
+            tree_data.fr = all_fr
 
-    # fetch DP
-    # all_dp = get_DP_all(db, tree_id, depth)
-    # tree_data.dp = all_dp
+            # fetch iw
+            all_iw = storage.get_efm_objects_all_of_tree(db, 'iw', tree_id, depth)
+            tree_data.iw = all_iw
 
-    # fetch constraints
-    all_c = storage.get_efm_objects_all_of_tree(db, 'c', tree_id, depth)
-    tree_data.c = all_c
+            # fetch DP
+            # all_dp = get_DP_all(db, tree_id, depth)
+            # tree_data.dp = all_dp
 
-    return tree_data
+            # fetch constraints
+            all_c = storage.get_efm_objects_all_of_tree(db, 'c', tree_id, depth)
+            tree_data.c = all_c
+
+        except TypeError:
+            raise HTTPException(
+                status_code=status.HTTP_409,
+                detail = f'Type Error when fetching elements for tree with ID {tree_id}'
+            )
+        except:
+            raise HTTPException(
+                status_code=status.HTTP_409,
+                detail = f'Error when fetching elements for tree with ID {tree_id}'
+            )
+        return tree_data
     
 def create_tree_recursively(
     db: PooledMySQLConnection,
@@ -270,78 +371,294 @@ def create_tree_recursively(
     return left_over_elements
 
 ### CONCEPTS
-def get_all_concepts(db: PooledMySQLConnection, tree_id: int, limit:int=100, offset: int = 0):
+def get_all_concepts(db: PooledMySQLConnection, tree_id: int, limit:int=100, offset: int = 0) -> List[schemas.Concept]:
     '''
     returns a list of all concepts of the tree identified via tree_id
     '''
-    return storage.get_efm_objects_all_of_tree(db, 'concept', tree_id, limit, offset)
+    try:
+        return storage.get_efm_objects_all_of_tree(db, 'concept', tree_id, limit, offset)
+    except TypeError:
+        raise HTTPException(
+            status_code=status.HTTP_409,
+            detail = f'Type Error when fetching concepts for EFM tree with ID {tree_id}'
+        )
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_409,
+            detail = f'Error when fetching concepts for EFM tree with ID {tree_id}'
+        )
 
-def get_concept(db: PooledMySQLConnection, cID: int):
-    return storage.get_efm_object(db, 'concept', cID)
+def get_concept(concept_id: int) -> schemas.Concept:
+    with get_connection() as db: 
+        try:
+            return storage.get_efm_object(
+                db=db, 
+                efm_object_type = 'concept', 
+                object_id= concept_id
+            )
+        except EfmElementNotFoundException:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No EFM concept with ID {concept_id} in database."
+            )
 
-def edit_concept(db: PooledMySQLConnection, cID: int, cData: schemas.ConceptEdit):
-    return storage.edit_efm_object(db, 'concept', cID, cData)
+def edit_concept(concept_id: int, concept_data: schemas.ConceptEdit) -> schemas.Concept:
+    with get_connection() as db: 
+        try:
+            return storage.get_efm_object(
+                db=db, 
+                efm_object_type = 'concept', 
+                object_id= concept_id
+            )
+        except EfmElementNotFoundException:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No EFM concept with ID {concept_id} in database."
+            )
+        try:
+            edited_concept = storage.edit_efm_object(db, 'concept', concept_id, concept_data)
+            db.commit
+            return edited_concept
+        
+        except TypeError:
+            raise HTTPException(
+                status_code=status.HTTP_409,
+                detail = f'Type Error when editing concept with ID {concept_id}'
+            )
+        except EfmDatabaseException:
+            raise HTTPException(
+                status_code=status.HTTP_409,
+                detail = f'Database error when editing concept with ID {concept_id}'
+            )
 
 ### FR
-def get_FR_info(db: PooledMySQLConnection, fr_id: int):
+def get_FR_info(fr_id: int) -> schemas.FunctionalRequirement:
     ''' 
         returns a FR object with all details
         but instead of relationships only ids
     ''' 
-    return storage.get_efm_object(db, 'FR', fr_id)
+    with get_connection() as db: 
+        try:
+            return storage.get_efm_object(
+                db=db, 
+                efm_object_type = 'FR', 
+                object_id= fr_id
+            )
+        except EfmElementNotFoundException:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No EFM FR with ID {fr_id} in database."
+            )
 
-def create_FR(db: PooledMySQLConnection, fr_new: schemas.FRnew):
+def create_FR(fr_new: schemas.FRnew) -> schemas.FunctionalRequirement:
     '''
         creates new FR based on schemas.FRnew (name, description) 
         associates it to DS with parentID via FR.rf_id ("requires function")
     '''
-    # checking if parent exists
-    parent_ds = storage.get_efm_object(db, 'DS', fr_new.rf_id)
-    # setting tree_id for fetching
-    fr_new.tree_id = parent_ds.tree_id
+    with get_connection() as db: 
+        try:
+            parent_ds = storage.get_efm_object(
+                db=db, 
+                efm_object_type = 'DS', 
+                object_id= fr_new.rf_id
+            )
+        except EfmElementNotFoundException:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No parend DS with ID {fr_new.rf_id} in database."
+            )
     
-    return storage.new_efm_object(db, 'FR', fr_new)
+        fr_new.tree_id = parent_ds.tree_id
+        
+        try:
+            new_fr = storage.new_efm_object(
+                db = db,
+                efm_object_type= 'FR',
+                object_data= fr_new,
+                commit=True
+                )
+        
+        except TypeError:
+            raise HTTPException(
+                status_code=status.HTTP_409,
+                detail = f'Type Error when creating new FR'
+            )
+        except EfmDatabaseException:
+            raise HTTPException(
+                status_code=status.HTTP_409,
+                detail = f'Error when creating new FR'
+            )
+
+        return new_fr
     
-def delete_FR(db: PooledMySQLConnection, fr_id: int):
+def delete_FR(fr_id: int) -> bool:
     '''
         deletes FR based on id 
     '''
-    return storage.delete_efm_object(db, 'FR', fr_id)
 
-def edit_FR(db: PooledMySQLConnection, fr_id: int, fr_data: schemas.FRnew):
+    with get_connection() as db:
+        
+        # first fetch to check if element exits
+        try:
+            storage.get_efm_object(
+                db=db, 
+                efm_object_type = 'FR', 
+                object_id= fr_id
+            )
+        except EfmElementNotFoundException:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No FR with ID {fr_id} in database."
+            )
+
+        # now we delete:
+        try:
+            return_value = storage.delete_efm_object(
+                db = db,
+                efm_object_type = 'FR',
+                object_id = fr_id
+            )
+        
+        except TypeError:
+            raise HTTPException(
+                status_code=status.HTTP_409,
+                detail = f'Type Error when deleting FR with ID {fr_id}'
+            )
+        except EfmDatabaseException:
+            raise HTTPException(
+                status_code=status.HTTP_409,
+                detail = f'Database error when deleting FR with ID {fr_id}'
+            )
+        
+        return return_value
+
+def edit_FR(fr_id: int, fr_data: schemas.FRnew) -> schemas.FunctionalRequirement:
     '''
         overwrites the data in the FR identified with fr_id with the data from fr_data
         can change parent (i.e. isb), name and description
         tree_id is set through parent; therefore, change of tree is theoretically possible
     '''
-    # first we need to set the tree_id, fetched from the parent DS
-    parent_ds = storage.get_efm_object(db, 'DS', fr_data.rf_id)
-    fr_data.tree_id = parent_ds.tree_id
+    with get_connection() as db: 
+        # first fetch to check if element exits
+        try:
+            storage.get_efm_object(
+                db=db, 
+                efm_object_type = 'FR', 
+                object_id= fr_id
+            )
+        except EfmElementNotFoundException:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No FR with ID {fr_id} in database."
+            )
 
-    return storage.edit_efm_object(db, 'FR', fr_id, fr_data)
+        # check if new parent exists
+        try:
+            parent_ds = storage.get_efm_object(
+                db=db, 
+                efm_object_type = 'DS', 
+                object_id= fr_data.rf_id
+            )
+        except EfmElementNotFoundException:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No parent DS with ID {fr_data.rf_id} in database when editing FR with ID {fr_id}."
+            )
     
-def new_parent_FR(db: PooledMySQLConnection, fr_id: int, ds_id: int):
+        # then we need to set the tree_id, fetched from the parent DS
+        fr_data.tree_id = parent_ds.tree_id
+
+        try:
+            edited_fr = storage.edit_efm_object(
+                db = db,
+                efm_object_type= 'FR',
+                object_id= fr_id,
+                object_data= fr_data,
+                commit=True
+                )
+        
+        except TypeError:
+            raise HTTPException(
+                status_code=status.HTTP_409,
+                detail = f'Type Error when editing FR with ID {fr_id}.'
+            )
+        except EfmDatabaseException:
+            raise HTTPException(
+                status_code=status.HTTP_409,
+                detail = f'Error when editing FR with ID {fr_id}.'
+            )
+
+        return edited_fr
+
+def new_parent_FR(fr_id: int, ds_id: int) -> schemas.FunctionalRequirement:
     '''
     sets ds_id as new rf_id for FR
     i.e. a change in parent
     '''
-    # fetch the FR data
-    fr_data = storage.get_efm_object(db, 'FR', fr_id)
-    # first we check if the new parent exists
-    new_parent_DS = storage.get_efm_object(db, 'DS', ds_id)
-    
-    # check for same tree
-    same_tree(fr_data, new_parent_DS)
-    # check whether new parent is eligible
-    new_parent_loop_prevention(db, fr_data, new_parent_DS)
+    with get_connection() as db: 
+        # first fetch to check if element exits
+        try:
+            fr_data = storage.get_efm_object(
+                db=db, 
+                efm_object_type = 'FR', 
+                object_id= fr_id
+            )
+        except EfmElementNotFoundException:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No FR with ID {fr_id} in database."
+            )
+         # check if new parent exists
+        try:
+            new_parent_DS = storage.get_efm_object(
+                db=db, 
+                efm_object_type = 'DS', 
+                object_id= ds_id
+            )
+        except EfmElementNotFoundException:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No parent DS with ID {ds_id} in database when editing FR with ID {fr_id}."
+            )
+      
+        # check for same tree
+        same_tree(fr_data, new_parent_DS)
+        # check whether new parent is eligible
+        new_parent_loop_prevention(db, fr_data, new_parent_DS)
 
-    # convert to FRnew object to avoid writing child relations
-    fr_data = schemas.FRnew(**fr_data.dict())
-    # set new parent ID
-    fr_data.rf_id = new_parent_DS.id
-    
-    # store it
-    return storage.edit_efm_object(db, 'FR', fr_id, fr_data)
+        # convert to FRnew object to avoid writing child relations
+        fr_data = schemas.FRnew(**fr_data.dict())
+        # set new parent ID
+        fr_data.rf_id = new_parent_DS.id
+        
+        # store it
+        try:
+            edited_fr = storage.edit_efm_object(
+                db = db,
+                efm_object_type= 'FR',
+                object_id= fr_id,
+                object_data= fr_data,
+                commit=True
+                )
+        
+        except TypeError:
+            raise HTTPException(
+                status_code=status.HTTP_409,
+                detail = f'Type Error when editing FR with ID {fr_id}.'
+            )
+        except EfmDatabaseException:
+            raise HTTPException(
+                status_code=status.HTTP_409,
+                detail = f'Error when editing FR with ID {fr_id}.'
+            )
+
+        return edited_fr
+
+#########################################################
+#########################################################
+## REWORK DONE UNTIL HERE 
+#########################################################
+#########################################################
 
 
 ### DS
