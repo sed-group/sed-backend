@@ -5,6 +5,7 @@ import apps.core.users.implementation as impl_users
 import apps.core.projects.implementation as impl
 import apps.core.projects.models as proj_models
 import apps.EFMbackend.schemas as schemas
+from fastapi.logger import logger
 
 # test data: 
 TEST_TREE = {
@@ -201,13 +202,17 @@ def test_create_tree(client, std_headers, std_user):
     assert response_tree == assertion_tree_data.dict()
 
     # test whether Top level DS exists:
-    get_ds_url = f"{urlPrefix}/{response_tree['id']}/ds/{response_tree['top_level_ds_id']}"
-    top_lvl_ds = client.get(get_ds_url)
-
+    get_ds_url = f"{urlPrefix}/{assertion_tree_data.id}/ds/{assertion_tree_data.top_level_ds_id}"
+    top_lvl_ds = client.get(
+        get_ds_url,
+        headers=std_headers,
+        )
+    # logger.info(assertion_tree_data)
+    
     assert top_lvl_ds.status_code == 200
 
     # cleanup
-    tu_projects.delete_projects(seeded_projects)
+    tu_projects.delete_projects([p])
 
 
 def test_full_tree_insertion():
