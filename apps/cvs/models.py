@@ -113,6 +113,7 @@ class VCSSubprocessPost(BaseModel):
 
 class VCSTableRow(BaseModel):
     id: int
+    row_index: int
     stakeholder: str
     stakeholder_expectations: str
     iso_process: VCSISOProcess
@@ -139,8 +140,8 @@ class VCSStakeholderNeed(BaseModel):
 
 
 class VCSStakeholderNeedPost(BaseModel):
-    name: str
-    rank_weight: int
+    name: Optional[str] = None
+    rank_weight: Optional[int] = None
 
 
 # ======================================================================================================================
@@ -158,44 +159,50 @@ class VCSValueDriverPost(BaseModel):
 
 
 # ======================================================================================================================
-# VCS Table
+# VCS Table - Representation/return models
 # ======================================================================================================================
 
-class ValueDriver(BaseModel):
+class ValueDriverGet(BaseModel):
     id: int
     name: str
 
 
-class StakeholderNeed(BaseModel):
+class StakeholderNeedGet(BaseModel):
     id: int
     need: str
     rank_weight: int
-    value_drivers: List[ValueDriver] = None
+    value_drivers: List[ValueDriverGet] = None
 
 
-class TableRow(BaseModel):
+class TableRowGet(BaseModel):
     id: int
+    row_index: int
     iso_process: Optional[VCSISOProcess] = None
     subprocess: Optional[VCSSubprocess] = None
-    stakeholder: str
+    stakeholder: Optional[str] = None
     stakeholder_expectations: Optional[str] = None
-    stakeholder_needs: List[StakeholderNeed] = None
+    stakeholder_needs: List[StakeholderNeedGet] = None
 
 
-class Table(BaseModel):
-    table_rows: List[TableRow]
+class TableGet(BaseModel):
+    table_rows: List[TableRowGet]
 
+
+# ======================================================================================================================
+# VCS Table - Post models
+# ======================================================================================================================
 
 class StakeholderNeedPost(BaseModel):
-    need: str
+    need: Optional[str] = None
     rank_weight: Optional[int] = 0
     value_driver_ids: Optional[List[int]] = None
 
 
 class TableRowPost(BaseModel):
+    row_index: int
     iso_process_id: Optional[int] = None
     subprocess_id: Optional[int] = None
-    stakeholder: str
+    stakeholder: Optional[str] = None
     stakeholder_expectations: Optional[str] = None
     stakeholder_needs: List[StakeholderNeedPost] = None
 

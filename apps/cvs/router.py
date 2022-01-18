@@ -1,14 +1,9 @@
-import time
-
 from libs.datastructures.pagination import ListChunk
 
 from fastapi import APIRouter, Depends
-from typing import List
 
 from apps.core.users.models import User
 from apps.core.authentication.utils import get_current_active_user
-from apps.core.projects.dependencies import SubProjectAccessChecker
-from apps.core.projects.models import AccessLevel
 
 import apps.cvs.implementation as impl
 import apps.cvs.models as models
@@ -270,9 +265,9 @@ async def delete_subprocess(subprocess_id: int, project_id: int,
 @router.get(
     '/project/{project_id}/vcs/{vcs_id}/get/table',
     summary='Returns the table of a a VCS',
-    response_model=models.Table,
+    response_model=models.TableGet,
 )
-async def get_vcs_table(vcs_id: int, project_id: int, user: User = Depends(get_current_active_user)) -> models.Table:
+async def get_vcs_table(vcs_id: int, project_id: int, user: User = Depends(get_current_active_user)) -> models.TableGet:
     impl.get_vcs(vcs_id, project_id, user.id)  # perfoming necessary controls
     return impl.get_vcs_table(vcs_id, project_id, user.id)
 

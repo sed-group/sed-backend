@@ -1,9 +1,7 @@
 from fastapi import HTTPException, status
-from typing import List
 
 from libs.datastructures.pagination import ListChunk
 
-import apps.core.individuals.exceptions as ind_ex
 import apps.core.authentication.exceptions as auth_ex
 from apps.core.db import get_connection
 
@@ -459,13 +457,10 @@ def delete_subprocess(subprocess_id: int, project_id: int, user_id: int) -> bool
 # VCS Table
 # ======================================================================================================================
 
-def get_vcs_table(vcs_id: int, project_id: int, user_id: int) -> models.Table:
-    # todo: handle exceptions
+def get_vcs_table(vcs_id: int, project_id: int, user_id: int) -> models.TableGet:
     try:
         with get_connection() as con:
             return storage.get_vcs_table(con, vcs_id, project_id, user_id)
-    except cvs_exceptions.SubprocessNotFoundException:
-        pass  # todo: remove it
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
