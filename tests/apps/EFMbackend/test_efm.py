@@ -4,159 +4,14 @@ import tests.apps.core.users.testutils as tu_users
 import apps.core.users.implementation as impl_users
 import apps.core.projects.implementation as impl
 import apps.core.projects.models as proj_models
+
 import apps.EFMbackend.schemas as schemas
+import efm_test_utils as tu_efm
+import efm_test_data as data_efm
+
 from fastapi.logger import logger
 
-# test data: 
-TEST_TREE = {
-    'name': 'efm test tree',
-    'description': 'A EFM test tree for pytest',
-    'top_level_ds_id': None,
-    'subproject_id': None,
-    'id': None,
-}
 
-FR_1 = {
-    'name': 'Function 1',
-    'description': 'a test function the product has to perform',
-    id: None,
-    'tree_id': None,
-    'rf_id': None,
-}
-
-FR_2 = {
-    'name': 'Function 2',
-    'description': 'another test function the product has to perform',
-    id: None,
-    'tree_id': None,
-    'rf_id': None,
-}
-
-DS_1A = {
-    'name': 'Design Solution A for FR 1',
-    'description': 'this is just a test DS, alternative A',
-    'id': None,
-    'tree_id': None,
-    'is_top_level_ds': False,
-    'isb_id': None,
-}
-
-DS_1B = {
-    'name': 'Design Solution B for FR 1',
-    'description': 'this is just a test DS, alternative A',
-    'id': None,
-    'tree_id': None,
-    'is_top_level_ds': False,
-    'isb_id': None,
-}
-
-IW_1A_1B = {
-    'description': 'interaction between DS 1A and 1B',
-    'id': None,
-    'tree_id': None,
-    'from_ds_id': None,
-    'to_ds_id': None,
-    'iw_type': 'energy',
-}
-
-TEST_TREE_DATA = {
-  "name": "Test tree",
-  "description": "",
-  "id": 30,
-  "top_level_ds_id": 45,
-  "ds": [
-    {
-      "name": "Test tree",
-      "description": "Top-level DS",
-      "isb_id": None,
-      "tree_id": 30,
-      "is_top_level_ds": True,
-      "id": 45
-    },
-    {
-      "name": "solution A1",
-      "description": None,
-      "isb_id": 17,
-      "tree_id": 30,
-      "is_top_level_ds": False,
-      "id": 46
-    },
-    {
-      "name": "Solution A2",
-      "description": None,
-      "isb_id": 18,
-      "tree_id": 30,
-      "is_top_level_ds": False,
-      "id": 47
-    },
-    {
-      "name": "Solution B2",
-      "description": "description solution b2 ",
-      "isb_id": 18,
-      "tree_id": 30,
-      "is_top_level_ds": False,
-      "id": 48
-    }
-  ],
-  "fr": [
-    {
-      "name": "Function 1",
-      "description": "description function 1",
-      "tree_id": 30,
-      "rf_id": 45,
-      "id": 17
-    },
-    {
-      "name": "Function 2",
-      "description": "description function 2",
-      "tree_id": 30,
-      "rf_id": 45,
-      "id": 18
-    }
-  ],
-  "iw": [
-    {
-      "tree_id": 30,
-      "iw_type": "spatial",
-      "description": None,
-      "from_ds_id": 46,
-      "to_ds_id": 47,
-      "id": 8
-    },
-    {
-      "tree_id": 30,
-      "iw_type": "spatial",
-      "description": None,
-      "from_ds_id": 48,
-      "to_ds_id": 46,
-      "id": 9
-    }
-  ],
-  "dp": [],
-  "c": [
-    {
-      "name": "Constraint for A1",
-      "description": "",
-      "tree_id": 30,
-      "icb_id": 46,
-      "id": 2
-    },
-    {
-      "name": "Second constraint for A1",
-      "description": "",
-      "tree_id": 30,
-      "icb_id": 46,
-      "id": 3
-    },
-    {
-      "name": "Constraint for A2",
-      "description": "",
-      "tree_id": 30,
-      "icb_id": 47,
-      "id": 4
-    }
-  ]
-}
 
 urlPrefix = "/api/efm"
 
@@ -177,7 +32,7 @@ def test_create_tree(client, std_headers, std_user):
     })
     
     # generate test tree data
-    tree_data = schemas.TreeNew(**TEST_TREE_DATA)
+    tree_data = schemas.TreeNew(**data_efm.TEST_TREE_DATA)
 
     # test
     response = client.post(
@@ -195,11 +50,10 @@ def test_create_tree(client, std_headers, std_user):
     # TEST_TREE['top_level_ds_id'] = response_tree['top_level_ds_id']
     # TEST_TREE['subproject_id'] = response_tree['subproject_id']
 
-    assertion_tree_data = schemas.TreeInfo(**TEST_TREE_DATA)
+    assertion_tree_data = schemas.TreeInfo(**data_efm.TEST_TREE_DATA)
     assertion_tree_data.id = response_tree['id']
     assertion_tree_data.top_level_ds_id = response_tree['top_level_ds_id']
 
-    assert response_tree == assertion_tree_data.dict()
 
     # test whether Top level DS exists:
     get_ds_url = f"{urlPrefix}/{assertion_tree_data.id}/ds/{assertion_tree_data.top_level_ds_id}"
@@ -209,14 +63,49 @@ def test_create_tree(client, std_headers, std_user):
         )
     # logger.info(assertion_tree_data)
     
-    assert top_lvl_ds.status_code == 200
-
     # cleanup
     tu_projects.delete_projects([p])
 
+    # assert
+    assert response_tree == assertion_tree_data.dict()
+    assert top_lvl_ds.status_code == 200
 
-def test_full_tree_insertion():
-    pass
+
+
+def test_create_fr(client, std_headers, std_user):
+    # setup
+    tree_data = tu_efm.create_tree(std_user)
+    
+    parent_ds_id = tree_data['top_lvl_ds_id']
+
+    tree_id = tree_data['tree_id']
+
+    # test
+    new_fr_url = f"{urlPrefix}/{tree_id}/fr/new"
+
+    new_fr_data = schemas.FRnew(**data_efm.FR_1)
+    new_fr_data.rf_id = parent_ds_id
+    new_fr_data.tree_id = tree_id
+    
+    response = client.post(
+      new_fr_url,
+      headers = std_headers,
+      json = new_fr_data.dict(),
+    )
+    new_fr = response.json()
+
+    #cleanup
+    tu_efm.delete_tree(tree_id)
+    tu_projects.delete_projects_with_ids([tree_data['project_id']])
+
+    # assertion
+    assert response.status_code == 200
+
+    assertion_fr_data = schemas.FunctionalRequirement(**new_fr_data.dict())
+    assertion_fr_data.id = new_fr['id']
+    
+    assert new_fr == assertion_fr_data.dict()
+
 
 # # access non-existent tree & other objects
 # def test_acces_nonexistent_objects(client, std_headers, std_user):

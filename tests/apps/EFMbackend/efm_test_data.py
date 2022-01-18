@@ -1,14 +1,53 @@
-from mysql.connector.pooling import PooledMySQLConnection
+# test data: 
+TEST_TREE = {
+    'name': 'efm test tree',
+    'description': 'A EFM test tree for pytest',
+    'top_level_ds_id': 0,
+    'subproject_id': 0,
+    'id': 0,
+}
 
-import apps.EFMbackend.implementation as implementation
-import apps.EFMbackend.schemas as schemas
+FR_1 = {
+    'name': 'Function 1',
+    'description': 'a test function the product has to perform',
+    'tree_id': 0,
+    'rf_id': 0,
+}
 
-import tests.testutils as tu
-import tests.apps.core.projects.testutils as tu_projects
-import tests.apps.core.users.testutils as tu_users
-import apps.core.users.implementation as impl_users
-import apps.core.projects.implementation as proj_impl
-import apps.core.projects.models as proj_models
+FR_2 = {
+    'name': 'Function 2',
+    'description': 'another test function the product has to perform',
+    'id': 0,
+    'tree_id': 0,
+    'rf_id': 0,
+}
+
+DS_1A = {
+    'name': 'Design Solution A for FR 1',
+    'description': 'this is just a test DS, alternative A',
+    'id': 0,
+    'tree_id': 0,
+    'is_top_level_ds': False,
+    'isb_id': 0,
+}
+
+DS_1B = {
+    'name': 'Design Solution B for FR 1',
+    'description': 'this is just a test DS, alternative A',
+    'id': 0,
+    'tree_id': 0,
+    'is_top_level_ds': False,
+    'isb_id': 0,
+}
+
+IW_1A_1B = {
+    'description': 'interaction between DS 1A and 1B',
+    'id': 0,
+    'tree_id': 0,
+    'from_ds_id': 0,
+    'to_ds_id': 0,
+    'iw_type': 'energy',
+}
 
 TEST_TREE_DATA = {
   "name": "Test tree",
@@ -19,14 +58,14 @@ TEST_TREE_DATA = {
     {
       "name": "Test tree",
       "description": "Top-level DS",
-      "isb_id": None,
+      "isb_id": 0,
       "tree_id": 30,
       "is_top_level_ds": True,
       "id": 45
     },
     {
       "name": "solution A1",
-      "description": None,
+      "description": 0,
       "isb_id": 17,
       "tree_id": 30,
       "is_top_level_ds": False,
@@ -34,7 +73,7 @@ TEST_TREE_DATA = {
     },
     {
       "name": "Solution A2",
-      "description": None,
+      "description": 0,
       "isb_id": 18,
       "tree_id": 30,
       "is_top_level_ds": False,
@@ -69,7 +108,7 @@ TEST_TREE_DATA = {
     {
       "tree_id": 30,
       "iw_type": "spatial",
-      "description": None,
+      "description": 0,
       "from_ds_id": 46,
       "to_ds_id": 47,
       "id": 8
@@ -77,7 +116,7 @@ TEST_TREE_DATA = {
     {
       "tree_id": 30,
       "iw_type": "spatial",
-      "description": None,
+      "description": 0,
       "from_ds_id": 48,
       "to_ds_id": 46,
       "id": 9
@@ -108,42 +147,3 @@ TEST_TREE_DATA = {
     }
   ]
 }
-
-def create_tree(user):
-    # setup (project generation)
-    current_user = impl_users.impl_get_user_with_username(user.username)
-    p = tu_projects.seed_random_project(current_user.id, participants={
-        current_user.id: proj_models.AccessLevel.ADMIN
-    })
-
-
-    # generate test tree data
-    tree_data = schemas.TreeNew(**TEST_TREE_DATA)
-        
-    tree = implementation.create_tree(
-        project_id = p.id,
-        new_tree = tree_data,
-        user_id = current_user.id
-        )
-
-
-    return {
-        'tree_data': tree,
-        'tree_id': tree.id,
-        'top_lvl_ds_id': tree.top_level_ds_id,
-        'project_id': p.id,
-        'user_id': current_user.id,
-      }
-
-def delete_tree(tree_id: int):
-    return implementation.delete_tree(tree_id)
-
-def populate_tree_with_FR(tree_id: int):
-  '''
-    populates a tree (tree_id) with 2 FR on top lvl
-    returns [FR1, FR2]
-  '''
-
-  tree = implementation.get_tree_details(tree_id)
-
-  
