@@ -1,6 +1,7 @@
 from libs.datastructures.pagination import ListChunk
 
 from fastapi import APIRouter, Depends
+from typing import List
 
 from apps.core.users.models import User
 from apps.core.authentication.utils import get_current_active_user
@@ -256,6 +257,16 @@ async def edit_subprocess(subprocess_id: int, project_id: int, vcs_post: models.
 async def delete_subprocess(subprocess_id: int, project_id: int,
                             user: User = Depends(get_current_active_user)) -> bool:
     return impl.delete_subprocess(subprocess_id, project_id, user.id)
+
+
+@router.put(
+    '/project/{project_id}/subprocess/update-indices/',
+    summary='Updates the indices of multiple subprocesses',
+    response_model=bool,
+)
+async def update_indices_subprocess(subprocess_ids: List[int], order_indices: List[int], project_id: int,
+                                    user: User = Depends(get_current_active_user)) -> bool:
+    return impl.update_indices_subprocess(subprocess_ids, order_indices, project_id, user.id)
 
 
 # ======================================================================================================================

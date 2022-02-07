@@ -99,12 +99,14 @@ class VCSSubprocess(BaseModel):
     id: int
     name: str
     parent_process: VCSISOProcess
+    order_index: int
     project: CVSProject
 
 
 class VCSSubprocessPost(BaseModel):
     name: str
     parent_process_id: int
+    order_index: Optional[int] = None
 
 
 # ======================================================================================================================

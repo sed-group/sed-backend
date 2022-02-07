@@ -24,7 +24,7 @@ CVS_VCS_VALUE_DRIVER_TABLE = 'cvs_vcs_value_drivers'
 CVS_VCS_VALUE_DRIVER_COLUMNS = ['id', 'name', 'project_id']
 
 CVS_VCS_SUBPROCESS_TABLE = 'cvs_vcs_subprocesses'
-CVS_VCS_SUBPROCESS_COLUMNS = ['id', 'name', 'parent_process_id', 'project_id']
+CVS_VCS_SUBPROCESS_COLUMNS = ['id', 'name', 'parent_process_id', 'project_id', 'order_index']
 
 CVS_VCS_TABLE_ROWS_TABLE = 'cvs_vcs_table_rows'
 CVS_VCS_TABLE_ROWS_COLUMNS = ['id', 'row_index', 'vcs_id', 'iso_process_id', 'subprocess_id', 'stakeholder',
@@ -420,7 +420,6 @@ def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int
     logger.debug(f'Editing value driver with id={value_driver_id}.')
 
     old_value_driver = get_value_driver(db_connection, value_driver_id, project_id, user_id)
-
     if old_value_driver.name == new_value_driver.name:  # No change
         return old_value_driver
 
@@ -543,7 +542,7 @@ def get_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, pro
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if result is None:
-        raise cvs_exceptions.SubprocessNotFoundException
+        raise cvs_exceptions.SubprocessNotFoundException(subprocess_id)
 
     if result['project_id'] != project_id:
         raise auth_exceptions.UnauthorizedOperationException
@@ -555,13 +554,17 @@ def create_subprocess(db_connection: PooledMySQLConnection, subprocess_post: mod
                       project_id: int, user_id: int) -> models.VCSSubprocess:
     logger.debug(f'Creating a subprocesses in project with id={project_id}.')
 
-    get_cvs_project(db_connection, project_id, user_id)  # performs checks for existing project and correct user
-    get_iso_process(subprocess_post.parent_process_id)  # performs checks for existing iso process
+    # performing necessary checks
+    get_cvs_project(db_connection, project_id, user_id)
+    get_iso_process(subprocess_post.parent_process_id)
+
+    columns = ['name', 'parent_process_id', 'project_id', 'order_index']
+    values = [subprocess_post.name, subprocess_post.parent_process_id, project_id, subprocess_post.order_index]
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
-        .insert(table=CVS_VCS_SUBPROCESS_TABLE, columns=['name', 'parent_process_id', 'project_id']) \
-        .set_values([subprocess_post.name, subprocess_post.parent_process_id, project_id]) \
+        .insert(table=CVS_VCS_SUBPROCESS_TABLE, columns=columns) \
+        .set_values(values) \
         .execute(fetch_type=FetchType.FETCH_NONE)
     subprocess_id = insert_statement.last_insert_id
 
@@ -578,8 +581,9 @@ def edit_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, pr
     if o == n:  # No change
         return old_subprocess
 
-    get_cvs_project(db_connection, project_id, user_id)  # performs checks for existing project and correct user
-    get_iso_process(new_subprocess.parent_process_id)  # performs checks for existing iso process
+    # performing necessary checks
+    get_cvs_project(db_connection, project_id, user_id)
+    get_iso_process(new_subprocess.parent_process_id)
 
     # Updating
     update_statement = MySQLStatementBuilder(db_connection)
@@ -592,16 +596,15 @@ def edit_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, pr
     _, rows = update_statement.execute(return_affected_rows=True)
 
     if rows == 0:
-        raise cvs_exceptions.SubprocessFailedToUpdateException
+        raise cvs_exceptions.SubprocessFailedToUpdateException(subprocess_id)
 
     return get_subprocess(db_connection, subprocess_id, project_id, user_id)
 
 
-def delete_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, project_id: int,
-                      user_id: int) -> bool:
+def delete_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, project_id: int, user_id: int) -> bool:
     logger.debug(f'Deleting subprocesses with id={subprocess_id}.')
 
-    get_cvs_project(db_connection, project_id, user_id)  # performs checks for existing project and correct user
+    get_cvs_project(db_connection, project_id, user_id)  # performing necessary checks
 
     select_statement = MySQLStatementBuilder(db_connection)
     result = select_statement \
@@ -610,7 +613,7 @@ def delete_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, 
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if result is None:
-        raise cvs_exceptions.SubprocessNotFoundException
+        raise cvs_exceptions.SubprocessNotFoundException(subprocess_id)
 
     if result['project_id'] != project_id:
         raise auth_exceptions.UnauthorizedOperationException
@@ -621,7 +624,7 @@ def delete_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, 
         .execute(return_affected_rows=True)
 
     if rows == 0:
-        raise cvs_exceptions.SubprocessFailedDeletionException
+        raise cvs_exceptions.SubprocessFailedDeletionException(subprocess_id)
 
     return True
 
@@ -633,8 +636,35 @@ def populate_subprocess(db_connection: PooledMySQLConnection, db_result, project
         id=db_result['id'],
         name=db_result['name'],
         parent_process=get_iso_process(db_result['parent_process_id']),
-        project=get_cvs_project(db_connection, project_id, user_id)
+        project=get_cvs_project(db_connection, project_id, user_id),
+        order_index=db_result['order_index'],
     )
+
+
+def update_subprocess_indices(db_connection: PooledMySQLConnection, subprocess_ids: List[int], order_indices: List[int],
+                              project_id: int, user_id: int) -> bool:
+    logger.debug(f'Updating indices for subprocesses with ids={subprocess_ids}.')
+
+    # Performs necessary checks
+    subprocesses = [get_subprocess(db_connection, _id, project_id, user_id) for _id in subprocess_ids]
+
+    for subprocess, index in zip(subprocesses, order_indices):
+        if index == subprocess.order_index:
+            continue  # skipping since otherwise affected rows will be 0
+
+        update_statement = MySQLStatementBuilder(db_connection)
+        update_statement.update(
+            table=CVS_VCS_SUBPROCESS_TABLE,
+            set_statement='order_index = %s',
+            values=[index],
+        )
+        update_statement.where('id = %s', [subprocess.id])
+        _, rows = update_statement.execute(return_affected_rows=True)
+
+        if rows == 0:
+            raise cvs_exceptions.SubprocessFailedToUpdateException(subprocess_id=subprocess.id)
+
+    return True
 
 
 # ======================================================================================================================

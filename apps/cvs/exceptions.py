@@ -60,15 +60,18 @@ class ISOProcessNotFoundException(Exception):
 # ======================================================================================================================
 
 class SubprocessNotFoundException(Exception):
-    pass
+    def __init__(self, subprocess_id: int = None):
+        self.subprocess_id = subprocess_id
 
 
 class SubprocessFailedToUpdateException(Exception):
-    pass
+    def __init__(self, subprocess_id: int = None):
+        self.subprocess_id = subprocess_id
 
 
 class SubprocessFailedDeletionException(Exception):
-    pass
+    def __init__(self, subprocess_id: int = None):
+        self.subprocess_id = subprocess_id
 
 
 # ======================================================================================================================
@@ -84,10 +87,10 @@ class VCSTableRowFailedToUpdateException(Exception):
 
 
 class VCSTableRowFailedDeletionException(Exception):
-    def __init__(self, table_row_id):
+    def __init__(self, table_row_id: int = None):
         self.table_row_id = table_row_id
 
 
 class VCSTableProcessAmbiguity(Exception):
-    def __init__(self, table_row_id):
+    def __init__(self, table_row_id: int = None):
         self.table_row_id = table_row_id

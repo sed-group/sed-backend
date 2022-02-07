@@ -289,7 +289,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_stakeholder_needs`
 (
     `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `table_row_id` INT UNSIGNED NOT NULL,
-    `need`         VARCHAR(255) NULL DEFAULT NULL,
+    `need`         VARCHAR(255) NULL     DEFAULT NULL,
     `rank_weight`  INT UNSIGNED NOT NULL DEFAULT 0,
     PRIMARY KEY (`id`),
     UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
@@ -335,6 +335,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_subprocesses`
     `name`              VARCHAR(255) NOT NULL,
     `parent_process_id` INT UNSIGNED NOT NULL,
     `project_id`        INT UNSIGNED NOT NULL,
+    `order_index`       INT UNSIGNED NOT NULL,
     PRIMARY KEY (`id`),
     UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
     INDEX `cvs_project_cascade_idx` (`project_id` ASC) VISIBLE,

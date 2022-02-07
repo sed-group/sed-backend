@@ -1,4 +1,5 @@
 from fastapi import HTTPException, status
+from typing import List
 
 from libs.datastructures.pagination import ListChunk
 
@@ -355,10 +356,10 @@ def get_subprocess(subprocess_id: int, project_id: int, user_id: int) -> models.
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find project with id={project_id}.',
         )
-    except cvs_exceptions.SubprocessNotFoundException:
+    except cvs_exceptions.SubprocessNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Could not find subprocess with id={subprocess_id}.',
+            detail=f'Could not find subprocess with id={e.subprocess_id}.',
         )
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
@@ -376,12 +377,12 @@ def create_subprocess(subprocess_post: models.VCSSubprocessPost, project_id: int
             return result
     except cvs_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find project with id={project_id}.',
         )
     except cvs_exceptions.ISOProcessNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find ISO process with id={subprocess_post.parent_process_id}.',
         )
     except auth_ex.UnauthorizedOperationException:
@@ -403,20 +404,20 @@ def edit_subprocess(subprocess_id: int, project_id: int, user_id: int,
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
         )
-    except cvs_exceptions.SubprocessNotFoundException:
+    except cvs_exceptions.SubprocessNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find subprocess with id={subprocess_id}.',
+            detail=f'Could not find subprocess with id={e.subprocess_id}.',
         )
     except cvs_exceptions.ISOProcessNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find ISO process with id={subprocess_post.parent_process_id}.',
         )
-    except cvs_exceptions.SubprocessFailedToUpdateException:
+    except cvs_exceptions.SubprocessFailedToUpdateException as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'Failed to edit subprocess with id={subprocess_id}.',
+            detail=f'Failed to edit subprocess with id={e.subprocess_id}.',
         )
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
@@ -436,15 +437,44 @@ def delete_subprocess(subprocess_id: int, project_id: int, user_id: int) -> bool
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
         )
-    except cvs_exceptions.SubprocessNotFoundException:
+    except cvs_exceptions.SubprocessNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find subprocess with id={subprocess_id}.',
+            detail=f'Could not find subprocess with id={e.subprocess_id}.',
         )
-    except cvs_exceptions.SubprocessFailedDeletionException:
+    except cvs_exceptions.SubprocessFailedDeletionException as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'Failed to remove subprocess with id={subprocess_id}.',
+            detail=f'Failed to remove subprocess with id={e.subprocess_id}.',
+        )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
+
+
+def update_indices_subprocess(subprocess_ids: List[int], order_indices: List[int], project_id: int,
+                              user_id: int) -> bool:
+    try:
+        with get_connection() as con:
+            result = storage.update_subprocess_indices(con, subprocess_ids, order_indices, project_id, user_id)
+            con.commit()
+            return result
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    except cvs_exceptions.SubprocessNotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Could not find subprocess with id={e.subprocess_id}.',
+        )
+    except cvs_exceptions.SubprocessFailedToUpdateException as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Failed to edit subprocess with id={e.subprocess_id}.',
         )
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
