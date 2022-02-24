@@ -200,3 +200,19 @@ while clients connecting to the API can communicate safely with HTTPS.
 
 
 TLS is achieved using a certbot certificate, which is mounted into the container in `docker-compose.prod.yml`. The `nginx/` directory contains the rest of the necessary files to make this work. Note that the setup requires knowledge of what the domain name is. At the time of writing, it was `sedlab.ppd.chalmers.se`. Attempting to deploy using the production composition on any other domain will not work without minor tweaks to the build code.
+
+# Known issues
+
+## Docker fails
+The docker deployment can fail for many reasons. This section lists some of the more regular problems. If a container fails, click on that container in the docker desktop application and check what error has occuted.
+
+### Incorrect line breaks
+If the output of any container says:
+`standard_init_linux.go:228: exec user process caused: no such file or directory`, then this is due to the windows line endings. This can usually be fixed by stopping the container, and running these commands in the repo:
+```
+git config core.autocrlf false 
+git rm --cached -r . 
+git reset --hard
+```
+These commands should set the appropriate line breaks. Rebuild using `docker-compose build` and restart all the components.
+
