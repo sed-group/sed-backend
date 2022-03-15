@@ -153,11 +153,13 @@ class VCSStakeholderNeedPost(BaseModel):
 class VCSValueDriver(BaseModel):
     id: int
     name: str
+    unit: str
     project: CVSProject
 
 
 class VCSValueDriverPost(BaseModel):
     name: str
+    unit: str
 
 
 # ======================================================================================================================
@@ -167,6 +169,7 @@ class VCSValueDriverPost(BaseModel):
 class ValueDriverGet(BaseModel):
     id: int
     name: str
+    unit: str
 
 
 class StakeholderNeedGet(BaseModel):

@@ -21,7 +21,7 @@ CVS_VCS_TABLE = 'cvs_vcss'
 CVS_VCS_COLUMNS = ['id', 'name', 'description', 'project_id', 'datetime_created', 'year_from', 'year_to']
 
 CVS_VCS_VALUE_DRIVER_TABLE = 'cvs_vcs_value_drivers'
-CVS_VCS_VALUE_DRIVER_COLUMNS = ['id', 'name', 'project_id']
+CVS_VCS_VALUE_DRIVER_COLUMNS = ['id', 'name', 'unit', 'project_id']
 
 CVS_VCS_SUBPROCESS_TABLE = 'cvs_vcs_subprocesses'
 CVS_VCS_SUBPROCESS_COLUMNS = ['id', 'name', 'parent_process_id', 'project_id', 'order_index']
@@ -407,8 +407,8 @@ def create_value_driver(db_connection: PooledMySQLConnection, value_driver_post:
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
-        .insert(table=CVS_VCS_VALUE_DRIVER_TABLE, columns=['name', 'project_id']) \
-        .set_values([value_driver_post.name, project_id]) \
+        .insert(table=CVS_VCS_VALUE_DRIVER_TABLE, columns=['name', 'unit', 'project_id']) \
+        .set_values([value_driver_post.name, value_driver_post.unit, project_id]) \
         .execute(fetch_type=FetchType.FETCH_NONE)
     value_driver_id = insert_statement.last_insert_id
 
@@ -473,6 +473,7 @@ def populate_value_driver(db_connection: PooledMySQLConnection, db_result, proje
     return models.VCSValueDriver(
         id=db_result['id'],
         name=db_result['name'],
+        unit=db_result['unit'],
         project=get_cvs_project(db_connection, project_id=project_id, user_id=user_id),
     )
 
