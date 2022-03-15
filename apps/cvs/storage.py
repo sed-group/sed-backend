@@ -700,10 +700,10 @@ def populate_table_row(db_connection: PooledMySQLConnection, db_result, project_
 
     iso_process, subprocesss = None, None
     if db_result['iso_process_id'] is not None:
-        iso_process = get_iso_process(db_result['iso_process_id'])
+        iso_process = get_iso_process(db_result['iso_process_id']) #Gets a iso process based on the id that we got from the DB result
     elif db_result['subprocess_id'] is not None:
         try:
-            subprocesss = get_subprocess(db_connection, db_result['subprocess_id'], project_id, user_id)
+            subprocesss = get_subprocess(db_connection, db_result['subprocess_id'], project_id, user_id) #Runs a new query on subprocess table based on the id that is in the result of the db query. Why is that not referenced as a foreign key and run as a single query here?????
         except cvs_exceptions.SubprocessNotFoundException:
             # If a subprocess is deleted but used in a table, the subprocess wont be found and thus this exception
             pass
