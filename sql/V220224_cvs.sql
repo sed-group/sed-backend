@@ -52,7 +52,21 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_table_rows`
         FOREIGN KEY (`vcs_id`)
             REFERENCES `seddb`.`cvs_vcss` (`id`)
             ON DELETE CASCADE
+            ON UPDATE NO ACTION,
+        FOREIGN KEY(`id`)
+            REFERENCES `seddb`.`cvs_bpmn_node`(`id`)
+            ON DELETE CASCADE
             ON UPDATE NO ACTION
+);
+
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_bpmn_node`
+(
+    `id`                INT NOT NULL AUTO_INCREMENT,
+    `name`              VARCHAR(255),
+    `type`              VARCHAR(63),
+    `posX`              INT UNSIGNED,
+    `posY`              INT UNSIGNED,
+    PRIMARY KEY(`id`)
 );
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_stakeholder_needs`
