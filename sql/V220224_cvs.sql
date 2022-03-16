@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcss`
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_table_rows`
 (
-    `id`                       INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `id`                       INT UNSIGNED NOT NULL,
     `row_index`                INT UNSIGNED NOT NULL,
     `vcs_id`                   INT UNSIGNED NOT NULL,
     `iso_process_id`           INT UNSIGNED NULL DEFAULT NULL,
@@ -52,7 +52,31 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_table_rows`
         FOREIGN KEY (`vcs_id`)
             REFERENCES `seddb`.`cvs_vcss` (`id`)
             ON DELETE CASCADE
+            ON UPDATE NO ACTION,
+        FOREIGN KEY(`id`)
+            REFERENCES `seddb`.`cvs_bpmn_node`(`id`)
+            ON DELETE CASCADE
             ON UPDATE NO ACTION
+);
+
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_bpmn_nodes`
+(
+    `id`                INT NOT NULL AUTO_INCREMENT,
+    `name`              VARCHAR(255) NOT NULL,
+    `type`              VARCHAR(63) NOT NULL,
+    `posX`              INT UNSIGNED,
+    `posY`              INT UNSIGNED,
+    PRIMARY KEY(`id`)
+);
+
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_bpmn_edges`
+(
+    `id`                INT NOT NULL AUTO_INCREMENT,
+    `name`              VARCHAR(255) NOT NULL,
+    `from`              INT NOT NULL REFERENCES `seddb`.`cvs_bpmn_nodes`(id),
+    `to`                INT NOT NULL REFERENCES `seddb`.`cvs_bpmn_nodes`(id),
+    `probability`       INT,
+    PRIMARY KEY(`id`)
 );
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_stakeholder_needs`
@@ -75,6 +99,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_value_drivers`
 (
     `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `name`       VARCHAR(255) NOT NULL,
+    `unit`       VARCHAR(63) NOT NULL,
     `project_id` INT UNSIGNED NOT NULL,
     PRIMARY KEY (`id`),
     UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,

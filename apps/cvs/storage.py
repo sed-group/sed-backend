@@ -21,7 +21,7 @@ CVS_VCS_TABLE = 'cvs_vcss'
 CVS_VCS_COLUMNS = ['id', 'name', 'description', 'project_id', 'datetime_created', 'year_from', 'year_to']
 
 CVS_VCS_VALUE_DRIVER_TABLE = 'cvs_vcs_value_drivers'
-CVS_VCS_VALUE_DRIVER_COLUMNS = ['id', 'name', 'project_id']
+CVS_VCS_VALUE_DRIVER_COLUMNS = ['id', 'name', 'unit', 'project_id']
 
 CVS_VCS_SUBPROCESS_TABLE = 'cvs_vcs_subprocesses'
 CVS_VCS_SUBPROCESS_COLUMNS = ['id', 'name', 'parent_process_id', 'project_id', 'order_index']
@@ -381,6 +381,33 @@ def get_all_value_driver(db_connection: PooledMySQLConnection, project_id: int,
 
 
 def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int, project_id: int,
+                         user_id: int) -> ListChunk[models.VCSValueDriver]:
+
+    logger.debug(f'Fetching value driver for project with id={value_driver_id}.')
+
+    where_statement = f'id = %s'
+    where_values = [value_driver_id]
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    result = select_statement \
+        .select(CVS_VCS_VALUE_DRIVER_TABLE, CVS_VCS_VALUE_DRIVER_COLUMNS) \
+        .where(where_statement, where_values) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    value_driver = [populate_value_driver(db_connection, result, project_id, user_id)];
+
+    if result is None:
+        raise cvs_exceptions.ValueDriverNotFoundException(value_driver_id=value_driver_id)
+
+    if result['project_id'] != project_id:
+        raise auth_exceptions.UnauthorizedOperationException
+
+    chunk = ListChunk[models.VCSValueDriver](chunk=value_driver, length_total=1)
+
+    return chunk
+
+'''
+def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int, project_id: int,
                      user_id: int) -> models.VCSValueDriver:
     logger.debug(f'Fetching value driver with id={value_driver_id}.')
 
@@ -397,6 +424,7 @@ def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int,
         raise auth_exceptions.UnauthorizedOperationException
 
     return populate_value_driver(db_connection, result, project_id, user_id)
+'''
 
 
 def create_value_driver(db_connection: PooledMySQLConnection, value_driver_post: models.VCSValueDriverPost,
@@ -407,19 +435,19 @@ def create_value_driver(db_connection: PooledMySQLConnection, value_driver_post:
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
-        .insert(table=CVS_VCS_VALUE_DRIVER_TABLE, columns=['name', 'project_id']) \
-        .set_values([value_driver_post.name, project_id]) \
+        .insert(table=CVS_VCS_VALUE_DRIVER_TABLE, columns=['name', 'unit', 'project_id']) \
+        .set_values([value_driver_post.name, value_driver_post.unit, project_id]) \
         .execute(fetch_type=FetchType.FETCH_NONE)
     value_driver_id = insert_statement.last_insert_id
 
-    return get_value_driver(db_connection, value_driver_id, project_id, user_id)
+    return get_value_driver(db_connection, value_driver_id, project_id, user_id).chunk[0]
 
 
 def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int, project_id: int, user_id: int,
                       new_value_driver: models.VCSValueDriverPost) -> models.VCSValueDriver:
     logger.debug(f'Editing value driver with id={value_driver_id}.')
 
-    old_value_driver = get_value_driver(db_connection, value_driver_id, project_id, user_id)
+    old_value_driver = get_value_driver(db_connection, value_driver_id, project_id, user_id).chunk[0]
     if old_value_driver.name == new_value_driver.name:  # No change
         return old_value_driver
 
@@ -427,8 +455,8 @@ def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int
     update_statement = MySQLStatementBuilder(db_connection)
     update_statement.update(
         table=CVS_VCS_VALUE_DRIVER_TABLE,
-        set_statement='name = %s',
-        values=[new_value_driver.name],
+        set_statement='name = %s, unit = %s',
+        values=[new_value_driver.name, new_value_driver.unit],
     )
     update_statement.where('id = %s', [value_driver_id])
     _, rows = update_statement.execute(return_affected_rows=True)
@@ -436,7 +464,7 @@ def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int
     if rows == 0:
         raise cvs_exceptions.ValueDriverFailedToUpdateException
 
-    return get_value_driver(db_connection, value_driver_id, project_id, user_id)
+    return get_value_driver(db_connection, value_driver_id, project_id, user_id).chunk[0]
 
 
 def delete_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int, project_id: int,
@@ -473,6 +501,7 @@ def populate_value_driver(db_connection: PooledMySQLConnection, db_result, proje
     return models.VCSValueDriver(
         id=db_result['id'],
         name=db_result['name'],
+        unit=db_result['unit'],
         project=get_cvs_project(db_connection, project_id=project_id, user_id=user_id),
     )
 
@@ -700,10 +729,10 @@ def populate_table_row(db_connection: PooledMySQLConnection, db_result, project_
 
     iso_process, subprocesss = None, None
     if db_result['iso_process_id'] is not None:
-        iso_process = get_iso_process(db_result['iso_process_id'])
+        iso_process = get_iso_process(db_result['iso_process_id']) #Gets a iso process based on the id that we got from the DB result
     elif db_result['subprocess_id'] is not None:
         try:
-            subprocesss = get_subprocess(db_connection, db_result['subprocess_id'], project_id, user_id)
+            subprocesss = get_subprocess(db_connection, db_result['subprocess_id'], project_id, user_id) #Runs a new query on subprocess table based on the id that is in the result of the db query. Why is that not referenced as a foreign key and run as a single query here?????
         except cvs_exceptions.SubprocessNotFoundException:
             # If a subprocess is deleted but used in a table, the subprocess wont be found and thus this exception
             pass
