@@ -440,14 +440,14 @@ def create_value_driver(db_connection: PooledMySQLConnection, value_driver_post:
         .execute(fetch_type=FetchType.FETCH_NONE)
     value_driver_id = insert_statement.last_insert_id
 
-    return get_value_driver(db_connection, value_driver_id, project_id, user_id)
+    return get_value_driver(db_connection, value_driver_id, project_id, user_id).chunk[0]
 
 
 def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int, project_id: int, user_id: int,
                       new_value_driver: models.VCSValueDriverPost) -> models.VCSValueDriver:
     logger.debug(f'Editing value driver with id={value_driver_id}.')
 
-    old_value_driver = get_value_driver(db_connection, value_driver_id, project_id, user_id)
+    old_value_driver = get_value_driver(db_connection, value_driver_id, project_id, user_id).chunk[0]
     if old_value_driver.name == new_value_driver.name:  # No change
         return old_value_driver
 
@@ -455,8 +455,8 @@ def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int
     update_statement = MySQLStatementBuilder(db_connection)
     update_statement.update(
         table=CVS_VCS_VALUE_DRIVER_TABLE,
-        set_statement='name = %s',
-        values=[new_value_driver.name],
+        set_statement='name = %s, unit = %s',
+        values=[new_value_driver.name, new_value_driver.unit],
     )
     update_statement.where('id = %s', [value_driver_id])
     _, rows = update_statement.execute(return_affected_rows=True)
@@ -464,7 +464,7 @@ def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int
     if rows == 0:
         raise cvs_exceptions.ValueDriverFailedToUpdateException
 
-    return get_value_driver(db_connection, value_driver_id, project_id, user_id)
+    return get_value_driver(db_connection, value_driver_id, project_id, user_id).chunk[0]
 
 
 def delete_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int, project_id: int,
