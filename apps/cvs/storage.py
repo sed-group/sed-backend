@@ -381,6 +381,33 @@ def get_all_value_driver(db_connection: PooledMySQLConnection, project_id: int,
 
 
 def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int, project_id: int,
+                         user_id: int) -> ListChunk[models.VCSValueDriver]:
+
+    logger.debug(f'Fetching value driver for project with id={value_driver_id}.')
+
+    where_statement = f'id = %s'
+    where_values = [value_driver_id]
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    result = select_statement \
+        .select(CVS_VCS_VALUE_DRIVER_TABLE, CVS_VCS_VALUE_DRIVER_COLUMNS) \
+        .where(where_statement, where_values) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    value_driver = [populate_value_driver(db_connection, result, project_id, user_id)];
+
+    if result is None:
+        raise cvs_exceptions.ValueDriverNotFoundException(value_driver_id=value_driver_id)
+
+    if result['project_id'] != project_id:
+        raise auth_exceptions.UnauthorizedOperationException
+
+    chunk = ListChunk[models.VCSValueDriver](chunk=value_driver, length_total=1)
+
+    return chunk
+
+'''
+def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int, project_id: int,
                      user_id: int) -> models.VCSValueDriver:
     logger.debug(f'Fetching value driver with id={value_driver_id}.')
 
@@ -397,6 +424,7 @@ def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int,
         raise auth_exceptions.UnauthorizedOperationException
 
     return populate_value_driver(db_connection, result, project_id, user_id)
+'''
 
 
 def create_value_driver(db_connection: PooledMySQLConnection, value_driver_post: models.VCSValueDriverPost,
