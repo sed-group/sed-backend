@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_table_rows`
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_bpmn_nodes`
 (
     `id`                INT NOT NULL AUTO_INCREMENT,
+    `vcs_id`            INT NOT NULL REFERENCES `seddb`.`cvs_vcss`(`id`),
     `name`              VARCHAR(255) NOT NULL,
     `type`              VARCHAR(63) NOT NULL,
     `posX`              INT UNSIGNED,
@@ -73,6 +74,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_bpmn_edges`
 (
     `id`                INT NOT NULL AUTO_INCREMENT,
     `name`              VARCHAR(255) NOT NULL,
+    `vcs_id`            INT NOT NULL REFERENCES `seddb`.`cvs_vcss`(`id`),
     `from`              INT NOT NULL REFERENCES `seddb`.`cvs_bpmn_nodes`(id),
     `to`                INT NOT NULL REFERENCES `seddb`.`cvs_bpmn_nodes`(id),
     `probability`       INT,
