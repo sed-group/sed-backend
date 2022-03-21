@@ -8,7 +8,7 @@ import apps.core.individuals.implementation as impl
 router = APIRouter()
 
 
-@router.post("/",
+@router.post("",
              summary="Create individual",
              description="Create a new individual",
              response_model=models.Individual)
@@ -37,7 +37,7 @@ async def put_individual_name(individual_id, individual_name):
     return impl.impl_put_individual_name(individual_id, individual_name, archetype=False)
 
 
-@router.post("/{individual_id}/parameters/",
+@router.post("/{individual_id}/parameters",
              summary="Add parameter to individual",
              response_model=models.IndividualParameter)
 async def post_parameter(individual_id: int, parameter: models.IndividualParameterPost):
@@ -51,7 +51,7 @@ async def delete_parameter(individual_id: int, parameter_id: int):
     return impl.impl_delete_parameter(individual_id, parameter_id)
 
 
-@router.post("/archetypes/",
+@router.post("/archetypes",
              summary="Create individual archetype",
              description="Create a new individual archetype",
              response_model=models.IndividualArchetype)
@@ -66,7 +66,7 @@ async def get_individual_archetype(individual_archetype_id) -> Optional[models.I
     return impl.impl_get_individual_archetype(individual_archetype_id)
 
 
-@router.get("/archetypes/{individual_archetype_id}/individuals/",
+@router.get("/archetypes/{individual_archetype_id}/individuals",
             summary="Get all individuals that uses this archetype",
             response_model=List[models.Individual])
 async def get_archetype_individuals(individual_archetype_id: int):
@@ -87,7 +87,7 @@ async def put_individual_archetype_name(individual_archetype_id, individual_name
     return impl.impl_put_individual_name(individual_archetype_id, individual_name, archetype=True)
 
 
-@router.delete("/archetypes/{individual_archetype_id}/individuals/",
+@router.delete("/archetypes/{individual_archetype_id}/individuals",
                response_model=int,
                summary="Delete all individuals for specific archetype")
 async def delete_archetype_individuals(individual_archetype_id: int):

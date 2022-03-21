@@ -39,9 +39,9 @@ def test_get_subprojects(client, std_headers, std_user):
                    tu_projects.seed_random_subproject(third_user.id, p1.id),
                    tu_projects.seed_random_subproject(third_user.id, p2.id)]
     # Act
-    res1 = client.get(f'/api/core/projects/{p1.id}/subprojects/', headers=std_headers)
-    res2 = client.get(f'/api/core/projects/{p2.id}/subprojects/', headers=std_headers)
-    res3 = client.get(f'/api/core/projects/{p3.id}/subprojects/', headers=std_headers)
+    res1 = client.get(f'/api/core/projects/{p1.id}/subprojects', headers=std_headers)
+    res2 = client.get(f'/api/core/projects/{p2.id}/subprojects', headers=std_headers)
+    res3 = client.get(f'/api/core/projects/{p3.id}/subprojects', headers=std_headers)
     # Assert
     assert res1.status_code == 200
     assert len(res1.json()) == 3
@@ -61,7 +61,7 @@ def test_create_subproject(client, std_headers, std_user):
     random_native_project_id = random.randint(0, 99999)
     app_sid = "MOD.EFM"
     # Act
-    res = client.post(f'/api/core/projects/{p.id}/subprojects/',
+    res = client.post(f'/api/core/projects/{p.id}/subprojects',
                       headers=std_headers,
                       json={
                           "application_sid": app_sid,

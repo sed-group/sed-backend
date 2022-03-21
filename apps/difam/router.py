@@ -15,7 +15,7 @@ router = APIRouter()
 DIFAM_APP_SID = 'MOD.DIFAM'
 
 
-@router.get("/projects/",
+@router.get("/projects",
             summary="List available DIFAM projects",
             response_model=ListChunk[models.DifamProject])
 async def get_difam_projects(segment_length: int, index: int, current_user: User = Depends(get_current_active_user)) \
@@ -36,7 +36,7 @@ async def get_difam_project(native_project_id: int) -> models.DifamProject:
     return impl.impl_get_difam_project(native_project_id)
 
 
-@router.post("/projects/",
+@router.post("/projects",
              summary="Create new DIFAM project",
              response_model=models.DifamProject)
 async def post_difam_project(difam_project_post: models.DifamProjectPost,

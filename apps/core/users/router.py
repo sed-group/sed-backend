@@ -11,7 +11,7 @@ from apps.core.users.implementation import impl_get_users, impl_post_user, impl_
 router = APIRouter()
 
 
-@router.get("/",
+@router.get("",
             summary="Lists all users",
             description="Produces a list of users in alphabetical order",
             response_model=List[models.User])
@@ -19,7 +19,7 @@ async def get_users(segment_length: int, index: int):
     return impl_get_users(segment_length, index)
 
 
-@router.post("/",
+@router.post("",
              summary="Create new user",
              response_model=models.User,
              dependencies=[Security(verify_scopes, scopes=['admin'])])
