@@ -19,7 +19,7 @@ CVS_APP_SID = 'MOD.CVS'
 # ======================================================================================================================
 
 @router.get(
-    '/project/get/all/',
+    '/project/get/all',
     summary='Returns all of the user\'s CVS projects',
     response_model=ListChunk[models.CVSProject],
 )
@@ -29,7 +29,7 @@ async def get_all_cvs_project(user: User = Depends(get_current_active_user)) \
 
 
 @router.get(
-    '/project/get/segment/',
+    '/project/get/segment',
     summary='Returns a segment of the user\'s CVS projects',
     response_model=ListChunk[models.CVSProject],
 )
@@ -39,7 +39,7 @@ async def get_segment_cvs_project(index: int, segment_length: int, user: User = 
 
 
 @router.get(
-    '/project/get/{project_id}/',
+    '/project/get/{project_id}',
     summary='Returns a CVS project based on id',
     description='Returns a CVS project based on id',
     response_model=models.CVSProject,
@@ -49,7 +49,7 @@ async def get_csv_project(project_id: int, user: User = Depends(get_current_acti
 
 
 @router.post(
-    '/project/create/',
+    '/project/create',
     summary='Creates a new CVS project',
     response_model=models.CVSProject,
 )
@@ -59,7 +59,7 @@ async def create_csv_project(project_post: models.CVSProjectPost,
 
 
 @router.put(
-    '/project/{project_id}/edit/',
+    '/project/{project_id}/edit',
     summary='Edits a CVS project',
     response_model=models.CVSProject,
 )
@@ -69,7 +69,7 @@ async def edit_csv_project(project_id: int, project_post: models.CVSProjectPost,
 
 
 @router.delete(
-    '/project/{project_id}/delete/',
+    '/project/{project_id}/delete',
     summary='Deletes a CVS project based on id',
     response_model=bool,
 )
@@ -82,7 +82,7 @@ async def delete_cvs_project(project_id: int, user: User = Depends(get_current_a
 # ======================================================================================================================
 
 @router.get(
-    '/project/{project_id}/vcs/get/all/',
+    '/project/{project_id}/vcs/get/all',
     summary='Returns all of VCSs of a project',
     response_model=ListChunk[models.VCS],
 )
@@ -91,7 +91,7 @@ async def get_all_vcs(project_id: int, user: User = Depends(get_current_active_u
 
 
 @router.get(
-    '/project/{project_id}/vcs/get/segment/',
+    '/project/{project_id}/vcs/get/segment',
     summary='Returns a segment of the VCSs of a project',
     response_model=ListChunk[models.VCS],
 )
@@ -110,7 +110,7 @@ async def get_vcs(vcs_id: int, project_id: int, user: User = Depends(get_current
 
 
 @router.post(
-    '/project/{project_id}/vcs/create/',
+    '/project/{project_id}/vcs/create',
     summary='Creates a new VCS in a project',
     response_model=models.VCS,
 )
@@ -120,7 +120,7 @@ async def create_vcs(vcs_post: models.VCSPost, project_id: int,
 
 
 @router.put(
-    '/project/{project_id}/vcs/{vcs_id}/edit/',
+    '/project/{project_id}/vcs/{vcs_id}/edit',
     summary='Edits a VCS',
     response_model=models.VCS,
 )
@@ -130,7 +130,7 @@ async def edit_vcs(vcs_id: int, project_id: int, vcs_post: models.VCSPost,
 
 
 @router.delete(
-    '/project/{project_id}/vcs/{vcs_id}/delete/',
+    '/project/{project_id}/vcs/{vcs_id}/delete',
     summary='Deletes a VCS based on id',
     response_model=bool,
 )
@@ -143,7 +143,7 @@ async def delete_vcs(vcs_id: int, project_id: int, user: User = Depends(get_curr
 # ======================================================================================================================
 
 @router.get(
-    '/project/{project_id}/value-driver/get/all/',
+    '/project/{project_id}/value-driver/get/all',
     summary='Returns all of value drivers of a project',
     response_model=ListChunk[models.VCSValueDriver],
 )
@@ -163,7 +163,7 @@ async def get_value_driver(value_driver_id: int, project_id: int,
 
 
 @router.post(
-    '/project/{project_id}/value-driver/create/',
+    '/project/{project_id}/value-driver/create',
     summary='Creates a new value driver in a project',
     response_model=models.VCSValueDriver,
 )
@@ -173,7 +173,7 @@ async def create_value_driver(vcs_post: models.VCSValueDriverPost, project_id: i
 
 
 @router.put(
-    '/project/{project_id}/value-driver/{value_driver_id}/edit/',
+    '/project/{project_id}/value-driver/{value_driver_id}/edit',
     summary='Edits a value driver',
     response_model=models.VCSValueDriver,
 )
@@ -183,7 +183,7 @@ async def edit_value_driver(value_driver_id: int, project_id: int, vcs_post: mod
 
 
 @router.delete(
-    '/project/{project_id}/value-driver/{value_driver_id}/delete/',
+    '/project/{project_id}/value-driver/{value_driver_id}/delete',
     summary='Deletes a value driver',
     response_model=bool,
 )
@@ -197,7 +197,7 @@ async def delete_value_driver(value_driver_id: int, project_id: int,
 # ======================================================================================================================
 
 @router.get(
-    '/vcs/iso-processes/get/all/',
+    '/vcs/iso-processes/get/all',
     summary='Returns all ISO processes',
     response_model=ListChunk[models.VCSISOProcess],
 )
@@ -210,7 +210,7 @@ async def get_all_iso_process() -> ListChunk[models.VCSISOProcess]:
 # ======================================================================================================================
 
 @router.get(
-    '/project/{project_id}/subprocess/get/all/',
+    '/project/{project_id}/subprocess/get/all',
     summary='Returns all subprocesses of a project',
     response_model=ListChunk[models.VCSSubprocess],
 )
@@ -230,7 +230,7 @@ async def get_subprocess(subprocess_id: int, project_id: int,
 
 
 @router.post(
-    '/project/{project_id}/subprocess/create/',
+    '/project/{project_id}/subprocess/create',
     summary='Creates a new subprocess',
     response_model=models.VCSSubprocess,
 )
@@ -240,7 +240,7 @@ async def create_subprocess(subprocess_post: models.VCSSubprocessPost, project_i
 
 
 @router.put(
-    '/project/{project_id}/subprocess/{subprocess_id}/edit/',
+    '/project/{project_id}/subprocess/{subprocess_id}/edit',
     summary='Edits a subprocess',
     response_model=models.VCSSubprocess,
 )
@@ -250,7 +250,7 @@ async def edit_subprocess(subprocess_id: int, project_id: int, vcs_post: models.
 
 
 @router.delete(
-    '/project/{project_id}/subprocess/{subprocess_id}/delete/',
+    '/project/{project_id}/subprocess/{subprocess_id}/delete',
     summary='Deletes a subprocess',
     response_model=bool,
 )
@@ -260,7 +260,7 @@ async def delete_subprocess(subprocess_id: int, project_id: int,
 
 
 @router.put(
-    '/project/{project_id}/subprocess/update-indices/',
+    '/project/{project_id}/subprocess/update-indices',
     summary='Updates the indices of multiple subprocesses',
     response_model=bool,
 )
