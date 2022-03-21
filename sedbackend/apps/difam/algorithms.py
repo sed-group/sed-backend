@@ -2,7 +2,7 @@ from typing import List, Any, Dict
 
 import sedbackend.apps.difam.models as models
 import sedbackend.apps.core.individuals.models as ind_models
-from libs.doe import create_latin_hypercube
+from sedbackend.libs.doe import create_latin_hypercube
 
 
 def create_hypercube_doe(doe_request: models.DOEGenerationRequest,

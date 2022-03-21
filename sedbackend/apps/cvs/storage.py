@@ -8,8 +8,8 @@ import sedbackend.apps.cvs.implementation as impl
 import sedbackend.apps.cvs.models as models
 import sedbackend.apps.cvs.exceptions as cvs_exceptions
 
-from libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
-from libs.datastructures.pagination import ListChunk
+from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
+from sedbackend.libs.datastructures.pagination import ListChunk
 
 CVS_APPLICATION_SID = 'MOD.CVS'
 

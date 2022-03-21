@@ -14,8 +14,8 @@ import sedbackend.apps.core.individuals.storage as ind_storage
 import sedbackend.apps.core.individuals.models as ind_models
 from sedbackend.apps.core.individuals.exceptions import IndividualNotFoundException
 
-from libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
-from libs.datastructures.pagination import ListChunk
+from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
+from sedbackend.libs.datastructures.pagination import ListChunk
 
 DIFAM_APPLICATION_SID = "MOD.DIFAM"
 DIFAM_TABLE = "difam_projects"

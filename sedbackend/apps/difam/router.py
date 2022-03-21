@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 
 import sedbackend.apps.difam.implementation as impl
 import sedbackend.apps.difam.models as models
-from libs.datastructures.pagination import ListChunk
+from sedbackend.libs.datastructures.pagination import ListChunk
 from sedbackend.apps.core.users.models import User
 from sedbackend.apps.core.authentication.utils import get_current_active_user
 from sedbackend.apps.core.projects.dependencies import SubProjectAccessChecker

@@ -3,7 +3,7 @@ from datetime import datetime
 
 from fastapi.logger import logger
 
-from libs.mysqlutils import MySQLStatementBuilder, FetchType, exclude_cols
+from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, exclude_cols
 import sedbackend.apps.core.measurements.models as models
 import sedbackend.apps.core.measurements.exceptions as exc
 

@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status
 from typing import List
 
-from libs.datastructures.pagination import ListChunk
+from sedbackend.libs.datastructures.pagination import ListChunk
 
 import sedbackend.apps.core.authentication.exceptions as auth_ex
 from sedbackend.apps.core.db import get_connection

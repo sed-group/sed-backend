@@ -8,7 +8,7 @@ import sedbackend.apps.difam.storage as storage
 import sedbackend.apps.difam.models as models
 import sedbackend.apps.difam.algorithms as algs
 from sedbackend.apps.core.db import get_connection
-from libs.datastructures.pagination import ListChunk
+from sedbackend.libs.datastructures.pagination import ListChunk
 
 
 def impl_delete_project(difam_project_id: int, current_user_id: int):

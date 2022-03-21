@@ -1,4 +1,4 @@
-from libs.datastructures.pagination import ListChunk
+from sedbackend.libs.datastructures.pagination import ListChunk
 
 from fastapi import APIRouter, Depends
 from typing import List

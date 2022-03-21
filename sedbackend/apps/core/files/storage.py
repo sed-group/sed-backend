@@ -6,7 +6,7 @@ from mysql.connector.pooling import PooledMySQLConnection
 
 import sedbackend.apps.core.files.models as models
 import sedbackend.apps.core.files.exceptions as exc
-from libs.mysqlutils import MySQLStatementBuilder, exclude_cols, FetchType
+from sedbackend.libs.mysqlutils import MySQLStatementBuilder, exclude_cols, FetchType
 
 FILES_RELATIVE_UPLOAD_DIR = f'{os.path.abspath(os.sep)}sed_lab/uploaded_files/'
 FILES_TABLE = 'files'

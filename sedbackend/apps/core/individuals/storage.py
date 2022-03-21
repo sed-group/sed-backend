@@ -5,7 +5,7 @@ from fastapi.logger import  logger
 
 import sedbackend.apps.core.individuals.models as models
 import sedbackend.apps.core.individuals.exceptions as ex
-from libs.mysqlutils import MySQLStatementBuilder, FetchType, exclude_cols
+from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, exclude_cols
 
 INDIVIDUALS_TABLE = 'individuals'
 INDIVIDUALS_COLUMNS = ['id', 'name', 'is_archetype']
