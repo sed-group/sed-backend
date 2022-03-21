@@ -13,7 +13,7 @@ import apps.core.projects.models as models
 
 def test_get_projects_unauthenticated(client):
     # Act
-    res = client.get('/api/core/projects/?segment_length=10&index=0')
+    res = client.get('/api/core/projects?segment_length=10&index=0')
     # assert
     assert res.status_code == 401
 
@@ -24,7 +24,7 @@ def test_get_projects(client, std_headers, std_user):
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     seeded_projects = tu_projects.seed_random_projects(current_user.id, amount=r.randint(5, max_projects))
     # Act
-    res = client.get(f'/api/core/projects/?segment_length={max_projects}&index=0', headers=std_headers)
+    res = client.get(f'/api/core/projects?segment_length={max_projects}&index=0', headers=std_headers)
     # Assert
     assert res.status_code == 200
     assert len(res.json()) == len(seeded_projects)
@@ -181,7 +181,7 @@ def test_add_participant_as_admin(client, std_headers, std_user):
     p = tu_projects.seed_random_project(owner_user.id)
     access_level = models.AccessLevel.EDITOR
     # Act
-    res = client.post(f'/api/core/projects/{p.id}/participants/'
+    res = client.post(f'/api/core/projects/{p.id}/participants'
                       f'?user_id={participant_user.id}'
                       f'&access_level={access_level.value}', headers=std_headers)
     p_updated = impl.impl_get_project(p.id)
@@ -211,7 +211,7 @@ def test_add_participant_as_non_admin(client, std_headers, std_user):
     })
     access_level = models.AccessLevel.EDITOR
     # Act
-    res = client.post(f'/api/core/projects/{p.id}/participants/'
+    res = client.post(f'/api/core/projects/{p.id}/participants'
                       f'?user_id={participant_user.id}'
                       f'&access_level={access_level.value}', headers=std_headers)
     p_updated = impl.impl_get_project(p.id)

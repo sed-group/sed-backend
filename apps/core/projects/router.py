@@ -12,7 +12,7 @@ from apps.core.users.models import User
 router = APIRouter()
 
 
-@router.get("/",
+@router.get("",
             summary="Lists all projects",
             description="Lists all projects in alphabetical order",
             response_model=List[models.ProjectListing])
@@ -50,7 +50,7 @@ async def get_project(project_id: int):
     return impl.impl_get_project(project_id)
 
 
-@router.post("/",
+@router.post("",
              summary="Create project",
              description="Create a new empty project. The current user is automatically set as the owner.",
              response_model=models.Project,
@@ -69,7 +69,7 @@ async def delete_project(project_id: int):
     return impl.impl_delete_project(project_id)
 
 
-@router.post("/{project_id}/participants/",
+@router.post("/{project_id}/participants",
              summary="Add participant to project",
              description="Add a participant to a project",
              dependencies=[Depends(ProjectAccessChecker([models.AccessLevel.OWNER, models.AccessLevel.ADMIN]))])
@@ -95,7 +95,7 @@ async def put_participant_name(project_id: int, name: str):
     return impl.impl_put_name(project_id, name)
 
 
-@router.get("/{project_id}/subprojects/",
+@router.get("/{project_id}/subprojects",
             summary="Get subprojects in project",
             dependencies=[Depends(ProjectAccessChecker(models.AccessLevel.list_can_read()))],
             response_model=List[models.SubProject])
@@ -111,7 +111,7 @@ async def get_subproject(project_id: int, subproject_id: int):
     return impl.impl_get_subproject(project_id, subproject_id)
 
 
-@router.post("/{project_id}/subprojects/",
+@router.post("/{project_id}/subprojects",
              summary="Create subproject",
              description="Create a new subproject. Needs to be connected to an existing project.",
              response_model=models.SubProject,
