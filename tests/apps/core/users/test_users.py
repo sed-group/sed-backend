@@ -1,4 +1,4 @@
-import apps.core.users.implementation as users_impl
+import sedbackend.apps.core.users.implementation as users_impl
 import tests.testutils as tu
 import tests.apps.core.users.testutils as tu_users
 

@@ -6,9 +6,9 @@ from fastapi import HTTPException
 
 import tests.apps.core.projects.testutils as tu_projects
 import tests.apps.core.users.testutils as tu_users
-import apps.core.users.implementation as impl_users
-import apps.core.projects.models as models
-import apps.core.projects.implementation as impl
+import sedbackend.apps.core.users.implementation as impl_users
+import sedbackend.apps.core.projects.models as models
+import sedbackend.apps.core.projects.implementation as impl
 
 
 def test_get_subprojects(client, std_headers, std_user):

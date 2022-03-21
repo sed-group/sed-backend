@@ -2,8 +2,8 @@ from typing import List, Dict, Optional
 import random
 
 import tests.testutils as tu
-import apps.core.projects.models as models
-import apps.core.projects.implementation as impl
+import sedbackend.apps.core.projects.models as models
+import sedbackend.apps.core.projects.implementation as impl
 
 
 def random_project(admin_id_list: List = None,
