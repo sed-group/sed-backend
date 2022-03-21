@@ -2,7 +2,7 @@ import pytest
 from starlette.testclient import TestClient
 
 import tests.apps.core.users.testutils as tu_users
-from main import app
+from sedbackend.main import app
 import sedbackend.apps.core.users.implementation as impl_users
 import sedbackend.apps.core.users.models as models_users
 

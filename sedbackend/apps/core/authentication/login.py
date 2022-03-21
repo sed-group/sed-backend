@@ -9,7 +9,7 @@ from sedbackend.apps.core.authentication.models import UserAuth
 from sedbackend.apps.core.authentication.exceptions import InvalidCredentialsException
 from sedbackend.apps.core.authentication.storage import get_user_auth_only
 from sedbackend.apps.core.db import get_connection
-from env import Environment
+from sedbackend.env import Environment
 
 
 # Key can be created using `openssl rand -hex 32`.

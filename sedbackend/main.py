@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-import main_router as api
-import setup
-import env
+import sedbackend.main_router as api
+import sedbackend.setup as setup
+import sedbackend.env as env
 
 
 # Parse environment variables
