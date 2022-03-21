@@ -9,7 +9,7 @@ from apps.core.applications.models import Application
 router = APIRouter()
 
 
-@router.get("/",
+@router.get("",
             summary="Lists all applications",
             description="Produces a list of applications in alphabetical order",
             response_model=List[Application],
