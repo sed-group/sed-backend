@@ -11,14 +11,14 @@ from apps.core.authentication.utils import get_current_active_user
 router = APIRouter()
 
 
-@router.post("/sets/",
+@router.post("/sets",
              summary="Post measurement set",
              response_model=models.MeasurementSet)
 async def post_measurement_set(measurement_set: models.MeasurementSetPost, subproject_id: Optional[int] = None):
     return impl.impl_post_measurement_set(measurement_set, subproject_id=subproject_id)
 
 
-@router.get("/sets/",
+@router.get("/sets",
             summary="Get measurement sets",
             response_model=List[models.MeasurementSetListing])
 async def get_measurement_sets(subproject_id: Optional[int] = None):
@@ -49,7 +49,7 @@ async def delete_measurement_set(measurement_set_id: int) -> bool:
     return impl.impl_delete_measurement_set(measurement_set_id)
 
 
-@router.post("/sets/{measurement_set_id}/measurements/",
+@router.post("/sets/{measurement_set_id}/measurements",
              summary="Post measurement",
              response_model=models.Measurement)
 async def post_measurement(measurement: models.MeasurementPost, measurement_set_id: int):
@@ -71,7 +71,7 @@ async def delete_measurement(measurement_set_id: int, measurement_id: int):
     return impl.impl_delete_measurement(measurement_set_id, measurement_id)
 
 
-@router.get("/sets/{measurement_set_id}/measurements/{measurement_id}/results/",
+@router.get("/sets/{measurement_set_id}/measurements/{measurement_id}/results",
             summary="Get measurement result data",
             description="Search for specific data measurement. Dates are provided as UNIX timestamp in milliseconds.",
             response_model=List[models.MeasurementResultData])
@@ -89,7 +89,7 @@ async def get_measurement_results(measurement_set_id: int,
     return impl.impl_get_measurement_results(measurement_id, dtype, date_class, date_from, date_to)
 
 
-@router.post("/sets/{measurement_set_id}/measurements/{measurement_id}/results/",
+@router.post("/sets/{measurement_set_id}/measurements/{measurement_id}/results",
              summary="Post measurement result data",
              response_model=models.MeasurementResultData)
 async def post_measurement_result(measurement_id: int, measurement_data_post: models.MeasurementResultDataPost):
