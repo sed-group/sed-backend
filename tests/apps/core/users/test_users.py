@@ -5,7 +5,7 @@ import tests.apps.core.users.testutils as tu_users
 
 def test_create_user(client, admin_headers):
     # Act
-    res = client.post("/api/core/users/",
+    res = client.post("/api/core/users",
                       headers=admin_headers,
                       json={
                           "username": tu.random_str(3, 40),
@@ -85,7 +85,7 @@ def test_get_users_unauthenticated(client):
 
 def test_post_user_unauthenticated(client):
     # Act
-    res = client.post("/api/core/users/",
+    res = client.post("/api/core/users",
                       json={
                           "username": tu.random_str(3, 40),
                           "email": tu.random_str(3, 40) + "@gmail.com",
