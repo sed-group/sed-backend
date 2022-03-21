@@ -1,7 +1,7 @@
 from typing import List
 
-import apps.core.users.models as models
-import apps.core.users.implementation as impl
+import sedbackend.apps.core.users.models as models
+import sedbackend.apps.core.users.implementation as impl
 import tests.testutils as tu
 
 
