@@ -1,7 +1,7 @@
 from fastapi.logger import logger
 import mysql.connector
 from mysql.connector import errorcode, pooling
-from env import Environment
+from sedbackend.env import Environment
 
 from contextlib import contextmanager
 
