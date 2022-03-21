@@ -73,7 +73,7 @@ GRANT EXECUTE ON `seddb`.* TO 'rw'@'%';
 - Run `mysql -h localhost -u root -p < V1__base.sql` (or you could use MySQL Workbench to execute the code)
 - Run `pip install -r requirements.txt` 
 - You may need to install some requirements, such as uvicorn and jose, manually. To do this, run `pip install uvicorn jose`
-- Run `uvicorn main:app --reload` from project root to launch the application
+- Run `uvicorn sedbackend.main:app --reload` from project root to launch the application
 - Go to http://localhost:8000/docs to get an overview of the API
 
 ### Using databases that are contained by docker
