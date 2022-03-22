@@ -35,3 +35,30 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_bpmn_edges`
     `probability`       INT,
     PRIMARY KEY(`id`)
 );
+
+CREATE TABLE IF NOT EXISTS `seddb`.`designs`
+(
+    `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `project`           INT UNSIGNED NOT NULL,
+    `vcs`               INT UNSIGNED NOT NULL,
+    `name`              VARCHAR(255) NOT NULL,
+    `description`       TEXT NOT NULL,
+    PRIMARY KEY(`id`),
+    FOREIGN KEY(`project`)
+        REFERENCES `seddb`.`cvs_projects`(`id`),
+    FOREIGN KEY(`vcs`)
+        REFERENCES `seddb`.`cvs_vcss`(`id`)
+);
+
+CREATE TABLE IF NOT EXISTS `seddb`.`value_driver_props`
+(
+    `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `design`            INT UNSIGNED NOT NULL,
+    `value_driver`      INT UNSIGNED NOT NULL,
+    `property`          DOUBLE NOT NULL,
+    PRIMARY KEY(`id`),
+    FOREIGN KEY(`design`)
+        REFERENCES `seddb`.`designs`(`id`),
+    FOREIGN KEY(`value_driver`)
+        REFERENCES `seddb`.`cvs_vcs_value_drivers`(`id`)
+);

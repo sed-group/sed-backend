@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_table_rows`
     `subprocess_id`            INT UNSIGNED NULL DEFAULT NULL,
     `stakeholder`              VARCHAR(255) NULL DEFAULT NULL,
     `stakeholder_expectations` TEXT         NULL DEFAULT NULL,
-    PRIMARY KEY (`id`),
+    PRIMARY KEY (`id`),1
     UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
     INDEX `vcs_cascade_idx` (`vcs_id` ASC) VISIBLE,
     CONSTRAINT `vcs_cascade`
