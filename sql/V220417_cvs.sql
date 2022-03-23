@@ -30,8 +30,8 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_bpmn_edges`
     `id`                INT NOT NULL AUTO_INCREMENT,
     `name`              VARCHAR(255) NOT NULL,
     `vcs_id`            INT NOT NULL REFERENCES `seddb`.`cvs_vcss`(`id`),
-    `from`              INT NOT NULL REFERENCES `seddb`.`cvs_bpmn_nodes`(id),
-    `to`                INT NOT NULL REFERENCES `seddb`.`cvs_bpmn_nodes`(id),
+    `from`              INT NOT NULL REFERENCES `seddb`.`cvs_bpmn_nodes`(`id`),
+    `to`                INT NOT NULL REFERENCES `seddb`.`cvs_bpmn_nodes`(`id`),
     `probability`       INT,
     PRIMARY KEY(`id`)
 );
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`designs`
     `project`           INT UNSIGNED NOT NULL,
     `vcs`               INT UNSIGNED NOT NULL,
     `name`              VARCHAR(255) NOT NULL,
-    `description`       TEXT NOT NULL,
+    `description`       TEXT,
     PRIMARY KEY(`id`),
     FOREIGN KEY(`project`)
         REFERENCES `seddb`.`cvs_projects`(`id`),

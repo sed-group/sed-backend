@@ -214,3 +214,15 @@ class TableRowPost(BaseModel):
 
 class TablePost(BaseModel):
     table_rows: List[TableRowPost]
+
+
+# ======================================================================================================================
+# CVS Designs
+# ======================================================================================================================
+
+class Design(BaseModel):
+    id: int
+    project: CVSProject
+    vcs: VCS
+    name: str
+    description: str
