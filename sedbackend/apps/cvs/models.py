@@ -2,6 +2,8 @@ from typing import List, Optional
 import enum
 
 from datetime import datetime
+
+from numpy import double, number
 from pydantic import BaseModel
 
 from sedbackend.apps.core.users.models import User
@@ -226,3 +228,22 @@ class Design(BaseModel):
     vcs: VCS
     name: str
     description: str
+
+class DesignPost(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+
+# ======================================================================================================================
+# CVS Value Driver Properties
+# ======================================================================================================================
+
+class ValueDriverProps(BaseModel):
+    id: int
+    design: Design
+    value_driver: VCSValueDriver
+    property: float
+    processes: List[VCSTableRow]
+
+class ValueDriverPropsPost(BaseModel):
+    property: float

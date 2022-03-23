@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`designs`
     `project`           INT UNSIGNED NOT NULL,
     `vcs`               INT UNSIGNED NOT NULL,
     `name`              VARCHAR(255) NOT NULL,
-    `description`       TEXT,
+    `description`       TEXT DEFAULT NULL,
     PRIMARY KEY(`id`),
     FOREIGN KEY(`project`)
         REFERENCES `seddb`.`cvs_projects`(`id`),
