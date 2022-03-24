@@ -548,6 +548,11 @@ def create_cvs_design(design_post: models.DesignPost, vcs_id: int, project_id: i
             detail='Unauthorized user.',
         )
 
+def get_all_design(project_id: int, vcs_id: int, user_id: int) -> ListChunk[models.Design]: 
+        with get_connection() as con:
+            return storage.get_all_designs(con, project_id, vcs_id, user_id)
+           
+
 def get_design(design_id: int, vcs_id: int, project_id: int, user_id: int) -> models.Design:
     try:
         with get_connection() as con:
@@ -561,11 +566,6 @@ def get_design(design_id: int, vcs_id: int, project_id: int, user_id: int) -> mo
         )
 
 
-def get_all_design(project_id: int, vcs_id: int, user_id: int) -> ListChunk[models.Design]: 
-        with get_connection() as con:
-            return storage.get_all_designs(con, project_id, vcs_id, user_id)
-            #con.commit()
-            #return result
 
 def delete_design(design_id: int, vcs_id: int, project_id: int, user_id: int) -> bool:
     try:
@@ -612,12 +612,6 @@ def create_bpmn_node(node: models.NodePost, project_id: int, vcs_id: int, user_i
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
         )
-    except auth_ex.UnauthorizedOperationException:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail='Unauthorized user.',
-        )
-
 
 def delete_bpmn_node(node_id: int, project_id: int, vcs_id: int) -> bool:
     try:
@@ -790,4 +784,5 @@ def update_bpmn(vcs_id: int, project_id: int, user_id: int, nodes: List[models.N
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
+        )
         )
