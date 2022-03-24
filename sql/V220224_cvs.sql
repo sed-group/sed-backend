@@ -75,6 +75,22 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_stakeholder_needs`
             ON UPDATE NO ACTION
 );
 
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_value_drivers`
+(
+    `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `name`       VARCHAR(255) NOT NULL,
+    `unit`       VARCHAR(63) DEFAULT NULL,
+    `project_id` INT UNSIGNED NOT NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
+    INDEX `cvs_project_cascade_idx` (`project_id` ASC) VISIBLE,
+    CONSTRAINT `cvs_project_value_driver_cascade`
+        FOREIGN KEY (`project_id`)
+            REFERENCES `seddb`.`cvs_projects` (`id`)
+            ON DELETE CASCADE
+            ON UPDATE NO ACTION
+);
+
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_needs_divers_map`
 (
     `id`                  INT UNSIGNED NOT NULL AUTO_INCREMENT,

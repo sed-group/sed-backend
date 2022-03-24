@@ -35,6 +35,8 @@ CVS_VCS_STAKEHOLDER_NEED_COLUMNS = ['id', 'table_row_id', 'need', 'rank_weight']
 CVS_VCS_NEEDS_DRIVERS_MAP_TABLE = 'cvs_vcs_needs_divers_map'
 CVS_VCS_NEEDS_DRIVERS_MAP_COLUMNS = ['id', 'stakeholder_need_id', 'value_driver_id']
 
+DESIGNS_TABLE = 'designs'
+DESIGNS_COLUMNS = ['id', 'project', 'vcs', 'name', 'description']
 
 # ======================================================================================================================
 # CVS projects
@@ -875,3 +877,44 @@ def create_vcs_table(db_connection: PooledMySQLConnection, new_table: models.Tab
                     .execute(fetch_type=FetchType.FETCH_NONE)
 
     return True
+
+
+# ======================================================================================================================
+# CVS Design
+# ======================================================================================================================
+
+def create_design(db_connection: PooledMySQLConnection, design_post: models.DesignPost, vcs_id: int, project_id: int, user_id: int) -> models.Design:
+    logger.debug(f'creating design with vcs_id:{vcs_id} and project_id:{project_id}')
+    get_cvs_project(db_connection, project_id, user_id)
+
+    insert_statement = MySQLStatementBuilder(db_connection)
+    insert_statement \
+        .insert(table=DESIGNS_TABLE, columns=['project', 'vcs', 'name', 'description']) \
+        .set_values([project_id, vcs_id, design_post.name, design_post.description]) \
+        .execute(fetch_type=FetchType.FETCH_NONE)
+    design_id = insert_statement.last_insert_id
+
+    return get_design(db_connection, design_id, project_id, vcs_id, user_id)
+
+def get_design(db_connection: PooledMySQLConnection, design_id: int, project_id: int, vcs_id: int, user_id: int) -> models.Design:
+    select_statement = MySQLStatementBuilder(db_connection)
+    result = select_statement \
+        .select(DESIGNS_TABLE, DESIGNS_COLUMNS)\
+        .where('id = %s', [design_id])\
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+    
+    if result is None:
+        raise cvs_exceptions.VCSNotFoundException
+
+    if result['project'] != project_id:
+        raise auth_exceptions.UnauthorizedOperationException
+
+    return populate_design(db_connection, result, project_id, vcs_id, user_id)
+
+def populate_design(db_connection: PooledMySQLConnection, db_result, project_id: int, vcs_id: int, user_id: int) -> models.Design:
+    return models.Design(
+        id=db_result['id'],
+        vcs=get_vcs(db_connection, vcs_id=vcs_id, project_id=project_id, user_id=user_id),
+        name=db_result['name'],
+        description=db_result['description']
+    )

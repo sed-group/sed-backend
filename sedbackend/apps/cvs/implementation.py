@@ -523,3 +523,25 @@ def create_vcs_table(new_table: models.TablePost, vcs_id: int, project_id: int, 
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
+
+# ======================================================================================================================
+# CVS Design
+# ======================================================================================================================
+
+
+def create_cvs_design(design_post: models.DesignPost, vcs_id: int, project_id: int, user_id: int) -> models.Design:
+    try:
+        with get_connection() as con:
+            result = storage.create_design(con, design_post, vcs_id, project_id, user_id)
+            con.commit()
+            return result
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )

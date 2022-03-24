@@ -2,6 +2,8 @@ from typing import List, Optional
 import enum
 
 from datetime import datetime
+
+from numpy import double, number
 from pydantic import BaseModel
 
 from sedbackend.apps.core.users.models import User
@@ -159,7 +161,7 @@ class VCSValueDriver(BaseModel):
 
 class VCSValueDriverPost(BaseModel):
     name: str
-    unit: str
+    unit: Optional[str] = None
 
 
 # ======================================================================================================================
@@ -214,3 +216,33 @@ class TableRowPost(BaseModel):
 
 class TablePost(BaseModel):
     table_rows: List[TableRowPost]
+
+
+# ======================================================================================================================
+# CVS Designs
+# ======================================================================================================================
+
+class Design(BaseModel):
+    id: int
+    vcs: VCS
+    name: str
+    description: str
+
+class DesignPost(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+
+# ======================================================================================================================
+# CVS Qualified Objectives
+# ======================================================================================================================
+
+class QualifiedObjective(BaseModel):
+    id: int
+    design: Design
+    value_driver: VCSValueDriver
+    property: float
+    processes: List[VCSTableRow]
+
+class QualifiedObjectivePost(BaseModel):
+    property: float
