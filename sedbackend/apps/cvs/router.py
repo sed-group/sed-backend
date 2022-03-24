@@ -157,7 +157,7 @@ async def get_all_value_driver(project_id: int,
 @router.get(
     '/project/{project_id}/value-driver/get/{value_driver_id}',
     summary='Returns a value driver',
-    response_model=ListChunk[models.VCSValueDriver],
+    response_model=models.VCSValueDriver,
 )
 async def get_value_driver(value_driver_id: int, project_id: int,
                            user: User = Depends(get_current_active_user)) -> models.VCSValueDriver:

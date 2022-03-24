@@ -564,6 +564,10 @@ def get_design(design_id: int, vcs_id: int, project_id: int, user_id: int) -> mo
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
         )
+<<<<<<< HEAD
+=======
+
+>>>>>>> acf463d (Imported changes from bpmn-api)
 
 
 
@@ -591,7 +595,6 @@ def edit_design(design_id: int, project_id: int, vcs_id: int, user_id: int, upda
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}'
         )
-
 
 # ======================================================================================================================
 # BPMN Table
