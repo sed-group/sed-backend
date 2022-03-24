@@ -39,6 +39,12 @@ CVS_VCS_NEEDS_DRIVERS_MAP_COLUMNS = ['id', 'stakeholder_need_id', 'value_driver_
 DESIGNS_TABLE = 'designs'
 DESIGNS_COLUMNS = ['id', 'project', 'vcs', 'name', 'description']
 
+CVS_BPMN_NODES_TABLE = 'cvs_bpmn_nodes'
+CVS_BPMN_NODES_COLUMNS = ['id', 'vcs_id', 'name', 'type', 'pos_x', 'pos_y']
+
+CVS_BPMN_EDGES_TABLE = 'cvs_bpmn_edges'
+CVS_BPMN_EDGES_COLUMNS = ['id', 'vcs_id', 'name', 'from_node', 'to_node', 'probability']
+
 # ======================================================================================================================
 # CVS projects
 # ======================================================================================================================
@@ -383,7 +389,7 @@ def get_all_value_driver(db_connection: PooledMySQLConnection, project_id: int,
 
 
 def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int, project_id: int,
-                         user_id: int) -> ListChunk[models.VCSValueDriver]:
+                     user_id: int) -> models.VCSValueDriver:
 
     logger.debug(f'Fetching value driver for project with id={value_driver_id}.')
 
@@ -396,7 +402,7 @@ def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int,
         .where(where_statement, where_values) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
-    value_driver = [populate_value_driver(db_connection, result, project_id, user_id)];
+    value_driver = populate_value_driver(db_connection, result, project_id, user_id)
 
     if result is None:
         raise cvs_exceptions.ValueDriverNotFoundException(value_driver_id=value_driver_id)
@@ -404,29 +410,7 @@ def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int,
     if result['project_id'] != project_id:
         raise auth_exceptions.UnauthorizedOperationException
 
-    chunk = ListChunk[models.VCSValueDriver](chunk=value_driver, length_total=1)
-
-    return chunk
-
-'''
-def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int, project_id: int,
-                     user_id: int) -> models.VCSValueDriver:
-    logger.debug(f'Fetching value driver with id={value_driver_id}.')
-
-    select_statement = MySQLStatementBuilder(db_connection)
-    result = select_statement \
-        .select(CVS_VCS_VALUE_DRIVER_TABLE, CVS_VCS_VALUE_DRIVER_COLUMNS) \
-        .where('id = %s', [value_driver_id]) \
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-
-    if result is None:
-        raise cvs_exceptions.ValueDriverNotFoundException(value_driver_id=value_driver_id)
-
-    if result['project_id'] != project_id:
-        raise auth_exceptions.UnauthorizedOperationException
-
-    return populate_value_driver(db_connection, result, project_id, user_id)
-'''
+    return value_driver
 
 
 def create_value_driver(db_connection: PooledMySQLConnection, value_driver_post: models.VCSValueDriverPost,
@@ -442,14 +426,14 @@ def create_value_driver(db_connection: PooledMySQLConnection, value_driver_post:
         .execute(fetch_type=FetchType.FETCH_NONE)
     value_driver_id = insert_statement.last_insert_id
 
-    return get_value_driver(db_connection, value_driver_id, project_id, user_id).chunk[0]
+    return get_value_driver(db_connection, value_driver_id, project_id, user_id)
 
 
 def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int, project_id: int, user_id: int,
                       new_value_driver: models.VCSValueDriverPost) -> models.VCSValueDriver:
     logger.debug(f'Editing value driver with id={value_driver_id}.')
 
-    old_value_driver = get_value_driver(db_connection, value_driver_id, project_id, user_id).chunk[0]
+    old_value_driver = get_value_driver(db_connection, value_driver_id, project_id, user_id)
     if old_value_driver.name == new_value_driver.name:  # No change
         return old_value_driver
 
@@ -466,7 +450,7 @@ def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int
     if rows == 0:
         raise cvs_exceptions.ValueDriverFailedToUpdateException
 
-    return get_value_driver(db_connection, value_driver_id, project_id, user_id).chunk[0]
+    return get_value_driver(db_connection, value_driver_id, project_id, user_id)
 
 
 def delete_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int, project_id: int,
@@ -708,6 +692,22 @@ def get_vcs_table(db_connection: PooledMySQLConnection, vcs_id: int, project_id:
     return models.TableGet(table_rows=table_rows)
 
 
+def get_vcs_table_row(db_connection: PooledMySQLConnection, row_id: int, project_id: int,
+                      user_id: int) -> models.TableRowGet or None:
+    logger.debug(f'Fetching vcs table row with id={row_id}.')
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    result = select_statement \
+        .select(CVS_VCS_TABLE_ROWS_TABLE, CVS_VCS_TABLE_ROWS_COLUMNS) \
+        .where('id = %s', [row_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if result is not None:
+        return populate_table_row(db_connection, result, project_id, user_id)
+    else:
+        return None
+
+
 def get_all_table_rows(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int,
                        user_id: int) -> List[models.TableRowGet]:
     logger.debug(f'Fetching all table rows for VCS with id={vcs_id}')
@@ -731,10 +731,10 @@ def populate_table_row(db_connection: PooledMySQLConnection, db_result, project_
 
     iso_process, subprocesss = None, None
     if db_result['iso_process_id'] is not None:
-        iso_process = get_iso_process(db_result['iso_process_id']) #Gets a iso process based on the id that we got from the DB result
+        iso_process = get_iso_process(db_result['iso_process_id']) # Gets a iso process based on the id that we got from the DB result
     elif db_result['subprocess_id'] is not None:
         try:
-            subprocesss = get_subprocess(db_connection, db_result['subprocess_id'], project_id, user_id) #Runs a new query on subprocess table based on the id that is in the result of the db query. Why is that not referenced as a foreign key and run as a single query here?????
+            subprocesss = get_subprocess(db_connection, db_result['subprocess_id'], project_id, user_id) # Runs a new query on subprocess table based on the id that is in the result of the db query. Why is that not referenced as a foreign key and run as a single query here?????
         except cvs_exceptions.SubprocessNotFoundException:
             # If a subprocess is deleted but used in a table, the subprocess wont be found and thus this exception
             pass
@@ -986,4 +986,189 @@ def populate_design(db_connection: PooledMySQLConnection, db_result, project_id:
         vcs=get_vcs(db_connection, vcs_id=vcs_id, project_id=project_id, user_id=user_id),
         name=db_result['name'],
         description=db_result['description']
+    )
+
+# ======================================================================================================================
+# BPMN Table
+# ======================================================================================================================
+
+def populate_bpmn_node(db_connection, result, project_id, user_id) -> models.NodeGet:
+    logger.debug(f'Populating model for node with id={result["id"]}.')
+
+    return models.NodeGet(
+        id=result['id'],
+        vcs_id=result['vcs_id'],
+        name=result['name'],
+        node_type=result['type'],
+        pos_x=result['pos_x'],
+        pos_y=result['pos_y'],
+        vcs_table_row=get_vcs_table_row(db_connection, result['id'], project_id, user_id)
+    )
+
+
+def populate_bpmn_edge(result) -> models.EdgeGet:
+    logger.debug(f'Populating model for edge with id={result["id"]}.')
+    return models.EdgeGet(
+        id=result['id'],
+        vcs_id=result['vcs_id'],
+        name=result['name'],
+        from_node=result['from_node'],
+        to_node=result['to_node'],
+        probability=result['probability']
+    )
+
+
+def get_bpmn_node(db_connection: PooledMySQLConnection, node_id: int, project_id, user_id) -> models.NodeGet:
+    logger.debug(f'Fetching node with id={node_id}.')
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    result = select_statement \
+        .select(CVS_BPMN_NODES_TABLE, CVS_BPMN_NODES_COLUMNS) \
+        .where('id = %s', [node_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if result is None:
+        raise cvs_exceptions.NodeNotFoundException
+
+    return populate_bpmn_node(db_connection, result, project_id, user_id)
+
+
+def create_bpmn_node(db_connection: PooledMySQLConnection, node: models.NodePost, project_id: int, user_id: int) -> models.NodeGet:
+    logger.debug(f'Creating a node for vcs with id={node.vcs_id}.')
+    columns = ['vcs_id', 'name', 'type']
+    values = [node.vcs_id, node.name, node.node_type]
+
+    insert_statement = MySQLStatementBuilder(db_connection)
+    insert_statement \
+        .insert(table=CVS_BPMN_NODES_TABLE, columns=columns) \
+        .set_values(values) \
+        .execute(fetch_type=FetchType.FETCH_NONE)
+    node_id = insert_statement.last_insert_id
+
+    return get_bpmn_node(db_connection, node_id, project_id, user_id)
+
+
+def delete_bpmn_node(db_connection: PooledMySQLConnection, node_id: int) -> bool:
+    # get_bpmn_node(db_connection, node_id)  # checks
+
+    delete_statement = MySQLStatementBuilder(db_connection)
+    _, rows = delete_statement.delete(CVS_BPMN_NODES_TABLE) \
+        .where('id = %s', [node_id]) \
+        .execute(return_affected_rows=True)
+
+    if rows == 0:
+        raise cvs_exceptions.NodeFailedDeletionException(node_id)
+
+    return True
+
+
+def update_bpmn_node(db_connection: PooledMySQLConnection, node_id: int, node: models.NodePost, project_id: int,
+                     user_id: int) -> models.NodeGet:
+    logger.debug(f'Updating node with id={node_id}.')
+
+    # Performs necessary checks
+    get_bpmn_node(db_connection, node_id, project_id, user_id)
+
+    update_statement = MySQLStatementBuilder(db_connection)
+    update_statement.update(
+        table=CVS_BPMN_NODES_TABLE,
+        set_statement='vcs_id = %s, name = %s, type = %s, pos_x = %s, pos_y = %s',
+        values=[node.vcs_id, node.name, node.node_type, node.pos_x, node.pos_y],
+    )
+    update_statement.where('id = %s', [node_id])
+    _, rows = update_statement.execute(return_affected_rows=True)
+
+    if rows == 0:
+        raise cvs_exceptions.NodeFailedToUpdateException
+
+    return get_bpmn_node(db_connection, node_id, project_id, user_id)
+
+
+def get_bpmn_edge(db_connection: PooledMySQLConnection, edge_id: int) -> models.EdgeGet:
+    logger.debug(f'Fetching edge with id={edge_id}.')
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    result = select_statement \
+        .select(CVS_BPMN_EDGES_TABLE, CVS_BPMN_EDGES_COLUMNS) \
+        .where('id = %s', [edge_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if result is None:
+        raise cvs_exceptions.EdgeNotFoundException
+
+    return populate_bpmn_edge(result)
+
+
+def create_bpmn_edge(db_connection: PooledMySQLConnection, edge: models.EdgePost) -> models.EdgeGet:
+    logger.debug(f'Creating an edge for vcs with id={edge.vcs_id}.')
+
+    columns = ['vcs_id', 'name', 'from_node', 'to_node', 'probability']
+    values = [edge.vcs_id, edge.name, edge.from_node, edge.to_node, edge.probability]
+
+    insert_statement = MySQLStatementBuilder(db_connection)
+    insert_statement \
+        .insert(table=CVS_BPMN_EDGES_TABLE, columns=columns) \
+        .set_values(values) \
+        .execute(fetch_type=FetchType.FETCH_NONE)
+    edge_id = insert_statement.last_insert_id
+
+    return get_bpmn_edge(db_connection, edge_id)
+
+
+def delete_bpmn_edge(db_connection: PooledMySQLConnection, edge_id: int) -> bool:
+    get_bpmn_edge(db_connection, edge_id)  # checks
+
+    delete_statement = MySQLStatementBuilder(db_connection)
+    _, rows = delete_statement.delete(CVS_BPMN_EDGES_TABLE) \
+        .where('id = %s', [edge_id]) \
+        .execute(return_affected_rows=True)
+
+    if rows == 0:
+        raise cvs_exceptions.EdgeFailedDeletionException(edge_id)
+
+    return True
+
+
+def update_bpmn_edge(db_connection: PooledMySQLConnection, edge_id: int, edge: models.EdgePost) -> models.EdgeGet:
+    logger.debug(f'Updating edge with id={edge_id}.')
+
+    # Performs necessary checks
+    get_bpmn_edge(db_connection, edge_id)
+
+    update_statement = MySQLStatementBuilder(db_connection)
+    update_statement.update(
+        table=CVS_BPMN_EDGES_TABLE,
+        set_statement='vcs_id = %s, name = %s, from_node = %s, to_node = %s, probability = %s',
+        values=[edge.vcs_id, edge.name, edge.from_node, edge.to_node, edge.probability],
+    )
+    update_statement.where('id = %s', [edge_id])
+    _, rows = update_statement.execute(return_affected_rows=True)
+
+    return get_bpmn_edge(db_connection, edge_id)
+
+
+def get_bpmn(db_connection: PooledMySQLConnection, vcs_id: int, project_id, user_id) -> models.BPMNGet:
+    logger.debug(f'Get BPMN for vcs with id={vcs_id}.')
+
+    where_statement = f'vcs_id = %s'
+    where_values = [vcs_id]
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    nodes = select_statement \
+        .select(CVS_BPMN_NODES_TABLE, CVS_BPMN_NODES_COLUMNS) \
+        .where(where_statement, where_values) \
+        .order_by(['id'], Sort.ASCENDING) \
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    edges = select_statement \
+        .select(CVS_BPMN_EDGES_TABLE, CVS_BPMN_EDGES_COLUMNS) \
+        .where(where_statement, where_values) \
+        .order_by(['id'], Sort.ASCENDING) \
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    return models.BPMNGet(
+        vcs_id=vcs_id,
+        nodes=[populate_bpmn_node(db_connection, node, project_id, user_id) for node in nodes],
+        edges=[populate_bpmn_edge(edge) for edge in edges],
     )

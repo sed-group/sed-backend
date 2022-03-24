@@ -244,5 +244,51 @@ class QualifiedObjective(BaseModel):
     property: float
     processes: List[VCSTableRow]
 
+
 class QualifiedObjectivePost(BaseModel):
     property: float
+
+
+# ======================================================================================================================
+# BPMN Table
+# ======================================================================================================================
+
+class NodeGet(BaseModel):
+    id: int
+    vcs_id: int
+    name: str
+    node_type: str
+    pos_x: Optional[int] = None
+    pos_y: Optional[int] = None
+    vcs_table_row: Optional[TableRowGet] = None
+
+
+class NodePost(BaseModel):
+    vcs_id: int
+    name: str
+    node_type: str
+    pos_x: Optional[int] = None
+    pos_y: Optional[int] = None
+
+
+class EdgeGet(BaseModel):
+    id: int
+    vcs_id: int
+    name: str
+    from_node: int
+    to_node: int
+    probability: int
+
+
+class EdgePost(BaseModel):
+    vcs_id: int
+    name: str
+    from_node: int
+    to_node: int
+    probability: int
+
+
+class BPMNGet(BaseModel):
+    vcs_id: int
+    nodes: List[NodeGet]
+    edges: List[EdgeGet]
