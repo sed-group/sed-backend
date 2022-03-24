@@ -559,11 +559,7 @@ def get_design(design_id: int, vcs_id: int, project_id: int, user_id: int) -> mo
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
         )
-    except auth_ex.UnauthorizedOperationException:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail='Unauthorized user.',
-        )
+
 
 def get_all_design(project_id: int, vcs_id: int, user_id: int) -> ListChunk[models.Design]: 
         with get_connection() as con:

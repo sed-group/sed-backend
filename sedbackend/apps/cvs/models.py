@@ -264,6 +264,7 @@ class NodeGet(BaseModel):
 
 
 class NodePost(BaseModel):
+    vcs_id: int
     name: str
     node_type: str
     pos_x: Optional[int] = None
@@ -280,6 +281,7 @@ class EdgeGet(BaseModel):
 
 
 class EdgePost(BaseModel):
+    vcs_id: int
     name: str
     from_node: int
     to_node: int
