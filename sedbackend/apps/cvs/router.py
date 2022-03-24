@@ -417,3 +417,4 @@ async def get_bpmn(vcs_id: int, project_id: int, user: User = Depends(get_curren
 async def update_bpmn(vcs_id: int, project_id: int, nodes: List[models.NodeGet], edges: List[models.EdgeGet],
                       user: User = Depends(get_current_active_user)) -> models.BPMNGet:
     return impl.update_bpmn(vcs_id, project_id, user.id, nodes, edges)
+

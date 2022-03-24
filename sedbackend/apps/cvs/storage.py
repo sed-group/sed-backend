@@ -918,14 +918,22 @@ def get_all_designs(db_connection: PooledMySQLConnection, project_id: int, vcs_i
     select_statement = MySQLStatementBuilder(db_connection)
     results = select_statement \
         .select(DESIGNS_TABLE, DESIGNS_COLUMNS) \
+<<<<<<< HEAD
         .where('vcs = %s and project = %s', [vcs_id, project_id]) \
         .order_by(['id'], Sort.ASCENDING) \
+=======
+        .where('vcs = %s', [vcs_id]) \
+>>>>>>> b6fa7c5 (C)
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
     logger.debug(results)
 
     design_list = []
     for result in results:
+<<<<<<< HEAD
+=======
+        logger.debug(result)
+>>>>>>> b6fa7c5 (C)
         design_list.append(populate_design(db_connection, result, project_id, vcs_id, user_id))
     
     count_statement = MySQLStatementBuilder(db_connection)
@@ -935,6 +943,7 @@ def get_all_designs(db_connection: PooledMySQLConnection, project_id: int, vcs_i
     chunk = ListChunk[models.Design](chunk=design_list, length_total=result['count'])
     return chunk
 
+<<<<<<< HEAD
 def delete_design(db_connection: PooledMySQLConnection, design_id: int, project_id: int, vcs_id: int, user_id: int) -> bool:
     logger.debug(f'Deleting design with id={design_id}')
 
@@ -980,6 +989,8 @@ def edit_design(db_connection: PooledMySQLConnection, design_id: int, project_id
     
     return(get_design(db_connection, design_id, project_id, vcs_id, user_id))
 
+=======
+>>>>>>> b6fa7c5 (C)
 def populate_design(db_connection: PooledMySQLConnection, db_result, project_id: int, vcs_id: int, user_id: int) -> models.Design:
     return models.Design(
         id=db_result['id'],
