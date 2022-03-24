@@ -709,7 +709,7 @@ def get_vcs_table_row(db_connection: PooledMySQLConnection, row_id: int, project
 
 def get_all_table_rows(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int,
                        user_id: int) -> List[models.TableRowGet]:
-    logger.debug(f'Fetching all table rows for VCS with id={vcs_id}.')
+    logger.debug(f'Fetching all table rows for VCS with id={vcs_id}')
 
     where_statement = f'vcs_id = %s'
     where_values = [vcs_id]
@@ -884,7 +884,7 @@ def create_vcs_table(db_connection: PooledMySQLConnection, new_table: models.Tab
 # ======================================================================================================================
 
 def create_design(db_connection: PooledMySQLConnection, design_post: models.DesignPost, vcs_id: int, project_id: int, user_id: int) -> models.Design:
-    logger.debug(f'creating design with vcs_id:{vcs_id} and project_id:{project_id}')
+    logger.debug(f'creating design with vcs_id={vcs_id} and project_id={project_id}')
     get_cvs_project(db_connection, project_id, user_id)
 
     insert_statement = MySQLStatementBuilder(db_connection)
@@ -904,12 +904,35 @@ def get_design(db_connection: PooledMySQLConnection, design_id: int, project_id:
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
     
     if result is None:
-        raise cvs_exceptions.VCSNotFoundException
+        raise cvs_exceptions.DesignNotFoundException
 
     if result['project'] != project_id:
         raise auth_exceptions.UnauthorizedOperationException
 
     return populate_design(db_connection, result, project_id, vcs_id, user_id)
+
+def get_all_designs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id: int) -> ListChunk[models.Design]:
+    logger.debug(f'Fetching all Designs with project_id={project_id}, vcs_id={vcs_id}')
+    
+    select_statement = MySQLStatementBuilder(db_connection)
+    results = select_statement \
+        .select(DESIGNS_TABLE, DESIGNS_COLUMNS) \
+        .where('vcs = %s', [vcs_id]) \
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    logger.debug(results)
+
+    design_list = []
+    for result in results:
+        logger.debug(result)
+        design_list.append(populate_design(db_connection, result, project_id, vcs_id, user_id))
+    
+    count_statement = MySQLStatementBuilder(db_connection)
+    result = count_statement.count(DESIGNS_TABLE) \
+        .where('vcs = %s', [vcs_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+    chunk = ListChunk[models.Design](chunk=design_list, length_total=result['count'])
+    return chunk
 
 def populate_design(db_connection: PooledMySQLConnection, db_result, project_id: int, vcs_id: int, user_id: int) -> models.Design:
     return models.Design(

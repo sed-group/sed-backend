@@ -127,3 +127,9 @@ class EdgeFailedDeletionException(Exception):
 
 class EdgeFailedToUpdateException(Exception):
     pass
+
+# ======================================================================================================================
+# Design
+# ======================================================================================================================
+class DesignNotFoundException(Exception):
+    pass
