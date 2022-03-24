@@ -94,3 +94,9 @@ class VCSTableRowFailedDeletionException(Exception):
 class VCSTableProcessAmbiguity(Exception):
     def __init__(self, table_row_id: int = None):
         self.table_row_id = table_row_id
+
+# ======================================================================================================================
+# Design
+# ======================================================================================================================
+class DesignNotFoundException(Exception):
+    pass
