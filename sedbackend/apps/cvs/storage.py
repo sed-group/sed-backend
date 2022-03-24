@@ -889,7 +889,7 @@ def create_design(db_connection: PooledMySQLConnection, design_post: models.Desi
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
-        .insert(table=DESIGNS_TABLE, columns=['project', 'vcs', 'name' 'description']) \
+        .insert(table=DESIGNS_TABLE, columns=['project', 'vcs', 'name', 'description']) \
         .set_values([project_id, vcs_id, design_post.name, design_post.description]) \
         .execute(fetch_type=FetchType.FETCH_NONE)
     design_id = insert_statement.last_insert_id
@@ -906,7 +906,7 @@ def get_design(db_connection: PooledMySQLConnection, design_id: int, project_id:
     if result is None:
         raise cvs_exceptions.VCSNotFoundException
 
-    if result['project_id'] != project_id:
+    if result['project'] != project_id:
         raise auth_exceptions.UnauthorizedOperationException
 
     return populate_design(db_connection, result, project_id, vcs_id, user_id)
@@ -914,7 +914,6 @@ def get_design(db_connection: PooledMySQLConnection, design_id: int, project_id:
 def populate_design(db_connection: PooledMySQLConnection, db_result, project_id: int, vcs_id: int, user_id: int) -> models.Design:
     return models.Design(
         id=db_result['id'],
-        project= get_cvs_project(db_connection, project_id=project_id, user_id=user_id),
         vcs=get_vcs(db_connection, vcs_id=vcs_id, project_id=project_id, user_id=user_id),
         name=db_result['name'],
         description=db_result['description']

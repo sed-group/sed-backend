@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_table_rows`
     `subprocess_id`            INT UNSIGNED NULL DEFAULT NULL,
     `stakeholder`              VARCHAR(255) NULL DEFAULT NULL,
     `stakeholder_expectations` TEXT         NULL DEFAULT NULL,
-    PRIMARY KEY (`id`),1
+    PRIMARY KEY (`id`),
     UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
     INDEX `vcs_cascade_idx` (`vcs_id` ASC) VISIBLE,
     CONSTRAINT `vcs_cascade`
@@ -71,6 +71,22 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_stakeholder_needs`
     CONSTRAINT `vcs_table_row_cascade`
         FOREIGN KEY (`table_row_id`)
             REFERENCES `seddb`.`cvs_vcs_table_rows` (`id`)
+            ON DELETE CASCADE
+            ON UPDATE NO ACTION
+);
+
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_value_drivers`
+(
+    `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `name`       VARCHAR(255) NOT NULL,
+    `unit`       VARCHAR(63) DEFAULT NULL,
+    `project_id` INT UNSIGNED NOT NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
+    INDEX `cvs_project_cascade_idx` (`project_id` ASC) VISIBLE,
+    CONSTRAINT `cvs_project_value_driver_cascade`
+        FOREIGN KEY (`project_id`)
+            REFERENCES `seddb`.`cvs_projects` (`id`)
             ON DELETE CASCADE
             ON UPDATE NO ACTION
 );

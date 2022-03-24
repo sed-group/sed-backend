@@ -1,18 +1,3 @@
-CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_value_drivers`
-(
-    `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `name`       VARCHAR(255) NOT NULL,
-    `unit`       VARCHAR(63) NOT NULL,
-    `project_id` INT UNSIGNED NOT NULL,
-    PRIMARY KEY (`id`),
-    UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
-    INDEX `cvs_project_cascade_idx` (`project_id` ASC) VISIBLE,
-    CONSTRAINT `cvs_project_value_driver_cascade`
-        FOREIGN KEY (`project_id`)
-            REFERENCES `seddb`.`cvs_projects` (`id`)
-            ON DELETE CASCADE
-            ON UPDATE NO ACTION
-);
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_bpmn_nodes`
 (
@@ -50,12 +35,13 @@ CREATE TABLE IF NOT EXISTS `seddb`.`designs`
         REFERENCES `seddb`.`cvs_vcss`(`id`)
 );
 
-CREATE TABLE IF NOT EXISTS `seddb`.`value_driver_props`
+CREATE TABLE IF NOT EXISTS `seddb`.`qualified_objectives`
 (
     `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `design`            INT UNSIGNED NOT NULL,
     `value_driver`      INT UNSIGNED NOT NULL,
     `property`          DOUBLE NOT NULL,
+    `unit`              VARCHAR(63) NOT NULL,
     PRIMARY KEY(`id`),
     FOREIGN KEY(`design`)
         REFERENCES `seddb`.`designs`(`id`),

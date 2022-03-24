@@ -161,7 +161,7 @@ class VCSValueDriver(BaseModel):
 
 class VCSValueDriverPost(BaseModel):
     name: str
-    unit: str
+    unit: Optional[str] = None
 
 
 # ======================================================================================================================
@@ -224,7 +224,6 @@ class TablePost(BaseModel):
 
 class Design(BaseModel):
     id: int
-    project: CVSProject
     vcs: VCS
     name: str
     description: str
@@ -235,15 +234,15 @@ class DesignPost(BaseModel):
 
 
 # ======================================================================================================================
-# CVS Value Driver Properties
+# CVS Qualified Objectives
 # ======================================================================================================================
 
-class ValueDriverProps(BaseModel):
+class QualifiedObjective(BaseModel):
     id: int
     design: Design
     value_driver: VCSValueDriver
     property: float
     processes: List[VCSTableRow]
 
-class ValueDriverPropsPost(BaseModel):
+class QualifiedObjectivePost(BaseModel):
     property: float

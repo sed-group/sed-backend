@@ -292,3 +292,16 @@ async def create_vcs_table(new_table: models.TablePost, vcs_id: int, project_id:
                            user: User = Depends(get_current_active_user)) -> bool:
     impl.get_vcs(vcs_id, project_id, user.id)  # perfoms necessary controls
     return impl.create_vcs_table(new_table, vcs_id, project_id, user.id)
+
+
+# ======================================================================================================================
+# CVS Design
+# ======================================================================================================================
+
+@router.post(
+    '/project/{project_id}/vcs/{vcs_id}/design/create',
+    summary='Creates a Design',
+    response_model=models.Design
+)
+async def create_design(design_post: models.DesignPost, vcs_id: int, project_id: int, user: User = Depends(get_current_active_user)) -> models.Design:
+    return impl.create_cvs_design(design_post, vcs_id, project_id, user.id)
