@@ -155,7 +155,7 @@ async def get_all_value_driver(project_id: int,
 @router.get(
     '/project/{project_id}/value-driver/get/{value_driver_id}',
     summary='Returns a value driver',
-    response_model=ListChunk[models.VCSValueDriver],
+    response_model=models.VCSValueDriver,
 )
 async def get_value_driver(value_driver_id: int, project_id: int,
                            user: User = Depends(get_current_active_user)) -> models.VCSValueDriver:
@@ -305,3 +305,70 @@ async def create_vcs_table(new_table: models.TablePost, vcs_id: int, project_id:
 )
 async def create_design(design_post: models.DesignPost, vcs_id: int, project_id: int, user: User = Depends(get_current_active_user)) -> models.Design:
     return impl.create_cvs_design(design_post, vcs_id, project_id, user.id)
+
+# ======================================================================================================================
+# BPMN Table
+# ======================================================================================================================
+
+@router.post(
+    '/project/{project_id}/bpmn/node/create',
+    summary='Creates a node for BPMN',
+    response_model=models.NodeGet,
+)
+async def create_bpmn_node(node: models.NodePost, project_id: int, user: User = Depends(get_current_active_user)) -> models.NodeGet:
+    return impl.create_bpmn_node(node, project_id, user.id)
+
+
+@router.delete(
+    '/bpmn/node/{node_id}/delete',
+    summary='Deletes a node',
+    response_model=bool,
+)
+async def delete_bpmn_node(node_id: int) -> bool:
+    return impl.delete_bpmn_node(node_id)
+
+
+@router.put(
+    '/bpmn/node/{node_id}/edit',
+    summary='Edit a node',
+    response_model=models.NodeGet,
+)
+async def update_bpmn_node(node_id: int, node: models.NodePost, project_id: int,
+                           user: User = Depends(get_current_active_user)) -> models.NodeGet:
+    return impl.update_bpmn_node(node_id, node, project_id, user.id)
+
+
+@router.post(
+    '/bpmn/edge/create',
+    summary='Creates a edge for BPMN',
+    response_model=models.EdgeGet,
+)
+async def create_bpmn_edge(edge: models.EdgePost) -> models.EdgeGet:
+    return impl.create_bpmn_edge(edge)
+
+
+@router.delete(
+    '/bpmn/edge/{edge_id}/delete',
+    summary='Deletes an edge',
+    response_model=bool,
+)
+async def delete_bpmn_edge(edge_id: int) -> bool:
+    return impl.delete_bpmn_edge(edge_id)
+
+
+@router.put(
+    '/bpmn/edge/{edge_id}/edit',
+    summary='Edit an edge',
+    response_model=models.EdgeGet,
+)
+async def update_bpmn_edge(edge_id: int, edge: models.EdgePost) -> models.EdgeGet:
+    return impl.update_bpmn_edge(edge_id, edge)
+
+
+@router.get(
+    '/project/{project_id}/bpmn/{vcs_id}/get',
+    summary='Get BPMN',
+    response_model=models.BPMNGet,
+)
+async def get_bpmn(vcs_id: int, project_id: int, user: User = Depends(get_current_active_user)) -> models.BPMNGet:
+    return impl.get_bpmn(vcs_id, project_id, user.id)
