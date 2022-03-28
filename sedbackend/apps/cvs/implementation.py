@@ -597,4 +597,3 @@ def edit_design(design_id: int, project_id: int, vcs_id: int, user_id: int, upda
             detail=f'Could not find project with id={project_id}'
         )
         
-    
