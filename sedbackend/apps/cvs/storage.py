@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-from turtle import update
-=======
->>>>>>> 5cbcb5e (Added deletion of a design and get for all designs)
 from unittest import result
 from mysql.connector.pooling import PooledMySQLConnection
 from fastapi.logger import logger
