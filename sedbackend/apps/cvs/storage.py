@@ -1,3 +1,4 @@
+from unittest import result
 from mysql.connector.pooling import PooledMySQLConnection
 from fastapi.logger import logger
 from typing import List
@@ -917,14 +918,14 @@ def get_all_designs(db_connection: PooledMySQLConnection, project_id: int, vcs_i
     select_statement = MySQLStatementBuilder(db_connection)
     results = select_statement \
         .select(DESIGNS_TABLE, DESIGNS_COLUMNS) \
-        .where('vcs = %s', [vcs_id]) \
+        .where('vcs = %s and project = %s', [vcs_id, project_id]) \
+        .order_by(['id'], Sort.ASCENDING) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
     logger.debug(results)
 
     design_list = []
     for result in results:
-        logger.debug(result)
         design_list.append(populate_design(db_connection, result, project_id, vcs_id, user_id))
     
     count_statement = MySQLStatementBuilder(db_connection)
@@ -933,6 +934,51 @@ def get_all_designs(db_connection: PooledMySQLConnection, project_id: int, vcs_i
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
     chunk = ListChunk[models.Design](chunk=design_list, length_total=result['count'])
     return chunk
+    
+def delete_design(db_connection: PooledMySQLConnection, design_id: int, project_id: int, vcs_id: int, user_id: int) -> bool:
+    logger.debug(f'Deleting design with id={design_id}')
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    result = select_statement\
+        .select(DESIGNS_TABLE, DESIGNS_COLUMNS)\
+        .where('id = %s', [design_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+    
+    if result is None: 
+        raise cvs_exceptions.DesignNotFoundException
+    
+    if result['project'] != project_id:
+        raise auth_exceptions.UnauthorizedOperationException
+    
+    if result['vcs'] != vcs_id:
+        raise auth_exceptions.UnauthorizedOperationException
+    
+    delete_statement = MySQLStatementBuilder(db_connection)
+    _, rows = delete_statement.delete(DESIGNS_TABLE) \
+        .where('id = %s', [design_id]) \
+        .execute(return_affected_rows=True)
+    
+    if rows ==0:
+        raise cvs_exceptions.DesignNotFoundException
+    
+    return True
+
+def edit_design(db_connection: PooledMySQLConnection, design_id: int, project_id: int, vcs_id: int, user_id: int, updated_design: models.DesignPost) -> models.Design:
+    logger.debug(f'Editing Design with id = {design_id}')
+
+    update_statement = MySQLStatementBuilder(db_connection)
+    update_statement.update(
+        table=DESIGNS_TABLE,
+        set_statement='name = %s, description = %s',
+        values=[updated_design.name, updated_design.description]
+    )
+    update_statement.where('id = %s', [design_id])
+    _, rows = update_statement.execute(return_affected_rows=True)
+
+    if rows == 0:
+        raise cvs_exceptions.DesignNotFoundException
+    
+    return(get_design(db_connection, design_id, project_id, vcs_id, user_id))
 
 def populate_design(db_connection: PooledMySQLConnection, db_result, project_id: int, vcs_id: int, user_id: int) -> models.Design:
     return models.Design(

@@ -1,3 +1,5 @@
+from statistics import mode
+from unittest import result
 from fastapi import HTTPException, status
 from typing import List
 
@@ -546,6 +548,46 @@ def create_cvs_design(design_post: models.DesignPost, vcs_id: int, project_id: i
             detail='Unauthorized user.',
         )
 
+def get_all_design(project_id: int, vcs_id: int, user_id: int) -> ListChunk[models.Design]: 
+        with get_connection() as con:
+            return storage.get_all_designs(con, project_id, vcs_id, user_id)
+           
+
+def get_design(design_id: int, vcs_id: int, project_id: int, user_id: int) -> models.Design:
+    try:
+        with get_connection() as con:
+            result = storage.get_design(con, design_id, project_id, vcs_id, user_id)
+            con.commit()
+            return result
+    except cvs_exceptions.CVSProjectFailedDeletionException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
+
+
+def delete_design(design_id: int, vcs_id: int, project_id: int, user_id: int) -> bool:
+    try:
+        with get_connection() as con:
+            res = storage.delete_design(con, design_id, project_id, vcs_id, user_id)
+            con.commit()
+            return res
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}'
+        )
+def edit_design(design_id: int, project_id: int, vcs_id: int, user_id: int, updated_design: models.DesignPost) -> models.Design:
+    try:
+        with get_connection() as con:
+            result = storage.edit_design(con, design_id, project_id, vcs_id, user_id, updated_design)
+            con.commit()
+            return result
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}'
+        )
 
 # ======================================================================================================================
 # BPMN Table
@@ -567,12 +609,6 @@ def create_bpmn_node(node: models.NodePost, project_id: int, vcs_id: int, user_i
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
         )
-    except auth_ex.UnauthorizedOperationException:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail='Unauthorized user.',
-        )
-
 
 def delete_bpmn_node(node_id: int, project_id: int, vcs_id: int) -> bool:
     try:
@@ -600,11 +636,6 @@ def delete_bpmn_node(node_id: int, project_id: int, vcs_id: int) -> bool:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Failed to remove node with id={e.node_id}.',
-        )
-    except auth_ex.UnauthorizedOperationException:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail='Unauthorized user.',
         )
 
 
@@ -751,57 +782,8 @@ def update_bpmn(vcs_id: int, project_id: int, user_id: int, nodes: List[models.N
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
         )
+        
 
-
-# ======================================================================================================================
-# CVS Design
-# ======================================================================================================================
-
-
-def create_cvs_design(design_post: models.DesignPost, vcs_id: int, project_id: int, user_id: int) -> models.Design:
-    try:
-        with get_connection() as con:
-            result = storage.create_design(con, design_post, vcs_id, project_id, user_id)
-            con.commit()
-            return result
-    except cvs_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project with id={project_id}.',
-        )
-    except auth_ex.UnauthorizedOperationException:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail='Unauthorized user.',
-        )
-
-
-def get_design(design_id: int, vcs_id: int, project_id: int, user_id: int) -> models.Design:
-    try:
-        with get_connection() as con:
-            result = storage.get_design(con, design_id, project_id, vcs_id, user_id)
-            con.commit()
-            return result
-    except cvs_exceptions.CVSProjectFailedDeletionException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project with id={project_id}.',
-        )
-    except auth_ex.UnauthorizedOperationException:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail='Unauthorized user.',
-        )
-
-
-def get_all_design(project_id: int, vcs_id: int, user_id: int) -> ListChunk[models.Design]:
-    try:
-        with get_connection() as con:
-            result = storage.get_all_designs(con, project_id, vcs_id, user_id)
-            con.commit()
-            return result
-    except auth_ex.UnauthorizedOperationException:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail='Unauthorized user.',
-        )
+        
+    
+        
