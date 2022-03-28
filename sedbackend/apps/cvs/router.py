@@ -331,3 +331,12 @@ async def get_design(design_id: int, vcs_id: int, project_id: int, user: User=De
 )
 async def delete_design(design_id: int, project_id: int, vcs_id: int, user: User = Depends(get_current_active_user)) -> bool:
     return impl.delete_design(design_id, vcs_id, project_id, user.id)
+
+@router.put(
+    '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/edit',
+    summary='Edit a design',
+    response_model=models.Design
+)
+async def edit_design(design_id: int, project_id: int, vcs_id: int, design_post: models.DesignPost,
+                        user: User = Depends(get_current_active_user)) -> models.Design:
+                    return impl.edit_design(design_id, project_id, vcs_id, user.id, design_post)
