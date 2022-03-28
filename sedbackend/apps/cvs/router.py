@@ -1,3 +1,5 @@
+from operator import mod
+from urllib import response
 from sedbackend.libs.datastructures.pagination import ListChunk
 
 from fastapi import APIRouter, Depends
@@ -155,7 +157,7 @@ async def get_all_value_driver(project_id: int,
 @router.get(
     '/project/{project_id}/value-driver/get/{value_driver_id}',
     summary='Returns a value driver',
-    response_model=models.VCSValueDriver,
+    response_model=ListChunk[models.VCSValueDriver],
 )
 async def get_value_driver(value_driver_id: int, project_id: int,
                            user: User = Depends(get_current_active_user)) -> models.VCSValueDriver:
@@ -305,6 +307,23 @@ async def create_vcs_table(new_table: models.TablePost, vcs_id: int, project_id:
 )
 async def create_design(design_post: models.DesignPost, vcs_id: int, project_id: int, user: User = Depends(get_current_active_user)) -> models.Design:
     return impl.create_cvs_design(design_post, vcs_id, project_id, user.id)
+
+
+@router.get(
+    '/project/{project_id}/vcs/{vcs_id}/design/get/{design_id}',
+    summary='Returns a design',
+    response_model=models.Design
+)
+async def get_design(design_id: int, vcs_id: int, project_id: int, user: User=Depends(get_current_active_user)) -> models.Design:
+    return impl.get_design(design_id, vcs_id, project_id, user.id)
+
+@router.get(
+    '/project/{project_id}/vcs/{vcs_id}/design/get/all',
+    summary='Returns all designs with project id={project_id} and vcs_id{vcs_id}',
+    response_model=ListChunk[models.Design]
+)
+async def get_all_designs(project_id: int, vcs_id: int, user: User=Depends(get_current_active_user)):
+    return impl.get_all_design(project_id, vcs_id, user.id)
 
 # ======================================================================================================================
 # BPMN Table

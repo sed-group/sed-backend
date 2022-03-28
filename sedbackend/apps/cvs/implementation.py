@@ -751,3 +751,57 @@ def update_bpmn(vcs_id: int, project_id: int, user_id: int, nodes: List[models.N
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
         )
+
+
+# ======================================================================================================================
+# CVS Design
+# ======================================================================================================================
+
+
+def create_cvs_design(design_post: models.DesignPost, vcs_id: int, project_id: int, user_id: int) -> models.Design:
+    try:
+        with get_connection() as con:
+            result = storage.create_design(con, design_post, vcs_id, project_id, user_id)
+            con.commit()
+            return result
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
+
+
+def get_design(design_id: int, vcs_id: int, project_id: int, user_id: int) -> models.Design:
+    try:
+        with get_connection() as con:
+            result = storage.get_design(con, design_id, project_id, vcs_id, user_id)
+            con.commit()
+            return result
+    except cvs_exceptions.CVSProjectFailedDeletionException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
+
+
+def get_all_design(project_id: int, vcs_id: int, user_id: int) -> ListChunk[models.Design]:
+    try:
+        with get_connection() as con:
+            result = storage.get_all_designs(con, project_id, vcs_id, user_id)
+            con.commit()
+            return result
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
