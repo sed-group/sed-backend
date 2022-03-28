@@ -1175,7 +1175,7 @@ def get_bpmn(db_connection: PooledMySQLConnection, vcs_id: int, project_id, user
 
 
 def update_bpmn(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int, user_id: int,
-                nodes: [models.NodeGet], edges: [models.EdgeGet]) -> models.BPMNGet:
+                nodes: List[models.NodeGet], edges: List[models.EdgeGet]) -> models.BPMNGet:
     logger.debug(f'Updating bpmn with vcs id={vcs_id}.')
 
     for node in nodes:
