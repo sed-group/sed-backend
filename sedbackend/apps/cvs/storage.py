@@ -1018,7 +1018,8 @@ def populate_bpmn_edge(result) -> models.EdgeGet:
     )
 
 
-def get_bpmn_node(db_connection: PooledMySQLConnection, node_id: int, project_id, user_id) -> models.NodeGet:
+def get_bpmn_node(db_connection: PooledMySQLConnection, node_id: int, project_id: int,
+                  user_id: int) -> models.NodeGet:
     logger.debug(f'Fetching node with id={node_id}.')
 
     select_statement = MySQLStatementBuilder(db_connection)
@@ -1033,10 +1034,11 @@ def get_bpmn_node(db_connection: PooledMySQLConnection, node_id: int, project_id
     return populate_bpmn_node(db_connection, result, project_id, user_id)
 
 
-def create_bpmn_node(db_connection: PooledMySQLConnection, node: models.NodePost, project_id: int, user_id: int) -> models.NodeGet:
-    logger.debug(f'Creating a node for vcs with id={node.vcs_id}.')
+def create_bpmn_node(db_connection: PooledMySQLConnection, node: models.NodePost, project_id: int, vcs_id: int,
+                     user_id: int) -> models.NodeGet:
+    logger.debug(f'Creating a node for vcs with id={vcs_id}.')
     columns = ['vcs_id', 'name', 'type']
-    values = [node.vcs_id, node.name, node.node_type]
+    values = [vcs_id, node.name, node.node_type]
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
@@ -1049,7 +1051,6 @@ def create_bpmn_node(db_connection: PooledMySQLConnection, node: models.NodePost
 
 
 def delete_bpmn_node(db_connection: PooledMySQLConnection, node_id: int) -> bool:
-    # get_bpmn_node(db_connection, node_id)  # checks
 
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement.delete(CVS_BPMN_NODES_TABLE) \
@@ -1063,7 +1064,7 @@ def delete_bpmn_node(db_connection: PooledMySQLConnection, node_id: int) -> bool
 
 
 def update_bpmn_node(db_connection: PooledMySQLConnection, node_id: int, node: models.NodePost, project_id: int,
-                     user_id: int) -> models.NodeGet:
+                     vcs_id: int, user_id: int) -> models.NodeGet:
     logger.debug(f'Updating node with id={node_id}.')
 
     # Performs necessary checks
@@ -1073,7 +1074,7 @@ def update_bpmn_node(db_connection: PooledMySQLConnection, node_id: int, node: m
     update_statement.update(
         table=CVS_BPMN_NODES_TABLE,
         set_statement='vcs_id = %s, name = %s, type = %s, pos_x = %s, pos_y = %s',
-        values=[node.vcs_id, node.name, node.node_type, node.pos_x, node.pos_y],
+        values=[vcs_id, node.name, node.node_type, node.pos_x, node.pos_y],
     )
     update_statement.where('id = %s', [node_id])
     _, rows = update_statement.execute(return_affected_rows=True)
@@ -1099,11 +1100,11 @@ def get_bpmn_edge(db_connection: PooledMySQLConnection, edge_id: int) -> models.
     return populate_bpmn_edge(result)
 
 
-def create_bpmn_edge(db_connection: PooledMySQLConnection, edge: models.EdgePost) -> models.EdgeGet:
-    logger.debug(f'Creating an edge for vcs with id={edge.vcs_id}.')
+def create_bpmn_edge(db_connection: PooledMySQLConnection, edge: models.EdgePost, vcs_id: int) -> models.EdgeGet:
+    logger.debug(f'Creating an edge for vcs with id={vcs_id}.')
 
     columns = ['vcs_id', 'name', 'from_node', 'to_node', 'probability']
-    values = [edge.vcs_id, edge.name, edge.from_node, edge.to_node, edge.probability]
+    values = [vcs_id, edge.name, edge.from_node, edge.to_node, edge.probability]
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
@@ -1129,7 +1130,8 @@ def delete_bpmn_edge(db_connection: PooledMySQLConnection, edge_id: int) -> bool
     return True
 
 
-def update_bpmn_edge(db_connection: PooledMySQLConnection, edge_id: int, edge: models.EdgePost) -> models.EdgeGet:
+def update_bpmn_edge(db_connection: PooledMySQLConnection, edge_id: int, edge: models.EdgePost,
+                     vcs_id: int) -> models.EdgeGet:
     logger.debug(f'Updating edge with id={edge_id}.')
 
     # Performs necessary checks
@@ -1139,7 +1141,7 @@ def update_bpmn_edge(db_connection: PooledMySQLConnection, edge_id: int, edge: m
     update_statement.update(
         table=CVS_BPMN_EDGES_TABLE,
         set_statement='vcs_id = %s, name = %s, from_node = %s, to_node = %s, probability = %s',
-        values=[edge.vcs_id, edge.name, edge.from_node, edge.to_node, edge.probability],
+        values=[vcs_id, edge.name, edge.from_node, edge.to_node, edge.probability],
     )
     update_statement.where('id = %s', [edge_id])
     _, rows = update_statement.execute(return_affected_rows=True)

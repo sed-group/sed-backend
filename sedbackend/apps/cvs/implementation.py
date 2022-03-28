@@ -598,26 +598,46 @@ def edit_design(design_id: int, project_id: int, vcs_id: int, user_id: int, upda
 # BPMN Table
 # ======================================================================================================================
 
-def create_bpmn_node(node: models.NodePost, project_id, user_id) -> models.NodeGet:
+def create_bpmn_node(node: models.NodePost, project_id: int, vcs_id: int, user_id: int) -> models.NodeGet:
     try:
         with get_connection() as con:
-            result = storage.create_bpmn_node(con, node, project_id, user_id)
+            result = storage.create_bpmn_node(con, node, project_id, vcs_id, user_id)
             con.commit()
             return result
     except cvs_exceptions.VCSNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs with id={node.vcs_id}.',
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
         )
 
 
-def delete_bpmn_node(node_id: int) -> bool:
+def delete_bpmn_node(node_id: int, project_id: int, vcs_id: int) -> bool:
     try:
         with get_connection() as con:
             result = storage.delete_bpmn_node(con, node_id)
             con.commit()
             return result
 
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
     except cvs_exceptions.NodeNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -634,39 +654,75 @@ def delete_bpmn_node(node_id: int) -> bool:
             detail='Unauthorized user.',
         )
 
-def update_bpmn_node(node_id: int, node: models.NodePost, project_id: int, user_id: int) -> models.NodeGet:
+
+def update_bpmn_node(node_id: int, node: models.NodePost, project_id: int, vcs_id: int, user_id: int) -> models.NodeGet:
     try:
         with get_connection() as con:
-            result = storage.update_bpmn_node(con, node_id, node, project_id, user_id)
-            con.commit()
-            return result
-    except cvs_exceptions.NodeNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find node with id={node_id}.',
-        )
-
-
-def create_bpmn_edge(edge: models.EdgePost) -> models.EdgeGet:
-    try:
-        with get_connection() as con:
-            result = storage.create_bpmn_edge(con, edge)
+            result = storage.update_bpmn_node(con, node_id, node, project_id, vcs_id, user_id)
             con.commit()
             return result
     except cvs_exceptions.VCSNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs with id={edge.vcs_id}.',
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    except cvs_exceptions.NodeNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find node with id={node_id}.',
+        )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
         )
 
 
-def delete_bpmn_edge(edge_id: int) -> bool:
+def create_bpmn_edge(edge: models.EdgePost, project_id, vcs_id) -> models.EdgeGet:
+    try:
+        with get_connection() as con:
+            result = storage.create_bpmn_edge(con, edge, vcs_id)
+            con.commit()
+            return result
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
+
+
+def delete_bpmn_edge(edge_id: int, project_id, vcs_id) -> bool:
     try:
         with get_connection() as con:
             result = storage.delete_bpmn_edge(con, edge_id)
             con.commit()
             return result
 
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
     except cvs_exceptions.EdgeNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -684,12 +740,22 @@ def delete_bpmn_edge(edge_id: int) -> bool:
         )
 
 
-def update_bpmn_edge(edge_id: int, edge: models.EdgePost) -> models.EdgeGet:
+def update_bpmn_edge(edge_id: int, edge: models.EdgePost, project_id: int, vcs_id: int) -> models.EdgeGet:
     try:
         with get_connection() as con:
-            result = storage.update_bpmn_edge(con, edge_id, edge)
+            result = storage.update_bpmn_edge(con, edge_id, edge, vcs_id)
             con.commit()
             return result
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
     except cvs_exceptions.EdgeNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -708,6 +774,11 @@ def get_bpmn(vcs_id: int, project_id: int, user_id: int) -> models.BPMNGet:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs with id={vcs_id}.',
         )
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
 
 
 def update_bpmn(vcs_id: int, project_id: int, user_id: int, nodes: List[models.NodeGet],
@@ -721,4 +792,9 @@ def update_bpmn(vcs_id: int, project_id: int, user_id: int, nodes: List[models.N
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs with id={vcs_id}.',
+        )
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
         )
