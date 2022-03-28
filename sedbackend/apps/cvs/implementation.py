@@ -1,3 +1,5 @@
+from statistics import mode
+from unittest import result
 from fastapi import HTTPException, status
 from typing import List
 
@@ -577,7 +579,6 @@ def delete_design(design_id: int, vcs_id: int, project_id: int, user_id: int) ->
             return res
     except cvs_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
-<<<<<<< HEAD
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
@@ -776,9 +777,15 @@ def update_bpmn(vcs_id: int, project_id: int, user_id: int, nodes: List[models.N
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
         )
-=======
+
+def edit_design(design_id: int, project_id: int, vcs_id: int, user_id: int, updated_design: models.DesignPost) -> models.Design:
+    try:
+        with get_connection() as con:
+            result = storage.edit_design(con, design_id, project_id, vcs_id, user_id, updated_design)
+            con.commit()
+            return result
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}'
         )
-    
->>>>>>> 5cbcb5e (Added deletion of a design and get for all designs)
