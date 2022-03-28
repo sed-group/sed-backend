@@ -2,24 +2,35 @@
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_bpmn_nodes`
 (
     `id`                INT NOT NULL AUTO_INCREMENT,
-    `vcs_id`            INT NOT NULL REFERENCES `seddb`.`cvs_vcss`(`id`),
+    `vcs_id`            INT UNSIGNED NOT NULL,
     `name`              VARCHAR(255) NOT NULL,
     `type`              VARCHAR(63) NOT NULL,
-    `posX`              INT UNSIGNED,
-    `posY`              INT UNSIGNED,
-    PRIMARY KEY(`id`)
+    `pos_x`             INT UNSIGNED,
+    `pos_y`             INT UNSIGNED,
+    PRIMARY KEY(`id`),
+    FOREIGN KEY(`vcs_id`)
+        REFERENCES `seddb`.`cvs_vcss`(`id`)
+        ON DELETE CASCADE
 );
+
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_bpmn_edges`
 (
     `id`                INT NOT NULL AUTO_INCREMENT,
+    `vcs_id`            INT UNSIGNED NOT NULL,
     `name`              VARCHAR(255) NOT NULL,
-    `vcs_id`            INT NOT NULL REFERENCES `seddb`.`cvs_vcss`(`id`),
-    `from`              INT NOT NULL REFERENCES `seddb`.`cvs_bpmn_nodes`(`id`),
-    `to`                INT NOT NULL REFERENCES `seddb`.`cvs_bpmn_nodes`(`id`),
+    `from_node`         INT NOT NULL,
+    `to_node`           INT NOT NULL,
     `probability`       INT,
-    PRIMARY KEY(`id`)
+    PRIMARY KEY(`id`),
+    FOREIGN KEY(`from_node`)
+        REFERENCES `seddb`.`cvs_bpmn_nodes`(`id`),
+    FOREIGN KEY(`from_node`)
+        REFERENCES `seddb`.`cvs_bpmn_nodes`(`id`),
+    FOREIGN KEY(`vcs_id`)
+        REFERENCES `seddb`.`cvs_vcss`(`id`)
 );
+
 
 CREATE TABLE IF NOT EXISTS `seddb`.`designs`
 (
