@@ -578,7 +578,6 @@ def delete_design(design_id: int, vcs_id: int, project_id: int, user_id: int) ->
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}'
         )
-
 def edit_design(design_id: int, project_id: int, vcs_id: int, user_id: int, updated_design: models.DesignPost) -> models.Design:
     try:
         with get_connection() as con:
@@ -788,3 +787,4 @@ def update_bpmn(vcs_id: int, project_id: int, user_id: int, nodes: List[models.N
             detail=f'Could not find project with id={project_id}.',
         )
         
+
