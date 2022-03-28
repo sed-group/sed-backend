@@ -616,6 +616,12 @@ def create_bpmn_node(node: models.NodePost, project_id: int, vcs_id: int, user_i
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
         )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
+
 
 def delete_bpmn_node(node_id: int, project_id: int, vcs_id: int) -> bool:
     try:
