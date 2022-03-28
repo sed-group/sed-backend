@@ -589,8 +589,12 @@ def edit_design(design_id: int, project_id: int, vcs_id: int, user_id: int, upda
             result = storage.edit_design(con, design_id, project_id, vcs_id, user_id, updated_design)
             con.commit()
             return result
+            con.commit()
+            return res
     except cvs_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}'
         )
+        
+    
