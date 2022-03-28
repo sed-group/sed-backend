@@ -651,10 +651,24 @@ def update_bpmn_edge(edge_id: int, edge: models.EdgePost) -> models.EdgeGet:
         )
 
 
-def get_bpmn(vcs_id: int, project_id, user_id) -> models.BPMNGet:
+def get_bpmn(vcs_id: int, project_id: int, user_id: int) -> models.BPMNGet:
     try:
         with get_connection() as con:
             result = storage.get_bpmn(con, vcs_id, project_id, user_id)
+            con.commit()
+            return result
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
+
+
+def update_bpmn(vcs_id: int, project_id: int, user_id: int, nodes: List[models.NodeGet],
+                edges: List[models.EdgeGet]) -> models.BPMNGet:
+    try:
+        with get_connection() as con:
+            result = storage.update_bpmn(con, vcs_id, project_id, user_id, nodes, edges)
             con.commit()
             return result
     except cvs_exceptions.VCSNotFoundException:
