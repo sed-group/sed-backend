@@ -579,6 +579,18 @@ def delete_design(design_id: int, vcs_id: int, project_id: int, user_id: int) ->
             detail='Unauthorized user.',
         )
 
+def edit_design(design_id: int, project_id: int, vcs_id: int, user_id: int, updated_design: models.DesignPost) -> models.Design:
+    try:
+        with get_connection() as con:
+            result = storage.edit_design(con, design_id, project_id, vcs_id, user_id, updated_design)
+            con.commit()
+            return result
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}'
+        )
+
 
 # ======================================================================================================================
 # BPMN Table
@@ -600,6 +612,12 @@ def create_bpmn_node(node: models.NodePost, project_id: int, vcs_id: int, user_i
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
         )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
+
 
 def delete_bpmn_node(node_id: int, project_id: int, vcs_id: int) -> bool:
     try:
@@ -772,18 +790,4 @@ def update_bpmn(vcs_id: int, project_id: int, user_id: int, nodes: List[models.N
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
-        )
-
-def edit_design(design_id: int, project_id: int, vcs_id: int, user_id: int, updated_design: models.DesignPost) -> models.Design:
-    try:
-        with get_connection() as con:
-            result = storage.edit_design(con, design_id, project_id, vcs_id, user_id, updated_design)
-            con.commit()
-            return result
-            con.commit()
-            return res
-    except cvs_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project with id={project_id}'
         )
