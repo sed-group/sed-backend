@@ -563,14 +563,21 @@ def get_design(design_id: int, vcs_id: int, project_id: int, user_id: int) -> mo
             detail='Unauthorized user.',
         )
 
-def get_all_design(project_id: int, vcs_id: int, user_id: int) -> ListChunk[models.Design]:
-    try: 
+def get_all_design(project_id: int, vcs_id: int, user_id: int) -> ListChunk[models.Design]: 
         with get_connection() as con:
-            result = storage.get_all_designs(con, project_id, vcs_id, user_id)
+            return storage.get_all_designs(con, project_id, vcs_id, user_id)
+            #con.commit()
+            #return result
+
+def delete_design(design_id: int, vcs_id: int, project_id: int, user_id: int) -> bool:
+    try:
+        with get_connection() as con:
+            res = storage.delete_design(con, design_id, project_id, vcs_id, user_id)
             con.commit()
-            return result
-    except auth_ex.UnauthorizedOperationException:
+            return res
+    except cvs_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
+<<<<<<< HEAD
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
@@ -769,3 +776,9 @@ def update_bpmn(vcs_id: int, project_id: int, user_id: int, nodes: List[models.N
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
         )
+=======
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}'
+        )
+    
+>>>>>>> 5cbcb5e (Added deletion of a design and get for all designs)

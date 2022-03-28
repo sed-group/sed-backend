@@ -1,7 +1,7 @@
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_bpmn_nodes`
 (
-    `id`                INT NOT NULL AUTO_INCREMENT,
+    `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `vcs_id`            INT UNSIGNED NOT NULL,
     `name`              VARCHAR(255) NOT NULL,
     `type`              VARCHAR(63) NOT NULL,
