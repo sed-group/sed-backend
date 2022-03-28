@@ -1103,3 +1103,30 @@ def get_bpmn(db_connection: PooledMySQLConnection, vcs_id: int, project_id, user
         nodes=[populate_bpmn_node(db_connection, node, project_id, user_id) for node in nodes],
         edges=[populate_bpmn_edge(edge) for edge in edges],
     )
+
+
+def update_bpmn(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int, user_id: int,
+                nodes: [models.NodeGet], edges: [models.EdgeGet]) -> models.BPMNGet:
+    logger.debug(f'Updating bpmn with vcs id={vcs_id}.')
+
+    for node in nodes:
+        new_node = models.NodePost(
+            vcs_id=vcs_id,
+            name=node.name,
+            node_type=node.node_type,
+            pos_x=node.pos_x,
+            pos_y=node.pos_y
+        )
+        update_bpmn_node(db_connection, node.id, new_node, project_id, user_id)
+
+    for edge in edges:
+        new_edge = models.EdgePost(
+            vcs_id=vcs_id,
+            name=edge.name,
+            from_node=edge.from_node,
+            to_node=edge.to_node,
+            probability=edge.probability,
+        )
+        update_bpmn_edge(db_connection, edge.id, new_edge)
+
+    return get_bpmn(db_connection, vcs_id, project_id, user_id)

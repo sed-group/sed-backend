@@ -372,3 +372,13 @@ async def update_bpmn_edge(edge_id: int, edge: models.EdgePost) -> models.EdgeGe
 )
 async def get_bpmn(vcs_id: int, project_id: int, user: User = Depends(get_current_active_user)) -> models.BPMNGet:
     return impl.get_bpmn(vcs_id, project_id, user.id)
+
+
+@router.put(
+    '/project/{project_id}/bpmn/{vcs_id}/edit',
+    summary='Edit BPMN',
+    response_model=models.BPMNGet,
+)
+async def update_bpmn(vcs_id: int, project_id: int, nodes: [models.NodeGet], edges: [models.EdgeGet],
+                      user: User = Depends(get_current_active_user)) -> models.BPMNGet:
+    return impl.update_bpmn(vcs_id, project_id, user.id, nodes, edges)
