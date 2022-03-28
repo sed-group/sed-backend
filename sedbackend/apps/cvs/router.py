@@ -324,7 +324,6 @@ async def get_all_designs(project_id: int, vcs_id: int, user: User = Depends(get
 async def get_design(design_id: int, vcs_id: int, project_id: int, user: User=Depends(get_current_active_user)) -> models.Design:
     return impl.get_design(design_id, vcs_id, project_id, user.id)
 
-
 @router.delete(
     '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/delete',
     summary='Deletes a Design based on the design id',
