@@ -664,8 +664,8 @@ def get_bpmn(vcs_id: int, project_id: int, user_id: int) -> models.BPMNGet:
         )
 
 
-def update_bpmn(vcs_id: int, project_id: int, user_id: int, nodes: [models.NodeGet],
-                edges: [models.EdgeGet]) -> models.BPMNGet:
+def update_bpmn(vcs_id: int, project_id: int, user_id: int, nodes: List[models.NodeGet],
+                edges: List[models.EdgeGet]) -> models.BPMNGet:
     try:
         with get_connection() as con:
             result = storage.update_bpmn(con, vcs_id, project_id, user_id, nodes, edges)
