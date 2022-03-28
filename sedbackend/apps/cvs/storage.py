@@ -935,7 +935,6 @@ def get_all_designs(db_connection: PooledMySQLConnection, project_id: int, vcs_i
     chunk = ListChunk[models.Design](chunk=design_list, length_total=result['count'])
     return chunk
     
-
 def delete_design(db_connection: PooledMySQLConnection, design_id: int, project_id: int, vcs_id: int, user_id: int) -> bool:
     logger.debug(f'Deleting design with id={design_id}')
 

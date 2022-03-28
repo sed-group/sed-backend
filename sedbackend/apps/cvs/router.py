@@ -340,8 +340,6 @@ async def delete_design(design_id: int, project_id: int, vcs_id: int, user: User
 async def edit_design(design_id: int, project_id: int, vcs_id: int, design_post: models.DesignPost,
                         user: User = Depends(get_current_active_user)) -> models.Design:
                     return impl.edit_design(design_id, project_id, vcs_id, user.id, design_post)
-
-
 # ======================================================================================================================
 # BPMN Table
 # ======================================================================================================================
