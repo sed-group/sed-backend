@@ -238,7 +238,7 @@ class DesignPost(BaseModel):
 
 
 # ======================================================================================================================
-# CVS Qualified Objectives
+# CVS Design Qualified Objectives
 # ======================================================================================================================
 
 class QualifiedObjective(BaseModel):
@@ -246,11 +246,13 @@ class QualifiedObjective(BaseModel):
     design: Design
     value_driver: VCSValueDriver
     property: float
+    unit: str
     processes: List[VCSTableRow]
 
 
 class QualifiedObjectivePost(BaseModel):
     property: float
+    unit: str
 
 
 # ======================================================================================================================

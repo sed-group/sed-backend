@@ -92,6 +92,8 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_value_drivers`
             ON UPDATE NO ACTION
 );
 
+
+
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_needs_divers_map`
 (
     `id`                  INT UNSIGNED NOT NULL AUTO_INCREMENT,

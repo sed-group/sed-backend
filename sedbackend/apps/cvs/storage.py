@@ -39,6 +39,9 @@ CVS_VCS_NEEDS_DRIVERS_MAP_COLUMNS = ['id', 'stakeholder_need_id', 'value_driver_
 DESIGNS_TABLE = 'designs'
 DESIGNS_COLUMNS = ['id', 'project', 'vcs', 'name', 'description']
 
+QUALIFIED_OBJECTIVE_TABLE = 'qualified_objectives'
+QUALIFIED_OBJECTIVE_COLUMNS = ['id', 'design', 'value_driver', 'property', 'unit']
+
 CVS_BPMN_NODES_TABLE = 'cvs_bpmn_nodes'
 CVS_BPMN_NODES_COLUMNS = ['id', 'vcs_id', 'name', 'type', 'pos_x', 'pos_y']
 
@@ -1010,6 +1013,57 @@ def populate_design(db_connection: PooledMySQLConnection, db_result, project_id:
         name=db_result['name'],
         description=db_result['description']
     )
+
+# ======================================================================================================================
+# CVS Qualified Objectives
+# ======================================================================================================================
+
+def get_qualified_objective(db_connection: PooledMySQLConnection, qualified_objective_id: int, 
+    design_id: int, value_driver_id: int,  user_id: int) -> models.QualifiedObjective:
+    
+    select_statement = MySQLStatementBuilder(db_connection)
+    result = select_statement \
+    .select(QUALIFIED_OBJECTIVE_TABLE, QUALIFIED_OBJECTIVE_COLUMNS) \
+    .where('id = %s', [qualified_objective_id]) \
+    .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if result is None:
+        pass
+
+    return populate_QO(db_connection, result, design_id, value_driver_id, user_id)
+
+def populate_QO(db_connection: PooledMySQLConnection, db_result, 
+    design_id: int, value_driver_id: int, user_id: int) -> models.QualifiedObjective:
+    return models.QualifiedObjective(
+        id = db_result['id'],
+        design = get_design(db_connection, design_id, None, None, user_id),
+        value_driver = get_value_driver(db_connection, value_driver_id, None, user_id),
+        property = db_result['property'],
+        unit = db_result['unit'],
+        processes = get_table_rows_from_driver()
+    )
+
+
+def get_table_rows_from_driver(db_connection: PooledMySQLConnection, value_driver_id: int):
+    select_statement = MySQLStatementBuilder(db_connection)
+    stakeholder_need_ids = select_statement \
+    .select(CVS_VCS_NEEDS_DRIVERS_MAP_TABLE, ['stakeholder_need_id']) \
+    .where('value_driver_id = %s', [value_driver_id]) \
+    .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    table_rows = []
+    for need_id in stakeholder_need_ids:
+        select_statement = MySQLStatementBuilder(db_connection)
+        table_row_ids = select_statement \
+        .select(CVS_VCS_STAKEHOLDER_NEED_TABLE, ['table_row_id']) \
+        .where('id = %s', [need_id]) \
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+        
+        for table_row_id in table_row_ids:
+            table_rows.append(get_vcs_table_row(db_connection, table_row_id, None, None))
+    
+    return table_rows
 
 # ======================================================================================================================
 # BPMN Table
