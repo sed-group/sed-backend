@@ -1,3 +1,4 @@
+from turtle import update
 from unittest import result
 from mysql.connector.pooling import PooledMySQLConnection
 from fastapi.logger import logger
@@ -1008,6 +1009,22 @@ def delete_design(db_connection: PooledMySQLConnection, design_id: int, project_
     
     return True
 
+def edit_design(db_connection: PooledMySQLConnection, design_id: int, project_id: int, vcs_id: int, user_id: int, updated_design: models.DesignPost) -> models.Design:
+    logger.debug(f'Editing Design with id = {design_id}')
+
+    update_statement = MySQLStatementBuilder(db_connection)
+    update_statement.update(
+        table=DESIGNS_TABLE,
+        set_statement='name = %s, description = %s',
+        values=[updated_design.name, updated_design.description]
+    )
+    update_statement.where('id = %s', [design_id])
+    _, rows = update_statement.execute(return_affected_rows=True)
+
+    if rows == 0:
+        raise cvs_exceptions.DesignNotFoundException
+    
+    return(get_design(db_connection, design_id, project_id, vcs_id, user_id))
 
 def populate_design(db_connection: PooledMySQLConnection, db_result, project_id: int, vcs_id: int, user_id: int) -> models.Design:
     return models.Design(
