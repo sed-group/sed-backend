@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_table_rows`
             ON DELETE CASCADE
             ON UPDATE NO ACTION,
         FOREIGN KEY(`id`)
-            REFERENCES `seddb`.`cvs_bpmn_node`(`id`)
+            REFERENCES `seddb`.`cvs_bpmn_nodes`(`id`)
             ON DELETE CASCADE
             ON UPDATE NO ACTION
 );

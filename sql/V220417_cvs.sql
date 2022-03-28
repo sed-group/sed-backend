@@ -1,14 +1,15 @@
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_bpmn_nodes`
 (
-    `id`                INT NOT NULL AUTO_INCREMENT,
-    `vcs_id`            INT NOT NULL REFERENCES `seddb`.`cvs_vcss`(`id`),
+    `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `vcs_id`            INT UNSIGNED NOT NULL REFERENCES `seddb`.`cvs_vcss`(`id`),
     `name`              VARCHAR(255) NOT NULL,
     `type`              VARCHAR(63) NOT NULL,
     `posX`              INT UNSIGNED,
     `posY`              INT UNSIGNED,
     PRIMARY KEY(`id`)
 );
+
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_bpmn_edges`
 (
