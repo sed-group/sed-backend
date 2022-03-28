@@ -332,7 +332,6 @@ async def get_design(design_id: int, vcs_id: int, project_id: int, user: User=De
 async def delete_design(design_id: int, project_id: int, vcs_id: int, user: User = Depends(get_current_active_user)) -> bool:
     return impl.delete_design(design_id, vcs_id, project_id, user.id)
 
-
 @router.put(
     '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/edit',
     summary='Edit a design',
