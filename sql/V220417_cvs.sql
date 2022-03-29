@@ -19,8 +19,8 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_bpmn_edges`
     `id`                INT NOT NULL AUTO_INCREMENT,
     `vcs_id`            INT UNSIGNED NOT NULL,
     `name`              VARCHAR(255) NOT NULL,
-    `from_node`         INT NOT NULL,
-    `to_node`           INT NOT NULL,
+    `from_node`         INT UNSIGNED NOT NULL,
+    `to_node`           INT UNSIGNED NOT NULL,
     `probability`       INT,
     PRIMARY KEY(`id`),
     FOREIGN KEY(`from_node`)

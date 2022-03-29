@@ -38,7 +38,8 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcss`
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_table_rows`
 (
-    `id`                       INT UNSIGNED NOT NULL,
+    `id`                       INT UNSIGNED AUTO_INCREMENT,
+    `node_id`                  INT UNSIGNED NOT NULL,
     `row_index`                INT UNSIGNED NOT NULL,
     `vcs_id`                   INT UNSIGNED NOT NULL,
     `iso_process_id`           INT UNSIGNED NULL DEFAULT NULL,
@@ -53,7 +54,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_table_rows`
             REFERENCES `seddb`.`cvs_vcss` (`id`)
             ON DELETE CASCADE
             ON UPDATE NO ACTION,
-        FOREIGN KEY(`id`)
+        FOREIGN KEY(`node_id`)
             REFERENCES `seddb`.`cvs_bpmn_nodes`(`id`)
             ON DELETE CASCADE
             ON UPDATE NO ACTION

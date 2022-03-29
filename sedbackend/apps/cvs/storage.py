@@ -27,7 +27,7 @@ CVS_VCS_SUBPROCESS_TABLE = 'cvs_vcs_subprocesses'
 CVS_VCS_SUBPROCESS_COLUMNS = ['id', 'name', 'parent_process_id', 'project_id', 'order_index']
 
 CVS_VCS_TABLE_ROWS_TABLE = 'cvs_vcs_table_rows'
-CVS_VCS_TABLE_ROWS_COLUMNS = ['id', 'row_index', 'vcs_id', 'iso_process_id', 'subprocess_id', 'stakeholder',
+CVS_VCS_TABLE_ROWS_COLUMNS = ['id', 'node_id', 'row_index', 'vcs_id', 'iso_process_id', 'subprocess_id', 'stakeholder',
                               'stakeholder_expectations']
 
 CVS_VCS_STAKEHOLDER_NEED_TABLE = 'cvs_vcs_stakeholder_needs'
@@ -692,14 +692,15 @@ def get_vcs_table(db_connection: PooledMySQLConnection, vcs_id: int, project_id:
     return models.TableGet(table_rows=table_rows)
 
 
-def get_vcs_table_row(db_connection: PooledMySQLConnection, row_id: int, project_id: int,
+# DO NOT USE IN API CALLS
+def get_vcs_table_row(db_connection: PooledMySQLConnection, node_id: int, project_id: int,
                       user_id: int) -> models.TableRowGet or None:
-    logger.debug(f'Fetching vcs table row with id={row_id}.')
+    logger.debug(f'Fetching vcs table row with id={node_id}.')
 
     select_statement = MySQLStatementBuilder(db_connection)
     result = select_statement \
         .select(CVS_VCS_TABLE_ROWS_TABLE, CVS_VCS_TABLE_ROWS_COLUMNS) \
-        .where('id = %s', [row_id]) \
+        .where('node_id = %s', [node_id]) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if result is not None:
@@ -834,20 +835,42 @@ def create_vcs_table(db_connection: PooledMySQLConnection, new_table: models.Tab
 
         elif table_row.iso_process_id is not None:
             # iso process provided
-            iso_process_id = impl.get_iso_process(table_row.iso_process_id).id
+            
+            iso_process = impl.get_iso_process(table_row.iso_process_id)
+            iso_process_id = iso_process.id
             subprocess_id = None
-
+            new_node = models.NodePost(
+                    name = iso_process.name,
+                    node_type = "process"
+                )
+            if(table_row.node_id is None):    
+                node = create_bpmn_node(db_connection, new_node, project_id, vcs_id, user_id)
+                table_row.node_id = node.id
+            else: 
+                update_bpmn_node(db_connection, table_row.node_id, new_node, project_id, vcs_id, user_id)
+            
         else:
             # subprocess provided
             iso_process_id = None
-            subprocess_id = impl.get_subprocess(table_row.subprocess_id, project_id, user_id).id
+            subprocess = impl.get_subprocess(table_row.subprocess_id, project_id, user_id)
+            subprocess_id = subprocess.id
+            new_node = models.NodePost(
+                name = subprocess.name,
+                node_type = "process"
+            )
+            if(table_row.node_id is None):   
+                node = create_bpmn_node(db_connection, new_node, project_id, vcs_id, user_id)
+                table_row.node_id = node.id
+            else:
+                update_bpmn_node(db_connection, table_row.node_id, new_node, project_id, vcs_id, user_id)
+            
 
         # Further checking provided data
         stakeholder = table_row.stakeholder if table_row.stakeholder is not None else ''
         stakeholder_exp = table_row.stakeholder_expectations if table_row.stakeholder_expectations is not None else ''
 
-        columns = ['vcs_id', 'row_index', 'iso_process_id', 'subprocess_id', 'stakeholder', 'stakeholder_expectations']
-        values = [vcs_id, table_row.row_index, iso_process_id, subprocess_id, stakeholder, stakeholder_exp]
+        columns = ['node_id', 'vcs_id', 'row_index', 'iso_process_id', 'subprocess_id', 'stakeholder', 'stakeholder_expectations']
+        values = [table_row.node_id, vcs_id, table_row.row_index, iso_process_id, subprocess_id, stakeholder, stakeholder_exp]
 
         insert_statement = MySQLStatementBuilder(db_connection)
         insert_statement \

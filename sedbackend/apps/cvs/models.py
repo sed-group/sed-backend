@@ -117,6 +117,7 @@ class VCSSubprocessPost(BaseModel):
 
 class VCSTableRow(BaseModel):
     id: int
+    node_id: int
     row_index: int
     stakeholder: str
     stakeholder_expectations: str
@@ -126,6 +127,7 @@ class VCSTableRow(BaseModel):
 
 
 class VCSTableRowPost(BaseModel):
+    node_id: Optional[int] = None
     stakeholder: str
     stakeholder_expectations: Optional[str] = None
     iso_process_id: Optional[int] = None
@@ -183,6 +185,7 @@ class StakeholderNeedGet(BaseModel):
 
 class TableRowGet(BaseModel):
     id: int
+    node_id: int
     row_index: int
     iso_process: Optional[VCSISOProcess] = None
     subprocess: Optional[VCSSubprocess] = None
@@ -206,6 +209,7 @@ class StakeholderNeedPost(BaseModel):
 
 
 class TableRowPost(BaseModel):
+    node_id: Optional[int] = None
     row_index: int
     iso_process_id: Optional[int] = None
     subprocess_id: Optional[int] = None
