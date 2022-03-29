@@ -589,6 +589,7 @@ def edit_design(design_id: int, project_id: int, vcs_id: int, user_id: int, upda
             detail=f'Could not find project with id={project_id}'
         )
 
+
 # ======================================================================================================================
 # BPMN Table
 # ======================================================================================================================
@@ -609,6 +610,7 @@ def create_bpmn_node(node: models.NodePost, project_id: int, vcs_id: int, user_i
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
         )
+
 
 def delete_bpmn_node(node_id: int, project_id: int, vcs_id: int) -> bool:
     try:
@@ -744,6 +746,11 @@ def update_bpmn_edge(edge_id: int, edge: models.EdgePost, project_id: int, vcs_i
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find edge with id={edge_id}.',
+        )
+    except cvs_exceptions.NodeNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find node with id={edge.from_node} or {edge.to_node}.',
         )
 
 

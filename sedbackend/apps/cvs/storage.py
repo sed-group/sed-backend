@@ -1188,7 +1188,7 @@ def update_bpmn(db_connection: PooledMySQLConnection, vcs_id: int, project_id: i
             pos_x=node.pos_x,
             pos_y=node.pos_y
         )
-        update_bpmn_node(db_connection, node.id, new_node, project_id, user_id)
+        update_bpmn_node(db_connection, node.id, new_node, project_id, vcs_id, user_id)
 
     for edge in edges:
         new_edge = models.EdgePost(
@@ -1198,6 +1198,6 @@ def update_bpmn(db_connection: PooledMySQLConnection, vcs_id: int, project_id: i
             to_node=edge.to_node,
             probability=edge.probability,
         )
-        update_bpmn_edge(db_connection, edge.id, new_edge)
+        update_bpmn_edge(db_connection, edge.id, new_edge, vcs_id)
 
     return get_bpmn(db_connection, vcs_id, project_id, user_id)
