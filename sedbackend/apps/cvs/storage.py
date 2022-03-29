@@ -1019,7 +1019,7 @@ def populate_design(db_connection: PooledMySQLConnection, db_result, project_id:
 # ======================================================================================================================
 
 def get_qualified_objective(db_connection: PooledMySQLConnection, qualified_objective_id: int, 
-    design_id: int, value_driver_id: int,  user_id: int) -> models.QualifiedObjective:
+    design_id: int, value_driver_id: int, project_id: int, user_id: int) -> models.QualifiedObjective:
     
     select_statement = MySQLStatementBuilder(db_connection)
     result = select_statement \
@@ -1028,23 +1028,25 @@ def get_qualified_objective(db_connection: PooledMySQLConnection, qualified_obje
     .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if result is None:
-        pass
+        raise cvs_exceptions.QualifiedObjectiveNotFoundException
 
-    return populate_QO(db_connection, result, design_id, value_driver_id, user_id)
+    return populate_QO(db_connection, result, design_id, value_driver_id, project_id, user_id)
 
 def populate_QO(db_connection: PooledMySQLConnection, db_result, 
-    design_id: int, value_driver_id: int, user_id: int) -> models.QualifiedObjective:
+    design_id: int, value_driver_id: int, project_id: int, user_id: int) -> models.QualifiedObjective:
     return models.QualifiedObjective(
         id = db_result['id'],
-        design = get_design(db_connection, design_id, None, None, user_id),
-        value_driver = get_value_driver(db_connection, value_driver_id, None, user_id),
+        design = design_id,
+        value_driver = get_value_driver(db_connection, value_driver_id, project_id, user_id),
         property = db_result['property'],
         unit = db_result['unit'],
-        processes = get_table_rows_from_driver()
+        processes = get_table_rows_from_driver(db_connection, value_driver_id, project_id, user_id)
     )
 
 
-def get_table_rows_from_driver(db_connection: PooledMySQLConnection, value_driver_id: int):
+def get_table_rows_from_driver(db_connection: PooledMySQLConnection, value_driver_id: int, 
+                project_id: int, user_id: int) -> List[models.TableRowGet]:
+    
     select_statement = MySQLStatementBuilder(db_connection)
     stakeholder_need_ids = select_statement \
     .select(CVS_VCS_NEEDS_DRIVERS_MAP_TABLE, ['stakeholder_need_id']) \
@@ -1061,7 +1063,7 @@ def get_table_rows_from_driver(db_connection: PooledMySQLConnection, value_drive
 
         
         for table_row_id in table_row_ids:
-            table_rows.append(get_vcs_table_row(db_connection, table_row_id, None, None))
+            table_rows.append(get_vcs_table_row(db_connection, table_row_id, project_id, user_id))
     
     return table_rows
 
