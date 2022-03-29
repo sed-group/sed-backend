@@ -104,7 +104,7 @@ class DesignNotFoundException(Exception):
 
 
 # ======================================================================================================================
-# Qualified Objectives
+# Quantified Objectives
 # ======================================================================================================================
 
 class QuantifiedObjectiveNotFoundException(Exception):

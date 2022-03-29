@@ -39,7 +39,7 @@ CVS_VCS_NEEDS_DRIVERS_MAP_COLUMNS = ['id', 'stakeholder_need_id', 'value_driver_
 DESIGNS_TABLE = 'designs'
 DESIGNS_COLUMNS = ['id', 'project', 'vcs', 'name', 'description']
 
-QUANTIFIED_OBJECTIVE_TABLE = 'qualified_objectives'
+QUANTIFIED_OBJECTIVE_TABLE = 'quantified_objectives'
 QUANTIFIED_OBJECTIVE_COLUMNS = ['id', 'design', 'value_driver', 'property', 'unit']
 
 CVS_BPMN_NODES_TABLE = 'cvs_bpmn_nodes'

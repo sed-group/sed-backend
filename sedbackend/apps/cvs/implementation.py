@@ -603,7 +603,7 @@ def get_quantified_objective(quantified_objective_id: int, design_id: int, value
     except cvs_exceptions.QuantifiedObjectiveNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find qualified objective with id={quantified_objective_id}'
+            detail=f'Could not find quantified objective with id={quantified_objective_id}'
         )
 
 # ======================================================================================================================
