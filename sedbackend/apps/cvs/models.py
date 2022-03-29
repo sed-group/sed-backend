@@ -245,12 +245,14 @@ class QuantifiedObjective(BaseModel):
     id: int
     design: int
     value_driver: VCSValueDriver
+    name: str
     property: float
     unit: str
     processes: List[TableRowGet]
 
 
 class QuantifiedObjectivePost(BaseModel):
+    name: str
     property: float
     unit: str
 

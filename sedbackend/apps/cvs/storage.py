@@ -40,7 +40,7 @@ DESIGNS_TABLE = 'designs'
 DESIGNS_COLUMNS = ['id', 'project', 'vcs', 'name', 'description']
 
 QUANTIFIED_OBJECTIVE_TABLE = 'quantified_objectives'
-QUANTIFIED_OBJECTIVE_COLUMNS = ['id', 'design', 'value_driver', 'property', 'unit']
+QUANTIFIED_OBJECTIVE_COLUMNS = ['id', 'design', 'value_driver', 'name', 'property', 'unit']
 
 CVS_BPMN_NODES_TABLE = 'cvs_bpmn_nodes'
 CVS_BPMN_NODES_COLUMNS = ['id', 'vcs_id', 'name', 'type', 'pos_x', 'pos_y']

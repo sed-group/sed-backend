@@ -356,7 +356,7 @@ async def get_quantified_objective(QO_id: int, design_id: int, value_driver_id: 
 
 @router.post(
     '/project/{project_id}/design/{design_id}/value_driver/{VD_id}/quantified-objective/create',
-    summare='Creates a quantified objective',
+    summary='Creates a quantified objective',
     response_model=models.QuantifiedObjective
 )
 async def create_quantified_objective(quantified_objective_post: models.QuantifiedObjectivePost, design_id: int, 
