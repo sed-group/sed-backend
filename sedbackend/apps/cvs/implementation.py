@@ -606,6 +606,20 @@ def get_quantified_objective(quantified_objective_id: int, design_id: int, value
             detail=f'Could not find quantified objective with id={quantified_objective_id}'
         )
 
+def create_quantified_objective(design_id: int, value_driver_id: int, 
+        quantified_objective_post: models.QuantifiedObjectivePost, project_id: int, user_id: int) -> models.QuantifiedObjective:
+    try:
+        with get_connection() as con:
+            res = storage.create_quantified_objective(con, design_id, value_driver_id, quantified_objective_post, project_id, user_id)
+            con.commit()
+            return res
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}'
+        )
+
+
 # ======================================================================================================================
 # BPMN Table
 # ======================================================================================================================

@@ -1032,6 +1032,18 @@ def get_quantified_objective(db_connection: PooledMySQLConnection, quantified_ob
 
     return populate_QO(db_connection, result, design_id, value_driver_id, project_id, user_id)
 
+def create_quantified_objective(db_connection: PooledMySQLConnection, design_id: int, value_driver_id: int, 
+    quantified_objective_post: models.QuantifiedObjectivePost, project_id: int, user_id: int) -> models.QuantifiedObjective:
+
+    insert_statement = MySQLStatementBuilder(db_connection)
+    insert_statement \
+        .insert(table=QUANTIFIED_OBJECTIVE_TABLE, columns=['design', 'value_driver', 'name', 'property', 'unit']) \
+        .set_values([design_id, value_driver_id, quantified_objective_post.name, quantified_objective_post.property, quantified_objective_post.unit]) \
+        .execute(fetch_type=FetchType.FETCH_NONE)
+    quantified_id = insert_statement.last_insert_id
+
+    return get_quantified_objective(db_connection, quantified_id, design_id, value_driver_id, project_id, user_id)
+    
 def populate_QO(db_connection: PooledMySQLConnection, db_result, 
     design_id: int, value_driver_id: int, project_id: int, user_id: int) -> models.QuantifiedObjective:
     return models.QuantifiedObjective(
@@ -1044,6 +1056,7 @@ def populate_QO(db_connection: PooledMySQLConnection, db_result,
     )
 
 
+#TODO change the way that stakeholder needs and value drivers are stored. 
 def get_table_rows_from_driver(db_connection: PooledMySQLConnection, value_driver_id: int, 
                 project_id: int, user_id: int) -> List[models.TableRowGet]:
     

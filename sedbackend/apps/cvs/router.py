@@ -354,6 +354,16 @@ async def get_quantified_objective(QO_id: int, design_id: int, value_driver_id: 
                     project_id: int, user: User= Depends(get_current_active_user)) -> models.QuantifiedObjective:
     return impl.get_quantified_objective(QO_id, design_id, value_driver_id, project_id, user.id)
 
+@router.post(
+    '/project/{project_id}/design/{design_id}/value_driver/{VD_id}/quantified-objective/create',
+    summare='Creates a quantified objective',
+    response_model=models.QuantifiedObjective
+)
+async def create_quantified_objective(quantified_objective_post: models.QuantifiedObjectivePost, design_id: int, 
+    project_id: int, VD_id: int, user: User = Depends(get_current_active_user)) -> models.QuantifiedObjective:
+    return impl.create_quantified_objective(design_id, VD_id, quantified_objective_post, project_id, user.id)
+
+
 # ======================================================================================================================
 # BPMN Table
 # ======================================================================================================================
