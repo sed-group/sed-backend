@@ -745,6 +745,7 @@ def populate_table_row(db_connection: PooledMySQLConnection, db_result, project_
 
     return models.TableRowGet(
         id=db_result['id'],
+        node_id=db_result['node_id'],
         row_index=db_result['row_index'],
         iso_process=iso_process,
         subprocess=subprocesss,
@@ -1014,7 +1015,7 @@ def populate_design(db_connection: PooledMySQLConnection, db_result, project_id:
         description=db_result['description']
     )
 
-# ======================================================================================================================
+# =====================v=================================================================================================
 # CVS Quantified Objectives
 # ======================================================================================================================
 
@@ -1050,6 +1051,7 @@ def populate_QO(db_connection: PooledMySQLConnection, db_result,
         id = db_result['id'],
         design = design_id,
         value_driver = get_value_driver(db_connection, value_driver_id, project_id, user_id),
+        name=db_result['name'],
         property = db_result['property'],
         unit = db_result['unit'],
         processes = get_table_rows_from_driver(db_connection, value_driver_id, project_id, user_id)
@@ -1071,12 +1073,19 @@ def get_table_rows_from_driver(db_connection: PooledMySQLConnection, value_drive
         select_statement = MySQLStatementBuilder(db_connection)
         table_row_ids = select_statement \
         .select(CVS_VCS_STAKEHOLDER_NEED_TABLE, ['table_row_id']) \
-        .where('id = %s', [need_id]) \
+        .where('id = %s', [need_id['stakeholder_need_id']]) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
         
+        
         for table_row_id in table_row_ids:
-            table_rows.append(get_vcs_table_row(db_connection, table_row_id, project_id, user_id))
+            select_statement = MySQLStatementBuilder(db_connection)
+            result = select_statement \
+            .select(CVS_VCS_TABLE_ROWS_TABLE, CVS_VCS_TABLE_ROWS_COLUMNS) \
+            .where('id = %s', [table_row_id['table_row_id']]) \
+            .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+            table_rows.append(populate_table_row(db_connection, result, project_id, user_id))
     
     return table_rows
 
