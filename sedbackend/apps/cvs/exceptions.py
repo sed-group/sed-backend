@@ -143,3 +143,11 @@ class EdgeFailedDeletionException(Exception):
 class EdgeFailedToUpdateException(Exception):
     pass
 
+
+
+# ======================================================================================================================
+# Market input
+# ======================================================================================================================
+
+class MarketInputNotFoundException(Exception):
+    pass

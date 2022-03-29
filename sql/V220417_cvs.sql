@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`quantified_objectives`
         REFERENCES `seddb`.`cvs_vcs_value_drivers`(`id`)
 );
 
-CREATE TABLE IF NOT EXISTS `seddb`.`market_input`
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_input`
 (
     `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `design`            INT UNSIGNED NOT NULL,
