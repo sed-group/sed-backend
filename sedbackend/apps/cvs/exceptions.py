@@ -107,7 +107,7 @@ class DesignNotFoundException(Exception):
 # Qualified Objectives
 # ======================================================================================================================
 
-class QualifiedObjectiveNotFoundException(Exception):
+class QuantifiedObjectiveNotFoundException(Exception):
     pass
 
 # ======================================================================================================================
@@ -143,8 +143,3 @@ class EdgeFailedDeletionException(Exception):
 class EdgeFailedToUpdateException(Exception):
     pass
 
-# ======================================================================================================================
-# Design
-# ======================================================================================================================
-class DesignNotFoundException(Exception):
-    pass
