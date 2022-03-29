@@ -59,3 +59,18 @@ CREATE TABLE IF NOT EXISTS `seddb`.`qualified_objectives`
     FOREIGN KEY(`value_driver`)
         REFERENCES `seddb`.`cvs_vcs_value_drivers`(`id`)
 );
+
+CREATE TABLE IF NOT EXISTS `seddb`.`market_input`
+(
+    `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `design`            INT UNSIGNED NOT NULL,
+    `table_row`         INT UNSIGNED NOT NULL,
+    `time`              DOUBLE NOT NULL,
+    `cost`              DOUBLE NOT NULL,
+    `revenue`           DOUBLE NOT NULL,
+    PRIMARY KEY (`id`),
+    FOREIGN KEY(`design`)
+        REFERENCES `seddb`.`designs`(`id`),
+    FOREIGN KEY(`table_row`)
+        REFERENCES `seddb`.`cvs_vcs_table_rows`(`id`)
+)
