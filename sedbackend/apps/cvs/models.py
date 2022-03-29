@@ -294,3 +294,24 @@ class BPMNGet(BaseModel):
     vcs_id: int
     nodes: List[NodeGet]
     edges: List[EdgeGet]
+
+
+# ======================================================================================================================
+# Market Input Table
+# ======================================================================================================================
+
+class MarketInputGet(BaseModel):
+    id: int
+    design: int
+    table_row: int
+    time: float
+    cost: float
+    revenue: float
+
+
+class MarketInputPost(BaseModel):
+    design: int
+    table_row: int
+    time: float
+    cost: float
+    revenue: float

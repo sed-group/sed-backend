@@ -789,8 +789,25 @@ def update_bpmn(vcs_id: int, project_id: int, user_id: int, nodes: List[models.N
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
         )
-        
 
+
+# ======================================================================================================================
+# Market Input
+# ======================================================================================================================
         
-    
-        
+def get_all_market_inputs(design_id: id) -> List[models.MarketInputGet]:
+    try:
+        with get_connection() as con:
+            db_result = storage.get_all_market_input(con, design_id)
+            con.commit()
+            return db_result
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
+    except cvs_exceptions.DesignNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find design with id={design_id}.',
+        )

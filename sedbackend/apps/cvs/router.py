@@ -418,3 +418,15 @@ async def update_bpmn(vcs_id: int, project_id: int, nodes: List[models.NodeGet],
                       user: User = Depends(get_current_active_user)) -> models.BPMNGet:
     return impl.update_bpmn(vcs_id, project_id, user.id, nodes, edges)
 
+
+# ======================================================================================================================
+# Market Input Table
+# ======================================================================================================================
+
+@router.get(
+    '/project/{project_id}/design/{design_id}/market-input/get/all',
+    summary='Get all market inputs',
+    response_model=List[models.MarketInputGet],
+)
+async def get_all_market_input(design_id) -> List[models.MarketInputGet]:
+    return impl.get_all_market_inputs(design_id)
