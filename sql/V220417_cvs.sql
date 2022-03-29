@@ -46,11 +46,12 @@ CREATE TABLE IF NOT EXISTS `seddb`.`designs`
         REFERENCES `seddb`.`cvs_vcss`(`id`)
 );
 
-CREATE TABLE IF NOT EXISTS `seddb`.`qualified_objectives`
+CREATE TABLE IF NOT EXISTS `seddb`.`quantified_objectives`
 (
     `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `design`            INT UNSIGNED NOT NULL,
     `value_driver`      INT UNSIGNED NOT NULL,
+    `name`              VARCHAR(63) NOT NULL,
     `property`          DOUBLE NOT NULL,
     `unit`              VARCHAR(63) NOT NULL,
     PRIMARY KEY(`id`),

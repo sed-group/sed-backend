@@ -234,10 +234,10 @@ class DesignPost(BaseModel):
 
 
 # ======================================================================================================================
-# CVS Design Qualified Objectives
+# CVS Design Quantified Objectives
 # ======================================================================================================================
 
-class QualifiedObjective(BaseModel):
+class QuantifiedObjective(BaseModel):
     id: int
     design: int
     value_driver: VCSValueDriver
@@ -246,7 +246,7 @@ class QualifiedObjective(BaseModel):
     processes: List[TableRowGet]
 
 
-class QualifiedObjectivePost(BaseModel):
+class QuantifiedObjectivePost(BaseModel):
     property: float
     unit: str
 

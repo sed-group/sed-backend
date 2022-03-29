@@ -342,17 +342,17 @@ async def edit_design(design_id: int, project_id: int, vcs_id: int, design_post:
                     return impl.edit_design(design_id, project_id, vcs_id, user.id, design_post)
 
 # ======================================================================================================================
-# Qualified Objectives
+# Quantified Objectives
 # ======================================================================================================================
 
 @router.get(
     '/project/{project_id}/design/{design_id}/value_driver/{value_driver_id}/qualified_objective/{QO_id}',
-    summary='Fetches a qualified objective',
-    response_model=models.QualifiedObjective
+    summary='Fetches a quantified objective',
+    response_model=models.QuantifiedObjective
 )
-async def get_qualified_objective(QO_id: int, design_id: int, value_driver_id: int,
-                    project_id: int, user: User= Depends(get_current_active_user)) -> models.QualifiedObjective:
-    return impl.get_qualified_objective(QO_id, design_id, value_driver_id, project_id, user.id)
+async def get_quantified_objective(QO_id: int, design_id: int, value_driver_id: int,
+                    project_id: int, user: User= Depends(get_current_active_user)) -> models.QuantifiedObjective:
+    return impl.get_quantified_objective(QO_id, design_id, value_driver_id, project_id, user.id)
 
 # ======================================================================================================================
 # BPMN Table

@@ -39,8 +39,8 @@ CVS_VCS_NEEDS_DRIVERS_MAP_COLUMNS = ['id', 'stakeholder_need_id', 'value_driver_
 DESIGNS_TABLE = 'designs'
 DESIGNS_COLUMNS = ['id', 'project', 'vcs', 'name', 'description']
 
-QUALIFIED_OBJECTIVE_TABLE = 'qualified_objectives'
-QUALIFIED_OBJECTIVE_COLUMNS = ['id', 'design', 'value_driver', 'property', 'unit']
+QUANTIFIED_OBJECTIVE_TABLE = 'qualified_objectives'
+QUANTIFIED_OBJECTIVE_COLUMNS = ['id', 'design', 'value_driver', 'property', 'unit']
 
 CVS_BPMN_NODES_TABLE = 'cvs_bpmn_nodes'
 CVS_BPMN_NODES_COLUMNS = ['id', 'vcs_id', 'name', 'type', 'pos_x', 'pos_y']
@@ -992,26 +992,26 @@ def populate_design(db_connection: PooledMySQLConnection, db_result, project_id:
     )
 
 # ======================================================================================================================
-# CVS Qualified Objectives
+# CVS Quantified Objectives
 # ======================================================================================================================
 
-def get_qualified_objective(db_connection: PooledMySQLConnection, qualified_objective_id: int, 
-    design_id: int, value_driver_id: int, project_id: int, user_id: int) -> models.QualifiedObjective:
+def get_quantified_objective(db_connection: PooledMySQLConnection, quantified_objective_id: int, 
+    design_id: int, value_driver_id: int, project_id: int, user_id: int) -> models.QuantifiedObjective:
     
     select_statement = MySQLStatementBuilder(db_connection)
     result = select_statement \
-    .select(QUALIFIED_OBJECTIVE_TABLE, QUALIFIED_OBJECTIVE_COLUMNS) \
-    .where('id = %s', [qualified_objective_id]) \
+    .select(QUANTIFIED_OBJECTIVE_TABLE, QUANTIFIED_OBJECTIVE_COLUMNS) \
+    .where('id = %s', [quantified_objective_id]) \
     .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if result is None:
-        raise cvs_exceptions.QualifiedObjectiveNotFoundException
+        raise cvs_exceptions.QuantifiedObjectiveNotFoundException
 
     return populate_QO(db_connection, result, design_id, value_driver_id, project_id, user_id)
 
 def populate_QO(db_connection: PooledMySQLConnection, db_result, 
-    design_id: int, value_driver_id: int, project_id: int, user_id: int) -> models.QualifiedObjective:
-    return models.QualifiedObjective(
+    design_id: int, value_driver_id: int, project_id: int, user_id: int) -> models.QuantifiedObjective:
+    return models.QuantifiedObjective(
         id = db_result['id'],
         design = design_id,
         value_driver = get_value_driver(db_connection, value_driver_id, project_id, user_id),
