@@ -39,6 +39,9 @@ CVS_VCS_NEEDS_DRIVERS_MAP_COLUMNS = ['id', 'stakeholder_need_id', 'value_driver_
 DESIGNS_TABLE = 'designs'
 DESIGNS_COLUMNS = ['id', 'project', 'vcs', 'name', 'description']
 
+QUANTIFIED_OBJECTIVE_TABLE = 'quantified_objectives'
+QUANTIFIED_OBJECTIVE_COLUMNS = ['id', 'design', 'value_driver', 'name', 'property', 'unit']
+
 CVS_BPMN_NODES_TABLE = 'cvs_bpmn_nodes'
 CVS_BPMN_NODES_COLUMNS = ['id', 'vcs_id', 'name', 'type', 'pos_x', 'pos_y']
 
@@ -742,6 +745,7 @@ def populate_table_row(db_connection: PooledMySQLConnection, db_result, project_
 
     return models.TableRowGet(
         id=db_result['id'],
+        node_id=db_result['node_id'],
         row_index=db_result['row_index'],
         iso_process=iso_process,
         subprocess=subprocesss,
@@ -1010,6 +1014,146 @@ def populate_design(db_connection: PooledMySQLConnection, db_result, project_id:
         name=db_result['name'],
         description=db_result['description']
     )
+
+# =====================v=================================================================================================
+# CVS Quantified Objectives
+# ======================================================================================================================
+
+def get_quantified_objective(db_connection: PooledMySQLConnection, quantified_objective_id: int, 
+    design_id: int, value_driver_id: int, project_id: int, user_id: int) -> models.QuantifiedObjective:
+    
+    select_statement = MySQLStatementBuilder(db_connection)
+    result = select_statement \
+    .select(QUANTIFIED_OBJECTIVE_TABLE, QUANTIFIED_OBJECTIVE_COLUMNS) \
+    .where('id = %s', [quantified_objective_id]) \
+    .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if result is None:
+        raise cvs_exceptions.QuantifiedObjectiveNotFoundException
+
+    return populate_QO(db_connection, result, design_id, value_driver_id, project_id, user_id)
+
+def create_quantified_objective(db_connection: PooledMySQLConnection, design_id: int, value_driver_id: int, 
+    quantified_objective_post: models.QuantifiedObjectivePost, project_id: int, user_id: int) -> models.QuantifiedObjective:
+
+    insert_statement = MySQLStatementBuilder(db_connection)
+    insert_statement \
+        .insert(table=QUANTIFIED_OBJECTIVE_TABLE, columns=['design', 'value_driver', 'name', 'property', 'unit']) \
+        .set_values([design_id, value_driver_id, quantified_objective_post.name, quantified_objective_post.property, quantified_objective_post.unit]) \
+        .execute(fetch_type=FetchType.FETCH_NONE)
+    quantified_id = insert_statement.last_insert_id
+
+    return get_quantified_objective(db_connection, quantified_id, design_id, value_driver_id, project_id, user_id)
+    
+def populate_QO(db_connection: PooledMySQLConnection, db_result, 
+    design_id: int, value_driver_id: int, project_id: int, user_id: int) -> models.QuantifiedObjective:
+    return models.QuantifiedObjective(
+        id = db_result['id'],
+        design = design_id,
+        value_driver = get_value_driver(db_connection, value_driver_id, project_id, user_id),
+        name=db_result['name'],
+        property = db_result['property'],
+        unit = db_result['unit'],
+        processes = get_table_rows_from_driver(db_connection, value_driver_id, project_id, user_id)
+    )
+
+
+#TODO change the way that stakeholder needs and value drivers are stored. 
+def get_table_rows_from_driver(db_connection: PooledMySQLConnection, value_driver_id: int, 
+                project_id: int, user_id: int) -> List[models.TableRowGet]:
+    
+    select_statement = MySQLStatementBuilder(db_connection)
+    stakeholder_need_ids = select_statement \
+    .select(CVS_VCS_NEEDS_DRIVERS_MAP_TABLE, ['stakeholder_need_id']) \
+    .where('value_driver_id = %s', [value_driver_id]) \
+    .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    table_rows = []
+    for need_id in stakeholder_need_ids:
+        select_statement = MySQLStatementBuilder(db_connection)
+        table_row_ids = select_statement \
+        .select(CVS_VCS_STAKEHOLDER_NEED_TABLE, ['table_row_id']) \
+        .where('id = %s', [need_id['stakeholder_need_id']]) \
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+        
+        
+        for table_row_id in table_row_ids:
+            select_statement = MySQLStatementBuilder(db_connection)
+            result = select_statement \
+            .select(CVS_VCS_TABLE_ROWS_TABLE, CVS_VCS_TABLE_ROWS_COLUMNS) \
+            .where('id = %s', [table_row_id['table_row_id']]) \
+            .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+            table_rows.append(populate_table_row(db_connection, result, project_id, user_id))
+    
+    return table_rows
+
+# ======================================================================================================================
+# CVS Quantified Objectives
+# ======================================================================================================================
+
+def get_quantified_objective(db_connection: PooledMySQLConnection, quantified_objective_id: int, 
+    design_id: int, value_driver_id: int, project_id: int, user_id: int) -> models.QuantifiedObjective:
+    
+    select_statement = MySQLStatementBuilder(db_connection)
+    result = select_statement \
+    .select(QUANTIFIED_OBJECTIVE_TABLE, QUANTIFIED_OBJECTIVE_COLUMNS) \
+    .where('id = %s', [quantified_objective_id]) \
+    .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if result is None:
+        raise cvs_exceptions.QuantifiedObjectiveNotFoundException
+
+    return populate_QO(db_connection, result, design_id, value_driver_id, project_id, user_id)
+
+def create_quantified_objective(db_connection: PooledMySQLConnection, design_id: int, value_driver_id: int, 
+    quantified_objective_post: models.QuantifiedObjectivePost, project_id: int, user_id: int) -> models.QuantifiedObjective:
+
+    insert_statement = MySQLStatementBuilder(db_connection)
+    insert_statement \
+        .insert(table=QUANTIFIED_OBJECTIVE_TABLE, columns=['design', 'value_driver', 'name', 'property', 'unit']) \
+        .set_values([design_id, value_driver_id, quantified_objective_post.name, quantified_objective_post.property, quantified_objective_post.unit]) \
+        .execute(fetch_type=FetchType.FETCH_NONE)
+    quantified_id = insert_statement.last_insert_id
+
+    return get_quantified_objective(db_connection, quantified_id, design_id, value_driver_id, project_id, user_id)
+    
+def populate_QO(db_connection: PooledMySQLConnection, db_result, 
+    design_id: int, value_driver_id: int, project_id: int, user_id: int) -> models.QuantifiedObjective:
+    return models.QuantifiedObjective(
+        id = db_result['id'],
+        design = design_id,
+        value_driver = get_value_driver(db_connection, value_driver_id, project_id, user_id),
+        property = db_result['property'],
+        unit = db_result['unit'],
+        processes = get_table_rows_from_driver(db_connection, value_driver_id, project_id, user_id)
+    )
+
+
+#TODO change the way that stakeholder needs and value drivers are stored. 
+def get_table_rows_from_driver(db_connection: PooledMySQLConnection, value_driver_id: int, 
+                project_id: int, user_id: int) -> List[models.TableRowGet]:
+    
+    select_statement = MySQLStatementBuilder(db_connection)
+    stakeholder_need_ids = select_statement \
+    .select(CVS_VCS_NEEDS_DRIVERS_MAP_TABLE, ['stakeholder_need_id']) \
+    .where('value_driver_id = %s', [value_driver_id]) \
+    .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    table_rows = []
+    for need_id in stakeholder_need_ids:
+        select_statement = MySQLStatementBuilder(db_connection)
+        table_row_ids = select_statement \
+        .select(CVS_VCS_STAKEHOLDER_NEED_TABLE, ['table_row_id']) \
+        .where('id = %s', [need_id]) \
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+        
+        for table_row_id in table_row_ids:
+            table_rows.append(get_vcs_table_row(db_connection, table_row_id, project_id, user_id))
+    
+    return table_rows
 
 # ======================================================================================================================
 # BPMN Table

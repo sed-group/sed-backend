@@ -173,7 +173,7 @@ class VCSValueDriverPost(BaseModel):
 class ValueDriverGet(BaseModel):
     id: int
     name: str
-    unit: str
+    unit: Optional[str] = None
 
 
 class StakeholderNeedGet(BaseModel):
@@ -238,19 +238,23 @@ class DesignPost(BaseModel):
 
 
 # ======================================================================================================================
-# CVS Qualified Objectives
+# CVS Design Quantified Objectives
 # ======================================================================================================================
 
-class QualifiedObjective(BaseModel):
+class QuantifiedObjective(BaseModel):
     id: int
-    design: Design
+    design: int
     value_driver: VCSValueDriver
+    name: str
     property: float
-    processes: List[VCSTableRow]
+    unit: str
+    processes: List[TableRowGet]
 
 
-class QualifiedObjectivePost(BaseModel):
+class QuantifiedObjectivePost(BaseModel):
+    name: str
     property: float
+    unit: str
 
 
 # ======================================================================================================================
