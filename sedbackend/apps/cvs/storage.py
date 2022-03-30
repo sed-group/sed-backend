@@ -981,6 +981,12 @@ def delete_design(db_connection: PooledMySQLConnection, design_id: int, project_
     if result['vcs'] != vcs_id:
         raise auth_exceptions.UnauthorizedOperationException
     
+
+    if(delete_all_quantified_objectives(db_connection, design_id)):
+        pass
+    else:
+        raise cvs_exceptions.QuantifiedObjectivesNotDeleted
+
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement.delete(DESIGNS_TABLE) \
         .where('id = %s', [design_id]) \
@@ -1092,6 +1098,16 @@ def delete_quantified_objective(db_connection: PooledMySQLConnection, quantified
     if rows == 0:
         raise cvs_exceptions.QuantifiedObjectiveNotFoundException
     
+    return True
+
+def delete_all_quantified_objectives(db_connection: PooledMySQLConnection, design_id: int) -> bool:
+    logger.debug(f'Deleting all quantified objectives with design id = {design_id}')
+
+    delete_statement = MySQLStatementBuilder(db_connection)
+    _, rows = delete_statement.delete(QUANTIFIED_OBJECTIVE_TABLE) \
+        .where('design = %s', [design_id]) \
+        .execute(return_affected_rows=True)
+  
     return True
 
 def edit_quantified_objective(db_connection: PooledMySQLConnection, quantified_objective_id: int, design_id: int,

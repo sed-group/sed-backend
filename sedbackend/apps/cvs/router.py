@@ -326,7 +326,7 @@ async def get_design(design_id: int, vcs_id: int, project_id: int, user: User=De
 
 @router.delete(
     '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/delete',
-    summary='Deletes a Design based on the design id',
+    summary='Deletes a Design based on the design id. Also deletes all associated Quantified Objectives',
     response_model=bool
 )
 async def delete_design(design_id: int, project_id: int, vcs_id: int, user: User = Depends(get_current_active_user)) -> bool:
