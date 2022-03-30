@@ -607,7 +607,7 @@ def get_quantified_objective(quantified_objective_id: int, design_id: int, value
             detail=f'Could not find quantified objective with id={quantified_objective_id}'
         )
 
-def create_quantified_objective(design_id: int, value_driver_id: int, 
+def create_quantified_objective(design_id: int, value_driver_id: int,
         quantified_objective_post: models.QuantifiedObjectivePost, project_id: int, user_id: int) -> models.QuantifiedObjective:
     try:
         with get_connection() as con:
@@ -822,6 +822,36 @@ def update_bpmn(vcs_id: int, project_id: int, user_id: int, nodes: List[models.N
         )
         
 
-        
-    
-        
+# ======================================================================================================================
+# Market Input
+# ======================================================================================================================
+
+def get_all_market_inputs(design_id: id) -> List[models.MarketInputGet]:
+    try:
+        with get_connection() as con:
+            db_result = storage.get_all_market_input(con, design_id)
+            con.commit()
+            return db_result
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
+    except cvs_exceptions.DesignNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find design with id={design_id}.',
+        )
+
+
+def update_market_input(market_input_id: int, market_input: models.MarketInputPost) -> models.MarketInputGet:
+    try:
+        with get_connection() as con:
+            db_result = storage.update_market_input(con, market_input_id, market_input)
+            con.commit()
+            return db_result
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )

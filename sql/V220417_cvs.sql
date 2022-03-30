@@ -1,7 +1,7 @@
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_bpmn_nodes`
 (
-    `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `id`                INT UNSIGNED AUTO_INCREMENT,
     `vcs_id`            INT UNSIGNED NOT NULL,
     `name`              VARCHAR(255) NOT NULL,
     `type`              VARCHAR(63) NOT NULL,
@@ -60,3 +60,18 @@ CREATE TABLE IF NOT EXISTS `seddb`.`quantified_objectives`
     FOREIGN KEY(`value_driver`)
         REFERENCES `seddb`.`cvs_vcs_value_drivers`(`id`)
 );
+
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_input`
+(
+    `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `design`            INT UNSIGNED NOT NULL,
+    `table_row`         INT UNSIGNED NOT NULL,
+    `time`              DOUBLE,
+    `cost`              DOUBLE,
+    `revenue`           DOUBLE,
+    PRIMARY KEY (`id`),
+    FOREIGN KEY(`design`)
+        REFERENCES `seddb`.`designs`(`id`),
+    FOREIGN KEY(`table_row`)
+        REFERENCES `seddb`.`cvs_vcs_table_rows`(`id`)
+)

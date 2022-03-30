@@ -48,6 +48,9 @@ CVS_BPMN_NODES_COLUMNS = ['id', 'vcs_id', 'name', 'type', 'pos_x', 'pos_y']
 CVS_BPMN_EDGES_TABLE = 'cvs_bpmn_edges'
 CVS_BPMN_EDGES_COLUMNS = ['id', 'vcs_id', 'name', 'from_node', 'to_node', 'probability']
 
+CVS_MARKET_INPUT_TABLE = 'cvs_market_input'
+CVS_MARKET_INPUT_COLUMN = ['id', 'design', 'table_row', 'time', 'cost', 'revenue']
+
 # ======================================================================================================================
 # CVS projects
 # ======================================================================================================================
@@ -1368,3 +1371,81 @@ def update_bpmn(db_connection: PooledMySQLConnection, vcs_id: int, project_id: i
         update_bpmn_edge(db_connection, edge.id, new_edge, vcs_id)
 
     return get_bpmn(db_connection, vcs_id, project_id, user_id)
+
+
+# ======================================================================================================================
+# Market Input Table
+# ======================================================================================================================
+
+def populate_market_input(db_result) -> models.MarketInputGet:
+    return models.MarketInputGet(
+        id=db_result['id'],
+        design=db_result['design'],
+        table_row=db_result['table_row'],
+        time=db_result['time'],
+        cost=db_result['cost'],
+        revenue=db_result['revenue']
+    )
+
+
+def get_market_input(db_connection: PooledMySQLConnection, market_input_id: int) -> models.MarketInputGet:
+    logger.debug(f'Fetching market input with id={market_input_id}.')
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    db_result = select_statement \
+        .select(CVS_MARKET_INPUT_TABLE, CVS_MARKET_INPUT_COLUMN) \
+        .where('id = %s', [market_input_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if db_result is None:
+        raise cvs_exceptions.MarketInputNotFoundException
+
+    return populate_market_input(db_result)
+
+
+def get_all_market_input(db_connection: PooledMySQLConnection, design_id: int) -> List[models.MarketInputGet]:
+    logger.debug(f'Fetching all market inputs for design with id={design_id}.')
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    results = select_statement \
+        .select(CVS_MARKET_INPUT_TABLE, CVS_MARKET_INPUT_COLUMN) \
+        .where('design = %s', [design_id]) \
+        .order_by(['id'], Sort.ASCENDING) \
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    return [populate_market_input(db_result) for db_result in results]
+
+
+def create_market_input(db_connection: PooledMySQLConnection, design_id: int, table_row_id: int,
+                        market_input: models.MarketInputPost) -> models.MarketInputGet:
+    logger.debug(f'Create market input')
+
+    columns = ['design', 'table_row', 'time', 'cost', 'revenue']
+    values = [design_id, table_row_id, market_input.time, market_input.cost, market_input.revenue]
+
+    insert_statement = MySQLStatementBuilder(db_connection)
+    insert_statement \
+        .insert(table=CVS_MARKET_INPUT_TABLE, columns=columns) \
+        .set_values(values) \
+        .execute(fetch_type=FetchType.FETCH_NONE)
+    market_input_id = insert_statement.last_insert_id
+
+    return get_market_input(db_connection, market_input_id)
+
+
+def update_market_input(db_connection: PooledMySQLConnection, market_input_id: int,
+                        market_input: models.MarketInputPost) -> models.MarketInputGet:
+    logger.debug(f'Update market input with id={market_input_id}')
+
+    get_market_input(db_connection, market_input_id)  # Performs necessary checks
+
+    update_statement = MySQLStatementBuilder(db_connection)
+    update_statement.update(
+        table=CVS_MARKET_INPUT_TABLE,
+        set_statement='time = %s, cost = %s, revenue = %s',
+        values=[market_input.time, market_input.cost, market_input.revenue],
+    )
+    update_statement.where('id = %s', [market_input_id])
+    _, rows = update_statement.execute(return_affected_rows=True)
+
+    return get_market_input(db_connection, market_input_id)
