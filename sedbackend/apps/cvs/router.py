@@ -454,3 +454,12 @@ async def update_bpmn(vcs_id: int, project_id: int, nodes: List[models.NodeGet],
 )
 async def get_all_market_input(design_id) -> List[models.MarketInputGet]:
     return impl.get_all_market_inputs(design_id)
+
+
+@router.put(
+    '/project/{project_id}/design/{design_id}/market-input/{market_input_id}/edit',
+    summary='Edit market input',
+    response_model=models.MarketInputGet,
+)
+async def update_market_input(market_input_id, market_input) -> models.MarketInputGet:
+    return impl.update_market_input(market_input_id, market_input)

@@ -842,3 +842,16 @@ def get_all_market_inputs(design_id: id) -> List[models.MarketInputGet]:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find design with id={design_id}.',
         )
+
+
+def update_market_input(market_input_id: int, market_input: models.MarketInputPost) -> models.MarketInputGet:
+    try:
+        with get_connection() as con:
+            db_result = storage.update_market_input(con, market_input_id, market_input)
+            con.commit()
+            return db_result
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )

@@ -314,8 +314,6 @@ class MarketInputGet(BaseModel):
 
 
 class MarketInputPost(BaseModel):
-    design: int
-    table_row: int
     time: float
     cost: float
     revenue: float

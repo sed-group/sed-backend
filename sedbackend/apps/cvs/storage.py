@@ -1414,3 +1414,38 @@ def get_all_market_input(db_connection: PooledMySQLConnection, design_id: int) -
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
     return [populate_market_input(db_result) for db_result in results]
+
+
+def create_market_input(db_connection: PooledMySQLConnection, design_id: int, table_row_id: int,
+                        market_input: models.MarketInputPost) -> models.MarketInputGet:
+    logger.debug(f'Create market input')
+
+    columns = ['design', 'table_row', 'time', 'cost', 'revenue']
+    values = [design_id, table_row_id, market_input.time, market_input.cost, market_input.revenue]
+
+    insert_statement = MySQLStatementBuilder(db_connection)
+    insert_statement \
+        .insert(table=CVS_MARKET_INPUT_TABLE, columns=columns) \
+        .set_values(values) \
+        .execute(fetch_type=FetchType.FETCH_NONE)
+    market_input_id = insert_statement.last_insert_id
+
+    return get_market_input(db_connection, market_input_id)
+
+
+def update_market_input(db_connection: PooledMySQLConnection, market_input_id: int,
+                        market_input: models.MarketInputPost) -> models.MarketInputGet:
+    logger.debug(f'Update market input with id={market_input_id}')
+
+    get_market_input(db_connection, market_input_id)  # Performs necessary checks
+
+    update_statement = MySQLStatementBuilder(db_connection)
+    update_statement.update(
+        table=CVS_MARKET_INPUT_TABLE,
+        set_statement='time = %s, cost = %s, revenue = %s',
+        values=[market_input.time, market_input.cost, market_input.revenue],
+    )
+    update_statement.where('id = %s', [market_input_id])
+    _, rows = update_statement.execute(return_affected_rows=True)
+
+    return get_market_input(db_connection, market_input_id)
