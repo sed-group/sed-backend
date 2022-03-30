@@ -1015,7 +1015,7 @@ def populate_design(db_connection: PooledMySQLConnection, db_result, project_id:
         description=db_result['description']
     )
 
-# =====================v=================================================================================================
+# ======================================================================================================================
 # CVS Quantified Objectives
 # ======================================================================================================================
 
@@ -1033,6 +1033,26 @@ def get_quantified_objective(db_connection: PooledMySQLConnection, quantified_ob
 
     return populate_QO(db_connection, result, design_id, value_driver_id, project_id, user_id)
 
+def get_all_quantified_objectives(db_connection: PooledMySQLConnection, design_id: int, 
+    project_id: int, user_id: int) -> List[models.QuantifiedObjective]:
+    
+    select_statement = MySQLStatementBuilder(db_connection)
+    res = select_statement \
+    .select(QUANTIFIED_OBJECTIVE_TABLE, QUANTIFIED_OBJECTIVE_COLUMNS) \
+    .where('design = %s', [design_id]) \
+    .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    if res is None:
+        raise cvs_exceptions.QuantifiedObjectiveNotFoundException
+    
+    QO_list = []
+
+    for result in res:
+        QO_list.append(populate_QO(db_connection, result, design_id, result['value_driver'], project_id, user_id))
+
+    return QO_list
+
+
 def create_quantified_objective(db_connection: PooledMySQLConnection, design_id: int, value_driver_id: int, 
     quantified_objective_post: models.QuantifiedObjectivePost, project_id: int, user_id: int) -> models.QuantifiedObjective:
 
@@ -1045,6 +1065,7 @@ def create_quantified_objective(db_connection: PooledMySQLConnection, design_id:
 
     return get_quantified_objective(db_connection, quantified_id, design_id, value_driver_id, project_id, user_id)
     
+
 def populate_QO(db_connection: PooledMySQLConnection, db_result, 
     design_id: int, value_driver_id: int, project_id: int, user_id: int) -> models.QuantifiedObjective:
     return models.QuantifiedObjective(

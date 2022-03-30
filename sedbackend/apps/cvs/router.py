@@ -346,6 +346,16 @@ async def edit_design(design_id: int, project_id: int, vcs_id: int, design_post:
 # ======================================================================================================================
 
 @router.get(
+    '/project/{project_id}/design/{design_id}/quantified-objective/get/all',
+    summary='Fetches all quantified objectives for a given design',
+    response_mode=List[models.QuantifiedObjective]
+)
+async def get_all_quantified_objectives(project_id: int, design_id: int, 
+    user: User=Depends(get_current_active_user)) -> List[models.QuantifiedObjective]:
+    return impl.get_all_quantified_objectives(design_id, project_id, user.id)
+
+
+@router.get(
     '/project/{project_id}/design/{design_id}/value_driver/{value_driver_id}/quantified_objective/{QO_id}',
     summary='Fetches a quantified objective',
     response_model=models.QuantifiedObjective
