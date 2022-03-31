@@ -1103,6 +1103,7 @@ def delete_quantified_objective(db_connection: PooledMySQLConnection, quantified
     
     return True
 
+# Do not open up for api. Should only be used when deleting other table entries. 
 def delete_all_quantified_objectives(db_connection: PooledMySQLConnection, design_id: int) -> bool:
     logger.debug(f'Deleting all quantified objectives with design id = {design_id}')
 
