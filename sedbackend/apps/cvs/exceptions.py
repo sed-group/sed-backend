@@ -110,6 +110,9 @@ class DesignNotFoundException(Exception):
 class QuantifiedObjectiveNotFoundException(Exception):
     pass
 
+class QuantifiedObjectivesNotDeleted(Exception):
+    pass
+
 # ======================================================================================================================
 # BPMN Table
 # ======================================================================================================================

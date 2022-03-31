@@ -326,7 +326,7 @@ async def get_design(design_id: int, vcs_id: int, project_id: int, user: User=De
 
 @router.delete(
     '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/delete',
-    summary='Deletes a Design based on the design id',
+    summary='Deletes a Design based on the design id. Also deletes all associated Quantified Objectives',
     response_model=bool
 )
 async def delete_design(design_id: int, project_id: int, vcs_id: int, user: User = Depends(get_current_active_user)) -> bool:
@@ -346,6 +346,16 @@ async def edit_design(design_id: int, project_id: int, vcs_id: int, design_post:
 # ======================================================================================================================
 
 @router.get(
+    '/project/{project_id}/design/{design_id}/quantified-objective/get/all',
+    summary='Fetches all quantified objectives for a given design',
+    response_model=List[models.QuantifiedObjective]
+)
+async def get_all_quantified_objectives(project_id: int, design_id: int, 
+    user: User=Depends(get_current_active_user)) -> List[models.QuantifiedObjective]:
+    return impl.get_all_quantified_objectives(design_id, project_id, user.id)
+
+
+@router.get(
     '/project/{project_id}/design/{design_id}/value_driver/{value_driver_id}/quantified_objective/{QO_id}',
     summary='Fetches a quantified objective',
     response_model=models.QuantifiedObjective
@@ -353,6 +363,21 @@ async def edit_design(design_id: int, project_id: int, vcs_id: int, design_post:
 async def get_quantified_objective(QO_id: int, design_id: int, value_driver_id: int,
                     project_id: int, user: User= Depends(get_current_active_user)) -> models.QuantifiedObjective:
     return impl.get_quantified_objective(QO_id, design_id, value_driver_id, project_id, user.id)
+
+@router.delete(
+    '/project/design/{design_id}/value_driver/{value_driver_id}/quantified-objective/{QO_id}',
+    response_model=bool
+)
+async def delete_quantified_objective(QO_id: int, design_id: int, value_driver_id: int, user: User=Depends(get_current_active_user)) -> bool:
+    return impl.delete_quantified_objective(QO_id, value_driver_id, design_id, user.id)
+
+@router.put(
+    '/project/{project_id}/design/{design_id}/value_driver/{value_driver_id}/quantified-objective/{qo_id}',
+    response_model=models.QuantifiedObjective
+)
+async def edit_quantified_objective(project_id: int, design_id: int, value_driver_id: int, qo_id: int, updated_qo: models.QuantifiedObjectivePost, user: User=Depends(get_current_active_user)) -> models.QuantifiedObjective:
+    return impl.edit_quantified_objective(qo_id, design_id, value_driver_id, project_id, updated_qo, user.id)
+
 
 @router.post(
     '/project/{project_id}/design/{design_id}/value_driver/{VD_id}/quantified-objective/create',
