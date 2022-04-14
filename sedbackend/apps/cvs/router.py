@@ -477,8 +477,9 @@ async def update_bpmn(vcs_id: int, project_id: int, nodes: List[models.NodeGet],
     summary='Get all market inputs',
     response_model=List[models.MarketInputGet],
 )
-async def get_all_market_input(vcs_id: int) -> List[models.MarketInputGet]:
-    return impl.get_all_market_inputs(vcs_id)
+async def get_all_market_input(project_id: int, vcs_id: int,
+                               user: User = Depends(get_current_active_user)) -> List[models.MarketInputGet]:
+    return impl.get_all_market_inputs(project_id, vcs_id, user.id)
 
 
 @router.post(
@@ -486,8 +487,9 @@ async def get_all_market_input(vcs_id: int) -> List[models.MarketInputGet]:
     summary='Creates a market input',
     response_model=models.MarketInputGet,
 )
-async def create_market_input(vcs_id: int, vcs_table_row_id: int, market_input: models.MarketInputPost) -> models.MarketInputGet:
-    return impl.create_market_input(vcs_id, vcs_table_row_id, market_input)
+async def create_market_input(project_id: int, vcs_id: int, vcs_table_row_id: int, market_input: models.MarketInputPost,
+                              user: User = Depends(get_current_active_user)) -> models.MarketInputGet:
+    return impl.create_market_input(project_id, vcs_id, vcs_table_row_id, market_input, user.id)
 
 
 @router.put(
@@ -495,5 +497,6 @@ async def create_market_input(vcs_id: int, vcs_table_row_id: int, market_input: 
     summary='Edit market input',
     response_model=models.MarketInputGet,
 )
-async def update_market_input(market_input_id: int, market_input: models.MarketInputPost) -> models.MarketInputGet:
-    return impl.update_market_input(market_input_id, market_input)
+async def update_market_input(project_id: int, market_input_id: int, market_input: models.MarketInputPost,
+                              user: User = Depends(get_current_active_user)) -> models.MarketInputGet:
+    return impl.update_market_input(project_id, market_input_id, market_input, user.id)

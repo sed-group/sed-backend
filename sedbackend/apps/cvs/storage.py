@@ -1423,8 +1423,10 @@ def get_market_input(db_connection: PooledMySQLConnection, market_input_id: int)
     return populate_market_input(db_result)
 
 
-def get_all_market_input(db_connection: PooledMySQLConnection, vcs_id: int) -> List[models.MarketInputGet]:
+def get_all_market_input(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id: int) -> List[models.MarketInputGet]:
     logger.debug(f'Fetching all market inputs for vcs with id={vcs_id}.')
+
+    get_cvs_project(db_connection, project_id, user_id)  # performs checks for existing project and correct user
 
     select_statement = MySQLStatementBuilder(db_connection)
     results = select_statement \
@@ -1436,9 +1438,11 @@ def get_all_market_input(db_connection: PooledMySQLConnection, vcs_id: int) -> L
     return [populate_market_input(db_result) for db_result in results]
 
 
-def create_market_input(db_connection: PooledMySQLConnection, vcs_id: int, table_row_id: int,
-                        market_input: models.MarketInputPost) -> models.MarketInputGet:
+def create_market_input(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, table_row_id: int,
+                        market_input: models.MarketInputPost, user_id: int) -> models.MarketInputGet:
     logger.debug(f'Create market input')
+
+    get_cvs_project(db_connection, project_id, user_id)  # performs checks for existing project and correct user
 
     columns = ['vcs', 'table_row', 'time', 'cost', 'revenue']
     values = [vcs_id, table_row_id, market_input.time, market_input.cost, market_input.revenue]
@@ -1453,9 +1457,11 @@ def create_market_input(db_connection: PooledMySQLConnection, vcs_id: int, table
     return get_market_input(db_connection, market_input_id)
 
 
-def update_market_input(db_connection: PooledMySQLConnection, market_input_id: int,
-                        market_input: models.MarketInputPost) -> models.MarketInputGet:
+def update_market_input(db_connection: PooledMySQLConnection, project_id: int, market_input_id: int,
+                        market_input: models.MarketInputPost, user_id: int) -> models.MarketInputGet:
     logger.debug(f'Update market input with id={market_input_id}')
+
+    get_cvs_project(db_connection, project_id, user_id)  # performs checks for existing project and correct user
 
     get_market_input(db_connection, market_input_id)  # Performs necessary checks
 
