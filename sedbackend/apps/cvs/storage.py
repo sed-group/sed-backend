@@ -802,7 +802,7 @@ def get_drivers_from_needs(db_connection: PooledMySQLConnection, stakeholder_nee
     value_drivers = []
     for result in results:
         value_driver = get_value_driver(db_connection, result['value_driver_id'], project_id, user_id)
-        value_drivers.append(models.ValueDriverGet(id=value_driver.id, name=value_driver.name))
+        value_drivers.append(models.ValueDriverGet(id=value_driver.id, name=value_driver.name, unit=value_driver.unit))
 
     return value_drivers
 
