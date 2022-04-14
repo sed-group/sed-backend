@@ -871,10 +871,10 @@ def update_bpmn(vcs_id: int, project_id: int, user_id: int, nodes: List[models.N
 # Market Input
 # ======================================================================================================================
 
-def get_all_market_inputs(vcs_id: int) -> List[models.MarketInputGet]:
+def get_all_market_inputs(project_id: int, vcs_id: int, user_id: int) -> List[models.MarketInputGet]:
     try:
         with get_connection() as con:
-            db_result = storage.get_all_market_input(con, vcs_id)
+            db_result = storage.get_all_market_input(con, project_id, vcs_id, user_id)
             con.commit()
             return db_result
     except auth_ex.UnauthorizedOperationException:
@@ -889,10 +889,10 @@ def get_all_market_inputs(vcs_id: int) -> List[models.MarketInputGet]:
         )
 
 
-def create_market_input(vcs_id: int, table_row_id: int, market_input: models.MarketInputPost) -> models.MarketInputGet:
+def create_market_input(project_id: int, vcs_id: int, table_row_id: int, market_input: models.MarketInputPost, user_id: int) -> models.MarketInputGet:
     try:
         with get_connection() as con:
-            db_result = storage.create_market_input(con, vcs_id, table_row_id, market_input)
+            db_result = storage.create_market_input(con, project_id, vcs_id, table_row_id, market_input, user_id)
             con.commit()
             return db_result
     except auth_ex.UnauthorizedOperationException:
@@ -907,10 +907,10 @@ def create_market_input(vcs_id: int, table_row_id: int, market_input: models.Mar
         )
 
 
-def update_market_input(market_input_id: int, market_input: models.MarketInputPost) -> models.MarketInputGet:
+def update_market_input(project_id: int, market_input_id: int, market_input: models.MarketInputPost, user_id) -> models.MarketInputGet:
     try:
         with get_connection() as con:
-            db_result = storage.update_market_input(con, market_input_id, market_input)
+            db_result = storage.update_market_input(con, project_id, market_input_id, market_input, user_id)
             con.commit()
             return db_result
     except auth_ex.UnauthorizedOperationException:
