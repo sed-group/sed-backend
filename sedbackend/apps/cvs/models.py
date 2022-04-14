@@ -306,7 +306,7 @@ class BPMNGet(BaseModel):
 
 class MarketInputGet(BaseModel):
     id: int
-    design: int
+    vcs: int
     table_row: int
     time: float
     cost: float

@@ -473,18 +473,27 @@ async def update_bpmn(vcs_id: int, project_id: int, nodes: List[models.NodeGet],
 # ======================================================================================================================
 
 @router.get(
-    '/project/{project_id}/design/{design_id}/market-input/get/all',
+    '/project/{project_id}/vcs/{vcs_id}/market-input/get/all',
     summary='Get all market inputs',
     response_model=List[models.MarketInputGet],
 )
-async def get_all_market_input(design_id) -> List[models.MarketInputGet]:
-    return impl.get_all_market_inputs(design_id)
+async def get_all_market_input(vcs_id: int) -> List[models.MarketInputGet]:
+    return impl.get_all_market_inputs(vcs_id)
+
+
+@router.post(
+    '/project/{project_id}/vcs/{vcs_id}/vcs_table_row/{vcs_table_row_id}/market-input/create',
+    summary='Creates a market input',
+    response_model=models.MarketInputGet,
+)
+async def create_market_input(vcs_id: int, vcs_table_row_id: int, market_input: models.MarketInputPost) -> models.MarketInputGet:
+    return impl.create_market_input(vcs_id, vcs_table_row_id, market_input)
 
 
 @router.put(
-    '/project/{project_id}/design/{design_id}/market-input/{market_input_id}/edit',
+    '/project/{project_id}/vcs/{vcs_id}/market-input/{market_input_id}/edit',
     summary='Edit market input',
     response_model=models.MarketInputGet,
 )
-async def update_market_input(market_input_id, market_input) -> models.MarketInputGet:
+async def update_market_input(market_input_id: int, market_input: models.MarketInputPost) -> models.MarketInputGet:
     return impl.update_market_input(market_input_id, market_input)
