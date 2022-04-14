@@ -1,3 +1,4 @@
+from distutils.log import debug
 from multiprocessing import Pool
 from unittest import result
 from mysql.connector.pooling import PooledMySQLConnection
@@ -852,6 +853,7 @@ def create_vcs_table(db_connection: PooledMySQLConnection, new_table: models.Tab
                     node_type = "process"
                 )
             if(table_row.node_id is None):    
+                logger.debug(f'Creating new bpmn node')
                 node = create_bpmn_node(db_connection, new_node, project_id, vcs_id, user_id)
                 table_row.node_id = node.id
             else: 
@@ -1264,14 +1266,11 @@ def update_bpmn_node(db_connection: PooledMySQLConnection, node_id: int, node: m
     update_statement = MySQLStatementBuilder(db_connection)
     update_statement.update(
         table=CVS_BPMN_NODES_TABLE,
-        set_statement='vcs_id = %s, name = %s, type = %s, pos_x = %s, pos_y = %s',
+        set_statement='vcs_id = %s, name = %s, type = %s, pos_x = %s, pos_y = %s', #Also needs to update the row of the vcs
         values=[vcs_id, node.name, node.node_type, node.pos_x, node.pos_y],
     )
     update_statement.where('id = %s', [node_id])
     _, rows = update_statement.execute(return_affected_rows=True)
-
-    if rows == 0:
-        raise cvs_exceptions.NodeFailedToUpdateException
 
     return get_bpmn_node(db_connection, node_id, project_id, user_id)
 
