@@ -64,14 +64,14 @@ CREATE TABLE IF NOT EXISTS `seddb`.`quantified_objectives`
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_input`
 (
     `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `design`            INT UNSIGNED NOT NULL,
+    `vcs`               INT UNSIGNED NOT NULL,
     `table_row`         INT UNSIGNED NOT NULL,
     `time`              DOUBLE,
     `cost`              DOUBLE,
     `revenue`           DOUBLE,
     PRIMARY KEY (`id`),
-    FOREIGN KEY(`design`)
-        REFERENCES `seddb`.`designs`(`id`),
+    FOREIGN KEY(`vcs`)
+        REFERENCES `seddb`.`cvs_vcss`(`id`),
     FOREIGN KEY(`table_row`)
         REFERENCES `seddb`.`cvs_vcs_table_rows`(`id`)
 )

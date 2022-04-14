@@ -51,7 +51,7 @@ CVS_BPMN_EDGES_TABLE = 'cvs_bpmn_edges'
 CVS_BPMN_EDGES_COLUMNS = ['id', 'vcs_id', 'name', 'from_node', 'to_node', 'probability']
 
 CVS_MARKET_INPUT_TABLE = 'cvs_market_input'
-CVS_MARKET_INPUT_COLUMN = ['id', 'design', 'table_row', 'time', 'cost', 'revenue']
+CVS_MARKET_INPUT_COLUMN = ['id', 'vcs', 'table_row', 'time', 'cost', 'revenue']
 
 # ======================================================================================================================
 # CVS projects
@@ -1400,7 +1400,7 @@ def update_bpmn(db_connection: PooledMySQLConnection, vcs_id: int, project_id: i
 def populate_market_input(db_result) -> models.MarketInputGet:
     return models.MarketInputGet(
         id=db_result['id'],
-        design=db_result['design'],
+        vcs=db_result['vcs'],
         table_row=db_result['table_row'],
         time=db_result['time'],
         cost=db_result['cost'],
@@ -1423,25 +1423,25 @@ def get_market_input(db_connection: PooledMySQLConnection, market_input_id: int)
     return populate_market_input(db_result)
 
 
-def get_all_market_input(db_connection: PooledMySQLConnection, design_id: int) -> List[models.MarketInputGet]:
-    logger.debug(f'Fetching all market inputs for design with id={design_id}.')
+def get_all_market_input(db_connection: PooledMySQLConnection, vcs_id: int) -> List[models.MarketInputGet]:
+    logger.debug(f'Fetching all market inputs for vcs with id={vcs_id}.')
 
     select_statement = MySQLStatementBuilder(db_connection)
     results = select_statement \
         .select(CVS_MARKET_INPUT_TABLE, CVS_MARKET_INPUT_COLUMN) \
-        .where('design = %s', [design_id]) \
+        .where('vcs = %s', [vcs_id]) \
         .order_by(['id'], Sort.ASCENDING) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
     return [populate_market_input(db_result) for db_result in results]
 
 
-def create_market_input(db_connection: PooledMySQLConnection, design_id: int, table_row_id: int,
+def create_market_input(db_connection: PooledMySQLConnection, vcs_id: int, table_row_id: int,
                         market_input: models.MarketInputPost) -> models.MarketInputGet:
     logger.debug(f'Create market input')
 
-    columns = ['design', 'table_row', 'time', 'cost', 'revenue']
-    values = [design_id, table_row_id, market_input.time, market_input.cost, market_input.revenue]
+    columns = ['vcs', 'table_row', 'time', 'cost', 'revenue']
+    values = [vcs_id, table_row_id, market_input.time, market_input.cost, market_input.revenue]
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \

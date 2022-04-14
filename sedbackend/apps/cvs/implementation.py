@@ -871,10 +871,10 @@ def update_bpmn(vcs_id: int, project_id: int, user_id: int, nodes: List[models.N
 # Market Input
 # ======================================================================================================================
 
-def get_all_market_inputs(design_id: id) -> List[models.MarketInputGet]:
+def get_all_market_inputs(vcs_id: int) -> List[models.MarketInputGet]:
     try:
         with get_connection() as con:
-            db_result = storage.get_all_market_input(con, design_id)
+            db_result = storage.get_all_market_input(con, vcs_id)
             con.commit()
             return db_result
     except auth_ex.UnauthorizedOperationException:
@@ -882,10 +882,28 @@ def get_all_market_inputs(design_id: id) -> List[models.MarketInputGet]:
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
-    except cvs_exceptions.DesignNotFoundException:
+    except cvs_exceptions.VCSNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find design with id={design_id}.',
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
+
+
+def create_market_input(vcs_id: int, table_row_id: int, market_input: models.MarketInputPost) -> models.MarketInputGet:
+    try:
+        with get_connection() as con:
+            db_result = storage.create_market_input(con, vcs_id, table_row_id, market_input)
+            con.commit()
+            return db_result
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
         )
 
 
