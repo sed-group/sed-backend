@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_bpmn_edges`
 );
 
 
-CREATE TABLE IF NOT EXISTS `seddb`.`designs`
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_designs`
 (
     `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `project`           INT UNSIGNED NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`designs`
         REFERENCES `seddb`.`cvs_vcss`(`id`)
 );
 
-CREATE TABLE IF NOT EXISTS `seddb`.`quantified_objectives`
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_quantified_objectives`
 (
     `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `design`            INT UNSIGNED NOT NULL,
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`quantified_objectives`
     `unit`              VARCHAR(63) NOT NULL,
     PRIMARY KEY(`id`),
     FOREIGN KEY(`design`)
-        REFERENCES `seddb`.`designs`(`id`),
+        REFERENCES `seddb`.`cvs_designs`(`id`),
     FOREIGN KEY(`value_driver`)
         REFERENCES `seddb`.`cvs_vcs_value_drivers`(`id`)
 );
