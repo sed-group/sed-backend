@@ -220,8 +220,14 @@ def delete_vcs(vcs_id: int, project_id: int, user_id: int) -> bool:
 # ======================================================================================================================
 
 def get_all_value_driver(project_id: int, user_id: int) -> ListChunk[models.VCSValueDriver]:
-    with get_connection() as con:
-        return storage.get_all_value_driver(con, project_id, user_id)
+    try:
+        with get_connection() as con:
+            return storage.get_all_value_driver(con, project_id, user_id)
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
 
 
 def get_value_driver(value_driver_id: int, project_id: int, user_id: int) -> models.VCSValueDriver:
@@ -230,7 +236,7 @@ def get_value_driver(value_driver_id: int, project_id: int, user_id: int) -> mod
             return storage.get_value_driver(con, value_driver_id, project_id, user_id)
     except cvs_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
         )
     except cvs_exceptions.ValueDriverNotFoundException:

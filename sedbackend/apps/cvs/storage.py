@@ -211,6 +211,8 @@ def populate_cvs_project(db_connection: PooledMySQLConnection, db_result) -> mod
 def get_all_vcs(db_connection: PooledMySQLConnection, project_id: int, user_id: int) -> ListChunk[models.VCS]:
     logger.debug(f'Fetching all VCSs for project with id={project_id}.')
 
+    get_cvs_project(db_connection, project_id, user_id)  # perform checks: project and user
+
     where_statement = f'project_id = %s'
     where_values = [project_id]
 
@@ -337,9 +339,6 @@ def delete_vcs(db_connection: PooledMySQLConnection, vcs_id: int, project_id: in
     if result is None:
         raise cvs_exceptions.VCSNotFoundException
 
-    if result['project_id'] != project_id:
-        raise auth_exceptions.UnauthorizedOperationException
-
     get_cvs_project(db_connection, project_id, user_id)  # performs checks for existing project and correct user
 
     delete_statement = MySQLStatementBuilder(db_connection)
@@ -373,6 +372,8 @@ def get_all_value_driver(db_connection: PooledMySQLConnection, project_id: int,
                          user_id: int) -> ListChunk[models.VCSValueDriver]:
     logger.debug(f'Fetching all value drivers for project with id={project_id}.')
 
+    get_cvs_project(db_connection, project_id, user_id)  # perform checks: project and user
+
     where_statement = f'project_id = %s'
     where_values = [project_id]
 
@@ -402,6 +403,8 @@ def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int,
 
     logger.debug(f'Fetching value driver for project with id={value_driver_id}.')
 
+    get_cvs_project(db_connection, project_id, user_id)  # perform checks: project and user
+
     where_statement = f'id = %s'
     where_values = [value_driver_id]
 
@@ -411,13 +414,10 @@ def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int,
         .where(where_statement, where_values) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
-    value_driver = populate_value_driver(db_connection, result, project_id, user_id)
-
     if result is None:
         raise cvs_exceptions.ValueDriverNotFoundException(value_driver_id=value_driver_id)
 
-    if result['project_id'] != project_id:
-        raise auth_exceptions.UnauthorizedOperationException
+    value_driver = populate_value_driver(db_connection, result, project_id, user_id)
 
     return value_driver
 
