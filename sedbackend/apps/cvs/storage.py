@@ -1,6 +1,5 @@
 from distutils.log import debug
 from multiprocessing import Pool
-from unittest import result
 from mysql.connector.pooling import PooledMySQLConnection
 from fastapi.logger import logger
 from typing import List
@@ -264,6 +263,8 @@ def get_segment_vcs(db_connection: PooledMySQLConnection, project_id: int, segme
 
 def get_vcs(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int, user_id: int) -> models.VCS:
     logger.debug(f'Fetching VCS with id={vcs_id}.')
+
+    get_cvs_project(db_connection, project_id, user_id)  # perform necessary checks for project and user
 
     select_statement = MySQLStatementBuilder(db_connection)
     result = select_statement \
@@ -701,9 +702,11 @@ def get_vcs_table(db_connection: PooledMySQLConnection, vcs_id: int, project_id:
 
 
 # DO NOT USE IN API CALLS
-def get_vcs_table_row(db_connection: PooledMySQLConnection, node_id: int, project_id: int,
+def get_vcs_table_row(db_connection: PooledMySQLConnection, node_id: int, project_id: int, vcs_id: int,
                       user_id: int) -> models.TableRowGet or None:
     logger.debug(f'Fetching vcs table row with id={node_id}.')
+
+    get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks for project, vcs and user
 
     select_statement = MySQLStatementBuilder(db_connection)
     result = select_statement \
@@ -714,7 +717,7 @@ def get_vcs_table_row(db_connection: PooledMySQLConnection, node_id: int, projec
     if result is not None:
         return populate_table_row(db_connection, result, project_id, user_id)
     else:
-        return None
+        raise cvs_exceptions.VCSTableRowNotFoundException
 
 
 def get_all_table_rows(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int,
@@ -1195,7 +1198,7 @@ def populate_bpmn_node(db_connection, result, project_id, user_id) -> models.Nod
         node_type=result['type'],
         pos_x=result['pos_x'],
         pos_y=result['pos_y'],
-        vcs_table_row=get_vcs_table_row(db_connection, result['id'], project_id, user_id)
+        vcs_table_row=get_vcs_table_row(db_connection, result['id'], project_id, result['vcs_id'], user_id)
     )
 
 
@@ -1426,7 +1429,7 @@ def get_market_input(db_connection: PooledMySQLConnection, market_input_id: int)
 def get_all_market_input(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id: int) -> List[models.MarketInputGet]:
     logger.debug(f'Fetching all market inputs for vcs with id={vcs_id}.')
 
-    get_cvs_project(db_connection, project_id, user_id)  # performs checks for existing project and correct user
+    get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks for existing project, vcs and correct user
 
     select_statement = MySQLStatementBuilder(db_connection)
     results = select_statement \
@@ -1442,7 +1445,16 @@ def create_market_input(db_connection: PooledMySQLConnection, project_id: int, v
                         market_input: models.MarketInputPost, user_id: int) -> models.MarketInputGet:
     logger.debug(f'Create market input')
 
-    get_cvs_project(db_connection, project_id, user_id)  # performs checks for existing project and correct user
+    select_statement = MySQLStatementBuilder(db_connection)
+    db_result = select_statement \
+        .select(CVS_MARKET_INPUT_TABLE, CVS_MARKET_INPUT_COLUMN) \
+        .where('table_row = %s', [table_row_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if db_result is not None:
+        raise cvs_exceptions.MarketInputAlreadyExistException
+
+    get_vcs_table_row(db_connection, table_row_id, project_id, vcs_id, user_id)  # perform checks
 
     columns = ['vcs', 'table_row', 'time', 'cost', 'revenue']
     values = [vcs_id, table_row_id, market_input.time, market_input.cost, market_input.revenue]
@@ -1457,11 +1469,11 @@ def create_market_input(db_connection: PooledMySQLConnection, project_id: int, v
     return get_market_input(db_connection, market_input_id)
 
 
-def update_market_input(db_connection: PooledMySQLConnection, project_id: int, market_input_id: int,
+def update_market_input(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, market_input_id: int,
                         market_input: models.MarketInputPost, user_id: int) -> models.MarketInputGet:
     logger.debug(f'Update market input with id={market_input_id}')
 
-    get_cvs_project(db_connection, project_id, user_id)  # performs checks for existing project and correct user
+    get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks for existing project, vcs and correct user
 
     get_market_input(db_connection, market_input_id)  # Performs necessary checks
 
