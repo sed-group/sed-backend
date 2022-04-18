@@ -1,6 +1,5 @@
 from os import stat
 from statistics import mode
-from unittest import result
 from fastapi import HTTPException, status
 from typing import List
 
@@ -221,8 +220,14 @@ def delete_vcs(vcs_id: int, project_id: int, user_id: int) -> bool:
 # ======================================================================================================================
 
 def get_all_value_driver(project_id: int, user_id: int) -> ListChunk[models.VCSValueDriver]:
-    with get_connection() as con:
-        return storage.get_all_value_driver(con, project_id, user_id)
+    try:
+        with get_connection() as con:
+            return storage.get_all_value_driver(con, project_id, user_id)
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
 
 
 def get_value_driver(value_driver_id: int, project_id: int, user_id: int) -> models.VCSValueDriver:
@@ -231,7 +236,7 @@ def get_value_driver(value_driver_id: int, project_id: int, user_id: int) -> mod
             return storage.get_value_driver(con, value_driver_id, project_id, user_id)
     except cvs_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
         )
     except cvs_exceptions.ValueDriverNotFoundException:
@@ -527,6 +532,7 @@ def create_vcs_table(new_table: models.TablePost, vcs_id: int, project_id: int, 
             detail='Unauthorized user.',
         )
 
+
 # ======================================================================================================================
 # CVS Design
 # ======================================================================================================================
@@ -548,11 +554,33 @@ def create_cvs_design(design_post: models.DesignPost, vcs_id: int, project_id: i
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
 
-def get_all_design(project_id: int, vcs_id: int, user_id: int) -> ListChunk[models.Design]: 
+
+def get_all_design(project_id: int, vcs_id: int, user_id: int) -> ListChunk[models.Design]:
+    try:
         with get_connection() as con:
             return storage.get_all_designs(con, project_id, vcs_id, user_id)
-           
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
+
 
 def get_design(design_id: int, vcs_id: int, project_id: int, user_id: int) -> models.Design:
     try:
@@ -564,6 +592,26 @@ def get_design(design_id: int, vcs_id: int, project_id: int, user_id: int) -> mo
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
+        )
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
+    except cvs_exceptions.DesignNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find design with id={design_id}.',
         )
 
 
@@ -578,13 +626,20 @@ def delete_design(design_id: int, vcs_id: int, project_id: int, user_id: int) ->
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}'
         )
-    except cvs_exceptions.QuantifiedObjectivesNotDeleted:
+    except cvs_exceptions.DesignNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not delete all Quantified Objective associated with design id={design_id}'
+            detail=f'Could not find design with id={design_id}.',
         )
-    
-def edit_design(design_id: int, project_id: int, vcs_id: int, user_id: int, updated_design: models.DesignPost) -> models.Design:
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
+
+
+def edit_design(design_id: int, project_id: int, vcs_id: int, user_id: int,
+                updated_design: models.DesignPost) -> models.Design:
     try:
         with get_connection() as con:
             result = storage.edit_design(con, design_id, project_id, vcs_id, user_id, updated_design)
@@ -595,16 +650,27 @@ def edit_design(design_id: int, project_id: int, vcs_id: int, user_id: int, upda
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}'
         )
+    except cvs_exceptions.DesignNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find design with id={design_id}.',
+        )
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
 
 
 # ======================================================================================================================
 # Quantified Objectives
 # ======================================================================================================================
 
-def get_all_quantified_objectives(design_id: int, project_id: int, user_id: int) -> List[models.QuantifiedObjective]:
+def get_all_quantified_objectives(design_id: int, project_id: int, vcs_id: int, user_id: int) -> List[
+                                    models.QuantifiedObjective]:
     try:
         with get_connection() as con:
-            res = storage.get_all_quantified_objectives(con, design_id, project_id, user_id)
+            res = storage.get_all_quantified_objectives(con, design_id, project_id, vcs_id, user_id)
             con.commit()
             return res
     except cvs_exceptions.QuantifiedObjectiveNotFoundException:
@@ -612,12 +678,29 @@ def get_all_quantified_objectives(design_id: int, project_id: int, user_id: int)
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find quantified objective'
         )
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}'
+        )
+    except cvs_exceptions.DesignNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find design with id={design_id}.',
+        )
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
+
 
 def get_quantified_objective(quantified_objective_id: int, design_id: int, value_driver_id: int,
-                        project_id: int, user_id: int) -> models.QuantifiedObjective:
+                             project_id: int, vcs_id: int, user_id: int) -> models.QuantifiedObjective:
     try:
         with get_connection() as con:
-            res = storage.get_quantified_objective(con, quantified_objective_id, design_id, value_driver_id, project_id, user_id)
+            res = storage.get_quantified_objective(con, quantified_objective_id, design_id, value_driver_id, project_id,
+                                                   vcs_id, user_id)
             con.commit()
             return res
     except cvs_exceptions.QuantifiedObjectiveNotFoundException:
@@ -625,12 +708,35 @@ def get_quantified_objective(quantified_objective_id: int, design_id: int, value
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find quantified objective with id={quantified_objective_id}'
         )
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}'
+        )
+    except cvs_exceptions.DesignNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find design with id={design_id}.',
+        )
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
+    except cvs_exceptions.ValueDriverNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Could not find value driver with id={value_driver_id}.',
+        )
+
 
 def create_quantified_objective(design_id: int, value_driver_id: int,
-        quantified_objective_post: models.QuantifiedObjectivePost, project_id: int, user_id: int) -> models.QuantifiedObjective:
+                                quantified_objective_post: models.QuantifiedObjectivePost, project_id: int, vcs_id: int,
+                                user_id: int) -> models.QuantifiedObjective:
     try:
         with get_connection() as con:
-            res = storage.create_quantified_objective(con, design_id, value_driver_id, quantified_objective_post, project_id, user_id)
+            res = storage.create_quantified_objective(con, design_id, value_driver_id, quantified_objective_post,
+                                                      project_id, vcs_id, user_id)
             con.commit()
             return res
     except cvs_exceptions.CVSProjectNotFoundException:
@@ -638,11 +744,19 @@ def create_quantified_objective(design_id: int, value_driver_id: int,
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}'
         )
+    except cvs_exceptions.ValueDriverNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Could not find value driver with id={value_driver_id}.',
+        )
 
-def delete_quantified_objective(quantified_objective_id: int, value_driver_id: int, design_id: int, user_id: int) -> bool:
+
+def delete_quantified_objective(quantified_objective_id: int, value_driver_id: int, design_id: int, project_id: int,
+                                vcs_id: int, user_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.delete_quantified_objective(con, quantified_objective_id, value_driver_id, design_id, user_id)
+            res = storage.delete_quantified_objective(con, quantified_objective_id, value_driver_id, design_id,
+                                                      project_id, vcs_id, user_id)
             con.commit()
             return res
     except auth_ex.UnauthorizedOperationException:
@@ -655,12 +769,35 @@ def delete_quantified_objective(quantified_objective_id: int, value_driver_id: i
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Could not find quantified objective'
         )
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}'
+        )
+    except cvs_exceptions.DesignNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find design with id={design_id}.',
+        )
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
+    except cvs_exceptions.ValueDriverNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Could not find value driver with id={value_driver_id}.',
+        )
 
-def edit_quantified_objective(quantified_objective_id: int, design_id: int, value_driver_id: int, project_id: int, 
-    updated_QO: models.QuantifiedObjectivePost, user_id: int) -> models.QuantifiedObjective:
-    try: 
+
+def edit_quantified_objective(quantified_objective_id: int, design_id: int, value_driver_id: int, project_id: int,
+                              vcs_id: int, updated_qo: models.QuantifiedObjectivePost,
+                              user_id: int) -> models.QuantifiedObjective:
+    try:
         with get_connection() as con:
-            res = storage.edit_quantified_objective(con, quantified_objective_id, design_id, value_driver_id, updated_QO, user_id, project_id)
+            res = storage.edit_quantified_objective(con, quantified_objective_id, design_id, value_driver_id,
+                                                    updated_qo, user_id, project_id, vcs_id)
             con.commit()
             return res
     except cvs_exceptions.QuantifiedObjectiveNotFoundException:
@@ -668,8 +805,21 @@ def edit_quantified_objective(quantified_objective_id: int, design_id: int, valu
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find quantified objective with id={quantified_objective_id}'
         )
-
-
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}'
+        )
+    except cvs_exceptions.DesignNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find design with id={design_id}.',
+        )
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
 
 
 # ======================================================================================================================
@@ -682,6 +832,11 @@ def create_bpmn_node(node: models.NodePost, project_id: int, vcs_id: int, user_i
             result = storage.create_bpmn_node(con, node, project_id, vcs_id, user_id)
             con.commit()
             return result
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
     except cvs_exceptions.VCSNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -694,10 +849,10 @@ def create_bpmn_node(node: models.NodePost, project_id: int, vcs_id: int, user_i
         )
 
 
-def delete_bpmn_node(node_id: int, project_id: int, vcs_id: int) -> bool:
+def delete_bpmn_node(node_id: int, project_id: int, vcs_id: int, user_id: int) -> bool:
     try:
         with get_connection() as con:
-            result = storage.delete_bpmn_node(con, node_id)
+            result = storage.delete_bpmn_node(con, project_id, vcs_id, node_id, user_id)
             con.commit()
             return result
 
@@ -751,10 +906,10 @@ def update_bpmn_node(node_id: int, node: models.NodePost, project_id: int, vcs_i
         )
 
 
-def create_bpmn_edge(edge: models.EdgePost, project_id, vcs_id) -> models.EdgeGet:
+def create_bpmn_edge(edge: models.EdgePost, project_id, vcs_id, user_id) -> models.EdgeGet:
     try:
         with get_connection() as con:
-            result = storage.create_bpmn_edge(con, edge, vcs_id)
+            result = storage.create_bpmn_edge(con, edge, project_id, vcs_id, user_id)
             con.commit()
             return result
     except cvs_exceptions.VCSNotFoundException:
@@ -772,12 +927,17 @@ def create_bpmn_edge(edge: models.EdgePost, project_id, vcs_id) -> models.EdgeGe
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
+    except cvs_exceptions.NodeNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find node with id = {edge.from_node} or {edge.to_node}.',
+        )
 
 
-def delete_bpmn_edge(edge_id: int, project_id, vcs_id) -> bool:
+def delete_bpmn_edge(edge_id: int, project_id, vcs_id, user_id) -> bool:
     try:
         with get_connection() as con:
-            result = storage.delete_bpmn_edge(con, edge_id)
+            result = storage.delete_bpmn_edge(con, edge_id, project_id, vcs_id, user_id)
             con.commit()
             return result
 
@@ -808,10 +968,10 @@ def delete_bpmn_edge(edge_id: int, project_id, vcs_id) -> bool:
         )
 
 
-def update_bpmn_edge(edge_id: int, edge: models.EdgePost, project_id: int, vcs_id: int) -> models.EdgeGet:
+def update_bpmn_edge(edge_id: int, edge: models.EdgePost, project_id: int, vcs_id: int, user_id: int) -> models.EdgeGet:
     try:
         with get_connection() as con:
-            result = storage.update_bpmn_edge(con, edge_id, edge, vcs_id)
+            result = storage.update_bpmn_edge(con, edge_id, edge, project_id, vcs_id, user_id)
             con.commit()
             return result
     except cvs_exceptions.VCSNotFoundException:
@@ -834,6 +994,11 @@ def update_bpmn_edge(edge_id: int, edge: models.EdgePost, project_id: int, vcs_i
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find node with id={edge.from_node} or {edge.to_node}.',
         )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
 
 
 def get_bpmn(vcs_id: int, project_id: int, user_id: int) -> models.BPMNGet:
@@ -851,6 +1016,11 @@ def get_bpmn(vcs_id: int, project_id: int, user_id: int) -> models.BPMNGet:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
+        )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
         )
 
 
@@ -871,16 +1041,21 @@ def update_bpmn(vcs_id: int, project_id: int, user_id: int, nodes: List[models.N
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
         )
-        
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
+
 
 # ======================================================================================================================
 # Market Input
 # ======================================================================================================================
 
-def get_all_market_inputs(vcs_id: int) -> List[models.MarketInputGet]:
+def get_all_market_inputs(project_id: int, vcs_id: int, user_id: int) -> List[models.MarketInputGet]:
     try:
         with get_connection() as con:
-            db_result = storage.get_all_market_input(con, vcs_id)
+            db_result = storage.get_all_market_input(con, project_id, vcs_id, user_id)
             con.commit()
             return db_result
     except auth_ex.UnauthorizedOperationException:
@@ -893,12 +1068,23 @@ def get_all_market_inputs(vcs_id: int) -> List[models.MarketInputGet]:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs with id={vcs_id}.',
         )
+    except cvs_exceptions.MarketInputNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find market input',
+        )
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
 
 
-def create_market_input(vcs_id: int, table_row_id: int, market_input: models.MarketInputPost) -> models.MarketInputGet:
+def create_market_input(project_id: int, vcs_id: int, table_row_id: int, market_input: models.MarketInputPost,
+                        user_id: int) -> models.MarketInputGet:
     try:
         with get_connection() as con:
-            db_result = storage.create_market_input(con, vcs_id, table_row_id, market_input)
+            db_result = storage.create_market_input(con, project_id, vcs_id, table_row_id, market_input, user_id)
             con.commit()
             return db_result
     except auth_ex.UnauthorizedOperationException:
@@ -911,16 +1097,47 @@ def create_market_input(vcs_id: int, table_row_id: int, market_input: models.Mar
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs with id={vcs_id}.',
         )
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    except cvs_exceptions.VCSTableRowNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find table row with id={table_row_id}.',
+        )
+    except cvs_exceptions.MarketInputAlreadyExistException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Market input already exist for table row with id={table_row_id}.',
+        )
 
 
-def update_market_input(market_input_id: int, market_input: models.MarketInputPost) -> models.MarketInputGet:
+def update_market_input(project_id: int, vcs_id: int, market_input_id: int, market_input: models.MarketInputPost,
+                        user_id) -> models.MarketInputGet:
     try:
         with get_connection() as con:
-            db_result = storage.update_market_input(con, market_input_id, market_input)
+            db_result = storage.update_market_input(con, project_id, vcs_id, market_input_id, market_input, user_id)
             con.commit()
             return db_result
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
+        )
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    except cvs_exceptions.MarketInputNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find market input with id={market_input_id}',
         )

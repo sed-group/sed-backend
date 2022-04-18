@@ -305,32 +305,40 @@ async def create_vcs_table(new_table: models.TablePost, vcs_id: int, project_id:
     summary='Creates a Design',
     response_model=models.Design
 )
-async def create_design(design_post: models.DesignPost, vcs_id: int, project_id: int, user: User = Depends(get_current_active_user)) -> models.Design:
+async def create_design(design_post: models.DesignPost, vcs_id: int, project_id: int,
+                        user: User = Depends(get_current_active_user)) -> models.Design:
     return impl.create_cvs_design(design_post, vcs_id, project_id, user.id)
+
 
 @router.get(
     '/project/{project_id}/vcs/{vcs_id}/design/get/all',
     summary='Returns all designs in project and vcs',
     response_model=ListChunk[models.Design],
 )
-async def get_all_designs(project_id: int, vcs_id: int, user: User = Depends(get_current_active_user)) -> ListChunk[models.Design]:
+async def get_all_designs(project_id: int, vcs_id: int, user: User = Depends(get_current_active_user)) -> ListChunk[
+                            models.Design]:
     return impl.get_all_design(project_id, vcs_id, user.id)
+
 
 @router.get(
     '/project/{project_id}/vcs/{vcs_id}/design/get/{design_id}',
     summary='Returns a design',
     response_model=models.Design
 )
-async def get_design(design_id: int, vcs_id: int, project_id: int, user: User=Depends(get_current_active_user)) -> models.Design:
+async def get_design(design_id: int, vcs_id: int, project_id: int,
+                     user: User = Depends(get_current_active_user)) -> models.Design:
     return impl.get_design(design_id, vcs_id, project_id, user.id)
+
 
 @router.delete(
     '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/delete',
     summary='Deletes a Design based on the design id. Also deletes all associated Quantified Objectives',
     response_model=bool
 )
-async def delete_design(design_id: int, project_id: int, vcs_id: int, user: User = Depends(get_current_active_user)) -> bool:
+async def delete_design(design_id: int, project_id: int, vcs_id: int,
+                        user: User = Depends(get_current_active_user)) -> bool:
     return impl.delete_design(design_id, vcs_id, project_id, user.id)
+
 
 @router.put(
     '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/edit',
@@ -338,55 +346,65 @@ async def delete_design(design_id: int, project_id: int, vcs_id: int, user: User
     response_model=models.Design
 )
 async def edit_design(design_id: int, project_id: int, vcs_id: int, design_post: models.DesignPost,
-                        user: User = Depends(get_current_active_user)) -> models.Design:
-                    return impl.edit_design(design_id, project_id, vcs_id, user.id, design_post)
+                      user: User = Depends(get_current_active_user)) -> models.Design:
+    return impl.edit_design(design_id, project_id, vcs_id, user.id, design_post)
+
 
 # ======================================================================================================================
 # Quantified Objectives
 # ======================================================================================================================
 
 @router.get(
-    '/project/{project_id}/design/{design_id}/quantified-objective/get/all',
+    '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/quantified_objective/get/all',
     summary='Fetches all quantified objectives for a given design',
     response_model=List[models.QuantifiedObjective]
 )
-async def get_all_quantified_objectives(project_id: int, design_id: int, 
-    user: User=Depends(get_current_active_user)) -> List[models.QuantifiedObjective]:
-    return impl.get_all_quantified_objectives(design_id, project_id, user.id)
+async def get_all_quantified_objectives(project_id: int, vcs_id: int, design_id: int,
+                                        user: User = Depends(get_current_active_user)) -> List[
+                                        models.QuantifiedObjective]:
+    return impl.get_all_quantified_objectives(design_id, project_id, vcs_id, user.id)
 
 
 @router.get(
-    '/project/{project_id}/design/{design_id}/value_driver/{value_driver_id}/quantified_objective/{QO_id}',
+    '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/value_driver/{value_driver_id}/quantified_objective/{qo_id}',
     summary='Fetches a quantified objective',
     response_model=models.QuantifiedObjective
 )
-async def get_quantified_objective(QO_id: int, design_id: int, value_driver_id: int,
-                    project_id: int, user: User= Depends(get_current_active_user)) -> models.QuantifiedObjective:
-    return impl.get_quantified_objective(QO_id, design_id, value_driver_id, project_id, user.id)
+async def get_quantified_objective(qo_id: int, design_id: int, value_driver_id: int,
+                                   project_id: int, vcs_id: int,
+                                   user: User = Depends(get_current_active_user)) -> models.QuantifiedObjective:
+    return impl.get_quantified_objective(qo_id, design_id, value_driver_id, project_id, vcs_id, user.id)
+
 
 @router.delete(
-    '/project/design/{design_id}/value_driver/{value_driver_id}/quantified-objective/{QO_id}',
+    '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/value_driver/{value_driver_id}/quantified-objective/{qo_id}',
     response_model=bool
 )
-async def delete_quantified_objective(QO_id: int, design_id: int, value_driver_id: int, user: User=Depends(get_current_active_user)) -> bool:
-    return impl.delete_quantified_objective(QO_id, value_driver_id, design_id, user.id)
+async def delete_quantified_objective(qo_id: int, design_id: int, value_driver_id: int, project_id: int, vcs_id: int,
+                                      user: User = Depends(get_current_active_user)) -> bool:
+    return impl.delete_quantified_objective(qo_id, value_driver_id, design_id, project_id, vcs_id, user.id)
+
 
 @router.put(
-    '/project/{project_id}/design/{design_id}/value_driver/{value_driver_id}/quantified-objective/{qo_id}',
+    '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/value_driver/{value_driver_id}/quantified-objective/{qo_id}',
     response_model=models.QuantifiedObjective
 )
-async def edit_quantified_objective(project_id: int, design_id: int, value_driver_id: int, qo_id: int, updated_qo: models.QuantifiedObjectivePost, user: User=Depends(get_current_active_user)) -> models.QuantifiedObjective:
-    return impl.edit_quantified_objective(qo_id, design_id, value_driver_id, project_id, updated_qo, user.id)
+async def edit_quantified_objective(project_id: int, vcs_id: int, design_id: int, value_driver_id: int, qo_id: int,
+                                    updated_qo: models.QuantifiedObjectivePost,
+                                    user: User = Depends(get_current_active_user)) -> models.QuantifiedObjective:
+    return impl.edit_quantified_objective(qo_id, design_id, value_driver_id, project_id, vcs_id, updated_qo, user.id)
 
 
 @router.post(
-    '/project/{project_id}/design/{design_id}/value_driver/{VD_id}/quantified-objective/create',
+    '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/value_driver/{value_driver_id}/quantified-objective/create',
     summary='Creates a quantified objective',
     response_model=models.QuantifiedObjective
 )
-async def create_quantified_objective(quantified_objective_post: models.QuantifiedObjectivePost, design_id: int, 
-    project_id: int, VD_id: int, user: User = Depends(get_current_active_user)) -> models.QuantifiedObjective:
-    return impl.create_quantified_objective(design_id, VD_id, quantified_objective_post, project_id, user.id)
+async def create_quantified_objective(quantified_objective_post: models.QuantifiedObjectivePost, design_id: int,
+                                      project_id: int, vcs_id: int, value_driver_id: int,
+                                      user: User = Depends(get_current_active_user)) -> models.QuantifiedObjective:
+    return impl.create_quantified_objective(design_id, value_driver_id, quantified_objective_post, project_id, vcs_id,
+                                            user.id)
 
 
 # ======================================================================================================================
@@ -408,8 +426,9 @@ async def create_bpmn_node(node: models.NodePost, project_id: int, vcs_id: int,
     summary='Deletes a node',
     response_model=bool,
 )
-async def delete_bpmn_node(node_id: int, project_id: int, vcs_id: int) -> bool:
-    return impl.delete_bpmn_node(node_id, project_id, vcs_id)
+async def delete_bpmn_node(node_id: int, project_id: int, vcs_id: int,
+                           user: User = Depends(get_current_active_user)) -> bool:
+    return impl.delete_bpmn_node(node_id, project_id, vcs_id, user.id)
 
 
 @router.put(
@@ -427,8 +446,9 @@ async def update_bpmn_node(node_id: int, node: models.NodePost, project_id: int,
     summary='Creates an edge',
     response_model=models.EdgeGet,
 )
-async def create_bpmn_edge(edge: models.EdgePost, project_id: int, vcs_id: int) -> models.EdgeGet:
-    return impl.create_bpmn_edge(edge, project_id, vcs_id)
+async def create_bpmn_edge(edge: models.EdgePost, project_id: int, vcs_id: int,
+                           user: User = Depends(get_current_active_user)) -> models.EdgeGet:
+    return impl.create_bpmn_edge(edge, project_id, vcs_id, user.id)
 
 
 @router.delete(
@@ -436,17 +456,19 @@ async def create_bpmn_edge(edge: models.EdgePost, project_id: int, vcs_id: int) 
     summary='Deletes an edge',
     response_model=bool,
 )
-async def delete_bpmn_edge(edge_id: int, project_id: int, vcs_id: int) -> bool:
-    return impl.delete_bpmn_edge(edge_id, project_id, vcs_id)
+async def delete_bpmn_edge(edge_id: int, project_id: int, vcs_id: int,
+                           user: User = Depends(get_current_active_user)) -> bool:
+    return impl.delete_bpmn_edge(edge_id, project_id, vcs_id, user.id)
 
 
 @router.put(
-    '/project/{project_id}/bpmn/{vcs_id}/edge/{edge_id}/edit',
+    '/project/{project_id}/vcs/{vcs_id}/edge/{edge_id}/edit',
     summary='Edit an edge',
     response_model=models.EdgeGet,
 )
-async def update_bpmn_edge(edge_id: int, edge: models.EdgePost, project_id: int, vcs_id: int) -> models.EdgeGet:
-    return impl.update_bpmn_edge(edge_id, edge, project_id, vcs_id)
+async def update_bpmn_edge(edge_id: int, edge: models.EdgePost, project_id: int, vcs_id: int,
+                           user: User = Depends(get_current_active_user)) -> models.EdgeGet:
+    return impl.update_bpmn_edge(edge_id, edge, project_id, vcs_id, user.id)
 
 
 @router.get(
@@ -473,27 +495,30 @@ async def update_bpmn(vcs_id: int, project_id: int, nodes: List[models.NodeGet],
 # ======================================================================================================================
 
 @router.get(
-    '/project/{project_id}/vcs/{vcs_id}/market-input/get/all',
+    '/project/{project_id}/vcs/{vcs_id}/market_input/get/all',
     summary='Get all market inputs',
     response_model=List[models.MarketInputGet],
 )
-async def get_all_market_input(vcs_id: int) -> List[models.MarketInputGet]:
-    return impl.get_all_market_inputs(vcs_id)
+async def get_all_market_input(project_id: int, vcs_id: int,
+                               user: User = Depends(get_current_active_user)) -> List[models.MarketInputGet]:
+    return impl.get_all_market_inputs(project_id, vcs_id, user.id)
 
 
 @router.post(
-    '/project/{project_id}/vcs/{vcs_id}/vcs_table_row/{vcs_table_row_id}/market-input/create',
+    '/project/{project_id}/vcs/{vcs_id}/vcs_table_row/{vcs_table_row_id}/market_input/create',
     summary='Creates a market input',
     response_model=models.MarketInputGet,
 )
-async def create_market_input(vcs_id: int, vcs_table_row_id: int, market_input: models.MarketInputPost) -> models.MarketInputGet:
-    return impl.create_market_input(vcs_id, vcs_table_row_id, market_input)
+async def create_market_input(project_id: int, vcs_id: int, vcs_table_row_id: int, market_input: models.MarketInputPost,
+                              user: User = Depends(get_current_active_user)) -> models.MarketInputGet:
+    return impl.create_market_input(project_id, vcs_id, vcs_table_row_id, market_input, user.id)
 
 
 @router.put(
-    '/project/{project_id}/vcs/{vcs_id}/market-input/{market_input_id}/edit',
+    '/project/{project_id}/vcs/{vcs_id}/market_input/{market_input_id}/edit',
     summary='Edit market input',
     response_model=models.MarketInputGet,
 )
-async def update_market_input(market_input_id: int, market_input: models.MarketInputPost) -> models.MarketInputGet:
-    return impl.update_market_input(market_input_id, market_input)
+async def update_market_input(project_id: int, vcs_id: int, market_input_id: int, market_input: models.MarketInputPost,
+                              user: User = Depends(get_current_active_user)) -> models.MarketInputGet:
+    return impl.update_market_input(project_id, vcs_id, market_input_id, market_input, user.id)
