@@ -920,9 +920,10 @@ def create_vcs_table(db_connection: PooledMySQLConnection, new_table: models.Tab
 # CVS Design
 # ======================================================================================================================
 
-def create_design(db_connection: PooledMySQLConnection, design_post: models.DesignPost, vcs_id: int, project_id: int, user_id: int) -> models.Design:
+def create_design(db_connection: PooledMySQLConnection, design_post: models.DesignPost, vcs_id: int, project_id: int,
+                  user_id: int) -> models.Design:
     logger.debug(f'creating design with vcs_id={vcs_id} and project_id={project_id}')
-    get_cvs_project(db_connection, project_id, user_id)
+    get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks: project, vcs and user
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
@@ -933,8 +934,12 @@ def create_design(db_connection: PooledMySQLConnection, design_post: models.Desi
 
     return get_design(db_connection, design_id, project_id, vcs_id, user_id)
 
+
 def get_design(db_connection: PooledMySQLConnection, design_id: int, project_id: int, vcs_id: int, user_id: int) -> models.Design:
     select_statement = MySQLStatementBuilder(db_connection)
+
+    get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks: project, vcs and user
+
     result = select_statement \
         .select(DESIGNS_TABLE, DESIGNS_COLUMNS)\
         .where('id = %s', [design_id])\
@@ -943,14 +948,15 @@ def get_design(db_connection: PooledMySQLConnection, design_id: int, project_id:
     if result is None:
         raise cvs_exceptions.DesignNotFoundException
 
-    if result['project'] != project_id:
-        raise auth_exceptions.UnauthorizedOperationException
-
     return populate_design(db_connection, result, project_id, vcs_id, user_id)
 
-def get_all_designs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id: int) -> ListChunk[models.Design]:
+
+def get_all_designs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
+                    user_id: int) -> ListChunk[models.Design]:
     logger.debug(f'Fetching all Designs with project_id={project_id}, vcs_id={vcs_id}')
-    
+
+    get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks: project, vcs and user
+
     select_statement = MySQLStatementBuilder(db_connection)
     results = select_statement \
         .select(DESIGNS_TABLE, DESIGNS_COLUMNS) \
@@ -970,9 +976,13 @@ def get_all_designs(db_connection: PooledMySQLConnection, project_id: int, vcs_i
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
     chunk = ListChunk[models.Design](chunk=design_list, length_total=result['count'])
     return chunk
-    
-def delete_design(db_connection: PooledMySQLConnection, design_id: int, project_id: int, vcs_id: int, user_id: int) -> bool:
+
+
+def delete_design(db_connection: PooledMySQLConnection, design_id: int, project_id: int, vcs_id: int,
+                  user_id: int) -> bool:
     logger.debug(f'Deleting design with id={design_id}')
+
+    get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks: project, vcs and user
 
     select_statement = MySQLStatementBuilder(db_connection)
     result = select_statement\
@@ -982,15 +992,8 @@ def delete_design(db_connection: PooledMySQLConnection, design_id: int, project_
     
     if result is None: 
         raise cvs_exceptions.DesignNotFoundException
-    
-    if result['project'] != project_id:
-        raise auth_exceptions.UnauthorizedOperationException
-    
-    if result['vcs'] != vcs_id:
-        raise auth_exceptions.UnauthorizedOperationException
-    
 
-    if(delete_all_quantified_objectives(db_connection, design_id)):
+    if delete_all_quantified_objectives(db_connection, design_id):
         pass
     else:
         raise cvs_exceptions.QuantifiedObjectivesNotDeleted
@@ -1000,13 +1003,17 @@ def delete_design(db_connection: PooledMySQLConnection, design_id: int, project_
         .where('id = %s', [design_id]) \
         .execute(return_affected_rows=True)
     
-    if rows ==0:
+    if rows == 0:
         raise cvs_exceptions.DesignNotFoundException
     
     return True
 
-def edit_design(db_connection: PooledMySQLConnection, design_id: int, project_id: int, vcs_id: int, user_id: int, updated_design: models.DesignPost) -> models.Design:
+
+def edit_design(db_connection: PooledMySQLConnection, design_id: int, project_id: int, vcs_id: int, user_id: int,
+                updated_design: models.DesignPost) -> models.Design:
     logger.debug(f'Editing Design with id = {design_id}')
+
+    get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks: project, vcs and user
 
     update_statement = MySQLStatementBuilder(db_connection)
     update_statement.update(
@@ -1020,7 +1027,8 @@ def edit_design(db_connection: PooledMySQLConnection, design_id: int, project_id
     if rows == 0:
         raise cvs_exceptions.DesignNotFoundException
     
-    return(get_design(db_connection, design_id, project_id, vcs_id, user_id))
+    return get_design(db_connection, design_id, project_id, vcs_id, user_id)
+
 
 def populate_design(db_connection: PooledMySQLConnection, db_result, project_id: int, vcs_id: int, user_id: int) -> models.Design:
     return models.Design(
