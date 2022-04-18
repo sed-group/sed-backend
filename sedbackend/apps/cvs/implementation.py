@@ -1,6 +1,5 @@
 from os import stat
 from statistics import mode
-from unittest import result
 from fastapi import HTTPException, status
 from typing import List
 
@@ -664,8 +663,6 @@ def edit_quantified_objective(quantified_objective_id: int, design_id: int, valu
         )
 
 
-
-
 # ======================================================================================================================
 # BPMN Table
 # ======================================================================================================================
@@ -676,6 +673,11 @@ def create_bpmn_node(node: models.NodePost, project_id: int, vcs_id: int, user_i
             result = storage.create_bpmn_node(con, node, project_id, vcs_id, user_id)
             con.commit()
             return result
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
     except cvs_exceptions.VCSNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -688,10 +690,10 @@ def create_bpmn_node(node: models.NodePost, project_id: int, vcs_id: int, user_i
         )
 
 
-def delete_bpmn_node(node_id: int, project_id: int, vcs_id: int) -> bool:
+def delete_bpmn_node(node_id: int, project_id: int, vcs_id: int, user_id: int) -> bool:
     try:
         with get_connection() as con:
-            result = storage.delete_bpmn_node(con, node_id)
+            result = storage.delete_bpmn_node(con, project_id, vcs_id, node_id, user_id)
             con.commit()
             return result
 
@@ -745,10 +747,10 @@ def update_bpmn_node(node_id: int, node: models.NodePost, project_id: int, vcs_i
         )
 
 
-def create_bpmn_edge(edge: models.EdgePost, project_id, vcs_id) -> models.EdgeGet:
+def create_bpmn_edge(edge: models.EdgePost, project_id, vcs_id, user_id) -> models.EdgeGet:
     try:
         with get_connection() as con:
-            result = storage.create_bpmn_edge(con, edge, vcs_id)
+            result = storage.create_bpmn_edge(con, edge, project_id, vcs_id, user_id)
             con.commit()
             return result
     except cvs_exceptions.VCSNotFoundException:
@@ -766,12 +768,17 @@ def create_bpmn_edge(edge: models.EdgePost, project_id, vcs_id) -> models.EdgeGe
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
+    except cvs_exceptions.NodeNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find node with id = {edge.from_node} or {edge.to_node}.',
+        )
 
 
-def delete_bpmn_edge(edge_id: int, project_id, vcs_id) -> bool:
+def delete_bpmn_edge(edge_id: int, project_id, vcs_id, user_id) -> bool:
     try:
         with get_connection() as con:
-            result = storage.delete_bpmn_edge(con, edge_id)
+            result = storage.delete_bpmn_edge(con, edge_id, project_id, vcs_id, user_id)
             con.commit()
             return result
 
@@ -802,10 +809,10 @@ def delete_bpmn_edge(edge_id: int, project_id, vcs_id) -> bool:
         )
 
 
-def update_bpmn_edge(edge_id: int, edge: models.EdgePost, project_id: int, vcs_id: int) -> models.EdgeGet:
+def update_bpmn_edge(edge_id: int, edge: models.EdgePost, project_id: int, vcs_id: int, user_id: int) -> models.EdgeGet:
     try:
         with get_connection() as con:
-            result = storage.update_bpmn_edge(con, edge_id, edge, vcs_id)
+            result = storage.update_bpmn_edge(con, edge_id, edge, project_id, vcs_id, user_id)
             con.commit()
             return result
     except cvs_exceptions.VCSNotFoundException:
@@ -828,6 +835,11 @@ def update_bpmn_edge(edge_id: int, edge: models.EdgePost, project_id: int, vcs_i
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find node with id={edge.from_node} or {edge.to_node}.',
         )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
 
 
 def get_bpmn(vcs_id: int, project_id: int, user_id: int) -> models.BPMNGet:
@@ -845,6 +857,11 @@ def get_bpmn(vcs_id: int, project_id: int, user_id: int) -> models.BPMNGet:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
+        )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
         )
 
 
@@ -864,6 +881,11 @@ def update_bpmn(vcs_id: int, project_id: int, user_id: int, nodes: List[models.N
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
+        )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
         )
         
 
