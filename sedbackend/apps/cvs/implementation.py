@@ -553,11 +553,33 @@ def create_cvs_design(design_post: models.DesignPost, vcs_id: int, project_id: i
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
+
 
 def get_all_design(project_id: int, vcs_id: int, user_id: int) -> ListChunk[models.Design]: 
+    try:
         with get_connection() as con:
             return storage.get_all_designs(con, project_id, vcs_id, user_id)
-           
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
+
 
 def get_design(design_id: int, vcs_id: int, project_id: int, user_id: int) -> models.Design:
     try:
@@ -569,6 +591,26 @@ def get_design(design_id: int, vcs_id: int, project_id: int, user_id: int) -> mo
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
+        )
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
+    except cvs_exceptions.DesignNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find design with id={design_id}.',
         )
 
 
@@ -583,6 +625,18 @@ def delete_design(design_id: int, vcs_id: int, project_id: int, user_id: int) ->
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}'
         )
+    except cvs_exceptions.DesignNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find design with id={design_id}.',
+        )
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
+
+
 def edit_design(design_id: int, project_id: int, vcs_id: int, user_id: int, updated_design: models.DesignPost) -> models.Design:
     try:
         with get_connection() as con:
@@ -593,6 +647,16 @@ def edit_design(design_id: int, project_id: int, vcs_id: int, user_id: int, upda
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}'
+        )
+    except cvs_exceptions.DesignNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find design with id={design_id}.',
+        )
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
         )
 
 
