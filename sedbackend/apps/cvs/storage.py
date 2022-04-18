@@ -52,6 +52,7 @@ CVS_BPMN_EDGES_COLUMNS = ['id', 'vcs_id', 'name', 'from_node', 'to_node', 'proba
 CVS_MARKET_INPUT_TABLE = 'cvs_market_input'
 CVS_MARKET_INPUT_COLUMN = ['id', 'vcs', 'table_row', 'time', 'cost', 'revenue']
 
+
 # ======================================================================================================================
 # CVS projects
 # ======================================================================================================================
@@ -400,7 +401,6 @@ def get_all_value_driver(db_connection: PooledMySQLConnection, project_id: int,
 
 def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int, project_id: int,
                      user_id: int) -> models.VCSValueDriver:
-
     logger.debug(f'Fetching value driver for project with id={value_driver_id}.')
 
     get_cvs_project(db_connection, project_id, user_id)  # perform checks: project and user
@@ -743,10 +743,12 @@ def populate_table_row(db_connection: PooledMySQLConnection, db_result, project_
 
     iso_process, subprocesss = None, None
     if db_result['iso_process_id'] is not None:
-        iso_process = get_iso_process(db_result['iso_process_id']) # Gets a iso process based on the id that we got from the DB result
+        iso_process = get_iso_process(
+            db_result['iso_process_id'])  # Gets a iso process based on the id that we got from the DB result
     elif db_result['subprocess_id'] is not None:
         try:
-            subprocesss = get_subprocess(db_connection, db_result['subprocess_id'], project_id, user_id) # Runs a new query on subprocess table based on the id that is in the result of the db query. Why is that not referenced as a foreign key and run as a single query here?????
+            subprocesss = get_subprocess(db_connection, db_result['subprocess_id'], project_id,
+                                         user_id)  # Runs a new query on subprocess table based on the id that is in the result of the db query. Why is that not referenced as a foreign key and run as a single query here?????
         except cvs_exceptions.SubprocessNotFoundException:
             # If a subprocess is deleted but used in a table, the subprocess wont be found and thus this exception
             pass
@@ -847,43 +849,44 @@ def create_vcs_table(db_connection: PooledMySQLConnection, new_table: models.Tab
 
         elif table_row.iso_process_id is not None:
             # iso process provided
-            
+
             iso_process = impl.get_iso_process(table_row.iso_process_id)
             iso_process_id = iso_process.id
             subprocess_id = None
             new_node = models.NodePost(
-                    name = iso_process.name,
-                    node_type = "process"
-                )
-            if(table_row.node_id is None):    
+                name=iso_process.name,
+                node_type="process"
+            )
+            if (table_row.node_id is None):
                 logger.debug(f'Creating new bpmn node')
                 node = create_bpmn_node(db_connection, new_node, project_id, vcs_id, user_id)
                 table_row.node_id = node.id
-            else: 
+            else:
                 update_bpmn_node(db_connection, table_row.node_id, new_node, project_id, vcs_id, user_id)
-            
+
         else:
             # subprocess provided
             iso_process_id = None
             subprocess = impl.get_subprocess(table_row.subprocess_id, project_id, user_id)
             subprocess_id = subprocess.id
             new_node = models.NodePost(
-                name = subprocess.name,
-                node_type = "process"
+                name=subprocess.name,
+                node_type="process"
             )
-            if(table_row.node_id is None):   
+            if (table_row.node_id is None):
                 node = create_bpmn_node(db_connection, new_node, project_id, vcs_id, user_id)
                 table_row.node_id = node.id
             else:
                 update_bpmn_node(db_connection, table_row.node_id, new_node, project_id, vcs_id, user_id)
-            
 
         # Further checking provided data
         stakeholder = table_row.stakeholder if table_row.stakeholder is not None else ''
         stakeholder_exp = table_row.stakeholder_expectations if table_row.stakeholder_expectations is not None else ''
 
-        columns = ['node_id', 'vcs_id', 'row_index', 'iso_process_id', 'subprocess_id', 'stakeholder', 'stakeholder_expectations']
-        values = [table_row.node_id, vcs_id, table_row.row_index, iso_process_id, subprocess_id, stakeholder, stakeholder_exp]
+        columns = ['node_id', 'vcs_id', 'row_index', 'iso_process_id', 'subprocess_id', 'stakeholder',
+                   'stakeholder_expectations']
+        values = [table_row.node_id, vcs_id, table_row.row_index, iso_process_id, subprocess_id, stakeholder,
+                  stakeholder_exp]
 
         insert_statement = MySQLStatementBuilder(db_connection)
         insert_statement \
@@ -935,16 +938,17 @@ def create_design(db_connection: PooledMySQLConnection, design_post: models.Desi
     return get_design(db_connection, design_id, project_id, vcs_id, user_id)
 
 
-def get_design(db_connection: PooledMySQLConnection, design_id: int, project_id: int, vcs_id: int, user_id: int) -> models.Design:
+def get_design(db_connection: PooledMySQLConnection, design_id: int, project_id: int, vcs_id: int,
+               user_id: int) -> models.Design:
     select_statement = MySQLStatementBuilder(db_connection)
 
     get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks: project, vcs and user
 
     result = select_statement \
-        .select(DESIGNS_TABLE, DESIGNS_COLUMNS)\
-        .where('id = %s', [design_id])\
+        .select(DESIGNS_TABLE, DESIGNS_COLUMNS) \
+        .where('id = %s', [design_id]) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-    
+
     if result is None:
         raise cvs_exceptions.DesignNotFoundException
 
@@ -969,7 +973,7 @@ def get_all_designs(db_connection: PooledMySQLConnection, project_id: int, vcs_i
     design_list = []
     for result in results:
         design_list.append(populate_design(db_connection, result, project_id, vcs_id, user_id))
-    
+
     count_statement = MySQLStatementBuilder(db_connection)
     result = count_statement.count(DESIGNS_TABLE) \
         .where('vcs = %s', [vcs_id]) \
@@ -985,12 +989,12 @@ def delete_design(db_connection: PooledMySQLConnection, design_id: int, project_
     get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks: project, vcs and user
 
     select_statement = MySQLStatementBuilder(db_connection)
-    result = select_statement\
-        .select(DESIGNS_TABLE, DESIGNS_COLUMNS)\
+    result = select_statement \
+        .select(DESIGNS_TABLE, DESIGNS_COLUMNS) \
         .where('id = %s', [design_id]) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-    
-    if result is None: 
+
+    if result is None:
         raise cvs_exceptions.DesignNotFoundException
 
     if delete_all_quantified_objectives(db_connection, design_id):
@@ -1002,10 +1006,10 @@ def delete_design(db_connection: PooledMySQLConnection, design_id: int, project_
     _, rows = delete_statement.delete(DESIGNS_TABLE) \
         .where('id = %s', [design_id]) \
         .execute(return_affected_rows=True)
-    
+
     if rows == 0:
         raise cvs_exceptions.DesignNotFoundException
-    
+
     return True
 
 
@@ -1026,11 +1030,12 @@ def edit_design(db_connection: PooledMySQLConnection, design_id: int, project_id
 
     if rows == 0:
         raise cvs_exceptions.DesignNotFoundException
-    
+
     return get_design(db_connection, design_id, project_id, vcs_id, user_id)
 
 
-def populate_design(db_connection: PooledMySQLConnection, db_result, project_id: int, vcs_id: int, user_id: int) -> models.Design:
+def populate_design(db_connection: PooledMySQLConnection, db_result, project_id: int, vcs_id: int,
+                    user_id: int) -> models.Design:
     return models.Design(
         id=db_result['id'],
         vcs=get_vcs(db_connection, vcs_id=vcs_id, project_id=project_id, user_id=user_id),
@@ -1038,58 +1043,19 @@ def populate_design(db_connection: PooledMySQLConnection, db_result, project_id:
         description=db_result['description']
     )
 
+
 # ======================================================================================================================
 # CVS Quantified Objectives
 # ======================================================================================================================
 
-def get_quantified_objective(db_connection: PooledMySQLConnection, quantified_objective_id: int, 
-    design_id: int, value_driver_id: int, project_id: int, user_id: int) -> models.QuantifiedObjective:
-    
-    select_statement = MySQLStatementBuilder(db_connection)
-    result = select_statement \
-    .select(QUANTIFIED_OBJECTIVE_TABLE, QUANTIFIED_OBJECTIVE_COLUMNS) \
-    .where('id = %s', [quantified_objective_id]) \
-    .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
-    if result is None:
-        raise cvs_exceptions.QuantifiedObjectiveNotFoundException
+def get_quantified_objective(db_connection: PooledMySQLConnection, quantified_objective_id: int,
+                             design_id: int, value_driver_id: int, project_id: int, vcs_id: int,
+                             user_id: int) -> models.QuantifiedObjective:
+    logger.debug(f'Get quantified objective with id = {design_id}')
 
-    return populate_QO(db_connection, result, design_id, value_driver_id, project_id, user_id)
-
-def get_all_quantified_objectives(db_connection: PooledMySQLConnection, design_id: int, 
-    project_id: int, user_id: int) -> List[models.QuantifiedObjective]:
-    
-    select_statement = MySQLStatementBuilder(db_connection)
-    res = select_statement \
-    .select(QUANTIFIED_OBJECTIVE_TABLE, QUANTIFIED_OBJECTIVE_COLUMNS) \
-    .where('design = %s', [design_id]) \
-    .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-
-    if res is None:
-        raise cvs_exceptions.QuantifiedObjectiveNotFoundException
-    
-    QO_list = []
-
-    for result in res:
-        QO_list.append(populate_QO(db_connection, result, design_id, result['value_driver'], project_id, user_id))
-
-    return QO_list
-
-
-def create_quantified_objective(db_connection: PooledMySQLConnection, design_id: int, value_driver_id: int, 
-    quantified_objective_post: models.QuantifiedObjectivePost, project_id: int, user_id: int) -> models.QuantifiedObjective:
-
-    insert_statement = MySQLStatementBuilder(db_connection)
-    insert_statement \
-        .insert(table=QUANTIFIED_OBJECTIVE_TABLE, columns=['design', 'value_driver', 'name', 'property', 'unit']) \
-        .set_values([design_id, value_driver_id, quantified_objective_post.name, quantified_objective_post.property, quantified_objective_post.unit]) \
-        .execute(fetch_type=FetchType.FETCH_NONE)
-    quantified_id = insert_statement.last_insert_id
-
-    return get_quantified_objective(db_connection, quantified_id, design_id, value_driver_id, project_id, user_id)
-    
-def delete_quantified_objective(db_connection: PooledMySQLConnection, quantified_objective_id: int, value_driver_id: int, design_id: int,
-    user_id: int) -> bool:
+    get_design(db_connection, design_id, project_id, vcs_id, user_id)  # perform checks
+    get_value_driver(db_connection, value_driver_id, project_id, user_id)
 
     select_statement = MySQLStatementBuilder(db_connection)
     result = select_statement \
@@ -1099,13 +1065,69 @@ def delete_quantified_objective(db_connection: PooledMySQLConnection, quantified
 
     if result is None:
         raise cvs_exceptions.QuantifiedObjectiveNotFoundException
-    
-    if result['design'] != design_id:
-        raise auth_exceptions.UnauthorizedOperationException
-    
-    if result['value_driver'] != value_driver_id:
-        raise auth_exceptions.UnauthorizedOperationException
-    
+
+    return populate_QO(db_connection, result, design_id, value_driver_id, project_id, user_id)
+
+
+def get_all_quantified_objectives(db_connection: PooledMySQLConnection, design_id: int,
+                                  project_id: int, vcs_id: int, user_id: int) -> List[models.QuantifiedObjective]:
+    logger.debug(f'Get all quantified objectives for design with id = {design_id}')
+
+    get_design(db_connection, design_id, project_id, vcs_id, user_id)  # perform checks
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    res = select_statement \
+        .select(QUANTIFIED_OBJECTIVE_TABLE, QUANTIFIED_OBJECTIVE_COLUMNS) \
+        .where('design = %s', [design_id]) \
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    if res is None:
+        raise cvs_exceptions.QuantifiedObjectiveNotFoundException
+
+    qo_list = []
+
+    for result in res:
+        qo_list.append(populate_QO(db_connection, result, design_id, result['value_driver'], project_id, user_id))
+
+    return qo_list
+
+
+def create_quantified_objective(db_connection: PooledMySQLConnection, design_id: int, value_driver_id: int,
+                                quantified_objective_post: models.QuantifiedObjectivePost, project_id: int, vcs_id: int,
+                                user_id: int) -> models.QuantifiedObjective:
+    logger.debug(f'Create quantified objective for design with id = {design_id}')
+
+    get_design(db_connection, design_id, project_id, vcs_id, user_id)
+    get_value_driver(db_connection, value_driver_id, project_id, user_id)
+
+    insert_statement = MySQLStatementBuilder(db_connection)
+    insert_statement \
+        .insert(table=QUANTIFIED_OBJECTIVE_TABLE, columns=['design', 'value_driver', 'name', 'property', 'unit']) \
+        .set_values([design_id, value_driver_id, quantified_objective_post.name, quantified_objective_post.property,
+                     quantified_objective_post.unit]) \
+        .execute(fetch_type=FetchType.FETCH_NONE)
+    quantified_id = insert_statement.last_insert_id
+
+    return get_quantified_objective(db_connection, quantified_id, design_id, value_driver_id, project_id, user_id)
+
+
+def delete_quantified_objective(db_connection: PooledMySQLConnection, quantified_objective_id: int,
+                                value_driver_id: int, design_id: int, project_id: int, vcs_id: int,
+                                user_id: int) -> bool:
+    logger.debug(f'Delete quantified objectives with id = {quantified_objective_id}')
+
+    get_design(db_connection, design_id, project_id, vcs_id, user_id)  # perform checks
+    get_value_driver(db_connection, value_driver_id, project_id, user_id)
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    result = select_statement \
+        .select(QUANTIFIED_OBJECTIVE_TABLE, QUANTIFIED_OBJECTIVE_COLUMNS) \
+        .where('id = %s', [quantified_objective_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if result is None:
+        raise cvs_exceptions.QuantifiedObjectiveNotFoundException
+
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement.delete(QUANTIFIED_OBJECTIVE_TABLE) \
         .where('id = %s', [quantified_objective_id]) \
@@ -1113,10 +1135,11 @@ def delete_quantified_objective(db_connection: PooledMySQLConnection, quantified
 
     if rows == 0:
         raise cvs_exceptions.QuantifiedObjectiveNotFoundException
-    
+
     return True
 
-# Do not open up for api. Should only be used when deleting other table entries. 
+
+# Do not open up for api. Should only be used when deleting other table entries.
 def delete_all_quantified_objectives(db_connection: PooledMySQLConnection, design_id: int) -> bool:
     logger.debug(f'Deleting all quantified objectives with design id = {design_id}')
 
@@ -1124,72 +1147,73 @@ def delete_all_quantified_objectives(db_connection: PooledMySQLConnection, desig
     _, rows = delete_statement.delete(QUANTIFIED_OBJECTIVE_TABLE) \
         .where('design = %s', [design_id]) \
         .execute(return_affected_rows=True)
-  
+
     return True
 
+
 def edit_quantified_objective(db_connection: PooledMySQLConnection, quantified_objective_id: int, design_id: int,
-    value_driver_id: int, updated_QO: models.QuantifiedObjectivePost, user_id: int, project_id: int) -> models.QuantifiedObjective:
+                              value_driver_id: int, updated_qo: models.QuantifiedObjectivePost, user_id: int,
+                              project_id: int, vcs_id: int) -> models.QuantifiedObjective:
     logger.debug(f'Editing quantified objective with id = {quantified_objective_id}')
+
+    get_design(db_connection, design_id, project_id, vcs_id, user_id)
+    get_value_driver(db_connection, value_driver_id, project_id, user_id)
 
     update_statement = MySQLStatementBuilder(db_connection)
     update_statement.update(
         table=QUANTIFIED_OBJECTIVE_TABLE,
         set_statement='name = %s, property = %s, unit = %s',
-        values=[updated_QO.name, updated_QO.property, updated_QO.unit]
+        values=[updated_qo.name, updated_qo.property, updated_qo.unit]
     )
     update_statement.where('id = %s', [quantified_objective_id])
     _, rows = update_statement.execute(return_affected_rows=True)
 
     if rows == 0:
         raise cvs_exceptions.QuantifiedObjectiveNotFoundException
-    
-    return(get_quantified_objective(db_connection, quantified_objective_id, design_id, value_driver_id, project_id, user_id))
+
+    return (get_quantified_objective(db_connection, quantified_objective_id, design_id, value_driver_id, project_id,
+                                     vcs_id, user_id))
 
 
-
-
-def populate_QO(db_connection: PooledMySQLConnection, db_result, 
-    design_id: int, value_driver_id: int, project_id: int, user_id: int) -> models.QuantifiedObjective:
+def populate_QO(db_connection: PooledMySQLConnection, db_result,
+                design_id: int, value_driver_id: int, project_id: int, user_id: int) -> models.QuantifiedObjective:
     return models.QuantifiedObjective(
-        id = db_result['id'],
-        design = design_id,
-        value_driver = get_value_driver(db_connection, value_driver_id, project_id, user_id),
+        id=db_result['id'],
+        design=design_id,
+        value_driver=get_value_driver(db_connection, value_driver_id, project_id, user_id),
         name=db_result['name'],
-        property = db_result['property'],
-        unit = db_result['unit'],
-        processes = get_table_rows_from_driver(db_connection, value_driver_id, project_id, user_id)
+        property=db_result['property'],
+        unit=db_result['unit'],
+        processes=get_table_rows_from_driver(db_connection, value_driver_id, project_id, user_id)
     )
 
 
-#TODO change the way that stakeholder needs and value drivers are stored. 
-def get_table_rows_from_driver(db_connection: PooledMySQLConnection, value_driver_id: int, 
-                project_id: int, user_id: int) -> List[models.TableRowGet]:
-    
+# TODO change the way that stakeholder needs and value drivers are stored.
+def get_table_rows_from_driver(db_connection: PooledMySQLConnection, value_driver_id: int,
+                               project_id: int, user_id: int) -> List[models.TableRowGet]:
     select_statement = MySQLStatementBuilder(db_connection)
     stakeholder_need_ids = select_statement \
-    .select(CVS_VCS_NEEDS_DRIVERS_MAP_TABLE, ['stakeholder_need_id']) \
-    .where('value_driver_id = %s', [value_driver_id]) \
-    .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+        .select(CVS_VCS_NEEDS_DRIVERS_MAP_TABLE, ['stakeholder_need_id']) \
+        .where('value_driver_id = %s', [value_driver_id]) \
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
     table_rows = []
     for need_id in stakeholder_need_ids:
         select_statement = MySQLStatementBuilder(db_connection)
         table_row_ids = select_statement \
-        .select(CVS_VCS_STAKEHOLDER_NEED_TABLE, ['table_row_id']) \
-        .where('id = %s', [need_id['stakeholder_need_id']]) \
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+            .select(CVS_VCS_STAKEHOLDER_NEED_TABLE, ['table_row_id']) \
+            .where('id = %s', [need_id['stakeholder_need_id']]) \
+            .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
-        
-        
         for table_row_id in table_row_ids:
             select_statement = MySQLStatementBuilder(db_connection)
             result = select_statement \
-            .select(CVS_VCS_TABLE_ROWS_TABLE, CVS_VCS_TABLE_ROWS_COLUMNS) \
-            .where('id = %s', [table_row_id['table_row_id']]) \
-            .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+                .select(CVS_VCS_TABLE_ROWS_TABLE, CVS_VCS_TABLE_ROWS_COLUMNS) \
+                .where('id = %s', [table_row_id['table_row_id']]) \
+                .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
             table_rows.append(populate_table_row(db_connection, result, project_id, user_id))
-    
+
     return table_rows
 
 

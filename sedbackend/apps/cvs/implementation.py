@@ -638,13 +638,6 @@ def delete_design(design_id: int, vcs_id: int, project_id: int, user_id: int) ->
         )
 
 
-    except cvs_exceptions.QuantifiedObjectivesNotDeleted:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not delete all Quantified Objective associated with design id={design_id}'
-        )
-
-
 def edit_design(design_id: int, project_id: int, vcs_id: int, user_id: int,
                 updated_design: models.DesignPost) -> models.Design:
     try:
@@ -673,10 +666,11 @@ def edit_design(design_id: int, project_id: int, vcs_id: int, user_id: int,
 # Quantified Objectives
 # ======================================================================================================================
 
-def get_all_quantified_objectives(design_id: int, project_id: int, user_id: int) -> List[models.QuantifiedObjective]:
+def get_all_quantified_objectives(design_id: int, project_id: int, vcs_id: int, user_id: int) -> List[
+                                    models.QuantifiedObjective]:
     try:
         with get_connection() as con:
-            res = storage.get_all_quantified_objectives(con, design_id, project_id, user_id)
+            res = storage.get_all_quantified_objectives(con, design_id, project_id, vcs_id, user_id)
             con.commit()
             return res
     except cvs_exceptions.QuantifiedObjectiveNotFoundException:
@@ -684,14 +678,29 @@ def get_all_quantified_objectives(design_id: int, project_id: int, user_id: int)
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find quantified objective'
         )
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}'
+        )
+    except cvs_exceptions.DesignNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find design with id={design_id}.',
+        )
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
 
 
 def get_quantified_objective(quantified_objective_id: int, design_id: int, value_driver_id: int,
-                             project_id: int, user_id: int) -> models.QuantifiedObjective:
+                             project_id: int, vcs_id: int, user_id: int) -> models.QuantifiedObjective:
     try:
         with get_connection() as con:
             res = storage.get_quantified_objective(con, quantified_objective_id, design_id, value_driver_id, project_id,
-                                                   user_id)
+                                                   vcs_id, user_id)
             con.commit()
             return res
     except cvs_exceptions.QuantifiedObjectiveNotFoundException:
@@ -699,15 +708,35 @@ def get_quantified_objective(quantified_objective_id: int, design_id: int, value
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find quantified objective with id={quantified_objective_id}'
         )
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}'
+        )
+    except cvs_exceptions.DesignNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find design with id={design_id}.',
+        )
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
+    except cvs_exceptions.ValueDriverNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Could not find value driver with id={value_driver_id}.',
+        )
 
 
 def create_quantified_objective(design_id: int, value_driver_id: int,
-                                quantified_objective_post: models.QuantifiedObjectivePost, project_id: int,
+                                quantified_objective_post: models.QuantifiedObjectivePost, project_id: int, vcs_id: int,
                                 user_id: int) -> models.QuantifiedObjective:
     try:
         with get_connection() as con:
             res = storage.create_quantified_objective(con, design_id, value_driver_id, quantified_objective_post,
-                                                      project_id, user_id)
+                                                      project_id, vcs_id, user_id)
             con.commit()
             return res
     except cvs_exceptions.CVSProjectNotFoundException:
@@ -715,13 +744,19 @@ def create_quantified_objective(design_id: int, value_driver_id: int,
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}'
         )
+    except cvs_exceptions.ValueDriverNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Could not find value driver with id={value_driver_id}.',
+        )
 
 
-def delete_quantified_objective(quantified_objective_id: int, value_driver_id: int, design_id: int,
-                                user_id: int) -> bool:
+def delete_quantified_objective(quantified_objective_id: int, value_driver_id: int, design_id: int, project_id: int,
+                                vcs_id: int, user_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.delete_quantified_objective(con, quantified_objective_id, value_driver_id, design_id, user_id)
+            res = storage.delete_quantified_objective(con, quantified_objective_id, value_driver_id, design_id,
+                                                      project_id, vcs_id, user_id)
             con.commit()
             return res
     except auth_ex.UnauthorizedOperationException:
@@ -734,20 +769,56 @@ def delete_quantified_objective(quantified_objective_id: int, value_driver_id: i
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Could not find quantified objective'
         )
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}'
+        )
+    except cvs_exceptions.DesignNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find design with id={design_id}.',
+        )
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
+    except cvs_exceptions.ValueDriverNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Could not find value driver with id={value_driver_id}.',
+        )
 
 
 def edit_quantified_objective(quantified_objective_id: int, design_id: int, value_driver_id: int, project_id: int,
-                              updated_QO: models.QuantifiedObjectivePost, user_id: int) -> models.QuantifiedObjective:
+                              vcs_id: int, updated_qo: models.QuantifiedObjectivePost,
+                              user_id: int) -> models.QuantifiedObjective:
     try:
         with get_connection() as con:
             res = storage.edit_quantified_objective(con, quantified_objective_id, design_id, value_driver_id,
-                                                    updated_QO, user_id, project_id)
+                                                    updated_qo, user_id, project_id, vcs_id)
             con.commit()
             return res
     except cvs_exceptions.QuantifiedObjectiveNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find quantified objective with id={quantified_objective_id}'
+        )
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}'
+        )
+    except cvs_exceptions.DesignNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find design with id={design_id}.',
+        )
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
         )
 
 
