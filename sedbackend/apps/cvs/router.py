@@ -408,8 +408,9 @@ async def create_bpmn_node(node: models.NodePost, project_id: int, vcs_id: int,
     summary='Deletes a node',
     response_model=bool,
 )
-async def delete_bpmn_node(node_id: int, project_id: int, vcs_id: int) -> bool:
-    return impl.delete_bpmn_node(node_id, project_id, vcs_id)
+async def delete_bpmn_node(node_id: int, project_id: int, vcs_id: int,
+                           user: User = Depends(get_current_active_user)) -> bool:
+    return impl.delete_bpmn_node(node_id, project_id, vcs_id, user.id)
 
 
 @router.put(
@@ -427,8 +428,9 @@ async def update_bpmn_node(node_id: int, node: models.NodePost, project_id: int,
     summary='Creates an edge',
     response_model=models.EdgeGet,
 )
-async def create_bpmn_edge(edge: models.EdgePost, project_id: int, vcs_id: int) -> models.EdgeGet:
-    return impl.create_bpmn_edge(edge, project_id, vcs_id)
+async def create_bpmn_edge(edge: models.EdgePost, project_id: int, vcs_id: int,
+                           user: User = Depends(get_current_active_user)) -> models.EdgeGet:
+    return impl.create_bpmn_edge(edge, project_id, vcs_id, user.id)
 
 
 @router.delete(
@@ -436,8 +438,9 @@ async def create_bpmn_edge(edge: models.EdgePost, project_id: int, vcs_id: int) 
     summary='Deletes an edge',
     response_model=bool,
 )
-async def delete_bpmn_edge(edge_id: int, project_id: int, vcs_id: int) -> bool:
-    return impl.delete_bpmn_edge(edge_id, project_id, vcs_id)
+async def delete_bpmn_edge(edge_id: int, project_id: int, vcs_id: int,
+                           user: User = Depends(get_current_active_user)) -> bool:
+    return impl.delete_bpmn_edge(edge_id, project_id, vcs_id, user.id)
 
 
 @router.put(
@@ -445,8 +448,9 @@ async def delete_bpmn_edge(edge_id: int, project_id: int, vcs_id: int) -> bool:
     summary='Edit an edge',
     response_model=models.EdgeGet,
 )
-async def update_bpmn_edge(edge_id: int, edge: models.EdgePost, project_id: int, vcs_id: int) -> models.EdgeGet:
-    return impl.update_bpmn_edge(edge_id, edge, project_id, vcs_id)
+async def update_bpmn_edge(edge_id: int, edge: models.EdgePost, project_id: int, vcs_id: int,
+                           user: User = Depends(get_current_active_user)) -> models.EdgeGet:
+    return impl.update_bpmn_edge(edge_id, edge, project_id, vcs_id, user.id)
 
 
 @router.get(
