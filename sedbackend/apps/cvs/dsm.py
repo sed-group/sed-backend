@@ -1,13 +1,16 @@
-import numpy as np
+from sedbackend.apps.cvs import models
+from typing import List
 
-def createDSM(BPMN):
-    nodes = BPMN.getNodes   # TODO Make sure the BPMN is fetched the right way
-    edges = BPMN.getEdges   # TODO Make sure the BPMN is fetched the right way
-    DSM = emptyDSM(len(nodes))
+def createDSM(bpmn: models.BPMNGet):
+    nodes: List[models.NodeGet]
+    edges: List[models.EdgeGet]
+    nodes = bpmn.nodes
+    edges = bpmn.edges
+    dsm = emptyDSM(len(nodes))
 
-    populateDSM(DSM, nodes, edges)
+    populateDSM(dsm, nodes, edges)
 
-    return DSM
+    return dsm
 
 def emptyDSM(length):
     matrix = [0] * length
@@ -15,8 +18,8 @@ def emptyDSM(length):
         matrix[i] = [0] * length
     return matrix
 
-def populateDSM(DSM, nodes, edges):
+def populateDSM(DSM, nodes: List[models.NodeGet], edges: List[models.EdgeGet]):
     for e in edges:
-        DSMfrom = nodes.index(e.fromNode)   # TODO Make sure the node id fetched the right way
-        DSMto = nodes.index(e.toNode)       # TODO Make sure the edge id is fetched the right way
-        DSM[DSMfrom][DSMto] = 1
+        DSMfrom = nodes.index(e.from_node)
+        DSMto = nodes.index(e.to_node)
+        DSM[DSMfrom][DSMto] = e.probability
