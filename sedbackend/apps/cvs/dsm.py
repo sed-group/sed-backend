@@ -1,8 +1,8 @@
 import numpy as np
 
 def createDSM(BPMN):
-    nodes = BPMN.getNodes
-    edges = BPMN.getEdges
+    nodes = BPMN.getNodes   # TODO Make sure the BPMN is fetched the right way
+    edges = BPMN.getEdges   # TODO Make sure the BPMN is fetched the right way
     DSM = emptyDSM(len(nodes))
 
     populateDSM(DSM, nodes, edges)
@@ -17,6 +17,6 @@ def emptyDSM(length):
 
 def populateDSM(DSM, nodes, edges):
     for e in edges:
-        DSMfrom = nodes.index(e.fromNode)
-        DSMto = nodes.index(e.toNode)
+        DSMfrom = nodes.index(e.fromNode)   # TODO Make sure the node id fetched the right way
+        DSMto = nodes.index(e.toNode)       # TODO Make sure the edge id is fetched the right way
         DSM[DSMfrom][DSMto] = 1
