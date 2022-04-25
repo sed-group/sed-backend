@@ -25,6 +25,8 @@ def seed_random_project(user_id):
     new_p = impl.create_cvs_project(p, user_id)
     return new_p
 
+def delete_project_by_id(project_id, user_id):
+    impl.delete_cvs_project(project_id, user_id)
 
 def random_VCS(name: str =None, description: str=None, year_from: int=None, year_to: int=None):
     if name is None:
