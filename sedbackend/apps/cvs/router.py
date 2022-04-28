@@ -366,7 +366,7 @@ async def get_all_quantified_objectives(project_id: int, vcs_id: int, design_id:
 
 
 @router.get(
-    '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/value_driver/{value_driver_id}/quantified_objective/{qo_id}',
+    '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/value_driver/{value_driver_id}/quantified_objective/get/{qo_id}',
     summary='Fetches a quantified objective',
     response_model=models.QuantifiedObjective
 )
@@ -377,7 +377,7 @@ async def get_quantified_objective(qo_id: int, design_id: int, value_driver_id: 
 
 
 @router.delete(
-    '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/value_driver/{value_driver_id}/quantified-objective/{qo_id}',
+    '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/value_driver/{value_driver_id}/quantified-objective/{qo_id}/delete',
     response_model=bool
 )
 async def delete_quantified_objective(qo_id: int, design_id: int, value_driver_id: int, project_id: int, vcs_id: int,
@@ -386,7 +386,7 @@ async def delete_quantified_objective(qo_id: int, design_id: int, value_driver_i
 
 
 @router.put(
-    '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/value_driver/{value_driver_id}/quantified-objective/{qo_id}',
+    '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/value_driver/{value_driver_id}/quantified-objective/{qo_id}/edit',
     response_model=models.QuantifiedObjective
 )
 async def edit_quantified_objective(project_id: int, vcs_id: int, design_id: int, value_driver_id: int, qo_id: int,
