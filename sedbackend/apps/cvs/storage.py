@@ -717,7 +717,8 @@ def get_vcs_table_row(db_connection: PooledMySQLConnection, node_id: int, projec
     if result is not None:
         return populate_table_row(db_connection, result, project_id, user_id)
     else:
-        raise cvs_exceptions.VCSTableRowNotFoundException
+       return None
+        # raise cvs_exceptions.VCSTableRowNotFoundException
 
 
 def get_all_table_rows(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int,
