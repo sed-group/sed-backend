@@ -317,3 +317,22 @@ class MarketInputPost(BaseModel):
     time: float
     cost: float
     revenue: float
+
+
+# ======================================================================================================================
+# Simulation
+# ======================================================================================================================
+
+class ProcessGet(BaseModel):
+    id: int
+    time: float
+    cost: float
+    revenue: float
+    name: str
+
+
+class ProcessGetPost(BaseModel):
+    time: float
+    cost: float
+    revenue: float
+    name: str
