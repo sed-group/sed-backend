@@ -126,7 +126,7 @@ class VCSTableRow(BaseModel):
     vcs: VCS
 
 
-class VCSTableRowPost(BaseModel):
+class VCSTableRowPost(BaseModel): # Never used anywhere
     node_id: Optional[int] = None
     stakeholder: str
     stakeholder_expectations: Optional[str] = None

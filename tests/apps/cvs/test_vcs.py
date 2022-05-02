@@ -150,4 +150,28 @@ def test_create_vcs_table(client, std_headers, std_user):
     assert res.status_code == 200
 
     #Cleanup
-    tu.delete_vcs_table_row_by_id()
+    tu.delete_vcs_table_row_by_id(res.json()["id"]) #Stub method only. Will not work
+    tu.delete_vd_by_id(value_driver.id, project.id, current_user.id)
+    tu.delete_VCS_with_ids([vcs.id], project.id, current_user.id)
+    tu.delete_project_by_id(project.id, current_user.id)
+
+def test_get_vcs_table(client, std_headers, std_user):
+    #setup
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    project = tu.seed_random_project(current_user.id)
+    vcs = tu.seed_random_vcs(current_user.id, project.id)
+
+    vcs_table_rows = tu.seed_vcs_table_rows(vcs.id, project.id, current_user.id, 2)
+
+    # Act
+    res = client.get(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/get/table')
+
+    # Assert
+    assert res.status_code == 200
+    #assert vcs_table_rows == res.json() #Nvm res.json will be a boolean
+
+    #Cleanup
+    #tu.delete_vcs_table_rows() #does not exist yet
+    tu.delete_VCS_with_ids([vcs.id], project.id, current_user.id)
+    tu.delete_project_by_id(project.id, current_user.id)
+    
