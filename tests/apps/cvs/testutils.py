@@ -67,3 +67,19 @@ def delete_VCSs(vcs_list: List[models.VCS], project_id, user_id):
 def delete_VCS_with_ids(vcs_id_list: List[int], project_id: int, user_id: int):
     for vcsid in vcs_id_list:
         impl.delete_vcs(vcsid, project_id, user_id)
+
+
+def random_value_driver(name: str=None, unit: str=None):
+    if name is None:
+        name = tu.random_str(5,50)
+
+def seed_random_value_driver(user_id, project_id):
+    value_driver = random_value_driver()
+    
+    new_value_driver = impl.create_value_driver(value_driver, project_id, user_id)
+
+    return new_value_driver
+
+def delete_vd_by_id(vd_id, project_id, user_id):
+    impl.delete_value_driver(vd_id, project_id, user_id)
+    
