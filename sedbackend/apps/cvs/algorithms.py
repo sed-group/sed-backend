@@ -1,6 +1,7 @@
-import simpy
 import matplotlib.pyplot as plt
 import random
+import sedbackend.apps.cvs.models as models
+from typing import List
 
 
 class Process:
@@ -55,3 +56,24 @@ _dsm = [[0, 1, 0, 0, 0],
 
 simulation = Simulation(_processes, _dsm)
 simulation.run(3000)
+
+# ======================================================================================================================
+# Simulation
+# ======================================================================================================================
+
+def run_simulation(designs: List[models.Design], dsm: List[List[int]], processes: List[models.ProcessGet],
+                   time_interval: float) -> List[float]:
+    process_index = 0
+    while self.time[-1] < time_interval:
+        process = self.processes[process_index]
+        row = self.dsm[process_index]
+        if self.time[-1] + process.time >= until:
+            break
+        self.time.append(process.time + self.time[-1])
+        self.cost.append(process.cost + self.cost[-1])
+        self.revenue.append(process.revenue + self.revenue[-1])
+        if all(c == 0 for c in row):
+            break
+        process_index = self.to_run(row)
+    sv = [self.revenue[i] - self.cost[i] for i in range(0, len(self.cost))]
+    return sv
