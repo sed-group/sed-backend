@@ -1,6 +1,8 @@
+from email import header
 import json
 from pydoc import cli
 import random as r
+from wsgiref import headers
 
 import pytest
 from fastapi import HTTPException
@@ -87,7 +89,7 @@ def test_delete_value_driver(client, std_headers, std_user):
     value_driver = tu.seed_random_value_driver(current_user.id, project.id) # Will currently break here because a value driver is created without unit
 
     #Act
-    res = client.delete(f'api/cvs/project/{project.id}/value-driver/{value_driver.id}/delete')
+    res = client.delete(f'/api/cvs/project/{project.id}/value-driver/{value_driver.id}/delete', headers=std_headers)
 
     #Assert
     assert res.status_code == 200
@@ -102,7 +104,7 @@ def test_get_value_driver(client, std_headers, std_user):
     value_driver = tu.seed_random_value_driver(current_user.id, project.id) # Will currently break here because a value driver is created without unit
 
     #Act
-    res = client.get(f'/api/cvs/project/{project.id}/value-driver/get/{value_driver.id}')
+    res = client.get(f'/api/cvs/project/{project.id}/value-driver/get/{value_driver.id}', headers=std_headers)
 
     #Assert
     assert res.status_code == 200
@@ -111,4 +113,3 @@ def test_get_value_driver(client, std_headers, std_user):
     tu.delete_vd_by_id(value_driver.id, project.id, current_user.id)
     tu.delete_project_by_id(project.id, current_user.id)
 
-    

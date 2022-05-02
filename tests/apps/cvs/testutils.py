@@ -73,6 +73,10 @@ def delete_VCS_with_ids(vcs_id_list: List[int], project_id: int, user_id: int):
 def random_value_driver(name: str=None, unit: str=None):
     if name is None:
         name = tu.random_str(5,50)
+    
+    return models.VCSValueDriverPost(
+        name=name
+    )
 
 def seed_random_value_driver(user_id, project_id):
     value_driver = random_value_driver()

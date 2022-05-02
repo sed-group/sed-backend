@@ -157,7 +157,7 @@ class VCSStakeholderNeedPost(BaseModel):
 class VCSValueDriver(BaseModel):
     id: int
     name: str
-    unit: str
+    unit: Optional[str] = None
     project: CVSProject
 
 

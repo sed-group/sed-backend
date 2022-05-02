@@ -150,7 +150,7 @@ def test_create_vcs_table(client, std_headers, std_user):
     assert res.status_code == 200
 
     #Cleanup
-    tu.delete_vcs_table_row_by_id(res.json()["id"]) #Stub method only. Will not work
+  #  tu.delete_vcs_table_row_by_id(res.json()["id"]) #Stub method only. Will not work
     tu.delete_vd_by_id(value_driver.id, project.id, current_user.id)
     tu.delete_VCS_with_ids([vcs.id], project.id, current_user.id)
     tu.delete_project_by_id(project.id, current_user.id)
