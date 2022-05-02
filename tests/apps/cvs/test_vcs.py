@@ -116,3 +116,38 @@ def test_delete_vcs(client, std_headers, std_user):
 
     #Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+
+def test_create_vcs_table(client, std_headers, std_user):
+    # Setup
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    project = tu.seed_random_project(current_user.id)
+    vcs = tu.seed_random_vcs(current_user.id, project.id)
+    value_driver = tu.seed_random_value_driver(current_user.id, project.id)
+
+    #Act
+    res = client.post(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/create/table',
+                    headers=std_headers,
+                    json = {
+                       "table_rows": [
+                            {
+                                "row_index": r.randint(1,10), #maybe works
+                                "iso_process_id": r.randint(1, 25),
+                                "stakeholder": testutils.random_str(5, 50),
+                                "stakeholder_expectations": testutils.random_str(5,50),
+                                "stakeholder_needs": [
+                                    {           
+                                        "need": testutils.random_str(5,50),
+                                        "rank_weight": r.randint(2, 30),
+                                        "value_driver_ids": [
+                                            value_driver.id
+                                        ]
+                                    }
+                                ]
+                            }
+                        ] 
+                    }) 
+    # Assert
+    assert res.status_code == 200
+
+    #Cleanup
+    tu.delete_vcs_table_row_by_id()

@@ -82,4 +82,3 @@ def seed_random_value_driver(user_id, project_id):
 
 def delete_vd_by_id(vd_id, project_id, user_id):
     impl.delete_value_driver(vd_id, project_id, user_id)
-    
