@@ -323,16 +323,15 @@ class MarketInputPost(BaseModel):
 # Simulation
 # ======================================================================================================================
 
-class ProcessGet(BaseModel):
-    id: int
+class Process(BaseModel):
+    name: str
     time: float
     cost: float
     revenue: float
-    name: str
 
 
-class ProcessGetPost(BaseModel):
-    time: float
-    cost: float
-    revenue: float
-    name: str
+class Simulation(BaseModel):
+    time_interval: List[float]
+    surplus_values: List[float]
+    processes: List[Process]
+

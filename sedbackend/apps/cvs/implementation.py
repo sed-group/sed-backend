@@ -9,6 +9,7 @@ import sedbackend.apps.core.authentication.exceptions as auth_ex
 from sedbackend.apps.core.db import get_connection
 import sedbackend.apps.cvs.models as models
 import sedbackend.apps.cvs.storage as storage
+import sedbackend.apps.cvs.algorithms as algorithms
 import sedbackend.apps.cvs.exceptions as cvs_exceptions
 
 
@@ -1140,4 +1141,30 @@ def update_market_input(project_id: int, vcs_id: int, market_input_id: int, mark
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find market input with id={market_input_id}',
+        )
+
+
+# ======================================================================================================================
+# Simulation
+# ======================================================================================================================
+
+def run_simulation(project_id: int, vcs_id: int, time_interval: float, user_id: int) -> models.Simulation:
+    try:
+        with get_connection() as con:
+            result = algorithms.run_simulation(con, project_id, vcs_id, user_id, time_interval)
+            return result
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
+    except cvs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={vcs_id}.',
+        )
+    except cvs_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
         )

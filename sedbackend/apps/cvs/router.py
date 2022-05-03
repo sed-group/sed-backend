@@ -522,3 +522,17 @@ async def create_market_input(project_id: int, vcs_id: int, vcs_table_row_id: in
 async def update_market_input(project_id: int, vcs_id: int, market_input_id: int, market_input: models.MarketInputPost,
                               user: User = Depends(get_current_active_user)) -> models.MarketInputGet:
     return impl.update_market_input(project_id, vcs_id, market_input_id, market_input, user.id)
+
+
+# ======================================================================================================================
+# Simulation
+# ======================================================================================================================
+
+@router.get(
+    '/project/{project_id}/vcs/{vcs_id}/simulation/run',
+    summary='Run simulation',
+    response_model=models.Simulation,
+)
+async def run_simulation(project_id: int, vcs_id: int, time_interval: float,
+                         user: User = Depends(get_current_active_user)) -> models.Simulation:
+    return impl.run_simulation(project_id, vcs_id, time_interval, user.id)
