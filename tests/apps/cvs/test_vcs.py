@@ -164,13 +164,13 @@ def test_get_vcs_table(client, std_headers, std_user):
     vcs_table_rows = tu.seed_vcs_table_rows(vcs.id, project.id, current_user.id, 2)
 
     # Act
-    res = client.get(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/get/table')
+    res = client.get(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/get/table', headers=std_headers)
 
     # Assert
     assert res.status_code == 200
     #assert vcs_table_rows == res.json() #Nvm res.json will be a boolean
 
-    #Cleanup
+    #Cleanup #Needs to clean everything associated with the vcs table rows
     #tu.delete_vcs_table_rows() #does not exist yet
     tu.delete_VCS_with_ids([vcs.id], project.id, current_user.id)
     tu.delete_project_by_id(project.id, current_user.id)
