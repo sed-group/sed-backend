@@ -77,3 +77,30 @@ def run_simulation(designs: List[models.Design], dsm: List[List[int]], processes
         process_index = self.to_run(row)
     sv = [self.revenue[i] - self.cost[i] for i in range(0, len(self.cost))]
     return sv
+
+# ======================================================================================================================
+# Design Structure Matrix
+# ======================================================================================================================
+
+def createDSM(bpmn: models.BPMNGet):
+    nodes: List[models.NodeGet]
+    edges: List[models.EdgeGet]
+    nodes = bpmn.nodes
+    edges = bpmn.edges
+    dsm = emptyDSM(len(nodes))
+
+    populateDSM(dsm, nodes, edges)
+
+    return dsm
+
+def emptyDSM(length):
+    matrix = [0] * length
+    for i in range(len(matrix)):
+        matrix[i] = [0] * length
+    return matrix
+
+def populateDSM(DSM, nodes: List[models.NodeGet], edges: List[models.EdgeGet]):
+    for e in edges:
+        DSMfrom = nodes.index(e.from_node)
+        DSMto = nodes.index(e.to_node)
+        DSM[DSMfrom][DSMto] = e.probability
