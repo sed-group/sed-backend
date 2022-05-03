@@ -107,18 +107,19 @@ def random_table_row(project_id,
     if row_index is None:
         row_index = random.randint(1,15)
     
-    if iso_process_id or subprocess_id is None:
-        if iso_process_id and subprocess_id is None:
-            if random.randint(1,2) == 2:
-                iso_process_id = random.randint(1, 25)
-            else:
-                subprocess = random_subprocess(project_id, user_id )
-                subprocess_id = subprocess.id
-    elif iso_process_id is not None and subprocess_id is not None:
-        if random.randint(1,2) == 2:
-            iso_process_id = None
-        else:
-            subprocess_id = None
+   # if iso_process_id or subprocess_id is None:
+   #     if iso_process_id and subprocess_id is None:
+    if random.randint(1,2) == 2:
+        iso_process_id = random.randint(1, 25)
+    else:
+        subprocess = random_subprocess(project_id, user_id )
+        subprocess_id = subprocess.id
+
+    #elif iso_process_id is not None and subprocess_id is not None:
+    #    if random.randint(1,2) == 2:
+    #        iso_process_id = None
+    #    else:
+    #        subprocess_id = None
     
     if stakeholder is None:
         stakeholder = tu.random_str(5, 50)
@@ -130,6 +131,7 @@ def random_table_row(project_id,
         stakeholder_needs = seed_stakeholder_needs(user_id, project_id)
     
     table_row = models.TableRowPost(
+        node_id=node_id,
         row_index=row_index,
         iso_process_id=iso_process_id,
         subprocess_id=subprocess_id,
@@ -146,9 +148,10 @@ def random_subprocess(project_id, user_id, name: str = None, parent_process_id: 
     if parent_process_id is None:
         parent_process_id = random.randint(1,25)
     
-    subprocess = models.VCSSubprocessPost(
+    subprocess = models.VCSSubprocessPost( #TODO fix bug here. Cannot create subprocess without order_index
         name=name,
-        parent_process_id=parent_process_id
+        parent_process_id=parent_process_id,
+        order_index=random.randint(1,10)
     )
     subp = impl.create_subprocess(subprocess, project_id, user_id)
     return subp
@@ -184,7 +187,7 @@ def seed_stakeholder_needs(user_id, project_id, amount=10) -> List[models.Stakeh
     
     return stakeholder_needs
 
-def seed_vcs_table_rows(vcs_id, project_id, user_id, amount=15) -> List[models.TableRowPost]:
+def seed_vcs_table_rows(vcs_id, project_id, user_id, amount=15) -> models.TablePost:
     table_rows =  []
     while (amount > 0):
     
@@ -192,6 +195,9 @@ def seed_vcs_table_rows(vcs_id, project_id, user_id, amount=15) -> List[models.T
         table_rows.append(tr)
         amount = amount - 1
     
-    vcs_table = impl.create_vcs_table(table_rows, vcs_id, project_id, user_id)
-    return vcs_table
+    table_model = models.TablePost(
+        table_rows=table_rows
+    )
+    vcs_table = impl.create_vcs_table(table_model, vcs_id, project_id, user_id)
+    return table_model
 
