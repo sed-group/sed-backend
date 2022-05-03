@@ -216,3 +216,25 @@ def seed_vcs_table_rows(vcs_id, project_id, user_id, amount=15) -> models.TableP
     vcs_table = impl.create_vcs_table(table_model, vcs_id, project_id, user_id)
     return table_model
 
+def random_design(name: str = None, description: str = None):
+    if name is None:
+        name = tu.random_str(5,50)
+    
+    if description is None:
+        description = tu.random_str(20,200)
+    
+    return models.DesignPost(
+        name=name,
+        description=description
+    )
+
+def seed_random_designs(project_id, vcs_id, user_id, amount = 15):
+    design_list = []
+    while amount > 0:
+        design = random_design()
+        design_list.append(impl.create_cvs_design(design, vcs_id, project_id, user_id))
+    
+    return design_list
+
+def delete_design_by_id(design_id, project_id, vcs_id, user_id):
+    impl.delete_design(design_id, vcs_id, project_id, user_id)
