@@ -1394,10 +1394,10 @@ def update_bpmn_edge(db_connection: PooledMySQLConnection, edge_id: int, edge: m
     return get_bpmn_edge(db_connection, edge_id)
 
 
-def get_bpmn(db_connection: PooledMySQLConnection, vcs_id: int, project_id, user_id) -> models.BPMNGet:
+def get_bpmn(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int, user_id: int) -> models.BPMNGet:
     logger.debug(f'Get BPMN for vcs with id={vcs_id}.')
 
-    get_vcs(db_connection, project_id, vcs_id, user_id)  # perform checks: project, vcs and user
+    get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks: project, vcs and user
 
     where_statement = f'vcs_id = %s'
     where_values = [vcs_id]
