@@ -156,6 +156,21 @@ def random_subprocess(project_id, user_id, name: str = None, parent_process_id: 
     subp = impl.create_subprocess(subprocess, project_id, user_id)
     return subp
 
+def seed_random_subprocesses(project_id, user_id, amount = 15):
+    subprocess_list = []
+    while amount > 0:
+        subprocess_list.append(random_subprocess(project_id, user_id))
+        amount = amount - 1
+    
+    return subprocess_list
+
+def delete_subprocess_by_id(subprocess_id, project_id, user_id):
+    impl.delete_subprocess(subprocess_id, project_id, user_id)
+
+def delete_subprocesses(subprocesses, project_id, user_id):
+    for subp in subprocesses:
+        delete_subprocess_by_id(subp.id, project_id, user_id)
+
 def random_stakeholder_need(user_id,
                         project_id,
                         need: str = None,
