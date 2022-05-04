@@ -331,7 +331,7 @@ class Process(BaseModel):
 
 
 class Simulation(BaseModel):
-    time_interval: List[float]
+    time: List[float]
     surplus_values: List[float]
     processes: List[Process]
 

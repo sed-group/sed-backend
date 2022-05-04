@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import random
 import sedbackend.apps.cvs.models as models
 from typing import List
@@ -6,21 +5,15 @@ from mysql.connector.pooling import PooledMySQLConnection
 import sedbackend.apps.cvs.storage as storage
 
 
-class Process:
-    def __init__(self, time, cost, revenue, name):
-        self.revenue = revenue
-        self.cost = cost
-        self.time = time
-        self.name = name
-
+# ======================================================================================================================
+# Simulation
+# ======================================================================================================================
 
 class Simulation:
     def __init__(self, db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id: int):
-        self.bpmn = storage.get_bpmn(db_connection, vcs_id, project_id, user_id)
-        self.nodes: List[models.NodeGet] = self.bpmn.nodes
-        self.edges: List[models.EdgeGet] = self.bpmn.edges
-        self.dsm = createDSM(self.nodes, self.edges)
-        self.processes = populate_processes(db_connection, self.nodes)
+        self.vcs_table_rows = storage.get_all_table_rows(db_connection, vcs_id, project_id, user_id)
+        self.processes = populate_processes(db_connection, self.vcs_table_rows)
+        self.dsm = create_dsm(self.processes)
         self.time = [0.0]
         self.cost = [0.0]
         self.revenue = [0.0]
@@ -42,36 +35,13 @@ class Simulation:
                 break
             process_index = self.to_run(row)
         sv = [self.revenue[i] - self.cost[i] for i in range(0, len(self.cost))]
-        #plt.plot(self.time, sv)
-        #plt.show()
 
         return models.Simulation(
-            time_interval=self.time,
+            time=self.time,
             surplus_values=sv,
             processes=self.processes
         )
 
-
-p1 = Process(10, 100, 0, "Design")
-p2 = Process(40, 80, 0, "Manufacturing")
-p3 = Process(200, 20, 600, "Operation")
-p4 = Process(10, 40, 0, "Maintenance")
-p5 = Process(1, 0, 0, "Disposal")
-
-_processes = [p1, p2, p3, p4, p5]
-_dsm = [[0, 1, 0, 0, 0],
-        [0, 0, 1, 0, 0],
-        [0, 0, 0, 1, 0],
-        [0, 0, 0.8, 0, 0.2],
-        [0, 0, 0, 0, 0]]
-
-#simulation = Simulation(_processes, _dsm)
-#simulation.run(3000)
-
-
-# ======================================================================================================================
-# Simulation
-# ======================================================================================================================
 
 def run_simulation(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id: int,
                    time_interval: float) -> models.Simulation:
@@ -80,18 +50,25 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, vcs_id
     return result
 
 
-def populate_processes(db_connection: PooledMySQLConnection, nodes: List[models.NodeGet]) -> List[models.Process]:
+def populate_processes(db_connection: PooledMySQLConnection,
+                       vcs_table_rows: List[models.TableRowGet]) -> List[models.Process]:
     processes = []
 
-    for node in nodes:
-        mi = storage.get_market_input(db_connection, node.vcs_table_row.id)
-        process = models.Process(
-            name=node.name,
-            time=mi.time,
-            cost=mi.cost,
-            revenue=mi.revenue
-        )
-        processes.append(process)
+    for table_row in vcs_table_rows:
+        if table_row.iso_process.category == 'Technical processes':
+            if table_row.iso_process.name:
+                name = table_row.iso_process.name
+            else:
+                name = table_row.subprocess
+
+            mi = storage.get_market_input(db_connection, table_row.id)
+            process = models.Process(
+                name=name,
+                time=mi.time,
+                cost=mi.cost,
+                revenue=mi.revenue
+            )
+            processes.append(process)
 
     return processes
 
@@ -100,21 +77,22 @@ def populate_processes(db_connection: PooledMySQLConnection, nodes: List[models.
 # Design Structure Matrix
 # ======================================================================================================================
 
-def createDSM(nodes: List[models.NodeGet], edges: List[models.EdgeGet]):
-    dsm = emptyDSM(len(nodes))
-
-    populateDSM(dsm, nodes, edges)
-
+def create_dsm(processes: List[models.Process]):
+    dsm = empty_dsm(len(processes))
+    # populateDSM(dsm, nodes, edges)
+    for i in range(len(dsm) - 1):
+        dsm[i][i + 1] = 1.0
     return dsm
 
-def emptyDSM(length):
+
+def empty_dsm(length):
     matrix = [0] * length
     for i in range(len(matrix)):
         matrix[i] = [0] * length
     return matrix
 
-def populateDSM(DSM, nodes: List[models.NodeGet], edges: List[models.EdgeGet]):
-    for e in edges:
-        DSMfrom = nodes.index(e.from_node)
-        DSMto = nodes.index(e.to_node)
-        DSM[DSMfrom][DSMto] = e.probability
+# def populateDSM(DSM, nodes: List[models.NodeGet], edges: List[models.EdgeGet]):
+#   for e in edges:
+#        DSMfrom = nodes.index(e.from_node)
+#        DSMto = nodes.index(e.to_node)
+#        DSM[DSMfrom][DSMto] = e.probability

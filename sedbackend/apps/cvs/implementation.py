@@ -1115,11 +1115,11 @@ def create_market_input(project_id: int, vcs_id: int, table_row_id: int, market_
         )
 
 
-def update_market_input(project_id: int, vcs_id: int, market_input_id: int, market_input: models.MarketInputPost,
+def update_market_input(project_id: int, vcs_id: int, table_row_id: int, market_input: models.MarketInputPost,
                         user_id) -> models.MarketInputGet:
     try:
         with get_connection() as con:
-            db_result = storage.update_market_input(con, project_id, vcs_id, market_input_id, market_input, user_id)
+            db_result = storage.update_market_input(con, project_id, vcs_id, table_row_id, market_input, user_id)
             con.commit()
             return db_result
     except auth_ex.UnauthorizedOperationException:
@@ -1140,7 +1140,7 @@ def update_market_input(project_id: int, vcs_id: int, market_input_id: int, mark
     except cvs_exceptions.MarketInputNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find market input with id={market_input_id}',
+            detail=f'Could not find market input with id={table_row_id}',
         )
 
 
@@ -1167,4 +1167,9 @@ def run_simulation(project_id: int, vcs_id: int, time_interval: float, user_id: 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
+        )
+    except cvs_exceptions.MarketInputNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find market input',
         )

@@ -1467,13 +1467,13 @@ def populate_market_input(db_result) -> models.MarketInputGet:
     )
 
 
-def get_market_input(db_connection: PooledMySQLConnection, market_input_id: int) -> models.MarketInputGet:
-    logger.debug(f'Fetching market input with id={market_input_id}.')
+def get_market_input(db_connection: PooledMySQLConnection, table_row_id: int) -> models.MarketInputGet:
+    logger.debug(f'Fetching market input with table row id={table_row_id}.')
 
     select_statement = MySQLStatementBuilder(db_connection)
     db_result = select_statement \
         .select(CVS_MARKET_INPUT_TABLE, CVS_MARKET_INPUT_COLUMN) \
-        .where('id = %s', [market_input_id]) \
+        .where('table_row = %s', [table_row_id]) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if db_result is None:
@@ -1523,16 +1523,16 @@ def create_market_input(db_connection: PooledMySQLConnection, project_id: int, v
         .execute(fetch_type=FetchType.FETCH_NONE)
     market_input_id = insert_statement.last_insert_id
 
-    return get_market_input(db_connection, market_input_id)
+    return get_market_input(db_connection, table_row_id)
 
 
-def update_market_input(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, market_input_id: int,
+def update_market_input(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, table_row_id: int,
                         market_input: models.MarketInputPost, user_id: int) -> models.MarketInputGet:
-    logger.debug(f'Update market input with id={market_input_id}')
+    logger.debug(f'Update market input with id={table_row_id}')
 
     get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks for existing project, vcs and correct user
 
-    get_market_input(db_connection, market_input_id)  # Performs necessary checks
+    get_market_input(db_connection, table_row_id)  # Performs necessary checks
 
     update_statement = MySQLStatementBuilder(db_connection)
     update_statement.update(
@@ -1540,7 +1540,7 @@ def update_market_input(db_connection: PooledMySQLConnection, project_id: int, v
         set_statement='time = %s, cost = %s, revenue = %s',
         values=[market_input.time, market_input.cost, market_input.revenue],
     )
-    update_statement.where('id = %s', [market_input_id])
+    update_statement.where('table_row = %s', [table_row_id])
     _, rows = update_statement.execute(return_affected_rows=True)
 
-    return get_market_input(db_connection, market_input_id)
+    return get_market_input(db_connection, table_row_id)
