@@ -230,7 +230,7 @@ class Design(BaseModel):
     id: int
     vcs: VCS
     name: str
-    description: str
+    description: Optional[str] = None
 
 class DesignPost(BaseModel):
     name: str

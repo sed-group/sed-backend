@@ -233,8 +233,13 @@ def seed_random_designs(project_id, vcs_id, user_id, amount = 15):
     while amount > 0:
         design = random_design()
         design_list.append(impl.create_cvs_design(design, vcs_id, project_id, user_id))
-    
+        amount = amount - 1
+        
     return design_list
+
+def delete_designs(designs, project_id, vcs_id, user_id):
+    for design in designs:
+        delete_design_by_id(design.id, project_id, vcs_id, user_id)
 
 def delete_design_by_id(design_id, project_id, vcs_id, user_id):
     impl.delete_design(design_id, vcs_id, project_id, user_id)
