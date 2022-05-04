@@ -278,3 +278,27 @@ def delete_quantified_objectives(quantified_objectives, project_id, vcs_id, desi
     for qo in quantified_objectives:
         delete_qo_and_vd(qo.id, qo.value_driver.id, project_id, vcs_id, design_id, user_id)
 
+# ======================================================================================================================
+# BPMN Table
+# ======================================================================================================================
+
+def random_node(name: str = None, node_type: str = None, pos_x: int = None, pos_y: int = None):
+    if name is None:
+        name = tu.random_str(5,50)
+    if node_type is None:
+        if random.randint(1,2) == 2:
+            node_type = tu.random_str(5,50)
+        else:
+            node_type = "process"
+    if pos_x is None:
+        pos_x = random.randint(1, 400)
+    if pos_y is None:
+        pos_y = random.randint(1, 400)
+    
+    return models.NodePost(
+        name=name,
+        node_type=node_type,
+        pos_x=pos_x,
+        pos_y=pos_y
+    )
+
