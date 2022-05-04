@@ -184,4 +184,81 @@ def test_get_all_quantified_objectives(client, std_headers, std_user):
     tu.delete_VCS_with_ids([vcs.id], project.id, current_user.id)
     tu.delete_project_by_id(project.id, current_user.id)
 
+def test_delete_quantified_objective(client, std_headers, std_user):
+    #setup
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    project = tu.seed_random_project(current_user.id)
+    vcs = tu.seed_random_vcs(current_user.id, project.id)
+    design = tu.seed_random_designs(project.id, vcs.id, current_user.id, 1)[0]
+    qo = tu.seed_random_quantified_objectives(project.id, vcs.id, design.id, current_user.id, 1)[0]
+
+    #Act
+    res = client.delete(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design/{design.id}/value_driver/{qo.value_driver.id}/quantified-objective/{qo.id}/delete', headers=std_headers)
+
+    
+    #Assert
+    assert res.status_code == 200
+    assert impl.get_value_driver(qo.value_driver.id, project.id, current_user.id) is not None
+
+    #Cleanup
+    tu.delete_vd_by_id(qo.value_driver.id, project.id, current_user.id)
+    tu.delete_design_by_id(design.id, project.id, vcs.id, current_user.id)
+    tu.delete_VCS_with_ids([vcs.id], project.id, current_user.id)
+    tu.delete_project_by_id(project.id, current_user.id)
+
+def test_edit_quantified_objective(client, std_headers, std_user):
+    #setup
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    project = tu.seed_random_project(current_user.id)
+    vcs = tu.seed_random_vcs(current_user.id, project.id)
+    design = tu.seed_random_designs(project.id, vcs.id, current_user.id, 1)[0]
+    qo = tu.seed_random_quantified_objectives(project.id, vcs.id, design.id, current_user.id, 1)[0]
+
+    #Act
+    new_name = testutils.random_str(5,50)
+    new_unit = testutils.random_str(5,50)
+    res = client.put(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design/{design.id}/value_driver/{qo.value_driver.id}/quantified-objective/{qo.id}/edit',
+                    headers=std_headers,
+                    json={
+                        "name": new_name,
+                        "property": qo.property,
+                        "unit": new_unit
+                    })
+    
+    #Assert
+    assert res.status_code == 200
+    assert res.json()["name"] == new_name
+    assert res.json()["property"]  == qo.property
+    assert res.json()["unit"] != qo.unit
+
+    #Cleanup
+    tu.delete_qo_and_vd(qo.id, qo.value_driver.id, project.id, vcs.id, design.id, current_user.id)
+    tu.delete_design_by_id(design.id, project.id, vcs.id, current_user.id)
+    tu.delete_VCS_with_ids([vcs.id], project.id, current_user.id)
+    tu.delete_project_by_id(project.id, current_user.id)
+
+
+def test_delete_qo_when_design_deleted(client, std_headers, std_user):
+    #Setup
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    project = tu.seed_random_project(current_user.id)
+    vcs = tu.seed_random_vcs(current_user.id, project.id)
+    design = tu.seed_random_designs(project.id, vcs.id, current_user.id, 1)[0]
+    quantified_objectives = tu.seed_random_quantified_objectives(project.id, vcs.id, design.id, current_user.id, 10)
+
+    #Act
+    res = client.delete(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design/{design.id}/delete', headers=std_headers)
+
+    #Assert
+    assert res.status_code == 200
+    not_exist = False
+    try:
+        impl.get_all_quantified_objectives(design.id, project.id, vcs.id, current_user.id)
+    except(HTTPException):
+        not_exist = True
+    assert not_exist
+
+    #Cleanup 
+    tu.delete_VCS_with_ids([vcs.id], project.id, current_user.id)
+    tu.delete_project_by_id(project.id, current_user.id)
 
