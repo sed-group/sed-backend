@@ -317,3 +317,21 @@ class MarketInputPost(BaseModel):
     time: float
     cost: float
     revenue: float
+
+
+# ======================================================================================================================
+# Simulation
+# ======================================================================================================================
+
+class Process(BaseModel):
+    name: str
+    time: float
+    cost: float
+    revenue: float
+
+
+class Simulation(BaseModel):
+    time: List[float]
+    surplus_values: List[float]
+    processes: List[Process]
+
