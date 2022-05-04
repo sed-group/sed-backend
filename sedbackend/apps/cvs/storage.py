@@ -1109,7 +1109,7 @@ def create_quantified_objective(db_connection: PooledMySQLConnection, design_id:
         .execute(fetch_type=FetchType.FETCH_NONE)
     quantified_id = insert_statement.last_insert_id
 
-    return get_quantified_objective(db_connection, quantified_id, design_id, value_driver_id, project_id, user_id)
+    return get_quantified_objective(db_connection, quantified_id, design_id, value_driver_id, project_id, vcs_id, user_id)
 
 
 def delete_quantified_objective(db_connection: PooledMySQLConnection, quantified_objective_id: int,

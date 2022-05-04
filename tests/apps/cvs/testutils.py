@@ -234,7 +234,7 @@ def seed_random_designs(project_id, vcs_id, user_id, amount = 15):
         design = random_design()
         design_list.append(impl.create_cvs_design(design, vcs_id, project_id, user_id))
         amount = amount - 1
-        
+
     return design_list
 
 def delete_designs(designs, project_id, vcs_id, user_id):
@@ -243,3 +243,38 @@ def delete_designs(designs, project_id, vcs_id, user_id):
 
 def delete_design_by_id(design_id, project_id, vcs_id, user_id):
     impl.delete_design(design_id, vcs_id, project_id, user_id)
+
+def random_quantified_objective(name: str =None, property: float =None, unit: str=None):
+    if name is None:
+        name = tu.random_str(5,50)
+    
+    if property is None:
+        property = random.uniform(0.5, 100)
+    
+    if unit is None: 
+        unit = tu.random_str(5,50)
+    
+    return models.QuantifiedObjectivePost(
+        name=name,
+        property=property,
+        unit=unit
+    )
+
+def seed_random_quantified_objectives(project_id, vcs_id, design_id, user_id, amount = 15):
+    quantified_objectives = []
+    while amount > 0:
+        vd = seed_random_value_driver(user_id, project_id)
+        qo = random_quantified_objective()
+        quantified_objectives.append(impl.create_quantified_objective(design_id, vd.id, qo, project_id, vcs_id, user_id))
+        amount = amount - 1
+    
+    return quantified_objectives
+
+def delete_qo_and_vd(qo_id, vd_id, project_id, vcs_id, design_id, user_id):
+    impl.delete_quantified_objective(qo_id, vd_id, design_id, project_id, vcs_id, user_id)
+    impl.delete_value_driver(vd_id, project_id, user_id)
+
+def delete_quantified_objectives(quantified_objectives, project_id, vcs_id, design_id, user_id):
+    for qo in quantified_objectives:
+        delete_qo_and_vd(qo.id, qo.value_driver.id, project_id, vcs_id, design_id, user_id)
+
