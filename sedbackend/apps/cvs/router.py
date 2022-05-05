@@ -505,23 +505,23 @@ async def get_all_market_input(project_id: int, vcs_id: int,
 
 
 @router.post(
-    '/project/{project_id}/vcs/{vcs_id}/vcs_table_row/{vcs_table_row_id}/market_input/create',
+    '/project/{project_id}/vcs/{vcs_id}/bpmn-node/{node_id}/market_input/create',
     summary='Creates a market input',
     response_model=models.MarketInputGet,
 )
-async def create_market_input(project_id: int, vcs_id: int, vcs_table_row_id: int, market_input: models.MarketInputPost,
+async def create_market_input(project_id: int, vcs_id: int, node_id: int, market_input: models.MarketInputPost,
                               user: User = Depends(get_current_active_user)) -> models.MarketInputGet:
-    return impl.create_market_input(project_id, vcs_id, vcs_table_row_id, market_input, user.id)
+    return impl.create_market_input(project_id, vcs_id, node_id, market_input, user.id)
 
 
 @router.put(
-    '/project/{project_id}/vcs/{vcs_id}/vcs_table_row/{vcs_table_row_id}/market_input/edit',
+    '/project/{project_id}/vcs/{vcs_id}/bpmn-node/{node_id}/market_input/edit',
     summary='Edit market input',
     response_model=models.MarketInputGet,
 )
-async def update_market_input(project_id: int, vcs_id: int, vcs_table_row_id: int, market_input: models.MarketInputPost,
+async def update_market_input(project_id: int, vcs_id: int, node_id: int, market_input: models.MarketInputPost,
                               user: User = Depends(get_current_active_user)) -> models.MarketInputGet:
-    return impl.update_market_input(project_id, vcs_id, vcs_table_row_id, market_input, user.id)
+    return impl.update_market_input(project_id, vcs_id, node_id, market_input, user.id)
 
 
 # ======================================================================================================================
