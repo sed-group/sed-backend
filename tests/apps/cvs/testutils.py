@@ -302,3 +302,52 @@ def random_node(name: str = None, node_type: str = None, pos_x: int = None, pos_
         pos_y=pos_y
     )
 
+def random_edge(from_node: int, to_node: int, name: str = None, probability: int = None):
+    if name is None:
+        name = tu.random_str(5, 50)
+    
+    if probability is None:
+        probability = 1
+    
+    return models.EdgePost(
+        name=name,
+        from_node=from_node,
+        to_node=to_node,
+        probability=probability
+    )
+
+def seed_random_bpmn_edges(project_id, vcs_id, user_id, bpmn_nodes, amount = 15):
+    bpmn_edges = []
+    outgoing_nodes = bpmn_nodes
+    incoming_nodes = bpmn_nodes
+
+    while amount > 0:
+        from_node = outgoing_nodes.pop(random.randint(0, len(outgoing_nodes) - 1))
+        to_node = incoming_nodes.pop(random.randint(0, len(incoming_nodes) - 1))
+
+        new_edge = random_edge(from_node.id, to_node.id)
+        bpmn_edges.append(impl.create_bpmn_edge(new_edge, project_id, vcs_id, user_id))
+        amount = amount - 1
+    return bpmn_edges
+
+def seed_random_bpmn_nodes(project_id, vcs_id, user_id, amount = 15):
+    bpmn_nodes = []
+    while amount > 0:
+        node = random_node()
+        bpmn_nodes.append(impl.create_bpmn_node(node, project_id, vcs_id, user_id))
+        amount = amount - 1
+    return bpmn_nodes
+
+def delete_bpmn_node(node_id, project_id, vcs_id, user_id):
+    impl.delete_bpmn_node(node_id, project_id, vcs_id, user_id)
+
+def delete_bpmn_edge(edge_id, project_id, vcs_id, user_id):
+    impl.delete_bpmn_edge(edge_id, project_id, vcs_id, user_id)
+
+def delete_multiple_bpmn_edges(edges, project_id, vcs_id, user_id):
+    for edge in edges:
+        delete_bpmn_edge(edge.id, project_id, vcs_id, user_id)
+
+def delete_multiple_bpmn_nodes(nodes, project_id, vcs_id, user_id):
+    for node in nodes:
+        delete_bpmn_node(node.id, project_id, vcs_id, user_id)

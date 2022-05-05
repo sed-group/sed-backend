@@ -701,6 +701,7 @@ def get_vcs_table(db_connection: PooledMySQLConnection, vcs_id: int, project_id:
     return models.TableGet(table_rows=table_rows)
 
 
+#TODO rewrite below
 # DO NOT USE IN API CALLS
 def get_vcs_table_row(db_connection: PooledMySQLConnection, node_id: int, project_id: int, vcs_id: int,
                       user_id: int) -> models.TableRowGet or None:
