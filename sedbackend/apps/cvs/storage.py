@@ -701,6 +701,7 @@ def get_vcs_table(db_connection: PooledMySQLConnection, vcs_id: int, project_id:
     return models.TableGet(table_rows=table_rows)
 
 
+#TODO rewrite below
 # DO NOT USE IN API CALLS
 def get_vcs_table_row(db_connection: PooledMySQLConnection, node_id: int, project_id: int, vcs_id: int,
                       user_id: int) -> models.TableRowGet or None:
@@ -1109,7 +1110,7 @@ def create_quantified_objective(db_connection: PooledMySQLConnection, design_id:
         .execute(fetch_type=FetchType.FETCH_NONE)
     quantified_id = insert_statement.last_insert_id
 
-    return get_quantified_objective(db_connection, quantified_id, design_id, value_driver_id, project_id, user_id)
+    return get_quantified_objective(db_connection, quantified_id, design_id, value_driver_id, project_id, vcs_id, user_id)
 
 
 def delete_quantified_objective(db_connection: PooledMySQLConnection, quantified_objective_id: int,
@@ -1286,7 +1287,7 @@ def create_bpmn_node(db_connection: PooledMySQLConnection, node: models.NodePost
 def delete_bpmn_node(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, node_id: int, user_id) -> bool:
     logger.debug(f'Delete node with id={node_id}.')
 
-    get_vcs(db_connection, project_id, vcs_id, user_id)
+    get_vcs(db_connection, vcs_id, project_id, user_id)
     get_bpmn_node(db_connection, node_id, project_id, user_id)
 
     delete_statement = MySQLStatementBuilder(db_connection)
@@ -1339,7 +1340,7 @@ def create_bpmn_edge(db_connection: PooledMySQLConnection, edge: models.EdgePost
                      vcs_id: int, user_id: int) -> models.EdgeGet:
     logger.debug(f'Creating an edge for vcs with id={vcs_id}.')
 
-    get_vcs(db_connection, project_id, vcs_id, user_id)  # perform checks: project, vcs and user
+    get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks: project, vcs and user
     get_bpmn_node(db_connection, edge.from_node, project_id, user_id)
     get_bpmn_node(db_connection, edge.to_node, project_id, user_id)
 
@@ -1359,7 +1360,7 @@ def create_bpmn_edge(db_connection: PooledMySQLConnection, edge: models.EdgePost
 def delete_bpmn_edge(db_connection: PooledMySQLConnection, edge_id: int, project_id: int, vcs_id: int,
                      user_id: int) -> bool:
     get_bpmn_edge(db_connection, edge_id)  # checks
-    get_vcs(db_connection, project_id, vcs_id, user_id)  # perform checks: project, vcs and user
+    get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks: project, vcs and user
 
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement.delete(CVS_BPMN_EDGES_TABLE) \
@@ -1378,7 +1379,7 @@ def update_bpmn_edge(db_connection: PooledMySQLConnection, edge_id: int, edge: m
 
     # Performs necessary checks
     get_bpmn_edge(db_connection, edge_id)
-    get_vcs(db_connection, project_id, vcs_id, user_id)
+    get_vcs(db_connection, vcs_id, project_id, user_id)
     get_bpmn_node(db_connection, edge.from_node, project_id, user_id)
     get_bpmn_node(db_connection, edge.to_node, project_id, user_id)
 
@@ -1427,7 +1428,7 @@ def update_bpmn(db_connection: PooledMySQLConnection, vcs_id: int, project_id: i
                 nodes: List[models.NodeGet], edges: List[models.EdgeGet]) -> models.BPMNGet:
     logger.debug(f'Updating bpmn with vcs id={vcs_id}.')
 
-    get_vcs(db_connection, project_id, vcs_id, user_id)  # perform checks: project, vcs and user
+    get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks: project, vcs and user
 
     for node in nodes:
         new_node = models.NodePost(
