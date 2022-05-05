@@ -39,6 +39,7 @@ def test_get_bpmn(client, std_headers, std_user):
     project = tu.seed_random_project(current_user.id)
     vcs = tu.seed_random_vcs(current_user.id, project.id)
     bpmn_nodes = tu.seed_random_bpmn_nodes(project.id, vcs.id, current_user.id, 20)
+    amount_of_bpmn_nodes = len(bpmn_nodes)
     bpmn_edges = tu.seed_random_bpmn_edges(project.id, vcs.id, current_user.id, bpmn_nodes, 6)
 
     #Act
@@ -46,7 +47,7 @@ def test_get_bpmn(client, std_headers, std_user):
     
     #Assert
     assert res.status_code == 200
-    assert len(res.json()["nodes"]) == len(bpmn_nodes)
+    assert len(res.json()["nodes"]) == amount_of_bpmn_nodes
     assert len(res.json()["edges"]) == len(bpmn_edges)
 
     #Cleanup

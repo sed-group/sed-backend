@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_bpmn_nodes`
         ON DELETE CASCADE
 );
 
-
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_bpmn_edges`
 (
     `id`                INT NOT NULL AUTO_INCREMENT,
