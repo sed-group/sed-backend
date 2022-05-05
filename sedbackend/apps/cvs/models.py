@@ -33,7 +33,7 @@ class CVSProjectPost(BaseModel):
 class VCS(BaseModel):
     id: int
     name: str
-    description: str
+    description: Optional[str] = None
     project: CVSProject
     datetime_created: datetime
     year_from: int
@@ -43,8 +43,8 @@ class VCS(BaseModel):
 class VCSPost(BaseModel):
     name: str
     description: Optional[str] = None
-    year_from: Optional[int] = None
-    year_to: Optional[int] = None
+    year_from: int
+    year_to: int
 
 
 # ======================================================================================================================
