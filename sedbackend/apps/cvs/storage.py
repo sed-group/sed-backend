@@ -50,7 +50,7 @@ CVS_BPMN_EDGES_TABLE = 'cvs_bpmn_edges'
 CVS_BPMN_EDGES_COLUMNS = ['id', 'vcs_id', 'name', 'from_node', 'to_node', 'probability']
 
 CVS_MARKET_INPUT_TABLE = 'cvs_market_input'
-CVS_MARKET_INPUT_COLUMN = ['id', 'vcs', 'table_row', 'time', 'cost', 'revenue']
+CVS_MARKET_INPUT_COLUMN = ['id', 'vcs', 'node', 'time', 'cost', 'revenue']
 
 
 # ======================================================================================================================
@@ -1461,20 +1461,20 @@ def populate_market_input(db_result) -> models.MarketInputGet:
     return models.MarketInputGet(
         id=db_result['id'],
         vcs=db_result['vcs'],
-        table_row=db_result['table_row'],
+        node=db_result['node'],
         time=db_result['time'],
         cost=db_result['cost'],
         revenue=db_result['revenue']
     )
 
 
-def get_market_input(db_connection: PooledMySQLConnection, table_row_id: int) -> models.MarketInputGet:
-    logger.debug(f'Fetching market input with table row id={table_row_id}.')
+def get_market_input(db_connection: PooledMySQLConnection, node_id: int) -> models.MarketInputGet:
+    logger.debug(f'Fetching market input with node id={node_id}.')
 
     select_statement = MySQLStatementBuilder(db_connection)
     db_result = select_statement \
         .select(CVS_MARKET_INPUT_TABLE, CVS_MARKET_INPUT_COLUMN) \
-        .where('table_row = %s', [table_row_id]) \
+        .where('node = %s', [node_id]) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if db_result is None:
@@ -1499,23 +1499,23 @@ def get_all_market_input(db_connection: PooledMySQLConnection, project_id: int, 
     return [populate_market_input(db_result) for db_result in results]
 
 
-def create_market_input(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, table_row_id: int,
+def create_market_input(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, node_id: int,
                         market_input: models.MarketInputPost, user_id: int) -> models.MarketInputGet:
     logger.debug(f'Create market input')
 
     select_statement = MySQLStatementBuilder(db_connection)
     db_result = select_statement \
         .select(CVS_MARKET_INPUT_TABLE, CVS_MARKET_INPUT_COLUMN) \
-        .where('table_row = %s', [table_row_id]) \
+        .where('node = %s', [node_id]) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if db_result is not None:
         raise cvs_exceptions.MarketInputAlreadyExistException
 
-    get_vcs_table_row(db_connection, table_row_id, project_id, vcs_id, user_id)  # perform checks
+    get_vcs_table_row(db_connection, node_id, project_id, vcs_id, user_id)  # perform checks
 
-    columns = ['vcs', 'table_row', 'time', 'cost', 'revenue']
-    values = [vcs_id, table_row_id, market_input.time, market_input.cost, market_input.revenue]
+    columns = ['vcs', 'node', 'time', 'cost', 'revenue']
+    values = [vcs_id, node_id, market_input.time, market_input.cost, market_input.revenue]
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
@@ -1524,16 +1524,16 @@ def create_market_input(db_connection: PooledMySQLConnection, project_id: int, v
         .execute(fetch_type=FetchType.FETCH_NONE)
     market_input_id = insert_statement.last_insert_id
 
-    return get_market_input(db_connection, table_row_id)
+    return get_market_input(db_connection, node_id)
 
 
-def update_market_input(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, table_row_id: int,
+def update_market_input(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, node_id: int,
                         market_input: models.MarketInputPost, user_id: int) -> models.MarketInputGet:
-    logger.debug(f'Update market input with id={table_row_id}')
+    logger.debug(f'Update market input with id={node_id}')
 
     get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks for existing project, vcs and correct user
 
-    get_market_input(db_connection, table_row_id)  # Performs necessary checks
+    get_market_input(db_connection, node_id)  # Performs necessary checks
 
     update_statement = MySQLStatementBuilder(db_connection)
     update_statement.update(
@@ -1541,7 +1541,7 @@ def update_market_input(db_connection: PooledMySQLConnection, project_id: int, v
         set_statement='time = %s, cost = %s, revenue = %s',
         values=[market_input.time, market_input.cost, market_input.revenue],
     )
-    update_statement.where('table_row = %s', [table_row_id])
+    update_statement.where('node = %s', [node_id])
     _, rows = update_statement.execute(return_affected_rows=True)
 
-    return get_market_input(db_connection, table_row_id)
+    return get_market_input(db_connection, node_id)

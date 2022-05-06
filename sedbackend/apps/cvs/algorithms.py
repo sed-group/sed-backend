@@ -60,8 +60,8 @@ def populate_processes(db_connection: PooledMySQLConnection,
                 name = table_row.iso_process.name
             else:
                 name = table_row.subprocess
-
-            mi = storage.get_market_input(db_connection, table_row.id)
+            
+            mi = storage.get_market_input(db_connection, table_row.node_id)
             process = models.Process(
                 name=name,
                 time=mi.time,
