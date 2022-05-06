@@ -224,7 +224,7 @@ async def get_all_subprocess(project_id: int,
 @router.get(
     '/project/{project_id}/subprocess/get/{subprocess_id}',
     summary='Returns a subprocess',
-    response_model=ListChunk[models.VCSSubprocess],
+    response_model=models.VCSSubprocess,
 )
 async def get_subprocess(subprocess_id: int, project_id: int,
                          user: User = Depends(get_current_active_user)) -> models.VCSSubprocess:
