@@ -108,7 +108,7 @@ class VCSSubprocess(BaseModel):
 class VCSSubprocessPost(BaseModel):
     name: str
     parent_process_id: int
-    order_index: Optional[int] = None
+    order_index: int
 
 
 # ======================================================================================================================
