@@ -40,7 +40,7 @@ def test_get_subprocess(client, std_headers, std_user):
 
     #Assert
     assert res.status_code == 200
-    assert subprocess.parent_process == res.json()["chunk"]["parent_process"]["id"]
+    assert subprocess.parent_process.id == res.json()["parent_process"]["id"]
 
     #cleanup
     tu.delete_subprocess_by_id(subprocess.id, project.id, current_user.id)
@@ -60,7 +60,8 @@ def test_edit_subprocess(client, std_headers, std_user):
                     headers=std_headers,
                     json={
                         "name": new_name,
-                        "parent_process_id": new_parent_process
+                        "parent_process_id": new_parent_process,
+                        "order_index": r.randint(1,10)
                     }) #Might break because no order_index is supplied
     
     #Assert

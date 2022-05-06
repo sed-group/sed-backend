@@ -76,32 +76,6 @@ def test_edit_vcs(client, std_headers, std_user):
     tu.delete_VCS_with_ids([res.json()["id"]],project.id, current_user.id)
     tu.delete_project_by_id(project.id, current_user.id)
 
-def test_edit_vcs_same_years(client, std_headers, std_user):
-     # Setup
-    current_user = impl_users.impl_get_user_with_username(std_user.username)
-    project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(current_user.id, project.id)
-
-    #Act
-    new_name = testutils.random_str(5,50)
-    new_desc = testutils.random_str(20,200)
-    res = client.put(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/edit',
-                    headers=std_headers,
-                    json= {
-                        "name": new_name,
-                        "description": new_desc
-                    })
-    
-    # assert
-    assert res.status_code == 200
-    assert res.json()["name"] == new_name
-    assert res.json()["description"] == new_desc
-    assert vcs.year_from == res.json()["year_from"]
-
-    #Cleanup 
-    tu.delete_VCS_with_ids([res.json()["id"]],project.id, current_user.id)
-    tu.delete_project_by_id(project.id, current_user.id)
-
 def test_delete_vcs(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
