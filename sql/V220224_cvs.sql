@@ -38,7 +38,8 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcss`
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_table_rows`
 (
-    `id`                       INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `id`                       INT UNSIGNED AUTO_INCREMENT,
+    `node_id`                  INT UNSIGNED NOT NULL,
     `row_index`                INT UNSIGNED NOT NULL,
     `vcs_id`                   INT UNSIGNED NOT NULL,
     `iso_process_id`           INT UNSIGNED NULL DEFAULT NULL,
@@ -51,6 +52,10 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_table_rows`
     CONSTRAINT `vcs_cascade`
         FOREIGN KEY (`vcs_id`)
             REFERENCES `seddb`.`cvs_vcss` (`id`)
+            ON DELETE CASCADE
+            ON UPDATE NO ACTION,
+        FOREIGN KEY(`node_id`)
+            REFERENCES `seddb`.`cvs_bpmn_nodes`(`id`)
             ON DELETE CASCADE
             ON UPDATE NO ACTION
 );
@@ -75,6 +80,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_value_drivers`
 (
     `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `name`       VARCHAR(255) NOT NULL,
+    `unit`       VARCHAR(63) DEFAULT NULL,
     `project_id` INT UNSIGNED NOT NULL,
     PRIMARY KEY (`id`),
     UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
@@ -85,6 +91,8 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_value_drivers`
             ON DELETE CASCADE
             ON UPDATE NO ACTION
 );
+
+
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_needs_divers_map`
 (

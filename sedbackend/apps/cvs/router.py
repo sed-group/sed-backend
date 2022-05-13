@@ -1,3 +1,5 @@
+from operator import mod
+from urllib import response
 from sedbackend.libs.datastructures.pagination import ListChunk
 
 from fastapi import APIRouter, Depends
@@ -103,7 +105,7 @@ async def get_segment_vcs(project_id: int, index: int, segment_length: int,
 @router.get(
     '/project/{project_id}/vcs/get/{vcs_id}',
     summary='Returns a VCS',
-    response_model=ListChunk[models.VCS],
+    response_model=models.VCS,
 )
 async def get_vcs(vcs_id: int, project_id: int, user: User = Depends(get_current_active_user)) -> models.VCS:
     return impl.get_vcs(vcs_id, project_id, user.id)
@@ -155,7 +157,7 @@ async def get_all_value_driver(project_id: int,
 @router.get(
     '/project/{project_id}/value-driver/get/{value_driver_id}',
     summary='Returns a value driver',
-    response_model=ListChunk[models.VCSValueDriver],
+    response_model=models.VCSValueDriver,
 )
 async def get_value_driver(value_driver_id: int, project_id: int,
                            user: User = Depends(get_current_active_user)) -> models.VCSValueDriver:
@@ -222,7 +224,7 @@ async def get_all_subprocess(project_id: int,
 @router.get(
     '/project/{project_id}/subprocess/get/{subprocess_id}',
     summary='Returns a subprocess',
-    response_model=ListChunk[models.VCSSubprocess],
+    response_model=models.VCSSubprocess,
 )
 async def get_subprocess(subprocess_id: int, project_id: int,
                          user: User = Depends(get_current_active_user)) -> models.VCSSubprocess:
@@ -292,3 +294,245 @@ async def create_vcs_table(new_table: models.TablePost, vcs_id: int, project_id:
                            user: User = Depends(get_current_active_user)) -> bool:
     impl.get_vcs(vcs_id, project_id, user.id)  # perfoms necessary controls
     return impl.create_vcs_table(new_table, vcs_id, project_id, user.id)
+
+
+# ======================================================================================================================
+# CVS Design
+# ======================================================================================================================
+
+@router.post(
+    '/project/{project_id}/vcs/{vcs_id}/design/create',
+    summary='Creates a Design',
+    response_model=models.Design
+)
+async def create_design(design_post: models.DesignPost, vcs_id: int, project_id: int,
+                        user: User = Depends(get_current_active_user)) -> models.Design:
+    return impl.create_cvs_design(design_post, vcs_id, project_id, user.id)
+
+
+@router.get(
+    '/project/{project_id}/vcs/{vcs_id}/design/get/all',
+    summary='Returns all designs in project and vcs',
+    response_model=ListChunk[models.Design],
+)
+async def get_all_designs(project_id: int, vcs_id: int, user: User = Depends(get_current_active_user)) -> ListChunk[
+                            models.Design]:
+    return impl.get_all_design(project_id, vcs_id, user.id)
+
+
+@router.get(
+    '/project/{project_id}/vcs/{vcs_id}/design/get/{design_id}',
+    summary='Returns a design',
+    response_model=models.Design
+)
+async def get_design(design_id: int, vcs_id: int, project_id: int,
+                     user: User = Depends(get_current_active_user)) -> models.Design:
+    return impl.get_design(design_id, vcs_id, project_id, user.id)
+
+
+@router.delete(
+    '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/delete',
+    summary='Deletes a Design based on the design id. Also deletes all associated Quantified Objectives',
+    response_model=bool
+)
+async def delete_design(design_id: int, project_id: int, vcs_id: int,
+                        user: User = Depends(get_current_active_user)) -> bool:
+    return impl.delete_design(design_id, vcs_id, project_id, user.id)
+
+
+@router.put(
+    '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/edit',
+    summary='Edit a design',
+    response_model=models.Design
+)
+async def edit_design(design_id: int, project_id: int, vcs_id: int, design_post: models.DesignPost,
+                      user: User = Depends(get_current_active_user)) -> models.Design:
+    return impl.edit_design(design_id, project_id, vcs_id, user.id, design_post)
+
+
+# ======================================================================================================================
+# Quantified Objectives
+# ======================================================================================================================
+
+@router.get(
+    '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/quantified_objective/get/all',
+    summary='Fetches all quantified objectives for a given design',
+    response_model=List[models.QuantifiedObjective]
+)
+async def get_all_quantified_objectives(project_id: int, vcs_id: int, design_id: int,
+                                        user: User = Depends(get_current_active_user)) -> List[
+                                        models.QuantifiedObjective]:
+    return impl.get_all_quantified_objectives(design_id, project_id, vcs_id, user.id)
+
+
+@router.get(
+    '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/value_driver/{value_driver_id}/quantified_objective/get/{qo_id}',
+    summary='Fetches a quantified objective',
+    response_model=models.QuantifiedObjective
+)
+async def get_quantified_objective(qo_id: int, design_id: int, value_driver_id: int,
+                                   project_id: int, vcs_id: int,
+                                   user: User = Depends(get_current_active_user)) -> models.QuantifiedObjective:
+    return impl.get_quantified_objective(qo_id, design_id, value_driver_id, project_id, vcs_id, user.id)
+
+
+@router.delete(
+    '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/value_driver/{value_driver_id}/quantified-objective/{qo_id}/delete',
+    response_model=bool
+)
+async def delete_quantified_objective(qo_id: int, design_id: int, value_driver_id: int, project_id: int, vcs_id: int,
+                                      user: User = Depends(get_current_active_user)) -> bool:
+    return impl.delete_quantified_objective(qo_id, value_driver_id, design_id, project_id, vcs_id, user.id)
+
+
+@router.put(
+    '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/value_driver/{value_driver_id}/quantified-objective/{qo_id}/edit',
+    response_model=models.QuantifiedObjective
+)
+async def edit_quantified_objective(project_id: int, vcs_id: int, design_id: int, value_driver_id: int, qo_id: int,
+                                    updated_qo: models.QuantifiedObjectivePost,
+                                    user: User = Depends(get_current_active_user)) -> models.QuantifiedObjective:
+    return impl.edit_quantified_objective(qo_id, design_id, value_driver_id, project_id, vcs_id, updated_qo, user.id)
+
+
+@router.post(
+    '/project/{project_id}/vcs/{vcs_id}/design/{design_id}/value_driver/{value_driver_id}/quantified-objective/create',
+    summary='Creates a quantified objective',
+    response_model=models.QuantifiedObjective
+)
+async def create_quantified_objective(quantified_objective_post: models.QuantifiedObjectivePost, design_id: int,
+                                      project_id: int, vcs_id: int, value_driver_id: int,
+                                      user: User = Depends(get_current_active_user)) -> models.QuantifiedObjective:
+    return impl.create_quantified_objective(design_id, value_driver_id, quantified_objective_post, project_id, vcs_id,
+                                            user.id)
+
+
+# ======================================================================================================================
+# BPMN Table
+# ======================================================================================================================
+
+@router.post(
+    '/project/{project_id}/vcs/{vcs_id}/bpmn/node/create',
+    summary='Creates a node for BPMN',
+    response_model=models.NodeGet,
+)
+async def create_bpmn_node(node: models.NodePost, project_id: int, vcs_id: int,
+                           user: User = Depends(get_current_active_user)) -> models.NodeGet:
+    return impl.create_bpmn_node(node, project_id, vcs_id, user.id)
+
+
+@router.delete(
+    '/project/{project_id}/vcs/{vcs_id}/bpmn/node/{node_id}/delete',
+    summary='Deletes a node',
+    response_model=bool,
+)
+async def delete_bpmn_node(node_id: int, project_id: int, vcs_id: int,
+                           user: User = Depends(get_current_active_user)) -> bool:
+    return impl.delete_bpmn_node(node_id, project_id, vcs_id, user.id)
+
+
+@router.put(
+    '/project/{project_id}/vcs/{vcs_id}/bpmn/node/{node_id}/edit',
+    summary='Edit a node',
+    response_model=models.NodeGet,
+)
+async def update_bpmn_node(node_id: int, node: models.NodePost, project_id: int, vcs_id: int,
+                           user: User = Depends(get_current_active_user)) -> models.NodeGet:
+    return impl.update_bpmn_node(node_id, node, project_id, vcs_id, user.id)
+
+
+@router.post(
+    '/project/{project_id}/vcs/{vcs_id}/bpmn/edge/create',
+    summary='Creates an edge',
+    response_model=models.EdgeGet,
+)
+async def create_bpmn_edge(edge: models.EdgePost, project_id: int, vcs_id: int,
+                           user: User = Depends(get_current_active_user)) -> models.EdgeGet:
+    return impl.create_bpmn_edge(edge, project_id, vcs_id, user.id)
+
+
+@router.delete(
+    '/project/{project_id}/vcs/{vcs_id}/bpmn/edge/{edge_id}/delete',
+    summary='Deletes an edge',
+    response_model=bool,
+)
+async def delete_bpmn_edge(edge_id: int, project_id: int, vcs_id: int,
+                           user: User = Depends(get_current_active_user)) -> bool:
+    return impl.delete_bpmn_edge(edge_id, project_id, vcs_id, user.id)
+
+
+@router.put(
+    '/project/{project_id}/vcs/{vcs_id}/edge/{edge_id}/edit',
+    summary='Edit an edge',
+    response_model=models.EdgeGet,
+)
+async def update_bpmn_edge(edge_id: int, edge: models.EdgePost, project_id: int, vcs_id: int,
+                           user: User = Depends(get_current_active_user)) -> models.EdgeGet:
+    return impl.update_bpmn_edge(edge_id, edge, project_id, vcs_id, user.id)
+
+
+@router.get(
+    '/project/{project_id}/vcs/{vcs_id}/bpmn/get',
+    summary='Get BPMN',
+    response_model=models.BPMNGet,
+)
+async def get_bpmn(vcs_id: int, project_id: int, user: User = Depends(get_current_active_user)) -> models.BPMNGet:
+    return impl.get_bpmn(vcs_id, project_id, user.id)
+
+
+@router.put(
+    '/project/{project_id}/vcs/{vcs_id}/bpmn/edit',
+    summary='Edit BPMN',
+    response_model=models.BPMNGet,
+)
+async def update_bpmn(vcs_id: int, project_id: int, nodes: List[models.NodeGet], edges: List[models.EdgeGet],
+                      user: User = Depends(get_current_active_user)) -> models.BPMNGet:
+    return impl.update_bpmn(vcs_id, project_id, user.id, nodes, edges)
+
+
+# ======================================================================================================================
+# Market Input Table
+# ======================================================================================================================
+
+@router.get(
+    '/project/{project_id}/vcs/{vcs_id}/market_input/get/all',
+    summary='Get all market inputs',
+    response_model=List[models.MarketInputGet],
+)
+async def get_all_market_input(project_id: int, vcs_id: int,
+                               user: User = Depends(get_current_active_user)) -> List[models.MarketInputGet]:
+    return impl.get_all_market_inputs(project_id, vcs_id, user.id)
+
+
+@router.post(
+    '/project/{project_id}/vcs/{vcs_id}/bpmn-node/{node_id}/market_input/create',
+    summary='Creates a market input',
+    response_model=models.MarketInputGet,
+)
+async def create_market_input(project_id: int, vcs_id: int, node_id: int, market_input: models.MarketInputPost,
+                              user: User = Depends(get_current_active_user)) -> models.MarketInputGet:
+    return impl.create_market_input(project_id, vcs_id, node_id, market_input, user.id)
+
+
+@router.put(
+    '/project/{project_id}/vcs/{vcs_id}/bpmn-node/{node_id}/market_input/edit',
+    summary='Edit market input',
+    response_model=models.MarketInputGet,
+)
+async def update_market_input(project_id: int, vcs_id: int, node_id: int, market_input: models.MarketInputPost,
+                              user: User = Depends(get_current_active_user)) -> models.MarketInputGet:
+    return impl.update_market_input(project_id, vcs_id, node_id, market_input, user.id)
+
+
+# ======================================================================================================================
+# Simulation
+# ======================================================================================================================
+
+@router.get(
+    '/project/{project_id}/vcs/{vcs_id}/simulation/run',
+    summary='Run simulation',
+    response_model=models.Simulation,
+)
+async def run_simulation(project_id: int, vcs_id: int, time_interval: float,
+                         user: User = Depends(get_current_active_user)) -> models.Simulation:
+    return impl.run_simulation(project_id, vcs_id, time_interval, user.id)

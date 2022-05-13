@@ -2,6 +2,8 @@ from typing import List, Optional
 import enum
 
 from datetime import datetime
+
+from numpy import double, number
 from pydantic import BaseModel
 
 from sedbackend.apps.core.users.models import User
@@ -31,7 +33,7 @@ class CVSProjectPost(BaseModel):
 class VCS(BaseModel):
     id: int
     name: str
-    description: str
+    description: Optional[str] = None
     project: CVSProject
     datetime_created: datetime
     year_from: int
@@ -41,8 +43,8 @@ class VCS(BaseModel):
 class VCSPost(BaseModel):
     name: str
     description: Optional[str] = None
-    year_from: Optional[int] = None
-    year_to: Optional[int] = None
+    year_from: int
+    year_to: int
 
 
 # ======================================================================================================================
@@ -106,7 +108,7 @@ class VCSSubprocess(BaseModel):
 class VCSSubprocessPost(BaseModel):
     name: str
     parent_process_id: int
-    order_index: Optional[int] = None
+    order_index: int
 
 
 # ======================================================================================================================
@@ -115,6 +117,7 @@ class VCSSubprocessPost(BaseModel):
 
 class VCSTableRow(BaseModel):
     id: int
+    node_id: int
     row_index: int
     stakeholder: str
     stakeholder_expectations: str
@@ -123,7 +126,8 @@ class VCSTableRow(BaseModel):
     vcs: VCS
 
 
-class VCSTableRowPost(BaseModel):
+class VCSTableRowPost(BaseModel): # Never used anywhere
+    node_id: Optional[int] = None
     stakeholder: str
     stakeholder_expectations: Optional[str] = None
     iso_process_id: Optional[int] = None
@@ -153,11 +157,13 @@ class VCSStakeholderNeedPost(BaseModel):
 class VCSValueDriver(BaseModel):
     id: int
     name: str
+    unit: Optional[str] = None
     project: CVSProject
 
 
 class VCSValueDriverPost(BaseModel):
     name: str
+    unit: Optional[str] = None
 
 
 # ======================================================================================================================
@@ -167,6 +173,7 @@ class VCSValueDriverPost(BaseModel):
 class ValueDriverGet(BaseModel):
     id: int
     name: str
+    unit: Optional[str] = None
 
 
 class StakeholderNeedGet(BaseModel):
@@ -178,6 +185,7 @@ class StakeholderNeedGet(BaseModel):
 
 class TableRowGet(BaseModel):
     id: int
+    node_id: int
     row_index: int
     iso_process: Optional[VCSISOProcess] = None
     subprocess: Optional[VCSSubprocess] = None
@@ -201,6 +209,7 @@ class StakeholderNeedPost(BaseModel):
 
 
 class TableRowPost(BaseModel):
+    node_id: Optional[int] = None
     row_index: int
     iso_process_id: Optional[int] = None
     subprocess_id: Optional[int] = None
@@ -211,3 +220,118 @@ class TableRowPost(BaseModel):
 
 class TablePost(BaseModel):
     table_rows: List[TableRowPost]
+
+
+# ======================================================================================================================
+# CVS Designs
+# ======================================================================================================================
+
+class Design(BaseModel):
+    id: int
+    vcs: VCS
+    name: str
+    description: Optional[str] = None
+
+class DesignPost(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+
+# ======================================================================================================================
+# CVS Design Quantified Objectives
+# ======================================================================================================================
+
+class QuantifiedObjective(BaseModel):
+    id: int
+    design: int
+    value_driver: VCSValueDriver
+    name: str
+    property: float
+    unit: str
+    processes: List[TableRowGet]
+
+
+class QuantifiedObjectivePost(BaseModel):
+    name: str
+    property: float
+    unit: str
+
+
+# ======================================================================================================================
+# BPMN Table
+# ======================================================================================================================
+
+class NodeGet(BaseModel):
+    id: int
+    vcs_id: int
+    name: str
+    node_type: str
+    pos_x: Optional[int] = None
+    pos_y: Optional[int] = None
+    vcs_table_row: Optional[TableRowGet] = None
+
+
+class NodePost(BaseModel):
+    name: str
+    node_type: str
+    pos_x: Optional[int] = None
+    pos_y: Optional[int] = None
+
+
+class EdgeGet(BaseModel):
+    id: int
+    vcs_id: int
+    name: str
+    from_node: int
+    to_node: int
+    probability: int
+
+
+class EdgePost(BaseModel):
+    name: str
+    from_node: int
+    to_node: int
+    probability: int
+
+
+class BPMNGet(BaseModel):
+    vcs_id: int
+    nodes: List[NodeGet]
+    edges: List[EdgeGet]
+
+
+# ======================================================================================================================
+# Market Input Table
+# ======================================================================================================================
+
+class MarketInputGet(BaseModel):
+    id: int
+    vcs: int
+    node: int
+    time: float
+    cost: float
+    revenue: float
+
+
+class MarketInputPost(BaseModel):
+    time: float
+    cost: float
+    revenue: float
+
+
+# ======================================================================================================================
+# Simulation
+# ======================================================================================================================
+
+class Process(BaseModel):
+    name: str
+    time: float
+    cost: float
+    revenue: float
+
+
+class Simulation(BaseModel):
+    time: List[float]
+    surplus_values: List[float]
+    processes: List[Process]
+
