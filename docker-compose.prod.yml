@@ -13,6 +13,7 @@ services:
     build:
       context: ./deployment/nginx/
       dockerfile: Dockerfile-tls-termination-proxy
+    restart: unless-stopped
     volumes:
       - C:\Certbot\live\sedlab.ppd.chalmers.se\:/etc/nginx/certs/live/sedlab.ppd.chalmers.se # TLS Certs syslink location
       - C:\Certbot\archive\sedlab.ppd.chalmers.se\:/etc/nginx/certs/archive/sedlab.ppd.chalmers.se # TLS Certs actual location
