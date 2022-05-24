@@ -9,6 +9,8 @@ import sedbackend.apps.cvs.storage as storage
 # Simulation
 # ======================================================================================================================
 
+
+# Run simulation and return time, surplus value and list of processes used in the simulation
 class Simulation:
     def __init__(self, db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id: int):
         self.vcs_table_rows = storage.get_all_table_rows(db_connection, vcs_id, project_id, user_id)
@@ -50,6 +52,7 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, vcs_id
     return result
 
 
+# create process objects of process of the category Technical processes
 def populate_processes(db_connection: PooledMySQLConnection,
                        vcs_table_rows: List[models.TableRowGet]) -> List[models.Process]:
     processes = []
@@ -78,9 +81,9 @@ def populate_processes(db_connection: PooledMySQLConnection,
 # Design Structure Matrix
 # ======================================================================================================================
 
+# Creates a dsm of the processes to be used in the simulation
 def create_dsm(processes: List[models.Process]):
     dsm = empty_dsm(len(processes))
-    # populateDSM(dsm, nodes, edges)
     for i in range(len(dsm) - 1):
         dsm[i][i + 1] = 1.0
     return dsm
@@ -92,8 +95,4 @@ def empty_dsm(length):
         matrix[i] = [0] * length
     return matrix
 
-# def populateDSM(DSM, nodes: List[models.NodeGet], edges: List[models.EdgeGet]):
-#   for e in edges:
-#        DSMfrom = nodes.index(e.from_node)
-#        DSMto = nodes.index(e.to_node)
-#        DSM[DSMfrom][DSMto] = e.probability
+

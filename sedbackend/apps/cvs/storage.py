@@ -1,5 +1,3 @@
-from distutils.log import debug
-from multiprocessing import Pool
 from mysql.connector.pooling import PooledMySQLConnection
 from fastapi.logger import logger
 from typing import List
