@@ -1,5 +1,3 @@
-from os import stat
-from statistics import mode
 from fastapi import HTTPException, status
 from typing import List
 
