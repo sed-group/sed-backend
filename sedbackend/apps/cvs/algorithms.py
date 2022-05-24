@@ -55,12 +55,13 @@ def populate_processes(db_connection: PooledMySQLConnection,
     processes = []
 
     for table_row in vcs_table_rows:
-        if table_row.iso_process.category == 'Technical processes':
-            if table_row.iso_process.name:
+        if (table_row.iso_process and table_row.iso_process.category == 'Technical processes') \
+                or (table_row.subprocess and table_row.subprocess.parent_process.category == 'Technical processes'):
+            if table_row.iso_process:
                 name = table_row.iso_process.name
             else:
-                name = table_row.subprocess
-            
+                name = table_row.subprocess.name
+
             mi = storage.get_market_input(db_connection, table_row.node_id)
             process = models.Process(
                 name=name,
