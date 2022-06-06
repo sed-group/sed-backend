@@ -4,6 +4,8 @@ import random
 
 import sedbackend.apps.cvs.implementation as impl
 import sedbackend.apps.cvs.models as models
+import sedbackend.apps.cvs.project.implementation
+import sedbackend.apps.cvs.project.models
 import tests.testutils as tu
 
 def random_project(name: str = None, description: str=None):
@@ -13,7 +15,7 @@ def random_project(name: str = None, description: str=None):
     if description is None:
         description = tu.random_str(20, 200)
     
-    project = models.CVSProjectPost(
+    project = sedbackend.apps.cvs.project.models.CVSProjectPost(
         name = name,
         description = description
     )
@@ -23,11 +25,11 @@ def random_project(name: str = None, description: str=None):
 def seed_random_project(user_id):
     p = random_project()
 
-    new_p = impl.create_cvs_project(p, user_id)
+    new_p = sedbackend.apps.cvs.project.implementation.create_cvs_project(p, user_id)
     return new_p
 
 def delete_project_by_id(project_id, user_id):
-    impl.delete_cvs_project(project_id, user_id)
+    sedbackend.apps.cvs.project.implementation.delete_cvs_project(project_id, user_id)
 
 def random_VCS(name: str =None, description: str=None, year_from: int=None, year_to: int=None):
     if name is None:

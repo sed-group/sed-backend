@@ -7,6 +7,7 @@ from fastapi import HTTPException
 
 import sedbackend.apps.cvs.implementation as impl
 import sedbackend.apps.cvs.models as models
+import sedbackend.apps.cvs.project.implementation
 import tests.apps.cvs.testutils as tu
 import tests.testutils as testutils
 import sedbackend.apps.core.users.implementation as impl_users
@@ -23,7 +24,7 @@ def test_create_cvs_project(client, admin_headers):
     assert res.status_code == 200
 
     # cleanup
-    impl.delete_cvs_project(res.json()["id"], res.json()["owner"]["id"])
+    sedbackend.apps.cvs.project.implementation.delete_cvs_project(res.json()["id"], res.json()["owner"]["id"])
 
 def test_delete_cvs_project(client, std_headers, std_user):
     #Setup 

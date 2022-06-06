@@ -1,6 +1,7 @@
 from fastapi import HTTPException, status
 from typing import List
 
+import sedbackend.apps.cvs.project.exceptions
 from sedbackend.libs.datastructures.pagination import ListChunk
 
 import sedbackend.apps.core.authentication.exceptions as auth_ex
@@ -9,89 +10,6 @@ import sedbackend.apps.cvs.models as models
 import sedbackend.apps.cvs.storage as storage
 import sedbackend.apps.cvs.algorithms as algorithms
 import sedbackend.apps.cvs.exceptions as cvs_exceptions
-
-
-# ======================================================================================================================
-# CVS projects
-# ======================================================================================================================
-
-def get_all_cvs_project(user_id: int) -> ListChunk[models.CVSProject]:
-    with get_connection() as con:
-        return storage.get_all_cvs_project(con, user_id)
-
-
-def get_segment_cvs_project(index: int, segment_length: int, user_id: int) -> ListChunk[models.CVSProject]:
-    with get_connection() as con:
-        return storage.get_segment_cvs_project(con, index, segment_length, user_id)
-
-
-def get_cvs_project(project_id: int, user_id: int) -> models.CVSProject:
-    try:
-        with get_connection() as con:
-            return storage.get_cvs_project(con, project_id, user_id)
-    except cvs_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Could not find project with id={project_id}.',
-        )
-    except auth_ex.UnauthorizedOperationException:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail='Unauthorized user.',
-        )
-
-
-def create_cvs_project(project_post: models.CVSProjectPost, user_id: int) -> models.CVSProject:
-    with get_connection() as con:
-        result = storage.create_cvs_project(con, project_post, user_id)
-        con.commit()
-        return result
-
-
-def edit_cvs_project(project_id: int, user_id: int, project_post: models.CVSProjectPost) -> models.CVSProject:
-    try:
-        with get_connection() as con:
-            result = storage.edit_cvs_project(con, project_id, user_id, project_post)
-            con.commit()
-            return result
-    except cvs_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project with id={project_id}.',
-        )
-    except cvs_exceptions.CVSProjectFailedToUpdateException:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'Failed to edit project with id={project_id}.',
-        )
-    except auth_ex.UnauthorizedOperationException:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail='Unauthorized user.',
-        )
-
-
-def delete_cvs_project(project_id: int, user_id: int) -> bool:
-    try:
-        with get_connection() as con:
-            res = storage.delete_cvs_project(con, project_id, user_id)
-            con.commit()
-            return res
-    except cvs_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project with id={project_id}.',
-        )
-    except cvs_exceptions.CVSProjectFailedDeletionException:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'Failed to remove project with id={project_id}.',
-        )
-    except auth_ex.UnauthorizedOperationException:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail='Unauthorized user.',
-        )
 
 
 # ======================================================================================================================
@@ -107,7 +25,7 @@ def get_segment_vcs(project_id: int, index: int, segment_length: int, user_id: i
     try:
         with get_connection() as con:
             return storage.get_segment_vcs(con, project_id, segment_length, index, user_id)
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find project with id={project_id}.',
@@ -123,7 +41,7 @@ def get_vcs(vcs_id: int, project_id: int, user_id: int) -> models.VCS:
     try:
         with get_connection() as con:
             return storage.get_vcs(con, vcs_id, project_id, user_id)
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find project with id={project_id}.',
@@ -146,7 +64,7 @@ def create_vcs(vcs_post: models.VCSPost, project_id: int, user_id: int) -> model
             result = storage.create_vcs(con, vcs_post, project_id, user_id)
             con.commit()
             return result
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -164,7 +82,7 @@ def edit_vcs(vcs_id: int, project_id: int, user_id: int, vcs_post: models.VCSPos
             result = storage.edit_vcs(con, vcs_id, project_id, user_id, vcs_post)
             con.commit()
             return result
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -192,7 +110,7 @@ def delete_vcs(vcs_id: int, project_id: int, user_id: int) -> bool:
             res = storage.delete_vcs(con, vcs_id, project_id, user_id)
             con.commit()
             return res
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -222,7 +140,7 @@ def get_all_value_driver(project_id: int, user_id: int) -> ListChunk[models.VCSV
     try:
         with get_connection() as con:
             return storage.get_all_value_driver(con, project_id, user_id)
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -233,7 +151,7 @@ def get_value_driver(value_driver_id: int, project_id: int, user_id: int) -> mod
     try:
         with get_connection() as con:
             return storage.get_value_driver(con, value_driver_id, project_id, user_id)
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -257,7 +175,7 @@ def create_value_driver(value_driver_post: models.VCSValueDriverPost, project_id
             result = storage.create_value_driver(con, value_driver_post, project_id, user_id)
             con.commit()
             return result
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -276,7 +194,7 @@ def edit_value_driver(value_driver_id: int, project_id: int, user_id: int,
             result = storage.edit_value_driver(con, value_driver_id, project_id, user_id, value_driver_post)
             con.commit()
             return result
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -304,7 +222,7 @@ def delete_value_driver(value_driver_id: int, project_id: int, user_id: int) -> 
             res = storage.delete_value_driver(con, value_driver_id, project_id, user_id)
             con.commit()
             return res
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -357,7 +275,7 @@ def get_subprocess(subprocess_id: int, project_id: int, user_id: int) -> models.
     try:
         with get_connection() as con:
             return storage.get_subprocess(con, subprocess_id, project_id, user_id)
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find project with id={project_id}.',
@@ -381,7 +299,7 @@ def create_subprocess(subprocess_post: models.VCSSubprocessPost, project_id: int
             result = storage.create_subprocess(con, subprocess_post, project_id, user_id)
             con.commit()
             return result
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find project with id={project_id}.',
@@ -405,7 +323,7 @@ def edit_subprocess(subprocess_id: int, project_id: int, user_id: int,
             result = storage.edit_subprocess(con, subprocess_id, project_id, user_id, subprocess_post)
             con.commit()
             return result
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -438,7 +356,7 @@ def delete_subprocess(subprocess_id: int, project_id: int, user_id: int) -> bool
             res = storage.delete_subprocess(con, subprocess_id, project_id, user_id)
             con.commit()
             return res
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -467,7 +385,7 @@ def update_indices_subprocess(subprocess_ids: List[int], order_indices: List[int
             result = storage.update_subprocess_indices(con, subprocess_ids, order_indices, project_id, user_id)
             con.commit()
             return result
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find project with id={project_id}.',
@@ -543,7 +461,7 @@ def create_cvs_design(design_post: models.DesignPost, vcs_id: int, project_id: i
             result = storage.create_design(con, design_post, vcs_id, project_id, user_id)
             con.commit()
             return result
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -564,7 +482,7 @@ def get_all_design(project_id: int, vcs_id: int, user_id: int) -> ListChunk[mode
     try:
         with get_connection() as con:
             return storage.get_all_designs(con, project_id, vcs_id, user_id)
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -587,12 +505,12 @@ def get_design(design_id: int, vcs_id: int, project_id: int, user_id: int) -> mo
             result = storage.get_design(con, design_id, project_id, vcs_id, user_id)
             con.commit()
             return result
-    except cvs_exceptions.CVSProjectFailedDeletionException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectFailedDeletionException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
         )
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -620,7 +538,7 @@ def delete_design(design_id: int, vcs_id: int, project_id: int, user_id: int) ->
             res = storage.delete_design(con, design_id, project_id, vcs_id, user_id)
             con.commit()
             return res
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}'
@@ -644,7 +562,7 @@ def edit_design(design_id: int, project_id: int, vcs_id: int, user_id: int,
             result = storage.edit_design(con, design_id, project_id, vcs_id, user_id, updated_design)
             con.commit()
             return result
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}'
@@ -677,7 +595,7 @@ def get_all_quantified_objectives(design_id: int, project_id: int, vcs_id: int, 
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find quantified objective'
         )
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}'
@@ -707,7 +625,7 @@ def get_quantified_objective(quantified_objective_id: int, design_id: int, value
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find quantified objective with id={quantified_objective_id}'
         )
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}'
@@ -738,7 +656,7 @@ def create_quantified_objective(design_id: int, value_driver_id: int,
                                                       project_id, vcs_id, user_id)
             con.commit()
             return res
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}'
@@ -768,7 +686,7 @@ def delete_quantified_objective(quantified_objective_id: int, value_driver_id: i
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Could not find quantified objective'
         )
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}'
@@ -804,7 +722,7 @@ def edit_quantified_objective(quantified_objective_id: int, design_id: int, valu
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find quantified objective with id={quantified_objective_id}'
         )
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}'
@@ -841,7 +759,7 @@ def create_bpmn_node(node: models.NodePost, project_id: int, vcs_id: int, user_i
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs with id={vcs_id}.',
         )
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -860,7 +778,7 @@ def delete_bpmn_node(node_id: int, project_id: int, vcs_id: int, user_id: int) -
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs with id={vcs_id}.',
         )
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -888,7 +806,7 @@ def update_bpmn_node(node_id: int, node: models.NodePost, project_id: int, vcs_i
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs with id={vcs_id}.',
         )
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -916,7 +834,7 @@ def create_bpmn_edge(edge: models.EdgePost, project_id, vcs_id, user_id) -> mode
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs with id={vcs_id}.',
         )
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -945,7 +863,7 @@ def delete_bpmn_edge(edge_id: int, project_id, vcs_id, user_id) -> bool:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs with id={vcs_id}.',
         )
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -978,7 +896,7 @@ def update_bpmn_edge(edge_id: int, edge: models.EdgePost, project_id: int, vcs_i
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs with id={vcs_id}.',
         )
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -1011,7 +929,7 @@ def get_bpmn(vcs_id: int, project_id: int, user_id: int) -> models.BPMNGet:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs with id={vcs_id}.',
         )
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -1035,7 +953,7 @@ def update_bpmn(vcs_id: int, project_id: int, user_id: int, nodes: List[models.N
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs with id={vcs_id}.',
         )
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -1072,7 +990,7 @@ def get_all_market_inputs(project_id: int, vcs_id: int, user_id: int) -> List[mo
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find market input',
         )
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -1096,7 +1014,7 @@ def create_market_input(project_id: int, vcs_id: int, node_id: int, market_input
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs with id={vcs_id}.',
         )
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -1130,7 +1048,7 @@ def update_market_input(project_id: int, vcs_id: int, node_id: int, market_input
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs with id={vcs_id}.',
         )
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
@@ -1161,7 +1079,7 @@ def run_simulation(project_id: int, vcs_id: int, time_interval: float, user_id: 
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs with id={vcs_id}.',
         )
-    except cvs_exceptions.CVSProjectNotFoundException:
+    except sedbackend.apps.cvs.project.exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',

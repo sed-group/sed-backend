@@ -3,27 +3,8 @@ import enum
 
 from datetime import datetime
 
-from numpy import double, number
 from pydantic import BaseModel
-
-from sedbackend.apps.core.users.models import User
-
-
-# ======================================================================================================================
-# CVS projects
-# ======================================================================================================================
-
-class CVSProject(BaseModel):
-    id: int
-    name: str
-    description: str
-    owner: User
-    datetime_created: datetime
-
-
-class CVSProjectPost(BaseModel):
-    name: str
-    description: Optional[str] = None
+from sedbackend.apps.cvs.project.models import CVSProject
 
 
 # ======================================================================================================================
