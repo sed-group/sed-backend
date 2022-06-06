@@ -11,9 +11,13 @@ import sedbackend.apps.cvs.storage as storage
 
 
 # Run simulation and return time, surplus value and list of processes used in the simulation
+import sedbackend.apps.cvs.vcs.models
+import sedbackend.apps.cvs.vcs.storage
+
+
 class Simulation:
     def __init__(self, db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id: int):
-        self.vcs_table_rows = storage.get_all_table_rows(db_connection, vcs_id, project_id, user_id)
+        self.vcs_table_rows = sedbackend.apps.cvs.vcs.storage.get_all_table_rows(db_connection, vcs_id, project_id, user_id)
         self.processes = populate_processes(db_connection, self.vcs_table_rows)
         self.dsm = create_dsm(self.processes)
         self.time = [0.0]
@@ -54,7 +58,7 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, vcs_id
 
 # create process objects of process of the category Technical processes
 def populate_processes(db_connection: PooledMySQLConnection,
-                       vcs_table_rows: List[models.TableRowGet]) -> List[models.Process]:
+                       vcs_table_rows: List[sedbackend.apps.cvs.vcs.models.TableRowGet]) -> List[models.Process]:
     processes = []
 
     for table_row in vcs_table_rows:

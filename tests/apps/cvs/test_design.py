@@ -3,8 +3,10 @@ import random as r
 import pytest
 from fastapi import HTTPException
 
+import sedbackend.apps.cvs.design.implementation
 import sedbackend.apps.cvs.implementation as impl
 import sedbackend.apps.cvs.models as models
+import sedbackend.apps.cvs.vcs.implementation
 import tests.apps.cvs.testutils as tu
 import tests.testutils as testutils
 import sedbackend.apps.core.users.implementation as impl_users
@@ -198,7 +200,7 @@ def test_delete_quantified_objective(client, std_headers, std_user):
     
     #Assert
     assert res.status_code == 200
-    assert impl.get_value_driver(qo.value_driver.id, project.id, current_user.id) is not None
+    assert sedbackend.apps.cvs.vcs.implementation.get_value_driver(qo.value_driver.id, project.id, current_user.id) is not None
 
     #Cleanup
     tu.delete_vd_by_id(qo.value_driver.id, project.id, current_user.id)
@@ -253,7 +255,7 @@ def test_delete_qo_when_design_deleted(client, std_headers, std_user):
     assert res.status_code == 200
     not_exist = False
     try:
-        impl.get_all_quantified_objectives(design.id, project.id, vcs.id, current_user.id)
+        sedbackend.apps.cvs.design.implementation.get_all_quantified_objectives(design.id, project.id, vcs.id, current_user.id)
     except(HTTPException):
         not_exist = True
     assert not_exist

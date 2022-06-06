@@ -1,6 +1,5 @@
 from fastapi import Depends, APIRouter
 
-import sedbackend.apps
 from sedbackend.apps.core.authentication.utils import get_current_active_user
 from sedbackend.apps.core.users.models import User
 from sedbackend.libs.datastructures.pagination import ListChunk
@@ -8,6 +7,7 @@ from sedbackend.apps.cvs.project import models, implementation
 
 
 router = APIRouter()
+
 
 @router.get(
     '/project/get/all',

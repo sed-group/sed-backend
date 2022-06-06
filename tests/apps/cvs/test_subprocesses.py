@@ -5,6 +5,7 @@ from fastapi import HTTPException
 
 import sedbackend.apps.cvs.implementation as impl
 import sedbackend.apps.cvs.models as models
+import sedbackend.apps.cvs.vcs.implementation
 import tests.apps.cvs.testutils as tu
 import tests.testutils as testutils
 import sedbackend.apps.core.users.implementation as impl_users
@@ -134,7 +135,7 @@ def test_update_indices(client, std_headers, std_user):
                     "order_indices": new_indices
                 })
     
-    new_subp = impl.get_all_subprocess(project.id, current_user.id)
+    new_subp = sedbackend.apps.cvs.vcs.implementation.get_all_subprocess(project.id, current_user.id)
     indices = []
     for subp in new_subp.chunk:
         indices.append(subp.order_index)
