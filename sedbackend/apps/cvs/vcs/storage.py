@@ -5,8 +5,8 @@ from mysql.connector.pooling import PooledMySQLConnection
 
 from sedbackend.apps.core.authentication import exceptions as auth_exceptions
 from sedbackend.apps.cvs.project.storage import get_cvs_project
-from sedbackend.apps.cvs.storage import create_bpmn_node, update_bpmn_node
-from sedbackend.apps.cvs.models import NodePost
+from sedbackend.apps.cvs.life_cycle.storage import create_bpmn_node, update_bpmn_node
+from sedbackend.apps.cvs.life_cycle.models import NodePost
 from sedbackend.apps.cvs.vcs import models, exceptions, implementation
 from sedbackend.libs.datastructures.pagination import ListChunk
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, Sort, FetchType

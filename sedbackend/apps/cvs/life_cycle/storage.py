@@ -1,28 +1,17 @@
-from mysql.connector.pooling import PooledMySQLConnection
-from fastapi.logger import logger
 from typing import List
 
-import sedbackend.apps.cvs.models as models
-import sedbackend.apps.cvs.exceptions as cvs_exceptions
-from sedbackend.apps.cvs.vcs.storage import get_vcs, get_vcs_table_row
+from fastapi.logger import logger
+from mysql.connector.pooling import PooledMySQLConnection
 
+from sedbackend.apps.cvs.vcs.storage import get_vcs_table_row, get_vcs
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
-
-CVS_APPLICATION_SID = 'MOD.CVS'
+from sedbackend.apps.cvs.life_cycle import exceptions, models
 
 CVS_BPMN_NODES_TABLE = 'cvs_bpmn_nodes'
 CVS_BPMN_NODES_COLUMNS = ['id', 'vcs_id', 'name', 'type', 'pos_x', 'pos_y']
-
 CVS_BPMN_EDGES_TABLE = 'cvs_bpmn_edges'
 CVS_BPMN_EDGES_COLUMNS = ['id', 'vcs_id', 'name', 'from_node', 'to_node', 'probability']
 
-CVS_MARKET_INPUT_TABLE = 'cvs_market_input'
-CVS_MARKET_INPUT_COLUMN = ['id', 'vcs', 'node', 'time', 'cost', 'revenue']
-
-
-# ======================================================================================================================
-# BPMN Table
-# ======================================================================================================================
 
 def populate_bpmn_node(db_connection, result, project_id, user_id) -> models.NodeGet:
     logger.debug(f'Populating model for node with id={result["id"]}.')
@@ -61,7 +50,7 @@ def get_bpmn_node(db_connection: PooledMySQLConnection, node_id: int, project_id
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if result is None:
-        raise cvs_exceptions.NodeNotFoundException
+        raise exceptions.NodeNotFoundException
 
     return populate_bpmn_node(db_connection, result, project_id, user_id)
 
@@ -97,7 +86,7 @@ def delete_bpmn_node(db_connection: PooledMySQLConnection, project_id: int, vcs_
         .execute(return_affected_rows=True)
 
     if rows == 0:
-        raise cvs_exceptions.NodeFailedDeletionException(node_id)
+        raise exceptions.NodeFailedDeletionException(node_id)
 
     return True
 
@@ -132,7 +121,7 @@ def get_bpmn_edge(db_connection: PooledMySQLConnection, edge_id: int) -> models.
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if result is None:
-        raise cvs_exceptions.EdgeNotFoundException
+        raise exceptions.EdgeNotFoundException
 
     return populate_bpmn_edge(result)
 
@@ -169,7 +158,7 @@ def delete_bpmn_edge(db_connection: PooledMySQLConnection, edge_id: int, project
         .execute(return_affected_rows=True)
 
     if rows == 0:
-        raise cvs_exceptions.EdgeFailedDeletionException(edge_id)
+        raise exceptions.EdgeFailedDeletionException(edge_id)
 
     return True
 
@@ -252,97 +241,3 @@ def update_bpmn(db_connection: PooledMySQLConnection, vcs_id: int, project_id: i
         update_bpmn_edge(db_connection, edge.id, new_edge, project_id, vcs_id, user_id)
 
     return get_bpmn(db_connection, vcs_id, project_id, user_id)
-
-
-# ======================================================================================================================
-# Market Input Table
-# ======================================================================================================================
-
-def populate_market_input(db_result) -> models.MarketInputGet:
-    return models.MarketInputGet(
-        id=db_result['id'],
-        vcs=db_result['vcs'],
-        node=db_result['node'],
-        time=db_result['time'],
-        cost=db_result['cost'],
-        revenue=db_result['revenue']
-    )
-
-
-def get_market_input(db_connection: PooledMySQLConnection, node_id: int) -> models.MarketInputGet:
-    logger.debug(f'Fetching market input with node id={node_id}.')
-
-    select_statement = MySQLStatementBuilder(db_connection)
-    db_result = select_statement \
-        .select(CVS_MARKET_INPUT_TABLE, CVS_MARKET_INPUT_COLUMN) \
-        .where('node = %s', [node_id]) \
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-
-    if db_result is None:
-        raise cvs_exceptions.MarketInputNotFoundException
-
-    return populate_market_input(db_result)
-
-
-def get_all_market_input(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
-                         user_id: int) -> List[models.MarketInputGet]:
-    logger.debug(f'Fetching all market inputs for vcs with id={vcs_id}.')
-
-    get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks for existing project, vcs and correct user
-
-    select_statement = MySQLStatementBuilder(db_connection)
-    results = select_statement \
-        .select(CVS_MARKET_INPUT_TABLE, CVS_MARKET_INPUT_COLUMN) \
-        .where('vcs = %s', [vcs_id]) \
-        .order_by(['id'], Sort.ASCENDING) \
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-
-    return [populate_market_input(db_result) for db_result in results]
-
-
-def create_market_input(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, node_id: int,
-                        market_input: models.MarketInputPost, user_id: int) -> models.MarketInputGet:
-    logger.debug(f'Create market input')
-
-    select_statement = MySQLStatementBuilder(db_connection)
-    db_result = select_statement \
-        .select(CVS_MARKET_INPUT_TABLE, CVS_MARKET_INPUT_COLUMN) \
-        .where('node = %s', [node_id]) \
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-
-    if db_result is not None:
-        raise cvs_exceptions.MarketInputAlreadyExistException
-
-    get_vcs_table_row(db_connection, node_id, project_id, vcs_id, user_id)  # perform checks
-
-    columns = ['vcs', 'node', 'time', 'cost', 'revenue']
-    values = [vcs_id, node_id, market_input.time, market_input.cost, market_input.revenue]
-
-    insert_statement = MySQLStatementBuilder(db_connection)
-    insert_statement \
-        .insert(table=CVS_MARKET_INPUT_TABLE, columns=columns) \
-        .set_values(values) \
-        .execute(fetch_type=FetchType.FETCH_NONE)
-    market_input_id = insert_statement.last_insert_id
-
-    return get_market_input(db_connection, node_id)
-
-
-def update_market_input(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, node_id: int,
-                        market_input: models.MarketInputPost, user_id: int) -> models.MarketInputGet:
-    logger.debug(f'Update market input with id={node_id}')
-
-    get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks for existing project, vcs and correct user
-
-    get_market_input(db_connection, node_id)  # Performs necessary checks
-
-    update_statement = MySQLStatementBuilder(db_connection)
-    update_statement.update(
-        table=CVS_MARKET_INPUT_TABLE,
-        set_statement='time = %s, cost = %s, revenue = %s',
-        values=[market_input.time, market_input.cost, market_input.revenue],
-    )
-    update_statement.where('node = %s', [node_id])
-    _, rows = update_statement.execute(return_affected_rows=True)
-
-    return get_market_input(db_connection, node_id)

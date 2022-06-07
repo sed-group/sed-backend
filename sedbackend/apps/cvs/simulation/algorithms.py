@@ -1,23 +1,16 @@
 import random
-import sedbackend.apps.cvs.models as models
 from typing import List
+
 from mysql.connector.pooling import PooledMySQLConnection
-import sedbackend.apps.cvs.storage as storage
+from sedbackend.apps.cvs.vcs import storage as vcs_storage
+from sedbackend.apps.cvs.simulation import models
 
-
-# ======================================================================================================================
-# Simulation
-# ======================================================================================================================
-
-
-# Run simulation and return time, surplus value and list of processes used in the simulation
-import sedbackend.apps.cvs.vcs.models
-import sedbackend.apps.cvs.vcs.storage
+import sedbackend.apps
 
 
 class Simulation:
     def __init__(self, db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id: int):
-        self.vcs_table_rows = sedbackend.apps.cvs.vcs.storage.get_all_table_rows(db_connection, vcs_id, project_id, user_id)
+        self.vcs_table_rows = vcs_storage.get_all_table_rows(db_connection, vcs_id, project_id, user_id)
         self.processes = populate_processes(db_connection, self.vcs_table_rows)
         self.dsm = create_dsm(self.processes)
         self.time = [0.0]
@@ -27,7 +20,7 @@ class Simulation:
     def to_run(self, row):
         return random.choices([i for i, _ in enumerate(row)], row, k=1)[0]
 
-    def run(self, until) -> models.Simulation:
+    def run(self, until) -> sedbackend.apps.cvs.simulation.models.Simulation:
         process_index = 0
         while self.time[-1] < until:
             process = self.processes[process_index]
@@ -42,7 +35,7 @@ class Simulation:
             process_index = self.to_run(row)
         sv = [self.revenue[i] - self.cost[i] for i in range(0, len(self.cost))]
 
-        return models.Simulation(
+        return sedbackend.apps.cvs.simulation.models.Simulation(
             time=self.time,
             surplus_values=sv,
             processes=self.processes
@@ -50,15 +43,15 @@ class Simulation:
 
 
 def run_simulation(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id: int,
-                   time_interval: float) -> models.Simulation:
+                   time_interval: float) -> sedbackend.apps.cvs.simulation.models.Simulation:
     simulation = Simulation(db_connection, project_id, vcs_id, user_id)
     result = simulation.run(time_interval)
     return result
 
 
-# create process objects of process of the category Technical processes
 def populate_processes(db_connection: PooledMySQLConnection,
-                       vcs_table_rows: List[sedbackend.apps.cvs.vcs.models.TableRowGet]) -> List[models.Process]:
+                       vcs_table_rows: List[sedbackend.apps.cvs.vcs.models.TableRowGet]) -> List[
+    sedbackend.apps.cvs.simulation.models.Process]:
     processes = []
 
     for table_row in vcs_table_rows:
@@ -69,8 +62,8 @@ def populate_processes(db_connection: PooledMySQLConnection,
             else:
                 name = table_row.subprocess.name
 
-            mi = storage.get_market_input(db_connection, table_row.node_id)
-            process = models.Process(
+            mi = sedbackend.apps.cvs.market_input.storage.get_market_input(db_connection, table_row.node_id)
+            process = sedbackend.apps.cvs.simulation.models.Process(
                 name=name,
                 time=mi.time,
                 cost=mi.cost,
@@ -81,12 +74,7 @@ def populate_processes(db_connection: PooledMySQLConnection,
     return processes
 
 
-# ======================================================================================================================
-# Design Structure Matrix
-# ======================================================================================================================
-
-# Creates a dsm of the processes to be used in the simulation
-def create_dsm(processes: List[models.Process]):
+def create_dsm(processes: List[sedbackend.apps.cvs.simulation.models.Process]):
     dsm = empty_dsm(len(processes))
     for i in range(len(dsm) - 1):
         dsm[i][i + 1] = 1.0
@@ -98,5 +86,3 @@ def empty_dsm(length):
     for i in range(len(matrix)):
         matrix[i] = [0] * length
     return matrix
-
-
