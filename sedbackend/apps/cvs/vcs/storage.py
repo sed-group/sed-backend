@@ -1,3 +1,4 @@
+from sys import stdout
 from typing import List
 
 from fastapi.logger import logger
@@ -17,8 +18,8 @@ CVS_VCS_COLUMNS = ['id', 'name', 'description', 'datetime_created', 'year_from',
 CVS_VCS_VALUE_DRIVER_TABLE = 'cvs_vcs_value_drivers'
 CVS_VCS_VALUE_DRIVER_COLUMNS = ['id', 'name', 'unit', 'project_id']
 
-CVS_VCS_SUBPROCESS_TABLE = 'cvs_vcs_subprocesses'
-CVS_VCS_SUBPROCESS_COLUMNS = ['id', 'name', 'parent_process_id', 'project_id', 'order_index']
+CVS_VCS_SUBPROCESS_TABLE = 'cvs_subprocesses'
+CVS_VCS_SUBPROCESS_COLUMNS = ['id', 'name', 'order_index', 'iso_process']
 
 CVS_VCS_TABLE_ROWS_TABLE = 'cvs_vcs_table_rows'
 CVS_VCS_TABLE_ROWS_COLUMNS = ['id', 'node_id', 'row_index', 'vcs_id', 'iso_process_id', 'subprocess_id', 'stakeholder',
@@ -345,19 +346,21 @@ def get_all_iso_process() -> ListChunk[models.VCSISOProcess]:
 
 def get_iso_process(iso_process_id: int) -> models.VCSISOProcess:
     logger.debug(f'Fetching ISO process with id={iso_process_id}.')
-
+    print("in get iso process: " + str(iso_process_id))
     for p in models.VCSISOProcesses:
-        if p.value.id == iso_process_id:
+        print(str(p.value.id))
+        if p.value.id == 10:#iso_process_id:
+            #logger.log(p.value.id)
+            print(p.value.id)
             return p.value
 
-    raise exceptions.ISOProcessNotFoundException
+    #raise exceptions.ISOProcessNotFoundException
 
 
 # ======================================================================================================================
 # VCS Subprocesses
 # ======================================================================================================================
-
-
+'''
 def get_all_subprocess(db_connection: PooledMySQLConnection, project_id: int,
                        user_id: int) -> ListChunk[models.VCSSubprocess]:
     logger.debug(f'Fetching all subprocesses for project with id={project_id}.')
@@ -382,7 +385,7 @@ def get_all_subprocess(db_connection: PooledMySQLConnection, project_id: int,
     chunk = ListChunk[models.VCSSubprocess](chunk=subprocess_list, length_total=result['count'])
 
     return chunk
-
+'''
 
 def get_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, project_id: int,
                    user_id: int) -> models.VCSSubprocess:
@@ -397,8 +400,8 @@ def get_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, pro
     if result is None:
         raise exceptions.SubprocessNotFoundException(subprocess_id)
 
-    if result['project_id'] != project_id:
-        raise auth_exceptions.UnauthorizedOperationException
+  #  if result['project_id'] != project_id:
+  #      raise auth_exceptions.UnauthorizedOperationException
 
     return populate_subprocess(db_connection, result, project_id, user_id)
 
@@ -411,8 +414,8 @@ def create_subprocess(db_connection: PooledMySQLConnection, subprocess_post: mod
     get_cvs_project(db_connection, project_id, user_id)
     get_iso_process(subprocess_post.parent_process_id)
 
-    columns = ['name', 'parent_process_id', 'project_id', 'order_index']
-    values = [subprocess_post.name, subprocess_post.parent_process_id, project_id, subprocess_post.order_index]
+    columns = ['name', 'order_index', 'iso_process']
+    values = [subprocess_post.name, subprocess_post.order_index, subprocess_post.parent_process_id]
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
@@ -442,7 +445,7 @@ def edit_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, pr
     update_statement = MySQLStatementBuilder(db_connection)
     update_statement.update(
         table=CVS_VCS_SUBPROCESS_TABLE,
-        set_statement='name = %s, parent_process_id = %s',
+        set_statement='name = %s, iso_process = %s',
         values=[new_subprocess.name, new_subprocess.parent_process_id],
     )
     update_statement.where('id = %s', [subprocess_id])
@@ -468,14 +471,15 @@ def delete_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, 
     if result is None:
         raise exceptions.SubprocessNotFoundException(subprocess_id)
 
-    if result['project_id'] != project_id:
-        raise auth_exceptions.UnauthorizedOperationException
+ #   if result['project_id'] != project_id:
+ #       raise auth_exceptions.UnauthorizedOperationException
 
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement.delete(CVS_VCS_SUBPROCESS_TABLE) \
         .where('id = %s', [subprocess_id]) \
         .execute(return_affected_rows=True)
-
+    
+    #TODO after deleting subprocesses - make sure to update the order indices. 
     if rows == 0:
         raise exceptions.SubprocessFailedDeletionException(subprocess_id)
 
@@ -485,13 +489,14 @@ def delete_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, 
 def populate_subprocess(db_connection: PooledMySQLConnection, db_result, project_id: int,
                         user_id: int) -> models.VCSSubprocess:
     logger.debug(f'Populating model for subprocess with id={db_result["id"]}.')
+    print("in populate: " + db_result['iso_process'])
     return models.VCSSubprocess(
         id=db_result['id'],
         name=db_result['name'],
-        parent_process=get_iso_process(db_result['parent_process_id']),
-        project=get_cvs_project(db_connection, project_id, user_id),
         order_index=db_result['order_index'],
+        parent_process=get_iso_process(db_result['iso_process'])
     )
+    #        project=get_cvs_project(db_connection, project_id, user_id),
 
 
 def update_subprocess_indices(db_connection: PooledMySQLConnection, subprocess_ids: List[int], order_indices: List[int],

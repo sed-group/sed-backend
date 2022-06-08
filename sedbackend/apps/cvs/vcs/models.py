@@ -80,15 +80,14 @@ class VCSISOProcesses(enum.Enum):  # processes in ISO 15288
 class VCSSubprocess(BaseModel):
     id: int
     name: str
-    parent_process: VCSISOProcess
     order_index: int
-    project: CVSProject
+    parent_process: VCSISOProcess
 
 
 class VCSSubprocessPost(BaseModel):
     name: str
-    parent_process_id: int
     order_index: int
+    parent_process_id: int
 
 
 # ======================================================================================================================
