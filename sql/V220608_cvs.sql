@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcss`
 #Iso_processes
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_iso_processes`
 (
-    `name`          TEXT NOT NULL PRIMARY KEY,
+    `id`            INT UNSIGNED NOT NULL PRIMARY KEY,
+    `name`          VARCHAR(255) NOT NULL,
     `category`      TEXT NOT NULL   
 );
 
@@ -47,7 +48,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_subprocesses`
     `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `name`          TEXT NOT NULL,
     `order_index`   INT NOT NULL UNIQUE,
-    `iso_process`   TEXT NOT NULL REFERENCES `seddb`.`cvs_iso_processes`(`name`)
+    `iso_process`   TEXT NOT NULL REFERENCES `seddb`.`cvs_iso_processes`(`id`)
 );
 
 #The rows of the vcs table
@@ -58,7 +59,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_rows`
     `stakeholder`           TEXT NOT NULL,
     `stakeholder_needs`     TEXT NOT NULL, 
     `stakeholder_expectations` TEXT NOT NULL,
-    `iso_process`               TEXT NULL REFERENCES `seddb`.`cvs_iso_processes`(`name`)
+    `iso_process`               VARCHAR(255) NULL REFERENCES `seddb`.`cvs_iso_processes`(`id`),
     `subprocess`                INT UNSIGNED NULL REFERENCES `seddb`.`cvs_subprocesses`(`id`)
 );
 
@@ -82,8 +83,9 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_value_drivers`
 #Vcs row and value driver connection
 CREATE TABLE IF NOT EXISTS `seddb`.`rowDrivers`
 (
-    `vcs_row`       INT UNSIGNED PRIMARY KEY REFERENCES `seddb`.`cvs_vcs_rows`(`id`),
-    `value_driver`  INT UNSIGNED PRIMARY KEY REFERENCES `seddb`.`cvs_value_drivers`(`id`)
+    `vcs_row`       INT UNSIGNED REFERENCES `seddb`.`cvs_vcs_rows`(`id`),
+    `value_driver`  INT UNSIGNED REFERENCES `seddb`.`cvs_value_drivers`(`id`),
+    PRIMARY KEY (`vcs_row`, `value_driver`)
 );
 
 # BPMN node
