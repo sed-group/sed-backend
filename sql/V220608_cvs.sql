@@ -48,7 +48,12 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_subprocesses`
     `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `name`          TEXT NOT NULL,
     `order_index`   INT NOT NULL UNIQUE,
-    `iso_process`   TEXT NOT NULL REFERENCES `seddb`.`cvs_iso_processes`(`id`)
+    `iso_process`   INT UNSIGNED NOT NULL,
+     CONSTRAINT `fk_iso_process_subprocess` 
+        FOREIGN KEY (`iso_process`) 
+	REFERENCES `seddb`.`cvs_iso_processes`(`id`) 
+	ON DELETE CASCADE
+	ON UPDATE NO ACTION
 );
 
 #The rows of the vcs table
@@ -59,8 +64,18 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_rows`
     `stakeholder`           TEXT NOT NULL,
     `stakeholder_needs`     TEXT NOT NULL, 
     `stakeholder_expectations` TEXT NOT NULL,
-    `iso_process`               VARCHAR(255) NULL REFERENCES `seddb`.`cvs_iso_processes`(`id`),
-    `subprocess`                INT UNSIGNED NULL REFERENCES `seddb`.`cvs_subprocesses`(`id`)
+    `iso_process`               INT UNSIGNED NULL,
+    `subprocess`                INT UNSIGNED NULL,
+    CONSTRAINT `row_iso_process`
+        FOREIGN KEY (`iso_process`) 
+        REFERENCES `seddb`.`cvs_iso_processes`(`id`)
+	    ON DELETE CASCADE
+	    ON UPDATE NO ACTION,
+    CONSTRAINT `row_subprocess`
+        FOREIGN KEY (`subprocess`) 
+        REFERENCES `seddb`.`cvs_subprocesses`(`id`)
+	    ON DELETE CASCADE
+	    ON UPDATE NO ACTION
 );
 
 #The value dimensions
@@ -69,7 +84,10 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_value_dimensions`
     `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `name`          TEXT NOT NULL,
     `priority`      TEXT NOT NULL, 
-    `vcs_row`       INT UNSIGNED NOT NULL REFERENCES `seddb`.`cvs_vcs_row`(`id`)
+    `vcs_row`       INT UNSIGNED NOT NULL,
+    CONSTRAINT `row_dimensions`
+    FOREIGN KEY (`vcs_row`) 
+    REFERENCES `seddb`.`cvs_vcs_rows`(`id`)
 );
 
 #Value drivers
@@ -77,15 +95,20 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_value_drivers`
 (
     `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `name`              TEXT NOT NULL,
-    `value_dimension`   INT UNSIGNED NULL REFERENCES `seddb`.`cvs_value_dimensions`(`id`)
+    `value_dimension`   INT UNSIGNED NULL,
+    CONSTRAINT `driver_dimension` 
+    FOREIGN KEY (`value_dimension`) 
+    REFERENCES `seddb`.`cvs_value_dimensions`(`id`)
 );
 
 #Vcs row and value driver connection
 CREATE TABLE IF NOT EXISTS `seddb`.`rowDrivers`
 (
-    `vcs_row`       INT UNSIGNED REFERENCES `seddb`.`cvs_vcs_rows`(`id`),
-    `value_driver`  INT UNSIGNED REFERENCES `seddb`.`cvs_value_drivers`(`id`),
-    PRIMARY KEY (`vcs_row`, `value_driver`)
+    `vcs_row`       INT UNSIGNED, 
+    `value_driver`  INT UNSIGNED, 
+    PRIMARY KEY (`vcs_row`, `value_driver`),
+    FOREIGN KEY (`vcs_row`) REFERENCES `seddb`.`cvs_vcs_rows`(`id`),
+    FOREIGN KEY (`value_driver`) REFERENCES `seddb`.`cvs_value_drivers`(`id`)
 );
 
 # BPMN node
