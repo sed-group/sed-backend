@@ -12,7 +12,7 @@ from sedbackend.libs.datastructures.pagination import ListChunk
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, Sort, FetchType
 
 CVS_VCS_TABLE = 'cvs_vcss'
-CVS_VCS_COLUMNS = ['id', 'name', 'description', 'project_id', 'datetime_created', 'year_from', 'year_to']
+CVS_VCS_COLUMNS = ['id', 'name', 'description', 'datetime_created', 'year_from', 'year_to', 'project']
 
 CVS_VCS_VALUE_DRIVER_TABLE = 'cvs_vcs_value_drivers'
 CVS_VCS_VALUE_DRIVER_COLUMNS = ['id', 'name', 'unit', 'project_id']
@@ -41,7 +41,7 @@ def get_all_vcs(db_connection: PooledMySQLConnection, project_id: int, user_id: 
 
     get_cvs_project(db_connection, project_id, user_id)  # perform checks: project and user
 
-    where_statement = f'project_id = %s'
+    where_statement = f'project = %s'
     where_values = [project_id]
 
     select_statement = MySQLStatementBuilder(db_connection)
@@ -67,7 +67,7 @@ def get_segment_vcs(db_connection: PooledMySQLConnection, project_id: int, segme
                     user_id: int) -> ListChunk[models.VCS]:
     logger.debug(f'Fetching VCS segment for project with id={project_id}.')
 
-    where_statement = f'project_id = %s'
+    where_statement = f'project = %s'
     where_values = [project_id]
 
     select_statement = MySQLStatementBuilder(db_connection)
@@ -105,7 +105,7 @@ def get_vcs(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int, 
     if result is None:
         raise exceptions.VCSNotFoundException
 
-    if result['project_id'] != project_id:
+    if result['project'] != project_id:
         raise auth_exceptions.UnauthorizedOperationException
 
     return populate_vcs(db_connection, result, project_id, user_id)
@@ -119,8 +119,8 @@ def create_vcs(db_connection: PooledMySQLConnection, vcs_post: models.VCSPost, p
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
-        .insert(table=CVS_VCS_TABLE, columns=['name', 'description', 'project_id', 'year_from', 'year_to']) \
-        .set_values([vcs_post.name, vcs_post.description, project_id, vcs_post.year_from, vcs_post.year_to]) \
+        .insert(table=CVS_VCS_TABLE, columns=['name', 'description', 'year_from', 'year_to', 'project']) \
+        .set_values([vcs_post.name, vcs_post.description, vcs_post.year_from, vcs_post.year_to, project_id]) \
         .execute(fetch_type=FetchType.FETCH_NONE)
     vcs_id = insert_statement.last_insert_id
 
