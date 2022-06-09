@@ -1,5 +1,4 @@
 from typing import List
-
 from fastapi import Depends, APIRouter
 from sedbackend.apps.core.authentication.utils import get_current_active_user
 from sedbackend.apps.core.users.models import User
