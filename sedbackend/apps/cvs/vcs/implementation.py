@@ -248,13 +248,25 @@ def delete_value_driver(value_driver_id: int, project_id: int, user_id: int) -> 
 # ======================================================================================================================
 
 
-def get_all_iso_process() -> ListChunk[models.VCSISOProcess]:
-    return storage.get_all_iso_process()
+def get_all_iso_process() -> List[models.VCSISOProcess]:
+    try:
+        with get_connection() as con:
+            res = storage.get_all_iso_process(con)
+            con.commit()
+            return res
+    except exceptions.ISOProcessNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Could not find any ISO processes'
+        )
 
 
 def get_iso_process(iso_process_id: int) -> models.VCSISOProcess:
     try:
-        return storage.get_iso_process(iso_process_id)
+        with get_connection() as con:
+            res = storage.get_iso_process(iso_process_id, con)
+            con.commit()
+            return res
     except exceptions.ISOProcessNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -266,19 +278,19 @@ def get_iso_process(iso_process_id: int) -> models.VCSISOProcess:
 # ======================================================================================================================
 
 
-def get_all_subprocess(project_id: int, user_id: int) -> ListChunk[models.VCSSubprocess]:
+def get_all_subprocess(vcs_id: int, user_id: int) -> List[models.VCSSubprocess]:
     with get_connection() as con:
-        return storage.get_all_subprocess(con, project_id, user_id)
+        return storage.get_all_subprocess(con, vcs_id, user_id)
 
 
-def get_subprocess(subprocess_id: int, project_id: int, user_id: int) -> models.VCSSubprocess:
+def get_subprocess(subprocess_id: int, user_id: int) -> models.VCSSubprocess:
     try:
         with get_connection() as con:
-            return storage.get_subprocess(con, subprocess_id, project_id, user_id)
+            return storage.get_subprocess(con, subprocess_id)
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Could not find project with id={project_id}.',
+            detail=f'Could not find project.',
         )
     except exceptions.SubprocessNotFoundException as e:
         raise HTTPException(
@@ -292,17 +304,17 @@ def get_subprocess(subprocess_id: int, project_id: int, user_id: int) -> models.
         )
 
 
-def create_subprocess(subprocess_post: models.VCSSubprocessPost, project_id: int,
+def create_subprocess(subprocess_post: models.VCSSubprocessPost,
                       user_id: int) -> models.VCSSubprocess:
     try:
         with get_connection() as con:
-            result = storage.create_subprocess(con, subprocess_post, project_id, user_id)
+            result = storage.create_subprocess(con, subprocess_post)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Could not find project with id={project_id}.',
+            detail=f'Could not find project.',
         )
     except exceptions.ISOProcessNotFoundException:
         raise HTTPException(
@@ -350,10 +362,10 @@ def edit_subprocess(subprocess_id: int, project_id: int, user_id: int,
         )
 
 
-def delete_subprocess(subprocess_id: int, project_id: int, user_id: int) -> bool:
+def delete_subprocess(subprocess_id: int, user_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.delete_subprocess(con, subprocess_id, project_id, user_id)
+            res = storage.delete_subprocess(con, subprocess_id)
             con.commit()
             return res
     except project_exceptions.CVSProjectNotFoundException:
@@ -412,10 +424,10 @@ def update_indices_subprocess(subprocess_ids: List[int], order_indices: List[int
 # ======================================================================================================================
 
 
-def get_vcs_table(vcs_id: int, project_id: int, user_id: int) -> models.TableGet:
+def get_vcs_table(vcs_id: int, user_id: int) -> List[models.VcsRow]:
     try:
         with get_connection() as con:
-            return storage.get_vcs_table(con, vcs_id, project_id, user_id)
+            return storage.get_vcs_table(con, vcs_id,  user_id)
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

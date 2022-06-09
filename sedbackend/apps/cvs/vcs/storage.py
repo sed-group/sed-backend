@@ -25,9 +25,9 @@ CVS_ISO_PROCESS_COLUMNS = ['id', 'name', 'category']
 CVS_VCS_SUBPROCESS_TABLE = 'cvs_subprocesses'
 CVS_VCS_SUBPROCESS_COLUMNS = ['id', 'name', 'order_index', 'iso_process']
 
-CVS_VCS_TABLE_ROWS_TABLE = 'cvs_vcs_table_rows'
-CVS_VCS_TABLE_ROWS_COLUMNS = ['id', 'node_id', 'row_index', 'vcs_id', 'iso_process_id', 'subprocess_id', 'stakeholder',
-                              'stakeholder_expectations']
+CVS_VCS_ROWS_TABLE = 'cvs_vcs_rows'
+CVS_VCS_ROWS_COLUMNS = ['id', 'index', 'stakeholder', 'stakeholder_needs',
+                              'stakeholder_expectations', 'iso_process', 'subprocess', 'vcs']
 CVS_VCS_STAKEHOLDER_NEED_TABLE = 'cvs_vcs_stakeholder_needs'
 CVS_VCS_STAKEHOLDER_NEED_COLUMNS = ['id', 'table_row_id', 'need', 'rank_weight']
 
@@ -380,62 +380,72 @@ def populate_iso_process(db_result):
 # ======================================================================================================================
 # VCS Subprocesses
 # ======================================================================================================================
-'''
-def get_all_subprocess(db_connection: PooledMySQLConnection, project_id: int,
-                       user_id: int) -> ListChunk[models.VCSSubprocess]:
-    logger.debug(f'Fetching all subprocesses for project with id={project_id}.')
 
-    where_statement = f'project_id = %s'
-    where_values = [project_id]
+def get_all_subprocess(db_connection: PooledMySQLConnection, vcs_id: int,
+                       user_id: int) -> List[models.VCSSubprocess]:
+    logger.debug(f'Fetching all subprocesses for vcs with id={vcs_id}.')
 
-    select_statement = MySQLStatementBuilder(db_connection)
-    results = select_statement \
-        .select(CVS_VCS_SUBPROCESS_TABLE, CVS_VCS_SUBPROCESS_COLUMNS) \
-        .where(where_statement, where_values) \
-        .order_by(['id'], Sort.ASCENDING) \
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+    
+    query = f'SELECT cvs_subprocesses.id, cvs_subprocesses.name, order_index, \
+        iso_process, vcs, cvs_iso_processes.name as iso_process_name, category \
+        FROM cvs_subprocesses INNER JOIN cvs_iso_processes ON iso_process = cvs_iso_processes.id\
+        WHERE vcs = %s'
+    with db_connection.cursor(prepared=True) as cursor:
+        cursor.execute(query, [vcs_id])
+        last_insert_id = cursor.lastrowid
+        res = cursor.fetchall()
+        
+        if res == None:
+            raise exceptions.SubprocessNotFoundException
+        
+        res = [dict(zip(cursor.column_names, row)) for row in res]
 
-    subprocess_list = [populate_subprocess(db_connection, result, project_id, user_id) for result in results]
+        
+    subprocess_list = [populate_subprocess(result) for result in res]
 
-    count_statement = MySQLStatementBuilder(db_connection)
-    result = count_statement \
-        .count(CVS_VCS_SUBPROCESS_TABLE) \
-        .where(where_statement, where_values) \
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-    chunk = ListChunk[models.VCSSubprocess](chunk=subprocess_list, length_total=result['count'])
+    return subprocess_list
 
-    return chunk
-'''
 
-def get_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, project_id: int,
-                   user_id: int) -> models.VCSSubprocess:
+def get_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int) -> models.VCSSubprocess:
     logger.debug(f'Fetching subprocess with id={subprocess_id}.')
 
-    select_statement = MySQLStatementBuilder(db_connection)
-    result = select_statement \
-        .select(CVS_VCS_SUBPROCESS_TABLE, CVS_VCS_SUBPROCESS_COLUMNS) \
-        .where('id = %s', [subprocess_id]) \
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+    columns = ['cvs_subprocesses.id', 'cvs_subprocesses.name', 'order_index', 
+    'iso_process', 'cvs_iso_processes.name as iso_process_name', 'category']
+  #  select_statement = MySQLStatementBuilder(db_connection)
+  #  result = select_statement \
+   #     .select(CVS_VCS_SUBPROCESS_TABLE, columns) \
+   #     .inner_join(CVS_ISO_PROCESS_TABLE, 'iso_process = cvs_iso_process.id') \
+   #     .where('cvs_subprocesses.id = %s', [subprocess_id]) \
+   #     .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
-    if result is None:
+    query = f'SELECT cvs_subprocesses.id, cvs_subprocesses.name, order_index, \
+        iso_process, vcs, cvs_iso_processes.name as iso_process_name, category \
+        FROM cvs_subprocesses INNER JOIN cvs_iso_processes ON iso_process = cvs_iso_processes.id\
+        WHERE cvs_subprocesses.id = %s'
+    with db_connection.cursor(prepared=True) as cursor:
+        cursor.execute(query, [subprocess_id])
+        last_insert_id = cursor.lastrowid
+        res = cursor.fetchone()
+        res = dict(zip(cursor.column_names, res))
+
+    if res is None:
         raise exceptions.SubprocessNotFoundException(subprocess_id)
 
   #  if result['project_id'] != project_id:
   #      raise auth_exceptions.UnauthorizedOperationException
 
-    return populate_subprocess(db_connection, result, project_id, user_id)
+    return populate_subprocess(res)
 
 
-def create_subprocess(db_connection: PooledMySQLConnection, subprocess_post: models.VCSSubprocessPost,
-                      project_id: int, user_id: int) -> models.VCSSubprocess:
-    logger.debug(f'Creating a subprocesses in project with id={project_id}.')
+def create_subprocess(db_connection: PooledMySQLConnection, subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
+    logger.debug(f'Creating a subprocesses.')
 
     # performing necessary checks
-    get_cvs_project(db_connection, project_id, user_id)
+#   get_cvs_project(db_connection, project_id, user_id)
 #    get_iso_process(subprocess_post.parent_process_id)
 
-    columns = ['name', 'order_index', 'iso_process']
-    values = [subprocess_post.name, subprocess_post.order_index, subprocess_post.parent_process_id]
+    columns = ['name', 'order_index', 'vcs', 'iso_process']
+    values = [subprocess_post.name, subprocess_post.order_index, subprocess_post.vcs_id, subprocess_post.parent_process_id]
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
@@ -444,14 +454,14 @@ def create_subprocess(db_connection: PooledMySQLConnection, subprocess_post: mod
         .execute(fetch_type=FetchType.FETCH_NONE)
     subprocess_id = insert_statement.last_insert_id
 
-    return get_subprocess(db_connection, subprocess_id, project_id, user_id)
+    return get_subprocess(db_connection, subprocess_id)
 
 
 def edit_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, project_id: int, user_id: int,
                     new_subprocess: models.VCSSubprocessPost) -> models.VCSSubprocess:
     logger.debug(f'Editing subprocesses with id={subprocess_id}.')
 
-    old_subprocess = get_subprocess(db_connection, subprocess_id, project_id, user_id)
+    old_subprocess = get_subprocess(db_connection, subprocess_id)
     o = (old_subprocess.name, old_subprocess.parent_process.id)
     n = (new_subprocess.name, new_subprocess.parent_process_id)
     if o == n:  # No change
@@ -474,13 +484,13 @@ def edit_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, pr
     if rows == 0:
         raise exceptions.SubprocessFailedToUpdateException(subprocess_id)
 
-    return get_subprocess(db_connection, subprocess_id, project_id, user_id)
+    return get_subprocess(db_connection, subprocess_id)
 
 
-def delete_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, project_id: int, user_id: int) -> bool:
+def delete_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int) -> bool:
     logger.debug(f'Deleting subprocesses with id={subprocess_id}.')
 
-    get_cvs_project(db_connection, project_id, user_id)  # performing necessary checks
+   # get_cvs_project(db_connection, project_id, user_id)  # performing necessary checks
 
     select_statement = MySQLStatementBuilder(db_connection)
     result = select_statement \
@@ -506,15 +516,19 @@ def delete_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, 
     return True
 
 
-def populate_subprocess(db_connection: PooledMySQLConnection, db_result, project_id: int,
-                        user_id: int) -> models.VCSSubprocess:
+def populate_subprocess(db_result) -> models.VCSSubprocess:
     logger.debug(f'Populating model for subprocess with id={db_result["id"]}.')
   #  print("in populate: " + db_result['iso_process'])
     return models.VCSSubprocess(
         id=db_result['id'],
         name=db_result['name'],
         order_index=db_result['order_index'],
-        parent_process=get_iso_process(db_result['iso_process'], db_connection)
+        vcs_id=db_result['vcs'],
+        parent_process=models.VCSISOProcess(
+            id=db_result['iso_process'],
+            name=db_result['iso_process_name'],
+            category=db_result['category']
+            )
     )
     #        project=get_cvs_project(db_connection, project_id, user_id),
 
@@ -524,7 +538,7 @@ def update_subprocess_indices(db_connection: PooledMySQLConnection, subprocess_i
     logger.debug(f'Updating indices for subprocesses with ids={subprocess_ids}.')
 
     # Performs necessary checks
-    subprocesses = [get_subprocess(db_connection, _id, project_id, user_id) for _id in subprocess_ids]
+    subprocesses = [get_subprocess(db_connection, _id) for _id in subprocess_ids]
 
     for subprocess, index in zip(subprocesses, order_indices):
         if index == subprocess.order_index:
@@ -553,10 +567,19 @@ def update_subprocess_indices(db_connection: PooledMySQLConnection, subprocess_i
 # DO NOT USE IN API CALLS
 
 
-def get_vcs_table(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int, user_id: int) -> models.TableGet:
+def get_vcs_table(db_connection: PooledMySQLConnection, vcs_id: int,  user_id: int) -> List[models.VcsRow]:
     logger.debug(f'Fetching all table for VCS with id={vcs_id}.')
-    table_rows = get_all_table_rows(db_connection, vcs_id, project_id, user_id)
-    return models.TableGet(table_rows=table_rows)
+#    table_rows = get_all_table_rows(db_connection, vcs_id, user_id)
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    results = select_statement \
+        .select(CVS_VCS_ROWS_TABLE, CVS_VCS_ROWS_COLUMNS) \
+        .where('vcs = %s', [vcs_id]) \
+        .order_by(['index'], Sort.ASCENDING) \
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    return [populate_vcs_row(db_connection, result, project_id, user_id) for result in results]
+    
 
 
 def get_vcs_table_row(db_connection: PooledMySQLConnection, node_id: int, project_id: int, vcs_id: int,
@@ -595,7 +618,7 @@ def get_all_table_rows(db_connection: PooledMySQLConnection, vcs_id: int, projec
     return [populate_table_row(db_connection, result, project_id, user_id) for result in results]
 
 
-def populate_table_row(db_connection: PooledMySQLConnection, db_result, project_id: int,
+def populate_vcs_row(db_connection: PooledMySQLConnection, db_result, project_id: int,
                        user_id: int) -> models.TableRowGet:
     logger.debug(f'Populating model for table row with id={db_result["id"]}.')
 
@@ -605,8 +628,7 @@ def populate_table_row(db_connection: PooledMySQLConnection, db_result, project_
             db_result['iso_process_id'], db_connection)  # Gets a iso process based on the id that we got from the DB result
     elif db_result['subprocess_id'] is not None:
         try:
-            subprocesss = get_subprocess(db_connection, db_result['subprocess_id'], project_id,
-                                         user_id)  # Runs a new query on subprocess table based on the id that is in the result of the db query. Why is that not referenced as a foreign key and run as a single query here?????
+            subprocesss = get_subprocess(db_connection, db_result['subprocess_id'])  # Runs a new query on subprocess table based on the id that is in the result of the db query. Why is that not referenced as a foreign key and run as a single query here?????
         except exceptions.SubprocessNotFoundException:
             # If a subprocess is deleted but used in a table, the subprocess wont be found and thus this exception
             pass

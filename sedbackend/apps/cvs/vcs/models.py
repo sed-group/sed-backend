@@ -81,36 +81,16 @@ class VCSSubprocess(BaseModel):
     id: int
     name: str
     order_index: int
+    vcs_id: int
     parent_process: VCSISOProcess
 
 
 class VCSSubprocessPost(BaseModel):
     name: str
     order_index: int
+    vcs_id: int
     parent_process_id: int
 
-
-# ======================================================================================================================
-# VCS Table Row
-# ======================================================================================================================
-
-class VCSTableRow(BaseModel):
-    id: int
-    node_id: int
-    row_index: int
-    stakeholder: str
-    stakeholder_expectations: str
-    iso_process: VCSISOProcess
-    subprocess: VCSSubprocess
-    vcs: VCS
-
-
-class VCSTableRowPost(BaseModel):  # Never used anywhere
-    node_id: Optional[int] = None
-    stakeholder: str
-    stakeholder_expectations: Optional[str] = None
-    iso_process_id: Optional[int] = None
-    subprocess_id: Optional[int] = None
 
 
 # ======================================================================================================================
@@ -157,7 +137,26 @@ class ValueDriverGet(BaseModel):
 # VCS Table - Representation/return models
 # ======================================================================================================================
 
+class VcsRow:
+    id: int
+    index: int
+    stakeholder: str
+    stakeholder_needs: str
+    stakeholder_expectations: str
+    iso_process: Optional[VCSISOProcess]
+    subprocess: Optional[VCSSubprocess]
+    vcs: int
 
+class VcsRowPost:
+    id: int
+    index: int
+    stakeholder: str
+    stakeholder_needs: str
+    stakeholder_expectations: str
+    iso_process: Optional[int]
+    subprocess: Optional[int]
+
+"""
 class StakeholderNeedGet(BaseModel):
     id: int
     need: str
@@ -178,13 +177,14 @@ class TableRowGet(BaseModel):
 
 class TableGet(BaseModel):
     table_rows: List[TableRowGet]
-
+"""
 
 # ======================================================================================================================
 # VCS Table - Post models
 # ======================================================================================================================
 
 
+"""
 class StakeholderNeedPost(BaseModel):
     need: Optional[str] = None
     rank_weight: Optional[int] = 0
@@ -203,3 +203,27 @@ class TableRowPost(BaseModel):
 
 class TablePost(BaseModel):
     table_rows: List[TableRowPost]
+"""
+
+# ======================================================================================================================
+# VCS Table Row
+# ======================================================================================================================
+"""
+class VCSTableRow(BaseModel):
+    id: int
+    node_id: int
+    row_index: int
+    stakeholder: str
+    stakeholder_expectations: str
+    iso_process: VCSISOProcess
+    subprocess: VCSSubprocess
+    vcs: VCS
+
+
+class VCSTableRowPost(BaseModel):  # Never used anywhere
+    node_id: Optional[int] = None
+    stakeholder: str
+    stakeholder_expectations: Optional[str] = None
+    iso_process_id: Optional[int] = None
+    subprocess_id: Optional[int] = None
+"""
