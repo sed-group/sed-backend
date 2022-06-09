@@ -432,7 +432,7 @@ def create_subprocess(db_connection: PooledMySQLConnection, subprocess_post: mod
 
     # performing necessary checks
     get_cvs_project(db_connection, project_id, user_id)
-    get_iso_process(subprocess_post.parent_process_id)
+#    get_iso_process(subprocess_post.parent_process_id)
 
     columns = ['name', 'order_index', 'iso_process']
     values = [subprocess_post.name, subprocess_post.order_index, subprocess_post.parent_process_id]
@@ -459,7 +459,7 @@ def edit_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, pr
 
     # performing necessary checks
     get_cvs_project(db_connection, project_id, user_id)
-    get_iso_process(new_subprocess.parent_process_id)
+#    get_iso_process(new_subprocess.parent_process_id)
 
     # Updating
     update_statement = MySQLStatementBuilder(db_connection)
@@ -514,7 +514,7 @@ def populate_subprocess(db_connection: PooledMySQLConnection, db_result, project
         id=db_result['id'],
         name=db_result['name'],
         order_index=db_result['order_index'],
-        parent_process=get_iso_process(db_result['iso_process'])
+        parent_process=get_iso_process(db_result['iso_process'], db_connection)
     )
     #        project=get_cvs_project(db_connection, project_id, user_id),
 
@@ -602,7 +602,7 @@ def populate_table_row(db_connection: PooledMySQLConnection, db_result, project_
     iso_process, subprocesss = None, None
     if db_result['iso_process_id'] is not None:
         iso_process = get_iso_process(
-            db_result['iso_process_id'])  # Gets a iso process based on the id that we got from the DB result
+            db_result['iso_process_id'], db_connection)  # Gets a iso process based on the id that we got from the DB result
     elif db_result['subprocess_id'] is not None:
         try:
             subprocesss = get_subprocess(db_connection, db_result['subprocess_id'], project_id,
