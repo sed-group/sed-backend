@@ -1,34 +1,44 @@
-from typing import List
+from typing import Optional, List
+
 from pydantic import BaseModel
-from sedbackend.apps.cvs.vcs import models as vcs_models
+
+from sedbackend.apps.cvs.vcs.models import TableRowGet
 
 
 class NodeGet(BaseModel):
     id: int
     vcs_id: int
-    pos_x: int
-    pos_y: int
-    from_node: int
-    to_node: int
+    name: str
+    node_type: str
+    pos_x: Optional[int] = None
+    pos_y: Optional[int] = None
+    vcs_table_row: Optional[TableRowGet] = None
 
 
 class NodePost(BaseModel):
-    pos_x: int
-    pos_y: int
+    name: str
+    node_type: str
+    pos_x: Optional[int] = None
+    pos_y: Optional[int] = None
 
 
-class ProcessNodeGet(NodeGet):
+class EdgeGet(BaseModel):
     id: int
-    vcs_row: vcs_models.TableRowGet
+    vcs_id: int
+    name: str
+    from_node: int
+    to_node: int
+    probability: int
 
 
-class StartStopNodeGet(NodeGet):
-    type: str
-
-
-class StartStopNodePost(NodePost):
-    type: str
+class EdgePost(BaseModel):
+    name: str
+    from_node: int
+    to_node: int
+    probability: int
 
 
 class BPMNGet(BaseModel):
+    vcs_id: int
     nodes: List[NodeGet]
+    edges: List[EdgeGet]
