@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_value_drivers`
 );
 
 #Vcs row and value driver connection
-CREATE TABLE IF NOT EXISTS `seddb`.`rowDrivers`
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_rowDrivers`
 (
     `vcs_row`       INT UNSIGNED, 
     `value_driver`  INT UNSIGNED, 
@@ -149,4 +149,31 @@ CREATE TABLE IF NOT EXISTS  `seddb`.`cvs_process_node`
     FOREIGN KEY (`iso_process`)
         REFERENCES `seddb`.`cvs_iso_process` (`id`)
         ON DELETE CASCADE
+);
+
+
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_designs`
+(
+    `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `name`              VARCHAR(255) NOT NULL,
+    `description`       TEXT DEFAULT NULL,
+    `vcs`               INT UNSIGNED NOT NULL,
+    PRIMARY KEY(`id`),
+    FOREIGN KEY(`vcs`)
+        REFERENCES `seddb`.`cvs_vcss`(`id`)
+);
+
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_quantified_objectives`
+(
+    `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `name`              VARCHAR(63) NOT NULL,
+    `value`             DOUBLE NOT NULL,
+    `unit`              VARCHAR(63) NOT NULL,
+    `value_driver`      INT UNSIGNED NOT NULL,
+    `design`            INT UNSIGNED NOT NULL,
+    PRIMARY KEY(`id`),
+    FOREIGN KEY(`design`)
+        REFERENCES `seddb`.`cvs_designs`(`id`),
+    FOREIGN KEY(`value_driver`)
+        REFERENCES `seddb`.`cvs_value_drivers`(`id`)
 );
