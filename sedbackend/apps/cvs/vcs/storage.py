@@ -9,6 +9,7 @@ from sedbackend.apps.cvs.project.storage import get_cvs_project
 from sedbackend.apps.cvs.life_cycle.storage import create_bpmn_node, update_bpmn_node
 from sedbackend.apps.cvs.life_cycle.models import NodePost
 from sedbackend.apps.cvs.vcs import models, exceptions, implementation
+from sedbackend.libs import mysqlutils
 from sedbackend.libs.datastructures.pagination import ListChunk
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, Sort, FetchType
 
@@ -17,6 +18,9 @@ CVS_VCS_COLUMNS = ['id', 'name', 'description', 'datetime_created', 'year_from',
 
 CVS_VCS_VALUE_DRIVER_TABLE = 'cvs_vcs_value_drivers'
 CVS_VCS_VALUE_DRIVER_COLUMNS = ['id', 'name', 'unit', 'project_id']
+
+CVS_ISO_PROCESS_TABLE = 'cvs_iso_processes'
+CVS_ISO_PROCESS_COLUMNS = ['id', 'name', 'category']
 
 CVS_VCS_SUBPROCESS_TABLE = 'cvs_subprocesses'
 CVS_VCS_SUBPROCESS_COLUMNS = ['id', 'name', 'order_index', 'iso_process']
@@ -335,27 +339,43 @@ def populate_value_driver(db_connection: PooledMySQLConnection, db_result, proje
 # ======================================================================================================================
 
 
-def get_all_iso_process() -> ListChunk[models.VCSISOProcess]:
+def get_all_iso_process(db_connection: PooledMySQLConnection) -> List[models.VCSISOProcess]:
     logger.debug(f'Fetching all ISO processes.')
 
-    iso_processes = [process.value for process in models.VCSISOProcesses]
-    chunk = ListChunk[models.VCSISOProcess](chunk=iso_processes, length_total=len(iso_processes))
+    select_statement = MySQLStatementBuilder(db_connection)
+    results = select_statement \
+        .select(CVS_ISO_PROCESS_TABLE, CVS_ISO_PROCESS_COLUMNS) \
+        .execute(FetchType.FETCH_ALL, dictionary=True)
+    
+    iso_processes = []
 
-    return chunk
+    for res in results:
+        iso_processes.append(populate_iso_process(res))
+    
+    return iso_processes
 
 
-def get_iso_process(iso_process_id: int) -> models.VCSISOProcess:
+def get_iso_process(iso_process_id: int, db_connection) -> models.VCSISOProcess:
     logger.debug(f'Fetching ISO process with id={iso_process_id}.')
-    print("in get iso process: " + str(iso_process_id))
-    for p in models.VCSISOProcesses:
-        print(str(p.value.id))
-        if p.value.id == 10:#iso_process_id:
-            #logger.log(p.value.id)
-            print(p.value.id)
-            return p.value
+    
+    select_statement = MySQLStatementBuilder(db_connection)
+    result = select_statement \
+        .select(CVS_ISO_PROCESS_TABLE, CVS_ISO_PROCESS_COLUMNS) \
+        .where('id = %s', [iso_process_id]) \
+        .execute(FetchType.FETCH_ALL, dictionary=True)
+    
+    if result == None:
+        raise exceptions.ISOProcessNotFoundException
 
-    #raise exceptions.ISOProcessNotFoundException
+    return populate_iso_process(result)
+    
 
+def populate_iso_process(db_result):
+    return models.VCSISOProcess(
+        id=db_result['id'],
+        name=db_result['name'],
+        category=db_result['category']
+    )
 
 # ======================================================================================================================
 # VCS Subprocesses
@@ -489,7 +509,7 @@ def delete_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, 
 def populate_subprocess(db_connection: PooledMySQLConnection, db_result, project_id: int,
                         user_id: int) -> models.VCSSubprocess:
     logger.debug(f'Populating model for subprocess with id={db_result["id"]}.')
-    print("in populate: " + db_result['iso_process'])
+  #  print("in populate: " + db_result['iso_process'])
     return models.VCSSubprocess(
         id=db_result['id'],
         name=db_result['name'],
