@@ -146,8 +146,8 @@ CREATE TABLE IF NOT EXISTS  `seddb`.`cvs_process_node`
 (
     `id`            INT UNSIGNED NOT NULL REFERENCES `seddb`.`cvs_nodes`(`id`),
     `vcs_row`       INT UNSIGNED NOT NULL,
-    FOREIGN KEY (`iso_process`)
-        REFERENCES `seddb`.`cvs_iso_process` (`id`)
+    FOREIGN KEY (`vcs_row`)
+        REFERENCES `seddb`.`cvs_vcs_rows` (`id`)
         ON DELETE CASCADE
 );
 
