@@ -3,8 +3,7 @@ from typing import List
 from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
 
-from sedbackend.apps.cvs.vcs.storage import get_vcs, get_value_driver, CVS_VCS_NEEDS_DRIVERS_MAP_TABLE, \
-    CVS_VCS_STAKEHOLDER_NEED_TABLE, CVS_VCS_TABLE_ROWS_TABLE, CVS_VCS_TABLE_ROWS_COLUMNS, populate_table_row
+from sedbackend.apps.cvs.vcs.storage import get_vcs, get_value_driver
 from sedbackend.libs.datastructures.pagination import ListChunk
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.cvs.design import models, exceptions
@@ -277,7 +276,7 @@ def populate_QO(db_connection: PooledMySQLConnection, db_result,
         processes=get_table_rows_from_driver(db_connection, value_driver_id, project_id, user_id)
     )
 
-
+'''
 # TODO change the way that stakeholder needs and value drivers are stored.
 def get_table_rows_from_driver(db_connection: PooledMySQLConnection, value_driver_id: int,
                                project_id: int, user_id: int) -> List[vcs_models.TableRowGet]:
@@ -305,3 +304,4 @@ def get_table_rows_from_driver(db_connection: PooledMySQLConnection, value_drive
             table_rows.append(populate_table_row(db_connection, result, project_id, user_id))
 
     return table_rows
+'''

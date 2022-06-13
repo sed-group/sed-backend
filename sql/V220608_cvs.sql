@@ -102,6 +102,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_value_drivers`
 (
     `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `name`              TEXT NOT NULL,
+    `unit`              TEXT NULL,
     `value_dimension`   INT UNSIGNED NULL,
     CONSTRAINT `driver_dimension` 
     FOREIGN KEY (`value_dimension`) 

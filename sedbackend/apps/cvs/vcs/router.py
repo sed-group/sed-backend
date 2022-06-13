@@ -90,10 +90,9 @@ async def get_vcs_table(vcs_id: int, user: User = Depends(get_current_active_use
     summary='Creates the table for a VCS',
     response_model=bool,
 )
-async def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int,
-                           user: User = Depends(get_current_active_user)) -> bool:
+async def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int) -> bool:
 #    implementation.get_vcs(vcs_id, project_id, user.id)  # perfoms necessary controls
-    return implementation.create_vcs_table(new_table, vcs_id, user.id)
+    return implementation.create_vcs_table(new_table, vcs_id)
 
 # ======================================================================================================================
 # VCS Value driver
@@ -103,41 +102,41 @@ async def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int,
 @router.get(
     '/project/{project_id}/value-driver/get/all',
     summary='Returns all of value drivers of a project',
-    response_model=ListChunk[models.VCSValueDriver],
+    response_model=List[models.ValueDriver],
 )
 async def get_all_value_driver(project_id: int,
-                               user: User = Depends(get_current_active_user)) -> ListChunk[models.VCSValueDriver]:
-    return implementation.get_all_value_driver(project_id, user.id)
+                               user: User = Depends(get_current_active_user)) -> List[models.ValueDriver]:
+    return implementation.get_all_value_driver(project_id)
 
 
 @router.get(
     '/project/{project_id}/value-driver/get/{value_driver_id}',
     summary='Returns a value driver',
-    response_model=models.VCSValueDriver,
+    response_model=models.ValueDriver,
 )
 async def get_value_driver(value_driver_id: int, project_id: int,
-                           user: User = Depends(get_current_active_user)) -> models.VCSValueDriver:
+                           user: User = Depends(get_current_active_user)) -> models.ValueDriver:
     return implementation.get_value_driver(value_driver_id, project_id, user.id)
 
 
 @router.post(
     '/project/{project_id}/value-driver/create',
     summary='Creates a new value driver in a project',
-    response_model=models.VCSValueDriver,
+    response_model=models.ValueDriver,
 )
-async def create_value_driver(vcs_post: models.VCSValueDriverPost, project_id: int,
-                              user: User = Depends(get_current_active_user)) -> models.VCSValueDriver:
-    return implementation.create_value_driver(vcs_post, project_id, user.id)
+async def create_value_driver(value_driver_post: models.ValueDriverPost, project_id: int,
+                              user: User = Depends(get_current_active_user)) -> models.ValueDriver:
+    return implementation.create_value_driver(value_driver_post)
 
 
 @router.put(
     '/project/{project_id}/value-driver/{value_driver_id}/edit',
     summary='Edits a value driver',
-    response_model=models.VCSValueDriver,
+    response_model=models.ValueDriver,
 )
-async def edit_value_driver(value_driver_id: int, project_id: int, vcs_post: models.VCSValueDriverPost,
-                            user: User = Depends(get_current_active_user)) -> models.VCSValueDriver:
-    return implementation.edit_value_driver(value_driver_id, project_id, user.id, vcs_post)
+async def edit_value_driver(value_driver_id: int, project_id: int, vcs_post: models.ValueDriverPost,
+                            user: User = Depends(get_current_active_user)) -> models.ValueDriver:
+    return implementation.edit_value_driver(value_driver_id, vcs_post)
 
 
 @router.delete(
@@ -147,7 +146,7 @@ async def edit_value_driver(value_driver_id: int, project_id: int, vcs_post: mod
 )
 async def delete_value_driver(value_driver_id: int, project_id: int,
                               user: User = Depends(get_current_active_user)) -> bool:
-    return implementation.delete_value_driver(value_driver_id, project_id, user.id)
+    return implementation.delete_value_driver(value_driver_id, user.id)
 
 
 # ======================================================================================================================
