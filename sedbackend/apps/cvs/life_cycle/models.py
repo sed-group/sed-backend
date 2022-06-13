@@ -13,7 +13,6 @@ class NodeGet(BaseModel):
 
 
 class NodePost(BaseModel):
-    vcs_id: int
     pos_x: int
     pos_y: int
 

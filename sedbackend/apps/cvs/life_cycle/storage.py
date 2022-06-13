@@ -16,6 +16,8 @@ CVS_START_STOP_NODES_TABLE = 'cvs_start_stop_nodes'
 CVS_START_STOP_NODES_COLUMNS = CVS_NODES_COLUMNS + ['type']
 
 
+# TODO error handling
+
 def populate_process_node(result) -> models.ProcessNodeGet:
     logger.debug(f'Populating model for process node with id={result["id"]}')
 
@@ -43,7 +45,7 @@ def populate_start_stop_node(result) -> models.StartStopNodeGet:
     )
 
 
-def get_node(db_connection: PooledMySQLConnection, node_id: int, vcs_id: int, table=CVS_NODES_TABLE,
+def get_node(db_connection: PooledMySQLConnection, node_id: int, table=CVS_NODES_TABLE,
              columns=None) -> dict:
 
     if columns is None:
@@ -56,21 +58,19 @@ def get_node(db_connection: PooledMySQLConnection, node_id: int, vcs_id: int, ta
 
     if result is None:
         raise exceptions.NodeNotFoundException
-    elif result['vcs'] != vcs_id:
-        raise exceptions.NodeIdDontMatchVCSIdException
 
     return result
 
 
-def get_process_node(db_connection: PooledMySQLConnection, node_id: int, vcs_id: int) -> models.ProcessNodeGet:
+def get_process_node(db_connection: PooledMySQLConnection, node_id: int) -> models.ProcessNodeGet:
     logger.debug(f'Fetching a process node with id={node_id}.')
-    result = get_node(db_connection, node_id, vcs_id, CVS_PROCESS_NODES_TABLE, CVS_PROCESS_NODES_COLUMNS)
+    result = get_node(db_connection, node_id, CVS_PROCESS_NODES_TABLE, CVS_PROCESS_NODES_COLUMNS)
     return populate_process_node(result)
 
 
-def get_start_stop_node(db_connection: PooledMySQLConnection, node_id: int, vcs_id: int) -> models.StartStopNodeGet:
+def get_start_stop_node(db_connection: PooledMySQLConnection, node_id: int) -> models.StartStopNodeGet:
     logger.debug(f'Fetching a process node with id={node_id}.')
-    result = get_node(db_connection, node_id, vcs_id, CVS_START_STOP_NODES_TABLE, CVS_START_STOP_NODES_COLUMNS)
+    result = get_node(db_connection, node_id, CVS_START_STOP_NODES_TABLE, CVS_START_STOP_NODES_COLUMNS)
     return populate_start_stop_node(result)
 
 
@@ -101,7 +101,7 @@ def create_process_node(db_connection: PooledMySQLConnection, node: models.Proce
         .set_values([node_id, node.vcs_row.id]) \
         .execute(fetch_type=FetchType.FETCH_NONE)
 
-    return get_process_node(db_connection, node_id, vcs_id)
+    return get_process_node(db_connection, node_id)
 
 
 def create_start_stop_node(db_connection: PooledMySQLConnection, node: models.StartStopNodePost,
@@ -120,7 +120,7 @@ def create_start_stop_node(db_connection: PooledMySQLConnection, node: models.St
         .execute(fetch_type=FetchType.FETCH_NONE)
     node_id = insert_statement.last_insert_id
 
-    return get_start_stop_node(db_connection, node_id, vcs_id)
+    return get_start_stop_node(db_connection, node_id)
 
 
 def delete_node(db_connection: PooledMySQLConnection, node_id: int) -> bool:
@@ -139,6 +139,9 @@ def delete_node(db_connection: PooledMySQLConnection, node_id: int) -> bool:
 
 def update_node(db_connection: PooledMySQLConnection, node_id: int, node: models.NodePost) -> bool:
     logger.debug(f'Updating node with id={node_id}.')
+
+    # Performs necessary checks
+    get_node(db_connection, node_id)
 
     update_statement = MySQLStatementBuilder(db_connection)
     update_statement.update(

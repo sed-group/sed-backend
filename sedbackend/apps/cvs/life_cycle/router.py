@@ -6,15 +6,6 @@ router = APIRouter()
 
 
 @router.post(
-    '/vcs/{vcs_id}/bpmn/node/process',
-    summary='Creates a process node for BPMN',
-    response_model=models.ProcessNodeGet,
-)
-async def create_process_node(node: models.ProcessNodePost, vcs_id: int) -> models.ProcessNodeGet:
-    return implementation.create_process_node(node, vcs_id)
-
-
-@router.post(
     '/vcs/{vcs_id}/bpmn/node/start_stop',
     summary='Creates a start/stop node for BPMN',
     response_model=models.StartStopNodeGet,
