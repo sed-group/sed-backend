@@ -69,6 +69,32 @@ async def delete_vcs(vcs_id: int, project_id: int, user: User = Depends(get_curr
     return implementation.delete_vcs(vcs_id, project_id, user.id)
 
 
+
+# ======================================================================================================================
+# VCS Table
+# ======================================================================================================================
+
+
+@router.get(
+    '/vcs/{vcs_id}/get/table',
+    summary='Returns the table of a a VCS',
+    response_model=List[models.VcsRow],
+)
+async def get_vcs_table(vcs_id: int, user: User = Depends(get_current_active_user)) -> List[models.VcsRow]:
+    #implementation.get_vcs(vcs_id, user.id)  # perfoming necessary controls
+    return implementation.get_vcs_table(vcs_id, user.id)
+
+
+@router.post(
+    '/vcs/{vcs_id}/create/table',
+    summary='Creates the table for a VCS',
+    response_model=bool,
+)
+async def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int,
+                           user: User = Depends(get_current_active_user)) -> bool:
+#    implementation.get_vcs(vcs_id, project_id, user.id)  # perfoms necessary controls
+    return implementation.create_vcs_table(new_table, vcs_id, user.id)
+
 # ======================================================================================================================
 # VCS Value driver
 # ======================================================================================================================
@@ -201,28 +227,3 @@ async def update_indices_subprocess(subprocess_ids: List[int], order_indices: Li
                                     user: User = Depends(get_current_active_user)) -> bool:
     return implementation.update_indices_subprocess(subprocess_ids, order_indices, project_id, user.id)
 
-
-# ======================================================================================================================
-# VCS Table
-# ======================================================================================================================
-
-
-@router.get(
-    '/vcs/{vcs_id}/get/table',
-    summary='Returns the table of a a VCS',
-    response_model=List[models.VcsRow],
-)
-async def get_vcs_table(vcs_id: int, user: User = Depends(get_current_active_user)) -> List[models.VcsRow]:
-    #implementation.get_vcs(vcs_id, user.id)  # perfoming necessary controls
-    return implementation.get_vcs_table(vcs_id, user.id)
-
-
-@router.post(
-    '/vcs/{vcs_id}/create/table',
-    summary='Creates the table for a VCS',
-    response_model=bool,
-)
-async def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int,
-                           user: User = Depends(get_current_active_user)) -> bool:
-#    implementation.get_vcs(vcs_id, project_id, user.id)  # perfoms necessary controls
-    return implementation.create_vcs_table(new_table, vcs_id, user.id)

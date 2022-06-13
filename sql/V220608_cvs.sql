@@ -49,17 +49,11 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_subprocesses`
     `name`          TEXT NOT NULL,
     `order_index`   INT NOT NULL UNIQUE, #TODO ask if it is neccessary to rearrange subprocesses in modal window
     `iso_process`   INT UNSIGNED NOT NULL,
-    `vcs`           INT UNSIGNED NOT NULL,
      CONSTRAINT `fk_iso_process_subprocess` 
         FOREIGN KEY (`iso_process`) 
 	    REFERENCES `seddb`.`cvs_iso_processes`(`id`) 
 	    ON DELETE CASCADE
-	    ON UPDATE NO ACTION,
-    CONSTRAINT `fk_vcs_subprocess`
-        FOREIGN KEY (`vcs`)
-        REFERENCES `seddb`.`cvs_vcss`(`id`)
-        ON DELETE CASCADE
-        ON UPDATE NO ACTION
+	    ON UPDATE NO ACTION
 );
 
 #The rows of the vcs table

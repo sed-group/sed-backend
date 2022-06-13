@@ -81,14 +81,12 @@ class VCSSubprocess(BaseModel):
     id: int
     name: str
     order_index: int
-    vcs_id: int
     parent_process: VCSISOProcess
 
 
 class VCSSubprocessPost(BaseModel):
     name: str
     order_index: int
-    vcs_id: int
     parent_process_id: int
 
 
@@ -145,7 +143,7 @@ class VcsRow:
     stakeholder_expectations: str
     iso_process: Optional[VCSISOProcess]
     subprocess: Optional[VCSSubprocess]
-    vcs: int
+    vcs_id: int
 
 class VcsRowPost:
     id: int
