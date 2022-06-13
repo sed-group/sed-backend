@@ -137,11 +137,8 @@ def delete_node(db_connection: PooledMySQLConnection, node_id: int) -> bool:
     return True
 
 
-def update_node(db_connection: PooledMySQLConnection, node_id: int, node: models.NodePost, vcs_id: int) -> bool:
+def update_node(db_connection: PooledMySQLConnection, node_id: int, node: models.NodePost) -> bool:
     logger.debug(f'Updating node with id={node_id}.')
-
-    # Performs necessary checks
-    get_node(db_connection, node_id, vcs_id)
 
     update_statement = MySQLStatementBuilder(db_connection)
     update_statement.update(
@@ -187,15 +184,15 @@ def get_bpmn(db_connection: PooledMySQLConnection, vcs_id: int) -> models.BPMNGe
 
 
 def update_bpmn(db_connection: PooledMySQLConnection, vcs_id: int,
-                nodes: List[models.NodeGet]) -> models.BPMNGet:
+                bpmn: models.BPMNGet) -> bool:
     logger.debug(f'Updating bpmn with vcs id={vcs_id}.')
 
-    for node in nodes:
+    for node in bpmn.nodes:
         new_node = models.NodePost(
             id=node.id,
             pos_x=node.pos_x,
             pos_y=node.pos_y
         )
-        update_node(db_connection, node.id, new_node, vcs_id)
+        update_node(db_connection, node.id, new_node)
 
-    return get_bpmn(db_connection, vcs_id)
+    return True
