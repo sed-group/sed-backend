@@ -10,7 +10,7 @@ from sedbackend.apps.core.authentication import exceptions as auth_exceptions
 from sedbackend.apps.cvs import project
 from sedbackend.apps.cvs import vcs
 from sedbackend.apps.cvs.project.storage import get_cvs_project
-from sedbackend.apps.cvs.life_cycle.storage import create_bpmn_node, update_bpmn_node
+from sedbackend.apps.cvs.life_cycle.storage import create_node, update_node
 from sedbackend.apps.cvs.life_cycle.models import NodePost
 from sedbackend.apps.cvs.vcs import models, exceptions, implementation
 from sedbackend.libs import mysqlutils

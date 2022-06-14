@@ -3,85 +3,148 @@ from typing import List
 from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
 
-from sedbackend.apps.cvs.vcs import storage as vcs_storage
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.cvs.life_cycle import exceptions, models
+from sedbackend.apps.cvs.vcs import storage as vcs_storage
 
-CVS_BPMN_NODES_TABLE = 'cvs_bpmn_nodes'
-CVS_BPMN_NODES_COLUMNS = ['id', 'vcs_id', 'name', 'type', 'pos_x', 'pos_y']
-CVS_BPMN_EDGES_TABLE = 'cvs_bpmn_edges'
-CVS_BPMN_EDGES_COLUMNS = ['id', 'vcs_id', 'name', 'from_node', 'to_node', 'probability']
+CVS_NODES_TABLE = 'cvs_nodes'
+CVS_NODES_COLUMNS = ['cvs_nodes.id', 'vcs', 'from', 'to', 'pos_x', 'pos_y']
+
+CVS_PROCESS_NODES_TABLE = 'cvs_process_nodes'
+CVS_PROCESS_NODES_COLUMNS = CVS_NODES_COLUMNS + ['vcs_row']
+
+CVS_START_STOP_NODES_TABLE = 'cvs_start_stop_nodes'
+CVS_START_STOP_NODES_COLUMNS = CVS_NODES_COLUMNS + ['type']
 
 
-def populate_bpmn_node(db_connection, result, project_id, user_id) -> models.NodeGet:
-    logger.debug(f'Populating model for node with id={result["id"]}.')
+# TODO error handling
 
-    return models.NodeGet(
+def populate_process_node(db_connection, result) -> models.ProcessNodeGet:
+    logger.debug(f'Populating model for process node with id={result["id"]}')
+
+    return models.ProcessNodeGet(
         id=result['id'],
-        vcs_id=result['vcs_id'],
-        name=result['name'],
-        node_type=result['type'],
+        vcs_id=result['vcs'],
+        from_node=result['from'],
+        to_node=result['to'],
         pos_x=result['pos_x'],
         pos_y=result['pos_y'],
-        vcs_table_row=vcs_storage.get_vcs_table_row(db_connection, result['id'], project_id, result['vcs_id'], user_id)
+        vcs_row=vcs_storage.get_vcs_row(db_connection, result['vcs_row'])
     )
 
 
-def populate_bpmn_edge(result) -> models.EdgeGet:
-    logger.debug(f'Populating model for edge with id={result["id"]}.')
-    return models.EdgeGet(
+def populate_start_stop_node(result) -> models.StartStopNodeGet:
+    logger.debug(f'Populating model for start/stop node with id={result["id"]}')
+    return models.StartStopNodeGet(
         id=result['id'],
-        vcs_id=result['vcs_id'],
-        name=result['name'],
-        from_node=result['from_node'],
-        to_node=result['to_node'],
-        probability=result['probability']
+        vcs_id=result['vcs'],
+        from_node=result['from'],
+        to_node=result['to'],
+        pos_x=result['pos_x'],
+        pos_y=result['pos_y'],
+        type=result['type']
     )
 
 
-def get_bpmn_node(db_connection: PooledMySQLConnection, node_id: int, project_id: int,
-                  user_id: int) -> models.NodeGet:
-    logger.debug(f'Fetching node with id={node_id}.')
+def get_node(db_connection: PooledMySQLConnection, node_id: int, table=CVS_NODES_TABLE,
+             columns=None) -> dict:
 
+    if columns is None:
+        columns = CVS_NODES_COLUMNS
     select_statement = MySQLStatementBuilder(db_connection)
     result = select_statement \
-        .select(CVS_BPMN_NODES_TABLE, CVS_BPMN_NODES_COLUMNS) \
+        .select(table, columns) \
         .where('id = %s', [node_id]) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if result is None:
         raise exceptions.NodeNotFoundException
 
-    return populate_bpmn_node(db_connection, result, project_id, user_id)
+    return result
 
 
-def create_bpmn_node(db_connection: PooledMySQLConnection, node: models.NodePost, project_id: int, vcs_id: int,
-                     user_id: int) -> models.NodeGet:
-    logger.debug(f'Creating a node for vcs with id={vcs_id}.')
+def get_process_node(db_connection: PooledMySQLConnection, node_id: int) -> models.ProcessNodeGet:
+    logger.debug(f'Fetching a process node with id={node_id}.')
 
-    vcs_storage.get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks: project, vcs and user
+    select_statement = MySQLStatementBuilder(db_connection)
+    result = select_statement \
+        .select(CVS_PROCESS_NODES_TABLE, CVS_PROCESS_NODES_COLUMNS) \
+        .inner_join(CVS_NODES_TABLE, 'cvs_nodes.id = cvs_process_nodes.id') \
+        .where('cvs_nodes.id = %s', [node_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
-    columns = ['vcs_id', 'name', 'type']
-    values = [vcs_id, node.name, node.node_type]
+    return populate_process_node(db_connection, result)
+
+
+def get_start_stop_node(db_connection: PooledMySQLConnection, node_id: int) -> models.StartStopNodeGet:
+    logger.debug(f'Fetching a process node with id={node_id}.')
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    result = select_statement \
+        .select(CVS_START_STOP_NODES_TABLE, CVS_START_STOP_NODES_COLUMNS) \
+        .inner_join(CVS_NODES_TABLE, 'cvs_nodes.id = cvs_start_stop_nodes.id') \
+        .where('cvs_nodes.id = %s', [node_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if result is None:
+        raise exceptions.NodeNotFoundException
+
+    return populate_start_stop_node(result)
+
+
+# Create parent node and return id
+def create_node(db_connection: PooledMySQLConnection, node: models.NodePost, vcs_id: int) -> int:
+    columns = ['vcs', 'pos_x', 'pos_y']
+    values = [vcs_id, node.pos_x, node.pos_y]
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
-        .insert(table=CVS_BPMN_NODES_TABLE, columns=columns) \
+        .insert(table=CVS_NODES_TABLE, columns=columns) \
         .set_values(values) \
         .execute(fetch_type=FetchType.FETCH_NONE)
     node_id = insert_statement.last_insert_id
 
-    return get_bpmn_node(db_connection, node_id, project_id, user_id)
+    return node_id
 
 
-def delete_bpmn_node(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, node_id: int, user_id) -> bool:
+def create_process_node(db_connection: PooledMySQLConnection, node: models.ProcessNodePost,
+                        vcs_id: int) -> models.ProcessNodeGet:
+    logger.debug(f'Create a process node for vcs with id={vcs_id}.')
+
+    node_id = create_node(db_connection, node, vcs_id)
+
+    insert_statement = MySQLStatementBuilder(db_connection)
+    insert_statement \
+        .insert(table=CVS_PROCESS_NODES_TABLE, columns=['id', 'vcs_row']) \
+        .set_values([node_id, node.vcs_row.id]) \
+        .execute(fetch_type=FetchType.FETCH_NONE)
+
+    return get_process_node(db_connection, node_id)
+
+
+def create_start_stop_node(db_connection: PooledMySQLConnection, node: models.StartStopNodePost,
+                           vcs_id: int) -> models.StartStopNodeGet:
+    logger.debug(f'Create a process node for vcs with id={vcs_id}.')
+
+    node_id = create_node(db_connection, node, vcs_id)
+
+    columns = ['id', 'type']
+    values = [node_id, node.type]
+
+    insert_statement = MySQLStatementBuilder(db_connection)
+    insert_statement \
+        .insert(table=CVS_START_STOP_NODES_TABLE, columns=columns) \
+        .set_values(values) \
+        .execute(fetch_type=FetchType.FETCH_NONE)
+
+    return get_start_stop_node(db_connection, node_id)
+
+
+def delete_node(db_connection: PooledMySQLConnection, node_id: int) -> bool:
     logger.debug(f'Delete node with id={node_id}.')
 
-    vcs_storage.get_vcs(db_connection, vcs_id, project_id, user_id)
-    get_bpmn_node(db_connection, node_id, project_id, user_id)
-
     delete_statement = MySQLStatementBuilder(db_connection)
-    _, rows = delete_statement.delete(CVS_BPMN_NODES_TABLE) \
+    _, rows = delete_statement.delete(CVS_NODES_TABLE) \
         .where('id = %s', [node_id]) \
         .execute(return_affected_rows=True)
 
@@ -91,153 +154,65 @@ def delete_bpmn_node(db_connection: PooledMySQLConnection, project_id: int, vcs_
     return True
 
 
-def update_bpmn_node(db_connection: PooledMySQLConnection, node_id: int, node: models.NodePost, project_id: int,
-                     vcs_id: int, user_id: int) -> models.NodeGet:
+def update_node(db_connection: PooledMySQLConnection, node_id: int, node: models.NodePost) -> bool:
     logger.debug(f'Updating node with id={node_id}.')
 
     # Performs necessary checks
-    get_bpmn_node(db_connection, node_id, project_id, user_id)
+    get_node(db_connection, node_id)
 
     update_statement = MySQLStatementBuilder(db_connection)
-    # Also needs to update the row of the vcs
     update_statement.update(
-        table=CVS_BPMN_NODES_TABLE,
-        set_statement='vcs_id = %s, name = %s, type = %s, pos_x = %s, pos_y = %s',
-        values=[vcs_id, node.name, node.node_type, node.pos_x, node.pos_y],
+        table=CVS_NODES_TABLE,
+        set_statement='pos_x = %s, pos_y = %s',
+        values=[node.pos_x, node.pos_y],
     )
     update_statement.where('id = %s', [node_id])
     _, rows = update_statement.execute(return_affected_rows=True)
 
-    return get_bpmn_node(db_connection, node_id, project_id, user_id)
-
-
-def get_bpmn_edge(db_connection: PooledMySQLConnection, edge_id: int) -> models.EdgeGet:
-    logger.debug(f'Fetching edge with id={edge_id}.')
-
-    select_statement = MySQLStatementBuilder(db_connection)
-    result = select_statement \
-        .select(CVS_BPMN_EDGES_TABLE, CVS_BPMN_EDGES_COLUMNS) \
-        .where('id = %s', [edge_id]) \
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-
-    if result is None:
-        raise exceptions.EdgeNotFoundException
-
-    return populate_bpmn_edge(result)
-
-
-def create_bpmn_edge(db_connection: PooledMySQLConnection, edge: models.EdgePost, project_id: int,
-                     vcs_id: int, user_id: int) -> models.EdgeGet:
-    logger.debug(f'Creating an edge for vcs with id={vcs_id}.')
-
-    vcs_storage.get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks: project, vcs and user
-    get_bpmn_node(db_connection, edge.from_node, project_id, user_id)
-    get_bpmn_node(db_connection, edge.to_node, project_id, user_id)
-
-    columns = ['vcs_id', 'name', 'from_node', 'to_node', 'probability']
-    values = [vcs_id, edge.name, edge.from_node, edge.to_node, edge.probability]
-
-    insert_statement = MySQLStatementBuilder(db_connection)
-    insert_statement \
-        .insert(table=CVS_BPMN_EDGES_TABLE, columns=columns) \
-        .set_values(values) \
-        .execute(fetch_type=FetchType.FETCH_NONE)
-    edge_id = insert_statement.last_insert_id
-
-    return get_bpmn_edge(db_connection, edge_id)
-
-
-def delete_bpmn_edge(db_connection: PooledMySQLConnection, edge_id: int, project_id: int, vcs_id: int,
-                     user_id: int) -> bool:
-    get_bpmn_edge(db_connection, edge_id)  # checks
-    vcs_storage.get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks: project, vcs and user
-
-    delete_statement = MySQLStatementBuilder(db_connection)
-    _, rows = delete_statement.delete(CVS_BPMN_EDGES_TABLE) \
-        .where('id = %s', [edge_id]) \
-        .execute(return_affected_rows=True)
-
-    if rows == 0:
-        raise exceptions.EdgeFailedDeletionException(edge_id)
-
     return True
 
 
-def update_bpmn_edge(db_connection: PooledMySQLConnection, edge_id: int, edge: models.EdgePost,
-                     project_id: int, vcs_id: int, user_id: int) -> models.EdgeGet:
-    logger.debug(f'Updating edge with id={edge_id}.')
-
-    # Performs necessary checks
-    get_bpmn_edge(db_connection, edge_id)
-    vcs_storage.get_vcs(db_connection, vcs_id, project_id, user_id)
-    get_bpmn_node(db_connection, edge.from_node, project_id, user_id)
-    get_bpmn_node(db_connection, edge.to_node, project_id, user_id)
-
-    update_statement = MySQLStatementBuilder(db_connection)
-    update_statement.update(
-        table=CVS_BPMN_EDGES_TABLE,
-        set_statement='vcs_id = %s, name = %s, from_node = %s, to_node = %s, probability = %s',
-        values=[vcs_id, edge.name, edge.from_node, edge.to_node, edge.probability],
-    )
-    update_statement.where('id = %s', [edge_id])
-    _, rows = update_statement.execute(return_affected_rows=True)
-
-    return get_bpmn_edge(db_connection, edge_id)
-
-
-def get_bpmn(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int, user_id: int) -> models.BPMNGet:
+def get_bpmn(db_connection: PooledMySQLConnection, vcs_id: int) -> models.BPMNGet:
     logger.debug(f'Get BPMN for vcs with id={vcs_id}.')
 
-    vcs_storage.get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks: project, vcs and user
+    # vcs_storage.get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks: project, vcs and user
 
-    where_statement = f'vcs_id = %s'
+    where_statement = f'vcs = %s'
     where_values = [vcs_id]
 
     select_statement = MySQLStatementBuilder(db_connection)
-    nodes = select_statement \
-        .select(CVS_BPMN_NODES_TABLE, CVS_BPMN_NODES_COLUMNS) \
+    process_nodes_result = select_statement \
+        .select(CVS_PROCESS_NODES_TABLE, CVS_PROCESS_NODES_COLUMNS) \
+        .inner_join(CVS_NODES_TABLE, 'cvs_nodes.id = cvs_process_nodes.id') \
         .where(where_statement, where_values) \
-        .order_by(['id'], Sort.ASCENDING) \
+        .order_by(['cvs_nodes.id'], Sort.ASCENDING) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+    process_nodes = [populate_process_node(db_connection, result) for result in process_nodes_result]
 
     select_statement = MySQLStatementBuilder(db_connection)
-    edges = select_statement \
-        .select(CVS_BPMN_EDGES_TABLE, CVS_BPMN_EDGES_COLUMNS) \
+    start_stop_nodes_result = select_statement \
+        .select(CVS_START_STOP_NODES_TABLE, CVS_START_STOP_NODES_COLUMNS) \
+        .inner_join(CVS_NODES_TABLE, 'cvs_nodes.id = cvs_start_stop_nodes.id') \
         .where(where_statement, where_values) \
-        .order_by(['id'], Sort.ASCENDING) \
+        .order_by(['cvs_nodes.id'], Sort.ASCENDING) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+    start_stop_nodes = [populate_start_stop_node(result) for result in start_stop_nodes_result]
 
     return models.BPMNGet(
-        vcs_id=vcs_id,
-        nodes=[populate_bpmn_node(db_connection, node, project_id, user_id) for node in nodes],
-        edges=[populate_bpmn_edge(edge) for edge in edges],
+        nodes=[*process_nodes, *start_stop_nodes]
     )
 
 
-def update_bpmn(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int, user_id: int,
-                nodes: List[models.NodeGet], edges: List[models.EdgeGet]) -> models.BPMNGet:
+def update_bpmn(db_connection: PooledMySQLConnection, vcs_id: int,
+                bpmn: models.BPMNGet) -> bool:
     logger.debug(f'Updating bpmn with vcs id={vcs_id}.')
 
-    vcs_storage.get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks: project, vcs and user
-
-    for node in nodes:
+    for node in bpmn.nodes:
         new_node = models.NodePost(
-            vcs_id=vcs_id,
-            name=node.name,
-            node_type=node.node_type,
+            id=node.id,
             pos_x=node.pos_x,
             pos_y=node.pos_y
         )
-        update_bpmn_node(db_connection, node.id, new_node, project_id, vcs_id, user_id)
+        update_node(db_connection, node.id, new_node)
 
-    for edge in edges:
-        new_edge = models.EdgePost(
-            vcs_id=vcs_id,
-            name=edge.name,
-            from_node=edge.from_node,
-            to_node=edge.to_node,
-            probability=edge.probability,
-        )
-        update_bpmn_edge(db_connection, edge.id, new_edge, project_id, vcs_id, user_id)
-
-    return get_bpmn(db_connection, vcs_id, project_id, user_id)
+    return True
