@@ -172,32 +172,32 @@ def update_node(db_connection: PooledMySQLConnection, node_id: int, node: models
     return True
 
 
-def db_select_nodes(db_connection: PooledMySQLConnection, vcs_id: int, table: str,
-                    columns: List) -> dict:
-    where_statement = f'vcs = %s'
-    where_values = [vcs_id]
-
-    select_statement = MySQLStatementBuilder(db_connection)
-    result = select_statement \
-        .select(table, columns) \
-        .where(where_statement, where_values) \
-        .order_by(['id'], Sort.ASCENDING) \
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-
-    return result
-
-
 def get_bpmn(db_connection: PooledMySQLConnection, vcs_id: int) -> models.BPMNGet:
     logger.debug(f'Get BPMN for vcs with id={vcs_id}.')
 
     # vcs_storage.get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks: project, vcs and user
 
-    process_nodes_result = db_select_nodes(db_connection, vcs_id, CVS_PROCESS_NODES_TABLE, CVS_PROCESS_NODES_COLUMNS)
-    start_stop_nodes_result = db_select_nodes(db_connection, vcs_id, CVS_START_STOP_NODES_TABLE,
-                                              CVS_START_STOP_NODES_COLUMNS)
+    where_statement = f'vcs = %s'
+    where_values = [vcs_id]
 
+    select_statement = MySQLStatementBuilder(db_connection)
+    process_nodes_result = select_statement \
+        .select(CVS_PROCESS_NODES_TABLE, CVS_PROCESS_NODES_COLUMNS) \
+        .inner_join(CVS_NODES_TABLE, 'cvs_nodes.id = cvs_process_nodes.id') \
+        .where(where_statement, where_values) \
+        .order_by(['cvs_nodes.id'], Sort.ASCENDING) \
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
     process_nodes = [populate_process_node(db_connection, result) for result in process_nodes_result]
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    start_stop_nodes_result = select_statement \
+        .select(CVS_START_STOP_NODES_TABLE, CVS_START_STOP_NODES_COLUMNS) \
+        .inner_join(CVS_NODES_TABLE, 'cvs_nodes.id = cvs_start_stop_nodes.id') \
+        .where(where_statement, where_values) \
+        .order_by(['cvs_nodes.id'], Sort.ASCENDING) \
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
     start_stop_nodes = [populate_start_stop_node(result) for result in start_stop_nodes_result]
+
     return models.BPMNGet(
         nodes=[*process_nodes, *start_stop_nodes]
     )
