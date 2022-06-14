@@ -2,7 +2,7 @@ from typing import Optional, List
 
 from pydantic import BaseModel
 
-from sedbackend.apps.cvs.vcs.models import VCS, VCSValueDriver, TableRowGet
+from sedbackend.apps.cvs.vcs.models import VCS, ValueDriver, VcsRow
 
 # ======================================================================================================================
 # CVS Design
@@ -28,11 +28,11 @@ class DesignPost(BaseModel):
 class QuantifiedObjective(BaseModel):
     id: int
     design: int
-    value_driver: VCSValueDriver
+    value_driver: ValueDriver
     name: str
     property: float
     unit: str
-    processes: List[TableRowGet]
+    processes: List[VcsRow]
 
 
 class QuantifiedObjectivePost(BaseModel):

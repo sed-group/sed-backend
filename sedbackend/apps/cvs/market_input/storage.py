@@ -3,7 +3,7 @@ from typing import List
 from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
 
-from sedbackend.apps.cvs.vcs.storage import get_vcs, get_vcs_table_row
+from sedbackend.apps.cvs.vcs.storage import get_vcs
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.cvs.market_input import models, exceptions
 
@@ -66,7 +66,7 @@ def create_market_input(db_connection: PooledMySQLConnection, project_id: int, v
     if db_result is not None:
         raise exceptions.MarketInputAlreadyExistException
 
-    get_vcs_table_row(db_connection, node_id, project_id, vcs_id, user_id)  # perform checks
+    #get_vcs_table_row(db_connection, node_id, project_id, vcs_id, user_id)  # perform checks
 
     columns = ['vcs', 'node', 'time', 'cost', 'revenue']
     values = [vcs_id, node_id, market_input.time, market_input.cost, market_input.revenue]

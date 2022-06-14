@@ -2,7 +2,8 @@ from typing import Optional, List
 
 from pydantic import BaseModel
 
-from sedbackend.apps.cvs.vcs.models import TableRowGet
+from sedbackend.apps.cvs.vcs.models import VcsRow
+
 
 
 class NodeGet(BaseModel):
@@ -12,7 +13,7 @@ class NodeGet(BaseModel):
     node_type: str
     pos_x: Optional[int] = None
     pos_y: Optional[int] = None
-    vcs_table_row: Optional[TableRowGet] = None
+    vcs_table_row: Optional[VcsRow] = None
 
 
 class NodePost(BaseModel):

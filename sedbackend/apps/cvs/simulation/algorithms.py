@@ -10,7 +10,7 @@ import sedbackend.apps
 
 class Simulation:
     def __init__(self, db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id: int):
-        self.vcs_table_rows = vcs_storage.get_all_table_rows(db_connection, vcs_id, project_id, user_id)
+     #   self.vcs_table_rows = vcs_storage.get_all_table_rows(db_connection, vcs_id, project_id, user_id)
         self.processes = populate_processes(db_connection, self.vcs_table_rows)
         self.dsm = create_dsm(self.processes)
         self.time = [0.0]
@@ -50,7 +50,7 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, vcs_id
 
 
 def populate_processes(db_connection: PooledMySQLConnection,
-                       vcs_table_rows: List[sedbackend.apps.cvs.vcs.models.TableRowGet]) -> List[
+                       vcs_table_rows: List[sedbackend.apps.cvs.vcs.models.VcsRow]) -> List[
     sedbackend.apps.cvs.simulation.models.Process]:
     processes = []
 
