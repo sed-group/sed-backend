@@ -71,6 +71,19 @@ class VCSStakeholderNeedPost(BaseModel):
     name: Optional[str] = None
     rank_weight: Optional[int] = None
 '''
+# ======================================================================================================================
+# VCS Value dimension
+# ======================================================================================================================
+class ValueDimension(BaseModel):
+    id: int
+    name: str
+    priority: str
+    vcs_row: int
+
+class ValueDimensionPost(BaseModel):
+    name: int
+    priority: str
+
 
 # ======================================================================================================================
 # VCS Value driver

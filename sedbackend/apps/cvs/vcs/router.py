@@ -101,7 +101,7 @@ async def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int) -> b
 
 @router.get(
     '/project/{project_id}/value-driver/get/all',
-    summary='Returns all of value drivers of a project',
+    summary='Returns all of value drivers of a project that are associated with a row',
     response_model=List[models.ValueDriver],
 )
 async def get_all_value_driver(project_id: int,

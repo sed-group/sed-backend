@@ -1,3 +1,4 @@
+from multiprocessing import Pool
 from sys import stdout
 from typing import List
 
@@ -6,6 +7,7 @@ from mysql.connector.pooling import PooledMySQLConnection
 
 from sedbackend.apps.core.authentication import exceptions as auth_exceptions
 from sedbackend.apps.cvs import project
+from sedbackend.apps.cvs import vcs
 from sedbackend.apps.cvs.project.storage import get_cvs_project
 from sedbackend.apps.cvs.life_cycle.storage import create_bpmn_node, update_bpmn_node
 from sedbackend.apps.cvs.life_cycle.models import NodePost
@@ -16,6 +18,9 @@ from sedbackend.libs.mysqlutils import MySQLStatementBuilder, Sort, FetchType
 
 CVS_VCS_TABLE = 'cvs_vcss'
 CVS_VCS_COLUMNS = ['id', 'name', 'description', 'datetime_created', 'year_from', 'year_to', 'project']
+
+CVS_VALUE_DIMENSION_TABLE = 'cvs_value_dimensions'
+CVS_VALUE_DIMENSION_COLUMNS = ['id', 'name', 'priority', 'vcs_row']
 
 CVS_VALUE_DRIVER_TABLE = 'cvs_value_drivers'
 CVS_VALUE_DRIVER_COLUMNS = ['id', 'name', 'unit', 'value_dimension']
@@ -202,6 +207,55 @@ def populate_vcs(db_connection: PooledMySQLConnection, db_result, project_id: in
 
 
 # ======================================================================================================================
+# VCS Value Dimensions
+# ======================================================================================================================
+def get_value_dimension(db_connection: PooledMySQLConnection, value_dimension_id: int, vcs_row: int) -> models.ValueDimension:
+    logger.debug(f'Fetching a single value dimension with id: {value_dimension_id}')
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    res = select_statement \
+        .select(CVS_VALUE_DIMENSION_TABLE, CVS_VALUE_DIMENSION_COLUMNS)\
+        .where(f'id = %s', [value_dimension_id])\
+        .execute(FetchType.FETCH_ONE, dictionary=True)
+    
+    if res is None:
+        raise exceptions.ValueDimensionNotFoundException
+    
+    if res['vcs_row'] != vcs_row:
+        raise exceptions.VCSRowNotCorrectException
+    
+    return populate_value_dimension(res, res['vcs_row'])
+
+def create_value_dimension(db_connection: PooledMySQLConnection, value_dimension_post: models.ValueDimensionPost, vcs_row: int) -> models.ValueDimension:
+    logger.debug(f'Inserting a new value dimension')
+
+    insert_statement = MySQLStatementBuilder(db_connection)
+    res = insert_statement \
+        .insert(CVS_VALUE_DIMENSION_TABLE, ['name', 'priority', 'vcs_row'])\
+        .set_values([value_dimension_post.name, value_dimension_post.priority, vcs_row]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+    
+    return get_value_dimension(db_connection, insert_statement.last_insert_id, vcs_row)
+
+def edit_value_dimension(db_connection: PooledMySQLConnection, dimension_id: int, updated_dimension: models.ValueDimensionPost, vcs_row: int) -> models.ValueDimension:
+    logger.debug(f'Editing value dimension with id={dimension_id}')
+
+    update_statement = MySQLStatementBuilder(db_connection)
+    res = update_statement \
+        .update(CVS_VALUE_DIMENSION_TABLE, 'name = %s, priority = %s, vcs_row = %s', [updated_dimension.name, updated_dimension.priority, vcs_row])\
+        .where(f'id = %s', [dimension_id])\
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+    
+    return get_value_dimension(db_connection, dimension_id, vcs_row)
+
+def populate_value_dimension(db_result, vcs_row: int) -> models.ValueDimension:
+    return models.ValueDimension(
+        id=db_result['id'],
+        name=db_result['name'],
+        priority=db_result['priority'],
+        vcs_row=vcs_row
+    )
+# ======================================================================================================================
 # VCS Value driver
 # ======================================================================================================================
 
@@ -210,7 +264,7 @@ def get_all_value_driver(db_connection: PooledMySQLConnection, project_id: int) 
     logger.debug(f'Fetching all value drivers for project with id={project_id}.')
     #Fetches only the value drivers that has a connection with a vcs row.
 
-    query = f'SELECT cvs_value_drivers.id, `name`, unit, value_dimension FROM cvs_value_drivers \
+    query = f'SELECT cvs_value_drivers.id, cvs_value_drivers.name, unit, value_dimension FROM cvs_value_drivers \
             INNER JOIN cvs_rowDrivers ON cvs_value_drivers.id = value_driver \
             INNER JOIN cvs_vcs_rows ON vcs_row = cvs_vcs_rows.id \
             INNER JOIN cvs_vcss ON vcs = cvs_vcss.id \
@@ -304,6 +358,8 @@ def populate_value_driver(db_result) -> models.ValueDriver:
         unit=db_result['unit'],
         value_dimension=db_result['value_dimension']
     )
+
+
 
 
 # ======================================================================================================================
