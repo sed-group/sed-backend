@@ -53,24 +53,6 @@ class VCSSubprocessPost(BaseModel):
     order_index: int
     parent_process_id: int
 
-
-
-# ======================================================================================================================
-# VCS Stakeholder need
-# ======================================================================================================================
-
-'''
-class VCSStakeholderNeed(BaseModel):
-    id: int
-    name: str
-    rank_weight: int
-    vcs_tabel_row: VCSTableRow
-
-
-class VCSStakeholderNeedPost(BaseModel):
-    name: Optional[str] = None
-    rank_weight: Optional[int] = None
-'''
 # ======================================================================================================================
 # VCS Value dimension
 # ======================================================================================================================
@@ -81,7 +63,7 @@ class ValueDimension(BaseModel):
     vcs_row: int
 
 class ValueDimensionPost(BaseModel):
-    name: int
+    name: str
     priority: str
 
 
@@ -103,7 +85,7 @@ class ValueDriverPost(BaseModel):
     value_dimension: Optional[int] = None
 
 # ======================================================================================================================
-# VCS Table - Representation/return models
+# VCS Rows - Representation/return models
 # ======================================================================================================================
 
 class VcsRow(BaseModel):
@@ -114,7 +96,7 @@ class VcsRow(BaseModel):
     stakeholder_expectations: str
     iso_process: Optional[VCSISOProcess] = None
     subprocess: Optional[VCSSubprocess] = None
-    value_dimension: Optional[List[int]] = None
+    value_dimensions: Optional[List[ValueDimension]] = None
     value_drivers: Optional[List[ValueDriver]] = None
     vcs_id: int
 
@@ -125,77 +107,6 @@ class VcsRowPost(BaseModel):
     stakeholder_expectations: str
     iso_process: Optional[int] = None
     subprocess: Optional[int] = None
-    value_dimension: Optional[List[int]] = None
+    value_dimensions: Optional[List[ValueDimensionPost]] = None
     value_drivers: Optional[List[int]] = None
 
-"""
-class StakeholderNeedGet(BaseModel):
-    id: int
-    need: str
-    rank_weight: int
-    value_drivers: List[ValueDriverGet] = None
-
-
-class TableRowGet(BaseModel):
-    id: int
-    node_id: int
-    row_index: int
-    iso_process: Optional[VCSISOProcess] = None
-    subprocess: Optional[VCSSubprocess] = None
-    stakeholder: Optional[str] = None
-    stakeholder_expectations: Optional[str] = None
-    stakeholder_needs: List[StakeholderNeedGet] = None
-
-
-class TableGet(BaseModel):
-    table_rows: List[TableRowGet]
-"""
-
-# ======================================================================================================================
-# VCS Table - Post models
-# ======================================================================================================================
-
-
-"""
-class StakeholderNeedPost(BaseModel):
-    need: Optional[str] = None
-    rank_weight: Optional[int] = 0
-    value_driver_ids: Optional[List[int]] = None
-
-
-class TableRowPost(BaseModel):
-    node_id: Optional[int] = None
-    row_index: int
-    iso_process_id: Optional[int] = None
-    subprocess_id: Optional[int] = None
-    stakeholder: Optional[str] = None
-    stakeholder_expectations: Optional[str] = None
-    stakeholder_needs: List[StakeholderNeedPost] = None
-
-
-class TablePost(BaseModel):
-    table_rows: List[TableRowPost]
-"""
-
-# ======================================================================================================================
-# VCS Table Row
-# ======================================================================================================================
-"""
-class VCSTableRow(BaseModel):
-    id: int
-    node_id: int
-    row_index: int
-    stakeholder: str
-    stakeholder_expectations: str
-    iso_process: VCSISOProcess
-    subprocess: VCSSubprocess
-    vcs: VCS
-
-
-class VCSTableRowPost(BaseModel):  # Never used anywhere
-    node_id: Optional[int] = None
-    stakeholder: str
-    stakeholder_expectations: Optional[str] = None
-    iso_process_id: Optional[int] = None
-    subprocess_id: Optional[int] = None
-"""
