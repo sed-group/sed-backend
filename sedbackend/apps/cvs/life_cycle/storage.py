@@ -5,9 +5,10 @@ from mysql.connector.pooling import PooledMySQLConnection
 
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.cvs.life_cycle import exceptions, models
+from sedbackend.apps.cvs.vcs import storage as vcs_storage
 
 CVS_NODES_TABLE = 'cvs_nodes'
-CVS_NODES_COLUMNS = ['id', 'vcs', 'from', 'to', 'pos_x', 'pos_y']
+CVS_NODES_COLUMNS = ['cvs_nodes.id', 'vcs', 'from', 'to', 'pos_x', 'pos_y']
 
 CVS_PROCESS_NODES_TABLE = 'cvs_process_nodes'
 CVS_PROCESS_NODES_COLUMNS = CVS_NODES_COLUMNS + ['vcs_row']
@@ -18,17 +19,17 @@ CVS_START_STOP_NODES_COLUMNS = CVS_NODES_COLUMNS + ['type']
 
 # TODO error handling
 
-def populate_process_node(result) -> models.ProcessNodeGet:
+def populate_process_node(db_connection, result) -> models.ProcessNodeGet:
     logger.debug(f'Populating model for process node with id={result["id"]}')
 
     return models.ProcessNodeGet(
         id=result['id'],
-        vcs_id=result['vcs_id'],
+        vcs_id=result['vcs'],
         from_node=result['from'],
         to_node=result['to'],
         pos_x=result['pos_x'],
         pos_y=result['pos_y'],
-        vcs_row=result['vcs_row']  # TODO get vcs row
+        vcs_row=vcs_storage.get_vcs_row(db_connection, result['vcs_row'])
     )
 
 
@@ -36,7 +37,7 @@ def populate_start_stop_node(result) -> models.StartStopNodeGet:
     logger.debug(f'Populating model for start/stop node with id={result["id"]}')
     return models.StartStopNodeGet(
         id=result['id'],
-        vcs_id=result['vcs_id'],
+        vcs_id=result['vcs'],
         from_node=result['from'],
         to_node=result['to'],
         pos_x=result['pos_x'],
@@ -64,19 +65,36 @@ def get_node(db_connection: PooledMySQLConnection, node_id: int, table=CVS_NODES
 
 def get_process_node(db_connection: PooledMySQLConnection, node_id: int) -> models.ProcessNodeGet:
     logger.debug(f'Fetching a process node with id={node_id}.')
-    result = get_node(db_connection, node_id, CVS_PROCESS_NODES_TABLE, CVS_PROCESS_NODES_COLUMNS)
-    return populate_process_node(result)
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    result = select_statement \
+        .select(CVS_PROCESS_NODES_TABLE, CVS_PROCESS_NODES_COLUMNS) \
+        .inner_join(CVS_NODES_TABLE, 'cvs_nodes.id = cvs_process_nodes.id') \
+        .where('cvs_nodes.id = %s', [node_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    return populate_process_node(db_connection, result)
 
 
 def get_start_stop_node(db_connection: PooledMySQLConnection, node_id: int) -> models.StartStopNodeGet:
     logger.debug(f'Fetching a process node with id={node_id}.')
-    result = get_node(db_connection, node_id, CVS_START_STOP_NODES_TABLE, CVS_START_STOP_NODES_COLUMNS)
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    result = select_statement \
+        .select(CVS_START_STOP_NODES_TABLE, CVS_START_STOP_NODES_COLUMNS) \
+        .inner_join(CVS_NODES_TABLE, 'cvs_nodes.id = cvs_start_stop_nodes.id') \
+        .where('cvs_nodes.id = %s', [node_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if result is None:
+        raise exceptions.NodeNotFoundException
+
     return populate_start_stop_node(result)
 
 
 # Create parent node and return id
 def create_node(db_connection: PooledMySQLConnection, node: models.NodePost, vcs_id: int) -> int:
-    columns = ['vcs, pos_x, pos_y']
+    columns = ['vcs', 'pos_x', 'pos_y']
     values = [vcs_id, node.pos_x, node.pos_y]
 
     insert_statement = MySQLStatementBuilder(db_connection)
@@ -115,10 +133,9 @@ def create_start_stop_node(db_connection: PooledMySQLConnection, node: models.St
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
-        .insert(table=CVS_PROCESS_NODES_TABLE, columns=columns) \
+        .insert(table=CVS_START_STOP_NODES_TABLE, columns=columns) \
         .set_values(values) \
         .execute(fetch_type=FetchType.FETCH_NONE)
-    node_id = insert_statement.last_insert_id
 
     return get_start_stop_node(db_connection, node_id)
 
@@ -179,7 +196,7 @@ def get_bpmn(db_connection: PooledMySQLConnection, vcs_id: int) -> models.BPMNGe
     start_stop_nodes_result = db_select_nodes(db_connection, vcs_id, CVS_START_STOP_NODES_TABLE,
                                               CVS_START_STOP_NODES_COLUMNS)
 
-    process_nodes = [populate_process_node(result) for result in process_nodes_result]
+    process_nodes = [populate_process_node(db_connection, result) for result in process_nodes_result]
     start_stop_nodes = [populate_start_stop_node(result) for result in start_stop_nodes_result]
     return models.BPMNGet(
         nodes=[*process_nodes, *start_stop_nodes]

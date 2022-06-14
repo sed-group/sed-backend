@@ -16,5 +16,5 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_input`
     FOREIGN KEY(`vcs`)
         REFERENCES `seddb`.`cvs_vcss`(`id`),
     FOREIGN KEY(`node`)
-        REFERENCES `seddb`.`cvs_bpmn_nodes`(`id`)
+        REFERENCES `seddb`.`cvs_nodes`(`id`)
 )

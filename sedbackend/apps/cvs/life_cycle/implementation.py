@@ -1,11 +1,8 @@
-from typing import List
-
 from fastapi import HTTPException
 from starlette import status
 
 from sedbackend.apps.core.authentication import exceptions as auth_ex
 from sedbackend.apps.core.db import get_connection
-from sedbackend.apps.cvs.project import exceptions as project_exceptions
 from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.life_cycle import exceptions, storage, models
 
@@ -73,7 +70,7 @@ def delete_node(node_id: int, vcs_id: int) -> bool:
 def update_node(node_id: int, node: models.NodePost, vcs_id: int) -> bool:
     try:
         with get_connection() as con:
-            result = storage.update_node(con, node_id, node, vcs_id)
+            result = storage.update_node(con, node_id, node)
             con.commit()
             return result
     except vcs_exceptions.VCSNotFoundException:
