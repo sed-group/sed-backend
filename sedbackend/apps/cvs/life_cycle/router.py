@@ -42,7 +42,7 @@ async def get_bpmn(vcs_id: int) -> models.BPMNGet:
 
 
 @router.put(
-    '/project/{project_id}/vcs/{vcs_id}/bpmn',
+    '/vcs/{vcs_id}/bpmn',
     summary='Edit BPMN',
     response_model=bool,
 )
