@@ -476,10 +476,15 @@ def create_subprocess(db_connection: PooledMySQLConnection, subprocess_post: mod
     values = [subprocess_post.name, subprocess_post.order_index, subprocess_post.parent_process_id]
 
     insert_statement = MySQLStatementBuilder(db_connection)
-    insert_statement \
-        .insert(table=CVS_VCS_SUBPROCESS_TABLE, columns=columns) \
-        .set_values(values) \
-        .execute(fetch_type=FetchType.FETCH_NONE)
+    try:
+        insert_statement \
+            .insert(table=CVS_VCS_SUBPROCESS_TABLE, columns=columns) \
+            .set_values(values) \
+            .execute(fetch_type=FetchType.FETCH_NONE)
+    except Error as e:
+        logger.debug(f'Error msg: {e.msg}')
+        raise exceptions.ISOProcessNotFoundException #Could also fail if the order index is the same. This is not checked for though. 
+        
     subprocess_id = insert_statement.last_insert_id
 
     return get_subprocess(db_connection, subprocess_id)
