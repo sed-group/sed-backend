@@ -94,6 +94,22 @@ async def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int) -> b
 #    implementation.get_vcs(vcs_id, project_id, user.id)  # perfoms necessary controls
     return implementation.create_vcs_table(new_table, vcs_id)
 
+@router.put(
+    '/vcs/{vcs_id}/table',
+    summary='Edits rows of the vcs table',
+    response_model=bool
+)
+async def edit_vcs_table(updated_table: List[models.VcsRow], vcs_id: int) -> bool:
+    return implementation.edit_vcs_table(updated_table, vcs_id)
+
+@router.delete(
+    '/vcs/{vcs_id}/row/{row_id}',
+    summary='Deletes the specified row',
+    response_model=bool
+)
+async def delete_vcs_row(row_id: int, vcs_id: int) -> bool:
+    return implementation.delete_vcs_row(row_id, vcs_id)
+
 # ======================================================================================================================
 # VCS Value driver
 # ======================================================================================================================

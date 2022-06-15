@@ -5,6 +5,7 @@ from typing import List
 
 from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
+from requests import delete
 
 from sedbackend.apps.core.authentication import exceptions as auth_exceptions
 from sedbackend.apps.cvs import project
@@ -725,5 +726,85 @@ def create_vcs_table(db_connection: PooledMySQLConnection, new_vcs_rows: List[mo
                     .set_values([insert_statement.last_insert_id, vd]) \
                     .execute(fetch_type=FetchType.FETCH_NONE)
         
+
+    return True
+
+def edit_vcs_table(db_connection: PooledMySQLConnection, updated_vcs_rows: List[models.VcsRow], vcs_id: int) -> bool:
+    logger.debug(f'Editing vcs table')
+
+    for row in updated_vcs_rows:
+
+        values = [row.index, row.stakeholder, row.stakeholder_expectations, row.stakeholder_needs, getattr(row.iso_process, 'id', None), getattr(row.subprocess, 'id', None), vcs_id]
+
+        if row.iso_process is None and row.subprocess is None:
+            raise exceptions.VCSTableProcessAmbiguity
+        elif row.iso_process is not None and row.subprocess is not None:
+            raise exceptions.VCSTableProcessAmbiguity
+        
+        update_statement = MySQLStatementBuilder(db_connection)
+        update_statement.update(
+            table=CVS_VCS_ROWS_TABLE,
+            set_statement=f'`index` = %s, stakeholder = %s, stakeholder_expectations = %s, stakeholder_needs = %s, iso_process = %s, subprocess = %s, vcs = %s',
+            values=[row.index, row.stakeholder, row.stakeholder_expectations, row.stakeholder_needs, getattr(row.iso_process, 'id', None), getattr(row.subprocess, 'id', None), vcs_id]
+        )
+        update_statement.where(f'id = %s', [row.id])
+        _, rows = update_statement.execute(return_affected_rows=True)
+
+        if rows == 0:
+            raise exceptions.VCSTableRowFailedToUpdateException
+
+        #TODO delete value drivers from rowDrivers if they are not in the array anymore
+        select_statement = MySQLStatementBuilder(db_connection)
+        drivers = select_statement \
+            .select('cvs_rowDrivers', ['value_driver'])\
+            .where('vcs_row = %s',  [row.id])\
+            .execute(fetch_type=FetchType.FETCH_ALL, dictionary=False)
+        
+        for driver in (row.value_drivers or []):
+            if driver.id in drivers: #If the value driver from the given vcs row is in the fetched drivers then all is good, nothing needs to be updated
+                drivers.pop(driver.id)
+            else:
+                #If the value driver from the given vcs row is not in the fetched drivers then we need to insert it into the rowDrivers table
+                insert_statement = MySQLStatementBuilder(db_connection)
+                insert_statement.insert('cvs_rowDrivers', ['vcs_row', 'value_driver'])\
+                    .set_values([row.id, driver.id])\
+                    .execute(fetch_type=FetchType.FETCH_NONE)
+        
+        for vd in (drivers or []) : #For all value drivers that are left over in the fetched drivers, and that are not in the new updated drivers, delete them from rowDrivers. 
+            delete_statement = MySQLStatementBuilder(db_connection)
+            _, vd_row = delete_statement.delete('cvs_rowDrivers')\
+                .where('value_driver = %s, vcs_row = %s', [vd, row.id])\
+                .execute(return_affected_rows=True)
+            if vd_row == 0:
+                raise exceptions.ValueDriverFailedDeletionException
+        
+        #TODO update the value dimensions if they are updated here. 
+        dimensions = get_all_row_value_dimensions(db_connection, vcs_id)
+        for dimension in (row.value_dimensions or []):
+            if dimension in dimensions:
+                dimensions.pop(dimension)
+            else:
+                create_value_dimension(db_connection, models.ValueDimensionPost(name=dimension.name, priority=dimension.priority), vcs_id)
+        
+        for dim in (dimensions or []):
+            delete_statement = MySQLStatementBuilder(db_connection)
+            _, dim_row = delete_statement.delete(CVS_VALUE_DIMENSION_TABLE)\
+                .where('id = %s', [dim.id])\
+                .execute(return_affected_rows=True)
+            if dim_row == 0:
+                raise exceptions.ValueDimensionFailedDeletionException
+              
+
+    return True
+
+def delete_vcs_row(db_connection: PooledMySQLConnection,vcs_row_id: int, vcs_id: int) -> bool:
+    logger.debug(f'Deleting vcs row with id: {vcs_row_id}')
+
+    delete_statement = MySQLStatementBuilder(db_connection)
+    _, rows = delete_statement.delete(CVS_VCS_ROWS_TABLE)\
+                    .where('id = %s and vcs = %s', [vcs_row_id, vcs_id])\
+                    .execute(return_affected_rows=True)
+    if rows == 0:
+        raise exceptions.VCSTableRowFailedDeletionException
 
     return True
