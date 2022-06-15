@@ -5,6 +5,9 @@ from typing import List
 
 from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
+from mysql.connector import Error,errorcode
+
+
 
 from sedbackend.apps.core.authentication import exceptions as auth_exceptions
 from sedbackend.apps.cvs import project
@@ -473,10 +476,15 @@ def create_subprocess(db_connection: PooledMySQLConnection, subprocess_post: mod
     values = [subprocess_post.name, subprocess_post.order_index, subprocess_post.parent_process_id]
 
     insert_statement = MySQLStatementBuilder(db_connection)
-    insert_statement \
-        .insert(table=CVS_VCS_SUBPROCESS_TABLE, columns=columns) \
-        .set_values(values) \
-        .execute(fetch_type=FetchType.FETCH_NONE)
+    try:
+        insert_statement \
+            .insert(table=CVS_VCS_SUBPROCESS_TABLE, columns=columns) \
+            .set_values(values) \
+            .execute(fetch_type=FetchType.FETCH_NONE)
+    except Error as e:
+        logger.debug(f'Error msg: {e.msg}')
+        raise exceptions.ISOProcessNotFoundException #Could also fail if the order index is the same. This is not checked for though. 
+        
     subprocess_id = insert_statement.last_insert_id
 
     return get_subprocess(db_connection, subprocess_id)
@@ -547,7 +555,6 @@ def populate_subprocess(db_result) -> models.VCSSubprocess:
         id=db_result['id'],
         name=db_result['name'],
         order_index=db_result['order_index'],
-        vcs_id=db_result['vcs'],
         parent_process=models.VCSISOProcess(
             id=db_result['iso_process'],
             name=db_result['iso_process_name'],
@@ -668,8 +675,10 @@ def populate_vcs_row(db_connection: PooledMySQLConnection, db_result, value_driv
     iso_process, subprocesss = None, None
     if db_result['iso_process'] is not None:
         logger.debug(db_result['iso_process']) #There is a bug here when fetching an entire vcs table
-        iso_process = get_iso_process(int(db_result['iso_process']), db_connection)  # Gets a iso process based on the id that we got from the DB result
-
+        try:
+            iso_process = get_iso_process(int(db_result['iso_process']), db_connection)  # Gets a iso process based on the id that we got from the DB result
+        except exceptions.ISOProcessNotFoundException:
+            raise exceptions.ISOProcessNotFoundException
     elif db_result['subprocess'] is not None:
         try:
             subprocesss = get_subprocess(db_connection, db_result['subprocess_id'])  # Runs a new query on subprocess table based on the id that is in the result of the db query. Why is that not referenced as a foreign key and run as a single query here?????
@@ -706,12 +715,20 @@ def create_vcs_table(db_connection: PooledMySQLConnection, new_vcs_rows: List[mo
             raise exceptions.VCSTableProcessAmbiguity
         
         insert_statement = MySQLStatementBuilder(db_connection)
-        inserted_row = insert_statement \
-            .insert(CVS_VCS_ROWS_TABLE, ['index', 'stakeholder', 'stakeholder_needs', 'stakeholder_expectations', 'iso_process', 'subprocess', 'vcs'])\
-            .set_values(values)\
-            .execute(fetch_type=FetchType.FETCH_ONE)
+        try: 
+            inserted_row = insert_statement \
+                .insert(CVS_VCS_ROWS_TABLE, ['index', 'stakeholder', 'stakeholder_needs', 'stakeholder_expectations', 'iso_process', 'subprocess', 'vcs'])\
+                .set_values(values)\
+                .execute(fetch_type=FetchType.FETCH_ONE)
+        except Error as e:
+                logger.debug(f'Error msg: {e.msg}')
+                if row.iso_process is not None:
+                    raise exceptions.ISOProcessNotFoundException
+                elif row.subprocess is not None:
+                    raise exceptions.SubprocessNotFoundException
+                else:
+                    raise exceptions.VCSTableRowFailedToUpdateException(e.msg)
 
-        logger.debug(inserted_row)
         if row.value_dimensions is not None: #Inserting into value dimension if value dimensions are specified
             #Insert into value dimension table
             for value_dimension in row.value_dimensions:
