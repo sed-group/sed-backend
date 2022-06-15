@@ -176,13 +176,12 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_designs`
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_quantified_objectives`
 (
-    `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `value_driver`      INT UNSIGNED NOT NULL,
+    `design`            INT UNSIGNED NOT NULL,
     `name`              VARCHAR(63) NOT NULL,
     `value`             DOUBLE NOT NULL,
     `unit`              VARCHAR(63) NOT NULL,
-    `value_driver`      INT UNSIGNED NOT NULL,
-    `design`            INT UNSIGNED NOT NULL,
-    PRIMARY KEY(`id`),
+    PRIMARY KEY(`value_driver`, `design`),
     FOREIGN KEY(`design`)
         REFERENCES `seddb`.`cvs_designs`(`id`),
     FOREIGN KEY(`value_driver`)

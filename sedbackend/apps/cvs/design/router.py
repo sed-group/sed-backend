@@ -72,33 +72,33 @@ async def get_all_quantified_objectives(design_id: int) -> List[models.Quantifie
 
 
 @router.get(
-    '/quantified_objective/{qo_id}',
+    '/design/{design_id}/value_driver/{value_driver_id}/quantified_objective',
     summary='Fetches a quantified objective',
     response_model=models.QuantifiedObjective
 )
-async def get_quantified_objective(qo_id: int) -> models.QuantifiedObjective:
-    return implementation.get_quantified_objective(qo_id)
+async def get_quantified_objective(value_driver_id: int, design_id: int) -> models.QuantifiedObjective:
+    return implementation.get_quantified_objective(value_driver_id, design_id)
 
 
 @router.delete(
-    '/quantified-objective/{qo_id}',
+    '/design/{design_id}/value_driver/{value_driver_id}/quantified_objective',
     response_model=bool
 )
-async def delete_quantified_objective(qo_id: int) -> bool:
-    return implementation.delete_quantified_objective(qo_id)
+async def delete_quantified_objective(value_driver_id: int, design_id: int) -> bool:
+    return implementation.delete_quantified_objective(value_driver_id, design_id)
 
 
 @router.put(
-    '/quantified-objective/{qo_id}',
+    '/design/{design_id}/value_driver/{value_driver_id}/quantified_objective',
     response_model=models.QuantifiedObjective
 )
-async def edit_quantified_objective(qo_id: int,
+async def edit_quantified_objective(value_driver_id: int, design_id: int,
                                     updated_qo: models.QuantifiedObjectivePost) -> models.QuantifiedObjective:
-    return implementation.edit_quantified_objective(qo_id, updated_qo)
+    return implementation.edit_quantified_objective(value_driver_id, design_id, updated_qo)
 
 
 @router.post(
-    '/value_driver/{value_driver_id}/quantified-objective',
+    '/design/{design_id}/value_driver/{value_driver_id}/quantified-objective',
     summary='Creates a quantified objective',
     response_model=models.QuantifiedObjective
 )

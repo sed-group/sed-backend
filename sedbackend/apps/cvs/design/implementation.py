@@ -171,16 +171,16 @@ def get_all_quantified_objectives(design_id: int) -> List[models.QuantifiedObjec
         )
 
 
-def get_quantified_objective(quantified_objective_id: int) -> models.QuantifiedObjective:
+def get_quantified_objective(value_driver_id: int, design_id: int) -> models.QuantifiedObjective:
     try:
         with get_connection() as con:
-            res = storage.get_quantified_objective(con, quantified_objective_id)
+            res = storage.get_quantified_objective(con, value_driver_id, design_id)
             con.commit()
             return res
     except exceptions.QuantifiedObjectiveNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find quantified objective with id={quantified_objective_id}'
+            detail=f'Could not find quantified objective value driver id={value_driver_id} and design id = {design_id}'
         )
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
@@ -224,10 +224,10 @@ def create_quantified_objective(design_id: int, value_driver_id: int,
         )
 
 
-def delete_quantified_objective(quantified_objective_id: int) -> bool:
+def delete_quantified_objective(value_driver_id: int, design_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.delete_quantified_objective(con, quantified_objective_id)
+            res = storage.delete_quantified_objective(con, value_driver_id, design_id)
             con.commit()
             return res
     except auth_ex.UnauthorizedOperationException:
@@ -262,17 +262,17 @@ def delete_quantified_objective(quantified_objective_id: int) -> bool:
         )
 
 
-def edit_quantified_objective(quantified_objective_id: int,
+def edit_quantified_objective(value_driver_id: int, design_id: int,
                               updated_qo: models.QuantifiedObjectivePost) -> models.QuantifiedObjective:
     try:
         with get_connection() as con:
-            res = storage.edit_quantified_objective(con, quantified_objective_id, updated_qo)
+            res = storage.edit_quantified_objective(con, value_driver_id, design_id, updated_qo)
             con.commit()
             return res
     except exceptions.QuantifiedObjectiveNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find quantified objective with id={quantified_objective_id}'
+            detail=f'Could not find quantified objective.'
         )
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(

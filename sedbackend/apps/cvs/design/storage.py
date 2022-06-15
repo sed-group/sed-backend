@@ -8,10 +8,10 @@ from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.cvs.design import models, exceptions
 
 DESIGNS_TABLE = 'cvs_designs'
-DESIGNS_COLUMNS = ['id', 'project', 'vcs', 'name', 'description']
+DESIGNS_COLUMNS = ['id', 'vcs', 'name', 'description']
 
 QUANTIFIED_OBJECTIVE_TABLE = 'cvs_quantified_objectives'
-QUANTIFIED_OBJECTIVE_COLUMNS = ['id', 'design', 'value_driver', 'name', 'value', 'unit']
+QUANTIFIED_OBJECTIVE_COLUMNS = ['design', 'value_driver', 'name', 'value', 'unit']
 
 
 def create_design(db_connection: PooledMySQLConnection, design_post: models.DesignPost, vcs_id: int) -> models.Design:
@@ -70,11 +70,6 @@ def delete_design(db_connection: PooledMySQLConnection, design_id: int) -> bool:
     if result is None:
         raise exceptions.DesignNotFoundException
 
-    if delete_all_quantified_objectives(db_connection, design_id):
-        pass
-    else:
-        raise exceptions.QuantifiedObjectivesNotDeleted
-
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement.delete(DESIGNS_TABLE) \
         .where('id = %s', [design_id]) \
@@ -115,13 +110,14 @@ def populate_design(db_result) -> models.Design:
 
 
 def get_quantified_objective(db_connection: PooledMySQLConnection,
-                             quantified_objective_id: int) -> models.QuantifiedObjective:
-    logger.debug(f'Get quantified objective with id = {quantified_objective_id}')
+                             value_driver_id: int, design_id: int) -> models.QuantifiedObjective:
+    logger.debug(f'Get quantified objective for value driver with id = {value_driver_id} '
+                 f'in design with id = {design_id}')
 
     select_statement = MySQLStatementBuilder(db_connection)
     result = select_statement \
         .select(QUANTIFIED_OBJECTIVE_TABLE, QUANTIFIED_OBJECTIVE_COLUMNS) \
-        .where('id = %s', [quantified_objective_id]) \
+        .where('value_driver = %s and design = %s', [value_driver_id, design_id]) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if result is None:
@@ -154,37 +150,28 @@ def get_all_quantified_objectives(db_connection: PooledMySQLConnection,
 def create_quantified_objective(db_connection: PooledMySQLConnection, design_id: int, value_driver_id: int,
                                 quantified_objective_post: models.QuantifiedObjectivePost) \
         -> models.QuantifiedObjective:
-    logger.debug(f'Create quantified objective for design with id = {design_id}')
+    logger.debug(f'Create quantified objective for value driver with id = {value_driver_id} '
+                 f'in design with id = {design_id}')
 
     get_design(db_connection, design_id)
     get_value_driver(db_connection, value_driver_id)
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
-        .insert(table=QUANTIFIED_OBJECTIVE_TABLE, columns=['design', 'value_driver', 'name', 'property', 'unit']) \
+        .insert(table=QUANTIFIED_OBJECTIVE_TABLE, columns=['design', 'value_driver', 'name', 'value', 'unit']) \
         .set_values([design_id, value_driver_id, quantified_objective_post.name, quantified_objective_post.value,
                      quantified_objective_post.unit]) \
         .execute(fetch_type=FetchType.FETCH_NONE)
-    quantified_id = insert_statement.last_insert_id
 
-    return get_quantified_objective(db_connection, quantified_id)
+    return get_quantified_objective(db_connection, design_id, value_driver_id)
 
 
-def delete_quantified_objective(db_connection: PooledMySQLConnection, quantified_objective_id: int) -> bool:
-    logger.debug(f'Delete quantified objectives with id = {quantified_objective_id}')
-
-    select_statement = MySQLStatementBuilder(db_connection)
-    result = select_statement \
-        .select(QUANTIFIED_OBJECTIVE_TABLE, QUANTIFIED_OBJECTIVE_COLUMNS) \
-        .where('id = %s', [quantified_objective_id]) \
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-
-    if result is None:
-        raise exceptions.QuantifiedObjectiveNotFoundException
+def delete_quantified_objective(db_connection: PooledMySQLConnection, value_driver_id: int, design_id: int) -> bool:
+    logger.debug(f'Delete quantified objectives with value driver id = {value_driver_id} and design id = {design_id}')
 
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement.delete(QUANTIFIED_OBJECTIVE_TABLE) \
-        .where('id = %s', [quantified_objective_id]) \
+        .where('value_driver = %s and design = %s', [value_driver_id, design_id]) \
         .execute(return_affected_rows=True)
 
     if rows == 0:
@@ -193,40 +180,28 @@ def delete_quantified_objective(db_connection: PooledMySQLConnection, quantified
     return True
 
 
-# Do not open up for api. Should only be used when deleting other table entries.
-def delete_all_quantified_objectives(db_connection: PooledMySQLConnection, design_id: int) -> bool:
-    logger.debug(f'Deleting all quantified objectives with design id = {design_id}')
-
-    delete_statement = MySQLStatementBuilder(db_connection)
-    _, rows = delete_statement.delete(QUANTIFIED_OBJECTIVE_TABLE) \
-        .where('design = %s', [design_id]) \
-        .execute(return_affected_rows=True)
-
-    return True
-
-
-def edit_quantified_objective(db_connection: PooledMySQLConnection, quantified_objective_id: int,
+def edit_quantified_objective(db_connection: PooledMySQLConnection, value_driver_id: int, design_id: int,
                               updated_qo: models.QuantifiedObjectivePost) -> models.QuantifiedObjective:
-    logger.debug(f'Editing quantified objective with id = {quantified_objective_id}')
+    logger.debug(f'Editing quantified objective for value driver with id = {value_driver_id} '
+                 f'in design with id = {design_id}')
 
     update_statement = MySQLStatementBuilder(db_connection)
     update_statement.update(
         table=QUANTIFIED_OBJECTIVE_TABLE,
-        set_statement='name = %s, property = %s, unit = %s',
+        set_statement='name = %s, value = %s, unit = %s',
         values=[updated_qo.name, updated_qo.value, updated_qo.unit]
     )
-    update_statement.where('id = %s', [quantified_objective_id])
+    update_statement.where('value_driver = %s and design = %s', [value_driver_id, design_id])
     _, rows = update_statement.execute(return_affected_rows=True)
 
     if rows == 0:
         raise exceptions.QuantifiedObjectiveNotFoundException
 
-    return get_quantified_objective(db_connection, quantified_objective_id)
+    return get_quantified_objective(db_connection, value_driver_id, design_id)
 
 
 def populate_qo(db_connection: PooledMySQLConnection, db_result) -> models.QuantifiedObjective:
     return models.QuantifiedObjective(
-        id=db_result['id'],
         design=db_result['design'],
         value_driver=get_value_driver(db_connection, db_result['value_driver']),
         name=db_result['name'],

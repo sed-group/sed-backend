@@ -26,7 +26,6 @@ class DesignPost(BaseModel):
 
 
 class QuantifiedObjective(BaseModel):
-    id: int
     design: int
     value_driver: ValueDriver
     name: str
