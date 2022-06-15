@@ -11,18 +11,11 @@ class NodeFailedDeletionException(Exception):
         self.node_id = node_id
 
 
+class InvalidNodeType(Exception):
+    pass
+
+
 class NodeFailedToUpdateException(Exception):
     pass
 
 
-class EdgeNotFoundException(Exception):
-    pass
-
-
-class EdgeFailedDeletionException(Exception):
-    def __init__(self, edge_id: int = None):
-        self.edge_id = edge_id
-
-
-class EdgeFailedToUpdateException(Exception):
-    pass

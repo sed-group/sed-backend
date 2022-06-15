@@ -5,7 +5,8 @@ from mysql.connector.pooling import PooledMySQLConnection
 
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.cvs.life_cycle import exceptions, models
-from sedbackend.apps.cvs.vcs import storage as vcs_storage
+from sedbackend.apps.cvs.vcs import storage as vcs_storage, exceptions as vcs_exceptions
+from mysql.connector import Error
 
 CVS_NODES_TABLE = 'cvs_nodes'
 CVS_NODES_COLUMNS = ['cvs_nodes.id', 'vcs', 'from', 'to', 'pos_x', 'pos_y']
@@ -52,12 +53,14 @@ def get_node(db_connection: PooledMySQLConnection, node_id: int, table=CVS_NODES
     if columns is None:
         columns = CVS_NODES_COLUMNS
     select_statement = MySQLStatementBuilder(db_connection)
-    result = select_statement \
-        .select(table, columns) \
-        .where('id = %s', [node_id]) \
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+    try:
+        result = select_statement \
+            .select(table, columns) \
+            .where('id = %s', [node_id]) \
+            .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
-    if result is None:
+    except Error as e:
+        logger.debug(f'Error msg: {e.msg}')
         raise exceptions.NodeNotFoundException
 
     return result
@@ -67,11 +70,16 @@ def get_process_node(db_connection: PooledMySQLConnection, node_id: int) -> mode
     logger.debug(f'Fetching a process node with id={node_id}.')
 
     select_statement = MySQLStatementBuilder(db_connection)
-    result = select_statement \
-        .select(CVS_PROCESS_NODES_TABLE, CVS_PROCESS_NODES_COLUMNS) \
-        .inner_join(CVS_NODES_TABLE, 'cvs_nodes.id = cvs_process_nodes.id') \
-        .where('cvs_nodes.id = %s', [node_id]) \
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+    try:
+        result = select_statement \
+            .select(CVS_PROCESS_NODES_TABLE, CVS_PROCESS_NODES_COLUMNS) \
+            .inner_join(CVS_NODES_TABLE, 'cvs_nodes.id = cvs_process_nodes.id') \
+            .where('cvs_nodes.id = %s', [node_id]) \
+            .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    except Error as e:
+        logger.debug(f'Error msg: {e.msg}')
+        raise exceptions.NodeNotFoundException
 
     return populate_process_node(db_connection, result)
 
@@ -80,13 +88,15 @@ def get_start_stop_node(db_connection: PooledMySQLConnection, node_id: int) -> m
     logger.debug(f'Fetching a process node with id={node_id}.')
 
     select_statement = MySQLStatementBuilder(db_connection)
-    result = select_statement \
-        .select(CVS_START_STOP_NODES_TABLE, CVS_START_STOP_NODES_COLUMNS) \
-        .inner_join(CVS_NODES_TABLE, 'cvs_nodes.id = cvs_start_stop_nodes.id') \
-        .where('cvs_nodes.id = %s', [node_id]) \
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+    try:
+        result = select_statement \
+            .select(CVS_START_STOP_NODES_TABLE, CVS_START_STOP_NODES_COLUMNS) \
+            .inner_join(CVS_NODES_TABLE, 'cvs_nodes.id = cvs_start_stop_nodes.id') \
+            .where('cvs_nodes.id = %s', [node_id]) \
+            .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
-    if result is None:
+    except Error as e:
+        logger.debug(f'Error msg: {e.msg}')
         raise exceptions.NodeNotFoundException
 
     return populate_start_stop_node(result)
@@ -98,11 +108,17 @@ def create_node(db_connection: PooledMySQLConnection, node: models.NodePost, vcs
     values = [vcs_id, node.pos_x, node.pos_y]
 
     insert_statement = MySQLStatementBuilder(db_connection)
-    insert_statement \
-        .insert(table=CVS_NODES_TABLE, columns=columns) \
-        .set_values(values) \
-        .execute(fetch_type=FetchType.FETCH_NONE)
-    node_id = insert_statement.last_insert_id
+    node_id = None
+    try:
+        insert_statement \
+            .insert(table=CVS_NODES_TABLE, columns=columns) \
+            .set_values(values) \
+            .execute(fetch_type=FetchType.FETCH_NONE)
+        node_id = insert_statement.last_insert_id
+    except Error as e:
+        logger.debug(f'Error msg: {e.msg}')
+        if vcs_id is not None:
+            raise vcs_exceptions.VCSNotFoundException
 
     return node_id
 
@@ -132,10 +148,17 @@ def create_start_stop_node(db_connection: PooledMySQLConnection, node: models.St
     values = [node_id, node.type]
 
     insert_statement = MySQLStatementBuilder(db_connection)
-    insert_statement \
-        .insert(table=CVS_START_STOP_NODES_TABLE, columns=columns) \
-        .set_values(values) \
-        .execute(fetch_type=FetchType.FETCH_NONE)
+    try:
+        insert_statement \
+            .insert(table=CVS_START_STOP_NODES_TABLE, columns=columns) \
+            .set_values(values) \
+            .execute(fetch_type=FetchType.FETCH_NONE)
+    except Error as e:
+        logger.debug(f'Error msg: {e.msg}')
+        if node.type != "start" and node.type != "stop":
+            raise exceptions.InvalidNodeType
+        elif vcs_id is not None:
+            raise vcs_exceptions.VCSNotFoundException
 
     return get_start_stop_node(db_connection, node_id)
 

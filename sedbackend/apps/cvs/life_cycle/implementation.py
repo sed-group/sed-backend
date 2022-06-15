@@ -41,6 +41,11 @@ def create_start_stop_node(node: models.StartStopNodePost, vcs_id: int) -> model
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs with id={vcs_id}.',
         )
+    except exceptions.InvalidNodeType:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Type must be start or stop.',
+        )
 
 
 def delete_node(node_id: int, vcs_id: int) -> bool:
