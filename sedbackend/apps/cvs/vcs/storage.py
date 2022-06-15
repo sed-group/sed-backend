@@ -646,7 +646,7 @@ def get_vcs_row(db_connection: PooledMySQLConnection, vcs_row_id: int) -> models
 
 
     query = f'SELECT vcs_row, cvs_value_drivers.id, `name`, unit, value_dimension \
-            FROM cvs_value_drivers INNER JOIN cvs_rowDrivers ON cvs_vcs_rows.id = vcs_row \
+            FROM cvs_value_drivers INNER JOIN cvs_rowDrivers ON cvs_value_drivers.id = value_driver \
             WHERE vcs_row = %s'
     with db_connection.cursor(prepared=True) as cursor:
         cursor.execute(query, [vcs_row_id])
@@ -800,11 +800,18 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, updated_vcs_rows: List[
 def delete_vcs_row(db_connection: PooledMySQLConnection,vcs_row_id: int, vcs_id: int) -> bool:
     logger.debug(f'Deleting vcs row with id: {vcs_row_id}')
 
+    row = get_vcs_row(db_connection, vcs_row_id)
     delete_statement = MySQLStatementBuilder(db_connection)
-    _, rows = delete_statement.delete(CVS_VCS_ROWS_TABLE)\
+    res, rows = delete_statement.delete(CVS_VCS_ROWS_TABLE)\
                     .where('id = %s and vcs = %s', [vcs_row_id, vcs_id])\
-                    .execute(return_affected_rows=True)
+                    .execute(return_affected_rows=True, fetch_type=FetchType.FETCH_ONE)
     if rows == 0:
         raise exceptions.VCSTableRowFailedDeletionException
+    
+    update_indices_q = f'UPDATE cvs_vcs_rows \
+        SET `index` = `index` - 1 \
+        WHERE vcs = %s and `index` > %s'
+    with db_connection.cursor(prepared=True) as cursor:
+        cursor.execute(update_indices_q, [vcs_id, row.index])
 
     return True
