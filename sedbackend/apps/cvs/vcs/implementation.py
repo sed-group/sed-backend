@@ -315,6 +315,11 @@ def create_subprocess(subprocess_post: models.VCSSubprocessPost,
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
+    except exceptions.GenericDatabaseException as err:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=err.msg
+        )
 
 
 def edit_subprocess(subprocess_id: int, project_id: int, user_id: int,
