@@ -147,18 +147,18 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_nodes`
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_start_stop_nodes`
 (
     `id`           INT UNSIGNED NOT NULL REFERENCES `seddb`.`cvs_nodes`(`id`),
-    `type`         VARCHAR(4),
+    `type`         VARCHAR(5),
     PRIMARY KEY (`id`),
     CONSTRAINT `check_type` CHECK (`type` IN ('start', 'stop'))
 );
 
 # BPMN process node
-CREATE TABLE IF NOT EXISTS  `seddb`.`cvs_process_node`
+CREATE TABLE IF NOT EXISTS  `seddb`.`cvs_process_nodes`
 (
     `id`            INT UNSIGNED NOT NULL REFERENCES `seddb`.`cvs_nodes`(`id`),
     `vcs_row`       INT UNSIGNED NOT NULL,
-    FOREIGN KEY (`iso_process`)
-        REFERENCES `seddb`.`cvs_iso_process` (`id`)
+    FOREIGN KEY (`vcs_row`)
+        REFERENCES `seddb`.`cvs_vcs_rows` (`id`)
         ON DELETE CASCADE
 );
 
@@ -176,13 +176,12 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_designs`
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_quantified_objectives`
 (
-    `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `value_driver`      INT UNSIGNED NOT NULL,
+    `design`            INT UNSIGNED NOT NULL,
     `name`              VARCHAR(63) NOT NULL,
     `value`             DOUBLE NOT NULL,
     `unit`              VARCHAR(63) NOT NULL,
-    `value_driver`      INT UNSIGNED NOT NULL,
-    `design`            INT UNSIGNED NOT NULL,
-    PRIMARY KEY(`id`),
+    PRIMARY KEY(`value_driver`, `design`),
     FOREIGN KEY(`design`)
         REFERENCES `seddb`.`cvs_designs`(`id`),
     FOREIGN KEY(`value_driver`)
