@@ -146,17 +146,22 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_nodes`
 # BPMN start/stop node
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_start_stop_nodes`
 (
-    `id`           INT UNSIGNED NOT NULL REFERENCES `seddb`.`cvs_nodes`(`id`),
+    `id`           INT UNSIGNED NOT NULL,
     `type`         VARCHAR(5),
     PRIMARY KEY (`id`),
+    FOREIGN KEY (`id`) REFERENCES `seddb`.`cvs_nodes`(`id`)
+        ON DELETE CASCADE,
     CONSTRAINT `check_type` CHECK (`type` IN ('start', 'stop'))
 );
 
 # BPMN process node
 CREATE TABLE IF NOT EXISTS  `seddb`.`cvs_process_nodes`
 (
-    `id`            INT UNSIGNED NOT NULL REFERENCES `seddb`.`cvs_nodes`(`id`),
+    `id`            INT UNSIGNED NOT NULL,
     `vcs_row`       INT UNSIGNED NOT NULL,
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`id`) REFERENCES `seddb`.`cvs_nodes`(`id`)
+        ON DELETE CASCADE,
     FOREIGN KEY (`vcs_row`)
         REFERENCES `seddb`.`cvs_vcs_rows` (`id`)
         ON DELETE CASCADE

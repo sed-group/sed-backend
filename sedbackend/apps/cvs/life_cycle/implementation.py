@@ -41,20 +41,20 @@ def create_start_stop_node(node: models.StartStopNodePost, vcs_id: int) -> model
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs with id={vcs_id}.',
         )
+    except exceptions.InvalidNodeType:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Type must be start or stop.',
+        )
 
 
-def delete_node(node_id: int, vcs_id: int) -> bool:
+def delete_node(node_id: int) -> bool:
     try:
         with get_connection() as con:
             result = storage.delete_node(con, node_id)
             con.commit()
             return result
 
-    except vcs_exceptions.VCSNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs with id={vcs_id}.',
-        )
     except exceptions.NodeNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -67,21 +67,21 @@ def delete_node(node_id: int, vcs_id: int) -> bool:
         )
 
 
-def update_node(node_id: int, node: models.NodePost, vcs_id: int) -> bool:
+def update_node(node_id: int, node: models.NodePost) -> bool:
     try:
         with get_connection() as con:
             result = storage.update_node(con, node_id, node)
             con.commit()
             return result
-    except vcs_exceptions.VCSNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs with id={vcs_id}.',
-        )
     except exceptions.NodeNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find node with id={node_id}.',
+        )
+    except exceptions.NodeFailedToUpdateException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Failed to update node.',
         )
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
@@ -118,6 +118,16 @@ def update_bpmn(vcs_id: int, bpmn: models.BPMNGet) -> bool:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs with id={vcs_id}.',
+        )
+    except exceptions.NodeNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find node.',
+        )
+    except exceptions.NodeFailedToUpdateException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Failed to update node.',
         )
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
