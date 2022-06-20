@@ -130,10 +130,15 @@ def create_process_node(db_connection: PooledMySQLConnection, node: models.Proce
     node_id = create_node(db_connection, node, vcs_id)
 
     insert_statement = MySQLStatementBuilder(db_connection)
-    insert_statement \
-        .insert(table=CVS_PROCESS_NODES_TABLE, columns=['id', 'vcs_row']) \
-        .set_values([node_id, node.vcs_row.id]) \
-        .execute(fetch_type=FetchType.FETCH_NONE)
+
+    try:
+        insert_statement \
+            .insert(table=CVS_PROCESS_NODES_TABLE, columns=['id', 'vcs_row']) \
+            .set_values([node_id, node.vcs_row.id]) \
+            .execute(fetch_type=FetchType.FETCH_NONE)
+    except Error as e:
+        logger.debug(f'Error msg: {e.msg}')
+        raise vcs_exceptions.VCSNotFoundException
 
     return get_process_node(db_connection, node_id)
 
@@ -191,6 +196,8 @@ def update_node(db_connection: PooledMySQLConnection, node_id: int, node: models
     )
     update_statement.where('id = %s', [node_id])
     _, rows = update_statement.execute(return_affected_rows=True)
+    if rows == 0:
+        raise exceptions.NodeFailedToUpdateException
 
     return True
 
@@ -198,28 +205,30 @@ def update_node(db_connection: PooledMySQLConnection, node_id: int, node: models
 def get_bpmn(db_connection: PooledMySQLConnection, vcs_id: int) -> models.BPMNGet:
     logger.debug(f'Get BPMN for vcs with id={vcs_id}.')
 
-    # vcs_storage.get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks: project, vcs and user
-
     where_statement = f'vcs = %s'
     where_values = [vcs_id]
 
-    select_statement = MySQLStatementBuilder(db_connection)
-    process_nodes_result = select_statement \
-        .select(CVS_PROCESS_NODES_TABLE, CVS_PROCESS_NODES_COLUMNS) \
-        .inner_join(CVS_NODES_TABLE, 'cvs_nodes.id = cvs_process_nodes.id') \
-        .where(where_statement, where_values) \
-        .order_by(['cvs_nodes.id'], Sort.ASCENDING) \
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-    process_nodes = [populate_process_node(db_connection, result) for result in process_nodes_result]
+    try:
+        select_statement = MySQLStatementBuilder(db_connection)
+        process_nodes_result = select_statement \
+            .select(CVS_PROCESS_NODES_TABLE, CVS_PROCESS_NODES_COLUMNS) \
+            .inner_join(CVS_NODES_TABLE, 'cvs_nodes.id = cvs_process_nodes.id') \
+            .where(where_statement, where_values) \
+            .order_by(['cvs_nodes.id'], Sort.ASCENDING) \
+            .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+        process_nodes = [populate_process_node(db_connection, result) for result in process_nodes_result]
 
-    select_statement = MySQLStatementBuilder(db_connection)
-    start_stop_nodes_result = select_statement \
-        .select(CVS_START_STOP_NODES_TABLE, CVS_START_STOP_NODES_COLUMNS) \
-        .inner_join(CVS_NODES_TABLE, 'cvs_nodes.id = cvs_start_stop_nodes.id') \
-        .where(where_statement, where_values) \
-        .order_by(['cvs_nodes.id'], Sort.ASCENDING) \
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-    start_stop_nodes = [populate_start_stop_node(result) for result in start_stop_nodes_result]
+        select_statement = MySQLStatementBuilder(db_connection)
+        start_stop_nodes_result = select_statement \
+            .select(CVS_START_STOP_NODES_TABLE, CVS_START_STOP_NODES_COLUMNS) \
+            .inner_join(CVS_NODES_TABLE, 'cvs_nodes.id = cvs_start_stop_nodes.id') \
+            .where(where_statement, where_values) \
+            .order_by(['cvs_nodes.id'], Sort.ASCENDING) \
+            .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+        start_stop_nodes = [populate_start_stop_node(result) for result in start_stop_nodes_result]
+    except Error as e:
+        logger.debug(f'Error msg: {e.msg}')
+        raise vcs_exceptions.VCSNotFoundException
 
     return models.BPMNGet(
         nodes=[*process_nodes, *start_stop_nodes]
@@ -231,11 +240,10 @@ def update_bpmn(db_connection: PooledMySQLConnection, vcs_id: int,
     logger.debug(f'Updating bpmn with vcs id={vcs_id}.')
 
     for node in bpmn.nodes:
-        new_node = models.NodePost(
-            id=node.id,
+        updated_node = models.NodePost(
             pos_x=node.pos_x,
             pos_y=node.pos_y
         )
-        update_node(db_connection, node.id, new_node)
+        update_node(db_connection, node.id, updated_node)
 
     return True

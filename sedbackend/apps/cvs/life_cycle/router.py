@@ -6,7 +6,7 @@ router = APIRouter()
 
 
 @router.post(
-    '/vcs/{vcs_id}/bpmn/node/start_stop',
+    '/vcs/{vcs_id}/node/start_stop',
     summary='Creates a start/stop node for BPMN',
     response_model=models.StartStopNodeGet,
 )
@@ -15,21 +15,21 @@ async def create_process_node(node: models.StartStopNodePost, vcs_id: int) -> mo
 
 
 @router.delete(
-    '/vcs/{vcs_id}/bpmn/node/{node_id}',
+    '/node/{node_id}',
     summary='Deletes a node',
     response_model=bool,
 )
-async def delete_bpmn_node(node_id: int, vcs_id: int) -> bool:
-    return implementation.delete_node(node_id, vcs_id)
+async def delete_bpmn_node(node_id: int) -> bool:
+    return implementation.delete_node(node_id)
 
 
 @router.put(
-    '/vcs/{vcs_id}/bpmn/node/{node_id}',
+    '/node/{node_id}',
     summary='Edit a node',
     response_model=bool,
 )
-async def update_bpmn_node(node_id: int, node: models.NodePost, vcs_id: int) -> bool:
-    return implementation.update_node(node_id, node, vcs_id)
+async def update_bpmn_node(node_id: int, node: models.NodePost) -> bool:
+    return implementation.update_node(node_id, node)
 
 
 @router.get(
