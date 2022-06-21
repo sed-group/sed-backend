@@ -97,3 +97,15 @@ class VCSTableProcessAmbiguity(Exception):
 
 class VCSRowNotCorrectException(Exception):
     pass
+
+
+# ======================================================================================================================
+# VCS Stakeholder needs
+# ======================================================================================================================
+
+class VCSStakeholderNeedNotFound(Exception):
+    pass
+
+
+class VCSStakeholderNeedFailedDeletionException(Exception):
+    pass

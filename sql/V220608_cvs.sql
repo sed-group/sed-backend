@@ -86,10 +86,11 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_rows`
 # Stakeholder need
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_stakeholder_needs`
 (
-    `id`            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    `vcs_row`       INT UNSIGNED,
-    `need`          TEXT NOT NULL,
-    `rank_weight`   FLOAT,
+    `id`                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `vcs_row`           INT UNSIGNED,
+    `need`              TEXT NOT NULL,
+    `value_dimension`   TEXT NULL,
+    `rank_weight`       FLOAT,
     FOREIGN KEY(`vcs_row`)
         REFERENCES  `seddb`.`cvs_vcs_rows`(`id`)
         ON DELETE CASCADE
@@ -125,7 +126,6 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_rowDrivers`
 (
     `stakeholder_need`  INT UNSIGNED,
     `value_driver`      INT UNSIGNED,
-    `value_dimension`   TEXT NULL,
     PRIMARY KEY (`stakeholder_need`, `value_driver`),
     FOREIGN KEY (`stakeholder_need`)
         REFERENCES `seddb`.`cvs_stakeholder_needs`(`id`)

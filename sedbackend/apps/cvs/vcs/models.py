@@ -82,7 +82,6 @@ class ValueDriver(BaseModel):
     vcs_id: int
     name: str
     unit: Optional[str] = None
-    value_dimensions: Optional[str] = None
 
 
 class ValueDriverPost(BaseModel):
@@ -100,11 +99,13 @@ class StakeholderNeed(BaseModel):
     vcs_row: int
     need: str
     rank_weight: Optional[float] = None
+    value_dimension: Optional[str] = None
     value_drivers: Optional[List[ValueDriver]] = None
 
 
 class StakeholderNeedPost(BaseModel):
     need: str
+    value_dimension: Optional[str] = None
     rank_weight: Optional[float] = None
 
 

@@ -41,11 +41,12 @@ CVS_ISO_PROCESS_COLUMNS = ['id', 'name', 'category']
 CVS_VCS_SUBPROCESS_TABLE = 'cvs_subprocesses'
 CVS_VCS_SUBPROCESS_COLUMNS = ['id', 'name', 'order_index', 'iso_process']
 
+CVS_VCS_STAKEHOLDER_NEED_TABLE = 'cvs_stakeholder_needs'
+CVS_VCS_STAKEHOLDER_NEED_COLUMNS = ['id', 'vcs_row', 'need', 'value_dimension', 'rank_weight']
+
 CVS_VCS_ROWS_TABLE = 'cvs_vcs_rows'
 CVS_VCS_ROWS_COLUMNS = ['id', 'index', 'stakeholder', 'stakeholder_needs',
                               'stakeholder_expectations', 'iso_process', 'subprocess', 'vcs']
-CVS_VCS_STAKEHOLDER_NEED_TABLE = 'cvs_vcs_stakeholder_needs'
-CVS_VCS_STAKEHOLDER_NEED_COLUMNS = ['id', 'table_row_id', 'need', 'rank_weight']
 
 CVS_VCS_NEEDS_DRIVERS_MAP_TABLE = 'cvs_vcs_needs_divers_map'
 CVS_VCS_NEEDS_DRIVERS_MAP_COLUMNS = ['id', 'stakeholder_need_id', 'value_driver_id']
@@ -618,6 +619,70 @@ def update_subprocess_indices(db_connection: PooledMySQLConnection, subprocess_i
 
 
 # ======================================================================================================================
+# VCS Stakeholder needs
+# ======================================================================================================================
+
+
+def populate_stakeholder_need(result) -> models.StakeholderNeed:
+    logger.debug(f'Populating model for stakeholder need with id={result["id"]}.')
+    return models.StakeholderNeed(
+        id=result['id'],
+        vcs_row_id=result['vcs_row'],
+        need=result['need'],
+        value_dimension=result['value_dimension'],
+        rank_weight=result['rank_weight']
+    )
+
+
+def get_stakeholder_need(db_connection: PooledMySQLConnection, need_id: int) -> models.StakeholderNeed:
+    logger.debug(f'Fetching stakeholder need with id={need_id}')
+
+    try:
+        select_statement = MySQLStatementBuilder(db_connection)
+        result = select_statement \
+            .select(CVS_VCS_STAKEHOLDER_NEED_TABLE, CVS_VCS_STAKEHOLDER_NEED_COLUMNS) \
+            .where(f'id = %s', [need_id]) \
+            .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+    except Error as e:
+        logger.debug(f'Error msg: {e.msg}')
+        raise exceptions.VCSStakeholderNeedNotFound
+
+    return populate_stakeholder_need(result)
+
+
+def create_stakeholder_need(db_connection: PooledMySQLConnection, vcs_row_id: int,
+                            need: models.StakeholderNeedPost) -> models.StakeholderNeed:
+    logger.debug(f'Creating stakeholder need for vcs row with id={vcs_row_id}')
+
+    try:
+        insert_statement = MySQLStatementBuilder(db_connection)
+        insert_statement \
+            .insert(table=CVS_VCS_STAKEHOLDER_NEED_TABLE, columns=['need', 'value_dimension', 'rank_weight']) \
+            .set_values([need.need, need.value_dimension, need.rank_weight]) \
+            .execute(fetch_type=FetchType.FETCH_NONE)
+        need_id = insert_statement.last_insert_id
+    except Error as e:
+        logger.debug(f'Error msg: {e.msg}')
+        raise exceptions.VCSTableRowNotFoundException
+
+    return get_stakeholder_need(db_connection, need_id)
+
+
+def delete_stakeholder_need(db_connection: PooledMySQLConnection, need_id: int) -> bool:
+    logger.debug(f'Delete stakeholder need with id={need_id}.')
+
+    delete_statement = MySQLStatementBuilder(db_connection)
+    _, rows = delete_statement.delete(CVS_VCS_STAKEHOLDER_NEED_TABLE) \
+        .where('id = %s', [need_id]) \
+        .execute(return_affected_rows=True)
+
+    if rows == 0:
+        raise exceptions.VCSStakeholderNeedFailedDeletionException
+
+    return True
+
+
+# ======================================================================================================================
 # VCS Rows
 # ======================================================================================================================
 
@@ -631,7 +696,8 @@ def get_vcs_table(db_connection: PooledMySQLConnection, vcs_id: int,  user_id: i
         .where(f'vcs = %s', [vcs_id]) \
         .order_by(['index'], Sort.ASCENDING) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-    
+
+    '''
     dimension_query = f'SELECT cvs_value_dimensions.id, cvs_value_dimensions.name, priority, vcs_row\
         FROM cvs_value_dimensions INNER JOIN cvs_vcs_rows ON vcs_row = cvs_vcs_rows.id\
         WHERE vcs = %s'
@@ -646,7 +712,9 @@ def get_vcs_table(db_connection: PooledMySQLConnection, vcs_id: int,  user_id: i
             dimension_dict[res['vcs_row']] = [populate_value_dimension(res, res['vcs_row'])]
         else:
             dimension_dict.get(res['vcs_row']).append(populate_value_dimension(res, res['vcs_row']))
+    '''
 
+    # get value drivers
     query = f'SELECT vcs_row, cvs_value_drivers.id, `name`, unit, value_dimension \
             FROM cvs_vcs_rows INNER JOIN cvs_rowDrivers ON cvs_vcs_rows.id = vcs_row \
             INNER JOIN cvs_value_drivers ON value_driver = cvs_value_drivers.id \
@@ -667,7 +735,8 @@ def get_vcs_table(db_connection: PooledMySQLConnection, vcs_id: int,  user_id: i
             driver_dict.get(res['vcs_row']).append(populate_value_driver(res))
 
     return [populate_vcs_row(db_connection, result, driver_dict, dimension_dict) for result in results]
-    
+
+
 def get_vcs_row(db_connection: PooledMySQLConnection, vcs_row_id: int) -> models.VcsRow:
     logger.debug(f'Fetching a single vcs row with id: {vcs_row_id}')
 
