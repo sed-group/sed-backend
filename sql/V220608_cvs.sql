@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_value_drivers`
 );
 
 #Vcs row and value driver connection
-CREATE TABLE IF NOT EXISTS `seddb`.`cvs_rowDrivers`
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_need_drivers`
 (
     `stakeholder_need`  INT UNSIGNED,
     `value_driver`      INT UNSIGNED,
