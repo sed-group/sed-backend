@@ -429,7 +429,7 @@ def get_vcs_table(vcs_id: int, user_id: int) -> List[models.VcsRow]:
         )
 
 
-def create_vcs_table(new_table: models.VcsRowPost, vcs_id: int)-> bool:
+def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int)-> bool:
     try:
         with get_connection() as con:
             result = storage.create_vcs_table(con, new_table, vcs_id)
@@ -466,4 +466,42 @@ def create_vcs_table(new_table: models.VcsRowPost, vcs_id: int)-> bool:
             detail='Unauthorized user.',
         )
 
+def edit_vcs_table(updated_vcs_rows: List[models.VcsRow], vcs_id: int) -> bool:
+    try: 
+        with get_connection() as con:
+            res = storage.edit_vcs_table(con, updated_vcs_rows, vcs_id)
+            con.commit()
+            return res
+    except exceptions.VCSTableRowFailedToUpdateException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not update vcs table'
+        )
+    except exceptions.VCSTableProcessAmbiguity:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Ambiguity in iso processes and subprocesses'
+        )
+    except exceptions.ValueDriverFailedDeletionException:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Could not delete value driver'
+        )
+    except exceptions.ValueDimensionFailedDeletionException:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Could not delete value dimension'
+        )
+
+def delete_vcs_row(vcs_row_id: int, vcs_id: int) -> bool:
+    try:
+        with get_connection() as con:
+            res = storage.delete_vcs_row(con, vcs_row_id, vcs_id)
+            con.commit()
+            return res
+    except exceptions.VCSTableRowFailedDeletionException:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Could not delete vcs row'
+        )
 

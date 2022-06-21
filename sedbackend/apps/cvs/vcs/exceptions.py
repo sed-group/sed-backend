@@ -24,7 +24,8 @@ class GenericDatabaseException(Exception):
 class ValueDimensionNotFoundException(Exception):
     pass
 
-
+class ValueDimensionFailedDeletionException(Exception):
+    pass
 # ======================================================================================================================
 # VCS Value driver
 # ======================================================================================================================
