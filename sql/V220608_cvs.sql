@@ -62,7 +62,6 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_rows`
     `id`                    INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `index`                 INT UNSIGNED UNIQUE,
     `stakeholder`           TEXT NOT NULL,
-    `stakeholder_needs`     TEXT NOT NULL, 
     `stakeholder_expectations` TEXT NOT NULL,
     `iso_process`               INT UNSIGNED NULL,
     `subprocess`                INT UNSIGNED NULL,
@@ -84,7 +83,19 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_rows`
         ON UPDATE NO ACTION
 );
 
-#The value dimensions
+# Stakeholder need
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_stakeholder_needs`
+(
+    `id`            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `vcs_row`       INT UNSIGNED,
+    `need`          TEXT NOT NULL,
+    `rank_weight`   FLOAT,
+    FOREIGN KEY(`vcs_row`)
+        REFERENCES  `seddb`.`cvs_vcs_rows`(`id`)
+        ON DELETE CASCADE
+);
+
+#The value dimensions - not to be used
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_value_dimensions`
 (
     `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -101,25 +112,27 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_value_dimensions`
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_value_drivers`
 (
     `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `vcs`               INT UNSIGNED NOT NULL,
     `name`              TEXT NOT NULL,
     `unit`              TEXT NULL,
-    `value_dimension`   INT UNSIGNED NULL,
-    CONSTRAINT `driver_dimension` 
-    FOREIGN KEY (`value_dimension`) 
-    REFERENCES `seddb`.`cvs_value_dimensions`(`id`)
-    ON DELETE CASCADE
+    FOREIGN KEY(`vcs`)
+        REFERENCES  `seddb`.`cvs_vcss`(`id`)
+        ON DELETE CASCADE
 );
 
 #Vcs row and value driver connection
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_rowDrivers`
 (
-    `vcs_row`       INT UNSIGNED, 
-    `value_driver`  INT UNSIGNED, 
-    PRIMARY KEY (`vcs_row`, `value_driver`),
-    FOREIGN KEY (`vcs_row`) REFERENCES `seddb`.`cvs_vcs_rows`(`id`)
-    ON DELETE CASCADE,
-    FOREIGN KEY (`value_driver`) REFERENCES `seddb`.`cvs_value_drivers`(`id`)
-    ON DELETE CASCADE
+    `stakeholder_need`  INT UNSIGNED,
+    `value_driver`      INT UNSIGNED,
+    `value_dimension`   TEXT NULL,
+    PRIMARY KEY (`stakeholder_need`, `value_driver`),
+    FOREIGN KEY (`stakeholder_need`)
+        REFERENCES `seddb`.`cvs_stakeholder_needs`(`id`)
+        ON DELETE CASCADE,
+    FOREIGN KEY (`value_driver`)
+        REFERENCES `seddb`.`cvs_value_drivers`(`id`)
+        ON DELETE CASCADE
 );
 
 # BPMN node

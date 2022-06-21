@@ -27,6 +27,7 @@ class VCSPost(BaseModel):
     year_from: int
     year_to: int
 
+
 # ======================================================================================================================
 # VCS ISO Process
 # ======================================================================================================================
@@ -36,6 +37,7 @@ class VCSISOProcess(BaseModel):
     id: int
     name: str
     category: str
+
 
 # ======================================================================================================================
 # VCS Subprocess
@@ -56,11 +58,14 @@ class VCSSubprocessPost(BaseModel):
 # ======================================================================================================================
 # VCS Value dimension
 # ======================================================================================================================
+
+
 class ValueDimension(BaseModel):
     id: int
     name: str
     priority: str
     vcs_row: int
+
 
 class ValueDimensionPost(BaseModel):
     name: str
@@ -74,15 +79,34 @@ class ValueDimensionPost(BaseModel):
 
 class ValueDriver(BaseModel):
     id: int
+    vcs_id: int
     name: str
     unit: Optional[str] = None
-    value_dimension: Optional[int] = None
+    value_dimensions: Optional[str] = None
 
 
 class ValueDriverPost(BaseModel):
     name: str
     unit: Optional[str] = None
-    value_dimension: Optional[int] = None
+
+
+# ======================================================================================================================
+# VCS Stakeholder Need
+# ======================================================================================================================
+
+
+class StakeholderNeed(BaseModel):
+    id: int
+    vcs_row: int
+    need: str
+    rank_weight: Optional[float] = None
+    value_drivers: Optional[List[ValueDriver]] = None
+
+
+class StakeholderNeedPost(BaseModel):
+    need: str
+    rank_weight: Optional[float] = None
+
 
 # ======================================================================================================================
 # VCS Rows - Representation/return models
@@ -90,23 +114,20 @@ class ValueDriverPost(BaseModel):
 
 class VcsRow(BaseModel):
     id: int
+    vcs_id: int
     index: int
     stakeholder: str
-    stakeholder_needs: str
+    stakeholder_needs: Optional[List[StakeholderNeed]] = None
     stakeholder_expectations: str
     iso_process: Optional[VCSISOProcess] = None
     subprocess: Optional[VCSSubprocess] = None
-    value_dimensions: Optional[List[ValueDimension]] = None
-    value_drivers: Optional[List[ValueDriver]] = None
-    vcs_id: int
+
 
 class VcsRowPost(BaseModel):
     index: int
     stakeholder: str
-    stakeholder_needs: str
+    stakeholder_needs: Optional[List[StakeholderNeed]] = None
     stakeholder_expectations: str
     iso_process: Optional[int] = None
     subprocess: Optional[int] = None
-    value_dimensions: Optional[List[ValueDimensionPost]] = None
-    value_drivers: Optional[List[int]] = None
 
