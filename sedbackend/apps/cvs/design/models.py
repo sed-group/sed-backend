@@ -11,7 +11,7 @@ from sedbackend.apps.cvs.vcs.models import VCS, ValueDriver, VcsRow
 
 class Design(BaseModel):
     id: int
-    vcs: VCS
+    vcs: int
     name: str
     description: Optional[str] = None
 
@@ -26,16 +26,14 @@ class DesignPost(BaseModel):
 
 
 class QuantifiedObjective(BaseModel):
-    id: int
     design: int
     value_driver: ValueDriver
     name: str
-    property: float
+    value: float
     unit: str
-    processes: List[VcsRow]
 
 
 class QuantifiedObjectivePost(BaseModel):
     name: str
-    property: float
+    value: float
     unit: str

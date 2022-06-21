@@ -315,6 +315,11 @@ def create_subprocess(subprocess_post: models.VCSSubprocessPost,
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
+    except exceptions.GenericDatabaseException as err:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=err.msg
+        )
 
 
 def edit_subprocess(subprocess_id: int, project_id: int, user_id: int,
@@ -445,6 +450,16 @@ def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int)-> bool:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find value driver with id={e.value_driver_id}.',
         )
+    except exceptions.ISOProcessNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='No such ISO process'
+        )
+    except exceptions.SubprocessNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='No such subprocess'
+        )
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -489,3 +504,4 @@ def delete_vcs_row(vcs_row_id: int, vcs_id: int) -> bool:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Could not delete vcs row'
         )
+
