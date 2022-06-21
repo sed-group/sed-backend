@@ -20,6 +20,8 @@ from sedbackend.libs import mysqlutils
 from sedbackend.libs.datastructures.pagination import ListChunk
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, Sort, FetchType
 
+DEBUG_ERROR_HANDLING = True #Set to false in production
+
 CVS_VCS_TABLE = 'cvs_vcss'
 CVS_VCS_COLUMNS = ['id', 'name', 'description', 'datetime_created', 'year_from', 'year_to', 'project']
 
@@ -483,7 +485,13 @@ def create_subprocess(db_connection: PooledMySQLConnection, subprocess_post: mod
             .execute(fetch_type=FetchType.FETCH_NONE)
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
-        raise exceptions.ISOProcessNotFoundException #Could also fail if the order index is the same. This is not checked for though. 
+
+        logger.debug(f'Entire error no: {str(e.errno)}')
+        if (DEBUG_ERROR_HANDLING):
+            raise exceptions.GenericDatabaseException(e.msg)
+        else:
+            raise exceptions.ISOProcessNotFoundException #Could also fail if the order index is the same. This is not checked for though. 
+
         
     subprocess_id = insert_statement.last_insert_id
 
