@@ -59,13 +59,13 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_subprocesses`
 #The rows of the vcs table
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_rows`
 (
-    `id`                    INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `index`                 INT UNSIGNED UNIQUE,
-    `stakeholder`           TEXT NOT NULL,
-    `stakeholder_expectations` TEXT NOT NULL,
+    `id`                        INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `vcs`                       INT UNSIGNED NOT NULL,
+    `index`                     INT UNSIGNED UNIQUE,
+    `stakeholder`               TEXT NOT NULL,
+    `stakeholder_expectations`  TEXT NOT NULL,
     `iso_process`               INT UNSIGNED NULL,
     `subprocess`                INT UNSIGNED NULL,
-    `vcs`                       INT UNSIGNED NOT NULL,
     CONSTRAINT `row_iso_process`
         FOREIGN KEY (`iso_process`) 
         REFERENCES `seddb`.`cvs_iso_processes`(`id`)
@@ -93,7 +93,9 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_stakeholder_needs`
     `rank_weight`       FLOAT,
     FOREIGN KEY(`vcs_row`)
         REFERENCES  `seddb`.`cvs_vcs_rows`(`id`)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT check_weight
+        check (`rank_weight` between 0 and 1)
 );
 
 #The value dimensions - not to be used

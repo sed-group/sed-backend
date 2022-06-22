@@ -106,6 +106,7 @@ class StakeholderNeed(BaseModel):
 class StakeholderNeedPost(BaseModel):
     need: str
     value_dimension: Optional[str] = None
+    value_drivers: Optional[List[id]] = None
     rank_weight: Optional[float] = None
 
 
@@ -131,4 +132,5 @@ class VcsRowPost(BaseModel):
     stakeholder_expectations: str
     iso_process: Optional[int] = None
     subprocess: Optional[int] = None
+
 
