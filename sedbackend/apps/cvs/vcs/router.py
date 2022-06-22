@@ -193,9 +193,8 @@ async def get_all_subprocess(vcs_id: int, user: User = Depends(get_current_activ
     summary='Returns a subprocess',
     response_model=models.VCSSubprocess,
 )
-async def get_subprocess(subprocess_id: int,
-                         user: User = Depends(get_current_active_user)) -> models.VCSSubprocess:
-    return implementation.get_subprocess(subprocess_id, user.id)
+async def get_subprocess(subprocess_id: int) -> models.VCSSubprocess:
+    return implementation.get_subprocess(subprocess_id)
 
 
 @router.post(
@@ -203,9 +202,8 @@ async def get_subprocess(subprocess_id: int,
     summary='Creates a new subprocess',
     response_model=models.VCSSubprocess,
 )
-async def create_subprocess(subprocess_post: models.VCSSubprocessPost,
-                                user: User = Depends(get_current_active_user)) -> models.VCSSubprocess:
-    return implementation.create_subprocess(subprocess_post, user.id)
+async def create_subprocess(subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
+    return implementation.create_subprocess(subprocess_post)
 
 
 @router.put(

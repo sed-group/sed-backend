@@ -267,7 +267,7 @@ def get_all_subprocess(vcs_id: int, user_id: int) -> List[models.VCSSubprocess]:
         return storage.get_all_subprocess(con, vcs_id, user_id)
 
 
-def get_subprocess(subprocess_id: int, user_id: int) -> models.VCSSubprocess:
+def get_subprocess(subprocess_id: int) -> models.VCSSubprocess:
     try:
         with get_connection() as con:
             return storage.get_subprocess(con, subprocess_id)
@@ -288,8 +288,7 @@ def get_subprocess(subprocess_id: int, user_id: int) -> models.VCSSubprocess:
         )
 
 
-def create_subprocess(subprocess_post: models.VCSSubprocessPost,
-                      user_id: int) -> models.VCSSubprocess:
+def create_subprocess(subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
     try:
         with get_connection() as con:
             result = storage.create_subprocess(con, subprocess_post)

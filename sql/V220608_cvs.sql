@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_rows`
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_stakeholder_needs`
 (
     `id`                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    `vcs_row`           INT UNSIGNED,
+    `vcs_row`           INT UNSIGNED NOT NULL,
     `need`              TEXT NOT NULL,
     `value_dimension`   TEXT NULL,
     `rank_weight`       FLOAT,
