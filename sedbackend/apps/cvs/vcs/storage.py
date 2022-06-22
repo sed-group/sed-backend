@@ -442,7 +442,7 @@ def delete_value_driver(db_connection: PooledMySQLConnection, value_driver_id: i
 def populate_value_driver(db_result) -> models.ValueDriver:
     return models.ValueDriver(
         id=db_result['id'],
-        vcs_id=db_result['vcs_id'],
+        vcs_id=db_result['vcs'],
         name=db_result['name'],
         unit=db_result['unit']
     )
@@ -703,7 +703,7 @@ def get_all_stakeholder_needs(db_connection: PooledMySQLConnection, vcs_row_id: 
         select_statement = MySQLStatementBuilder(db_connection)
         results = select_statement \
             .select(CVS_VCS_STAKEHOLDER_NEED_TABLE, CVS_VCS_STAKEHOLDER_NEED_COLUMNS) \
-            .where(f'id = %s', [vcs_row_id]) \
+            .where(f'vcs_row = %s', [vcs_row_id]) \
             .order_by(['id'], Sort.ASCENDING) \
             .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
@@ -804,9 +804,9 @@ def populate_vcs_row(db_connection: PooledMySQLConnection, db_result) -> models.
 
     iso_process, subprocess = None, None
     if db_result['iso_process'] is not None:
-        iso_process = get_iso_process(int(db_result['iso_process']), db_connection)  # Gets a iso process based on the id that we got from the DB result
+        iso_process = get_iso_process(int(db_result['iso_process']), db_connection)
     elif db_result['subprocess'] is not None:
-        subprocess = get_subprocess(db_connection, db_result['subprocess_id'])  # Runs a new query on subprocess table based on the id that is in the result of the db query. Why is that not referenced as a foreign key and run as a single query here?????
+        subprocess = get_subprocess(db_connection, db_result['subprocess_id'])
 
     return models.VcsRow(
         id=db_result['id'],
@@ -814,7 +814,7 @@ def populate_vcs_row(db_connection: PooledMySQLConnection, db_result) -> models.
         index=db_result['index'],
         stakeholder=db_result['stakeholder'],
         stakeholder_expectations=db_result['stakeholder_expectations'],
-        stakeholder_needs=get_all_stakeholder_needs(db_connection, db_result['vcs']),
+        stakeholder_needs=get_all_stakeholder_needs(db_connection, db_result['id']),
         iso_process=iso_process,
         subprocess=subprocess
     )
