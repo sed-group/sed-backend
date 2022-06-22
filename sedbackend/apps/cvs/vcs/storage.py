@@ -11,13 +11,9 @@ from mysql.connector import Error,errorcode
 
 
 from sedbackend.apps.core.authentication import exceptions as auth_exceptions
-from sedbackend.apps.cvs import project
-from sedbackend.apps.cvs import vcs
 from sedbackend.apps.cvs.project.storage import get_cvs_project
-from sedbackend.apps.cvs.life_cycle.storage import create_node, update_node
-from sedbackend.apps.cvs.life_cycle.models import NodePost
 from sedbackend.apps.cvs.vcs import models, exceptions, implementation
-from sedbackend.libs import mysqlutils
+from sedbackend.apps.cvs.life_cycle import storage as life_cycle_storage, models as life_cycle_models
 from sedbackend.libs.datastructures.pagination import ListChunk
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, Sort, FetchType
 
@@ -853,6 +849,14 @@ def create_vcs_table(db_connection: PooledMySQLConnection, new_vcs_rows: List[mo
                     raise exceptions.SubprocessNotFoundException
                 else:
                     raise exceptions.VCSTableRowFailedToUpdateException(e.msg)
+
+        node = life_cycle_models.ProcessNodePost(
+            pos_x=0,
+            pos_y=0,
+            vcs_row=get_vcs_row(db_connection, vcs_row_id)
+        )
+
+        life_cycle_storage.create_process_node(db_connection, node, vcs_id)
 
         [create_stakeholder_need(db_connection, vcs_row_id, need) for need in row.stakeholder_needs]
 
