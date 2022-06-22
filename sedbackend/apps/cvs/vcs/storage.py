@@ -495,10 +495,8 @@ def populate_iso_process(db_result):
 # VCS Subprocesses
 # ======================================================================================================================
 
-def get_all_subprocess(db_connection: PooledMySQLConnection, vcs_id: int,
-                       user_id: int) -> List[models.VCSSubprocess]:
+def get_all_subprocess(db_connection: PooledMySQLConnection, vcs_id: int) -> List[models.VCSSubprocess]:
     logger.debug(f'Fetching all subprocesses for vcs with id={vcs_id}.')
-
     
     query = f'SELECT cvs_subprocesses.id, cvs_subprocesses.name, order_index, \
         iso_process, cvs_iso_processes.name as iso_process_name, category \
@@ -523,7 +521,7 @@ def get_all_subprocess(db_connection: PooledMySQLConnection, vcs_id: int,
 def get_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int) -> models.VCSSubprocess:
     logger.debug(f'Fetching subprocess with id={subprocess_id}.')
 
-    query = f'SELECT cvs_subprocesses.id, cvs_subprocesses.name, order_index, \
+    query = f'SELECT cvs_subprocesses.id, cvs_subprocesses.vcs, cvs_subprocesses.name, order_index, \
         iso_process, cvs_iso_processes.name as iso_process_name, category \
         FROM cvs_subprocesses INNER JOIN cvs_iso_processes ON iso_process = cvs_iso_processes.id\
         WHERE cvs_subprocesses.id = %s'
@@ -539,11 +537,11 @@ def get_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int) -> 
     return populate_subprocess(res)
 
 
-def create_subprocess(db_connection: PooledMySQLConnection, subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
+def create_subprocess(db_connection: PooledMySQLConnection, vcs_id: int, subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
     logger.debug(f'Creating a subprocesses.')
 
-    columns = ['name', 'order_index', 'iso_process']
-    values = [subprocess_post.name, subprocess_post.order_index, subprocess_post.parent_process_id]
+    columns = ['vcs', 'name', 'order_index', 'iso_process']
+    values = [vcs_id, subprocess_post.name, subprocess_post.order_index, subprocess_post.parent_process_id]
 
     insert_statement = MySQLStatementBuilder(db_connection)
     try:
@@ -565,7 +563,7 @@ def create_subprocess(db_connection: PooledMySQLConnection, subprocess_post: mod
     return get_subprocess(db_connection, subprocess_id)
 
 
-def edit_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, project_id: int, user_id: int,
+def edit_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int,
                     new_subprocess: models.VCSSubprocessPost) -> models.VCSSubprocess:
     logger.debug(f'Editing subprocesses with id={subprocess_id}.')
 
@@ -574,9 +572,6 @@ def edit_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int, pr
     n = (new_subprocess.name, new_subprocess.parent_process_id)
     if o == n:  # No change
         return old_subprocess
-
-    # performing necessary checks
-    get_cvs_project(db_connection, project_id, user_id)
 
     # Updating
     update_statement = MySQLStatementBuilder(db_connection)
@@ -599,6 +594,8 @@ def delete_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int) 
 
    # get_cvs_project(db_connection, project_id, user_id)  # performing necessary checks
 
+    subprocess = get_subprocess(db_connection, subprocess_id)
+
     select_statement = MySQLStatementBuilder(db_connection)
     result = select_statement \
         .select(CVS_VCS_SUBPROCESS_TABLE, CVS_VCS_SUBPROCESS_COLUMNS) \
@@ -616,7 +613,13 @@ def delete_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int) 
         .where('id = %s', [subprocess_id]) \
         .execute(return_affected_rows=True)
     
-    #TODO after deleting subprocesses - make sure to update the order indices. 
+    #TODO after deleting subprocesses - make sure to update the order indices.
+    update_indices_q = f'UPDATE cvs_subprocesses \
+            SET `order_index` = `order_index` - 1 \
+            WHERE id = %s and `order_index` > %s'
+    with db_connection.cursor(prepared=True) as cursor:
+        cursor.execute(update_indices_q, [subprocess_id, subprocess.order_index])
+
     if rows == 0:
         raise exceptions.SubprocessFailedDeletionException(subprocess_id)
 
@@ -628,6 +631,7 @@ def populate_subprocess(db_result) -> models.VCSSubprocess:
   #  print("in populate: " + db_result['iso_process'])
     return models.VCSSubprocess(
         id=db_result['id'],
+        vcs_id=db_result['vcs'],
         name=db_result['name'],
         order_index=db_result['order_index'],
         parent_process=models.VCSISOProcess(

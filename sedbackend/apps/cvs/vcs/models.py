@@ -45,6 +45,7 @@ class VCSISOProcess(BaseModel):
 
 class VCSSubprocess(BaseModel):
     id: int
+    vcs_id: int
     name: str
     order_index: int
     parent_process: VCSISOProcess

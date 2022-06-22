@@ -262,9 +262,9 @@ def get_iso_process(iso_process_id: int) -> models.VCSISOProcess:
 # ======================================================================================================================
 
 
-def get_all_subprocess(vcs_id: int, user_id: int) -> List[models.VCSSubprocess]:
+def get_all_subprocess(vcs_id: int) -> List[models.VCSSubprocess]:
     with get_connection() as con:
-        return storage.get_all_subprocess(con, vcs_id, user_id)
+        return storage.get_all_subprocess(con, vcs_id)
 
 
 def get_subprocess(subprocess_id: int) -> models.VCSSubprocess:
@@ -288,10 +288,10 @@ def get_subprocess(subprocess_id: int) -> models.VCSSubprocess:
         )
 
 
-def create_subprocess(subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
+def create_subprocess(vcs_id: int, subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
     try:
         with get_connection() as con:
-            result = storage.create_subprocess(con, subprocess_post)
+            result = storage.create_subprocess(con, vcs_id, subprocess_post)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
@@ -316,11 +316,11 @@ def create_subprocess(subprocess_post: models.VCSSubprocessPost) -> models.VCSSu
         )
 
 
-def edit_subprocess(subprocess_id: int, project_id: int, user_id: int,
+def edit_subprocess(subprocess_id: int,
                     subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
     try:
         with get_connection() as con:
-            result = storage.edit_subprocess(con, subprocess_id, project_id, user_id, subprocess_post)
+            result = storage.edit_subprocess(con, subprocess_id, subprocess_post)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:

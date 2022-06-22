@@ -13,14 +13,14 @@ router = APIRouter()
 
 
 @router.get(
-    '/project/{project_id}/vcs/get/all',
+    '/project/{project_id}/vcs/all',
     summary='Returns all of VCSs of a project',
     response_model=ListChunk[models.VCS],
 )
 async def get_all_vcs(project_id: int, user: User = Depends(get_current_active_user)) -> ListChunk[models.VCS]:
     return implementation.get_all_vcs(project_id, user.id)
 
-
+'''
 @router.get(
     '/project/{project_id}/vcs/get/segment',
     summary='Returns a segment of the VCSs of a project',
@@ -29,10 +29,10 @@ async def get_all_vcs(project_id: int, user: User = Depends(get_current_active_u
 async def get_segment_vcs(project_id: int, index: int, segment_length: int,
                           user: User = Depends(get_current_active_user)) -> ListChunk[models.VCS]:
     return implementation.get_segment_vcs(project_id, index, segment_length, user.id)
-
+'''
 
 @router.get(
-    '/project/{project_id}/vcs/get/{vcs_id}',
+    '/project/{project_id}/vcs/{vcs_id}',
     summary='Returns a VCS',
     response_model=models.VCS,
 )
@@ -41,7 +41,7 @@ async def get_vcs(vcs_id: int, project_id: int, user: User = Depends(get_current
 
 
 @router.post(
-    '/project/{project_id}/vcs/create',
+    '/project/{project_id}/vcs',
     summary='Creates a new VCS in a project',
     response_model=models.VCS,
 )
@@ -51,7 +51,7 @@ async def create_vcs(vcs_post: models.VCSPost, project_id: int,
 
 
 @router.put(
-    '/project/{project_id}/vcs/{vcs_id}/edit',
+    '/project/{project_id}/vcs/{vcs_id}',
     summary='Edits a VCS',
     response_model=models.VCS,
 )
@@ -61,7 +61,7 @@ async def edit_vcs(vcs_id: int, project_id: int, vcs_post: models.VCSPost,
 
 
 @router.delete(
-    '/project/{project_id}/vcs/{vcs_id}/delete',
+    '/project/{project_id}/vcs/{vcs_id}',
     summary='Deletes a VCS based on id',
     response_model=bool,
 )
@@ -76,7 +76,7 @@ async def delete_vcs(vcs_id: int, project_id: int, user: User = Depends(get_curr
 
 
 @router.get(
-    '/vcs/{vcs_id}/get/table',
+    '/vcs/{vcs_id}/table',
     summary='Returns the table of a a VCS',
     response_model=List[models.VcsRow],
 )
@@ -86,7 +86,7 @@ async def get_vcs_table(vcs_id: int, user: User = Depends(get_current_active_use
 
 
 @router.post(
-    '/vcs/{vcs_id}/create/table',
+    '/vcs/{vcs_id}/table',
     summary='Creates the table for a VCS',
     response_model=bool,
 )
@@ -134,7 +134,7 @@ async def get_value_driver(value_driver_id: int) -> models.ValueDriver:
 
 
 @router.post(
-    '/vcs/{vcs_id}/value-driver/create',
+    '/vcs/{vcs_id}/value-driver',
     summary='Creates a new value driver in a project',
     response_model=models.ValueDriver,
 )
@@ -166,7 +166,7 @@ async def delete_value_driver(value_driver_id: int) -> bool:
 
 
 @router.get(
-    '/vcs/iso-processes/get/all',
+    '/vcs/iso-processes/all',
     summary='Returns all ISO processes',
     response_model=List[models.VCSISOProcess],
 )
@@ -180,16 +180,16 @@ async def get_all_iso_process() -> List[models.VCSISOProcess]:
 
 
 @router.get(
-    '/vcs/{vcs_id}/subprocess/get/all',
+    '/vcs/{vcs_id}/subprocess/all',
     summary='Returns all subprocesses of a project',
     response_model=ListChunk[models.VCSSubprocess],
 )
-async def get_all_subprocess(vcs_id: int, user: User = Depends(get_current_active_user)) -> List[models.VCSSubprocess]:
-    return implementation.get_all_subprocess(vcs_id, user.id)
+async def get_all_subprocess(vcs_id: int) -> List[models.VCSSubprocess]:
+    return implementation.get_all_subprocess(vcs_id)
 
 
 @router.get(
-    '/subprocess/get/{subprocess_id}',
+    '/subprocess/{subprocess_id}',
     summary='Returns a subprocess',
     response_model=models.VCSSubprocess,
 )
@@ -198,26 +198,25 @@ async def get_subprocess(subprocess_id: int) -> models.VCSSubprocess:
 
 
 @router.post(
-    '/subprocess/create',
+    '/vcs/{vcs_id}/subprocess',
     summary='Creates a new subprocess',
     response_model=models.VCSSubprocess,
 )
-async def create_subprocess(subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
-    return implementation.create_subprocess(subprocess_post)
+async def create_subprocess(vcs_id: int, subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
+    return implementation.create_subprocess(vcs_id, subprocess_post)
 
 
 @router.put(
-    '/project/{project_id}/subprocess/{subprocess_id}/edit',
+    '/subprocess/{subprocess_id}',
     summary='Edits a subprocess',
     response_model=models.VCSSubprocess,
 )
-async def edit_subprocess(subprocess_id: int, project_id: int, vcs_post: models.VCSSubprocessPost,
-                          user: User = Depends(get_current_active_user)) -> models.VCSSubprocess:
-    return implementation.edit_subprocess(subprocess_id, project_id, user.id, vcs_post)
+async def edit_subprocess(subprocess_id: int, vcs_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
+    return implementation.edit_subprocess(subprocess_id, vcs_post)
 
 
 @router.delete(
-    '/subprocess/{subprocess_id}/delete',
+    '/subprocess/{subprocess_id}',
     summary='Deletes a subprocess',
     response_model=bool,
 )
@@ -226,7 +225,7 @@ async def delete_subprocess(subprocess_id: int) -> bool:
 
 
 @router.put(
-    '/project/{project_id}/subprocess/update-indices',
+    '/subprocess/{subprocess_id}',
     summary='Updates the indices of multiple subprocesses',
     response_model=bool,
 )
