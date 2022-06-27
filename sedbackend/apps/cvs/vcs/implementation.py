@@ -326,7 +326,7 @@ def edit_subprocess(subprocess_id: int,
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project with id={project_id}.',
+            detail=f'Could not find project.',
         )
     except exceptions.SubprocessNotFoundException as e:
         raise HTTPException(
@@ -460,7 +460,7 @@ def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int)-> bool:
             detail='Unauthorized user.',
         )
 
-def edit_vcs_table(updated_vcs_rows: List[models.VcsRow], vcs_id: int) -> bool:
+def edit_vcs_table(updated_vcs_rows: List[models.VcsRowPut], vcs_id: int) -> bool:
     try: 
         with get_connection() as con:
             res = storage.edit_vcs_table(con, updated_vcs_rows, vcs_id)

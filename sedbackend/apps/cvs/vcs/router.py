@@ -99,7 +99,7 @@ async def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int) -> b
     summary='Edits rows of the vcs table',
     response_model=bool
 )
-async def edit_vcs_table(updated_table: List[models.VcsRow], vcs_id: int) -> bool:
+async def edit_vcs_table(updated_table: List[models.VcsRowPut], vcs_id: int) -> bool:
     return implementation.edit_vcs_table(updated_table, vcs_id)
 
 @router.delete(

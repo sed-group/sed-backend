@@ -300,7 +300,7 @@ def get_all_value_driver(db_connection: PooledMySQLConnection, vcs_id: int) -> L
         results = select_statement \
             .select(CVS_VALUE_DRIVER_TABLE, CVS_VALUE_DRIVER_COLUMNS) \
             .where(where_statement, where_values) \
-            .order_by(['cvs_nodes.id'], Sort.ASCENDING) \
+            .order_by(['id'], Sort.ASCENDING) \
             .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
     except Error as e:
@@ -348,7 +348,7 @@ def add_vcs_need_driver(db_connection: PooledMySQLConnection, need_id: int, valu
     return True
 
 
-def update_vcs_need_driver(db_connection: PooledMySQLConnection, need_id: int, value_drivers: List[id]) -> bool:
+def update_vcs_need_driver(db_connection: PooledMySQLConnection, need_id: int, value_drivers: List[int]) -> bool:
     logger.debug(f'Update value drivers in stakeholder need with id={need_id}.')
 
     delete_statement = MySQLStatementBuilder(db_connection)
@@ -736,7 +736,7 @@ def create_stakeholder_need(db_connection: PooledMySQLConnection, vcs_row_id: in
 
 
 def update_stakeholder_need(db_connection: PooledMySQLConnection, need_id: int,
-                            need: models.StakeholderNeed) -> models.StakeholderNeed:
+                            need: models.StakeholderNeedPut) -> models.StakeholderNeed:
     logger.debug(f'Edit stakeholder need for with id={need_id}')
 
     update_statement = MySQLStatementBuilder(db_connection)
@@ -747,8 +747,6 @@ def update_stakeholder_need(db_connection: PooledMySQLConnection, need_id: int,
     )
     update_statement.where('id = %s', [need_id])
     _, rows = update_statement.execute(return_affected_rows=True)
-    if rows == 0:
-        raise exceptions.VCSStakeholderNeedNotFound
 
     update_vcs_need_driver(db_connection, need_id, need.value_drivers)
 
@@ -863,7 +861,7 @@ def create_vcs_table(db_connection: PooledMySQLConnection, new_vcs_rows: List[mo
     return True
 
 
-def edit_vcs_table(db_connection: PooledMySQLConnection, updated_vcs_rows: List[models.VcsRow], vcs_id: int) -> bool:
+def edit_vcs_table(db_connection: PooledMySQLConnection, updated_vcs_rows: List[models.VcsRowPut], vcs_id: int) -> bool:
     logger.debug(f'Editing vcs table')
 
     for row in updated_vcs_rows:
@@ -877,13 +875,10 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, updated_vcs_rows: List[
         update_statement.update(
             table=CVS_VCS_ROWS_TABLE,
             set_statement=f'`index` = %s, stakeholder = %s, stakeholder_expectations = %s, iso_process = %s, subprocess = %s, vcs = %s',
-            values=[row.index, row.stakeholder, row.stakeholder_expectations, getattr(row.iso_process, 'id', None), getattr(row.subprocess, 'id', None), vcs_id]
+            values=[row.index, row.stakeholder, row.stakeholder_expectations, row.iso_process, row.subprocess, vcs_id]
         )
         update_statement.where(f'id = %s', [row.id])
         _, rows = update_statement.execute(return_affected_rows=True)
-
-        if rows == 0:
-            raise exceptions.VCSTableRowFailedToUpdateException
 
         [update_stakeholder_need(db_connection, need.id, need) for need in row.stakeholder_needs]
 
