@@ -46,27 +46,28 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_iso_processes`
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_subprocesses`
 (
     `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `vcs`           INT UNSIGNED NOT NULL,
     `name`          TEXT NOT NULL,
     `order_index`   INT NOT NULL UNIQUE, #TODO ask if it is neccessary to rearrange subprocesses in modal window
     `iso_process`   INT UNSIGNED NOT NULL,
-     CONSTRAINT `fk_iso_process_subprocess` 
-        FOREIGN KEY (`iso_process`) 
-	    REFERENCES `seddb`.`cvs_iso_processes`(`id`) 
-	    ON DELETE CASCADE
-	    ON UPDATE NO ACTION
+    FOREIGN KEY (`iso_process`)
+        REFERENCES `seddb`.`cvs_iso_processes`(`id`)
+	    ON DELETE CASCADE,
+    FOREIGN KEY(`vcs`) REFERENCES  `seddb`.`cvs_vcss`(`id`)
+        ON DELETE CASCADE
+
 );
 
 #The rows of the vcs table
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_rows`
 (
-    `id`                    INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `index`                 INT UNSIGNED UNIQUE,
-    `stakeholder`           TEXT NOT NULL,
-    `stakeholder_needs`     TEXT NOT NULL, 
-    `stakeholder_expectations` TEXT NOT NULL,
+    `id`                        INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `vcs`                       INT UNSIGNED NOT NULL,
+    `index`                     INT UNSIGNED UNIQUE,
+    `stakeholder`               TEXT NOT NULL,
+    `stakeholder_expectations`  TEXT NOT NULL,
     `iso_process`               INT UNSIGNED NULL,
     `subprocess`                INT UNSIGNED NULL,
-    `vcs`                       INT UNSIGNED NOT NULL,
     CONSTRAINT `row_iso_process`
         FOREIGN KEY (`iso_process`) 
         REFERENCES `seddb`.`cvs_iso_processes`(`id`)
@@ -84,7 +85,22 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_rows`
         ON UPDATE NO ACTION
 );
 
-#The value dimensions
+# Stakeholder need
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_stakeholder_needs`
+(
+    `id`                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `vcs_row`           INT UNSIGNED NOT NULL,
+    `need`              TEXT NOT NULL,
+    `value_dimension`   TEXT NULL,
+    `rank_weight`       FLOAT,
+    FOREIGN KEY(`vcs_row`)
+        REFERENCES  `seddb`.`cvs_vcs_rows`(`id`)
+        ON DELETE CASCADE,
+    CONSTRAINT check_weight
+        check (`rank_weight` between 0 and 1)
+);
+
+#The value dimensions - not to be used
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_value_dimensions`
 (
     `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -101,25 +117,26 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_value_dimensions`
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_value_drivers`
 (
     `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `vcs`               INT UNSIGNED NOT NULL,
     `name`              TEXT NOT NULL,
     `unit`              TEXT NULL,
-    `value_dimension`   INT UNSIGNED NULL,
-    CONSTRAINT `driver_dimension` 
-    FOREIGN KEY (`value_dimension`) 
-    REFERENCES `seddb`.`cvs_value_dimensions`(`id`)
-    ON DELETE CASCADE
+    FOREIGN KEY(`vcs`)
+        REFERENCES  `seddb`.`cvs_vcss`(`id`)
+        ON DELETE CASCADE
 );
 
 #Vcs row and value driver connection
-CREATE TABLE IF NOT EXISTS `seddb`.`cvs_rowDrivers`
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_need_drivers`
 (
-    `vcs_row`       INT UNSIGNED, 
-    `value_driver`  INT UNSIGNED, 
-    PRIMARY KEY (`vcs_row`, `value_driver`),
-    FOREIGN KEY (`vcs_row`) REFERENCES `seddb`.`cvs_vcs_rows`(`id`)
-    ON DELETE CASCADE,
-    FOREIGN KEY (`value_driver`) REFERENCES `seddb`.`cvs_value_drivers`(`id`)
-    ON DELETE CASCADE
+    `stakeholder_need`  INT UNSIGNED,
+    `value_driver`      INT UNSIGNED,
+    PRIMARY KEY (`stakeholder_need`, `value_driver`),
+    FOREIGN KEY (`stakeholder_need`)
+        REFERENCES `seddb`.`cvs_stakeholder_needs`(`id`)
+        ON DELETE CASCADE,
+    FOREIGN KEY (`value_driver`)
+        REFERENCES `seddb`.`cvs_value_drivers`(`id`)
+        ON DELETE CASCADE
 );
 
 # BPMN node
