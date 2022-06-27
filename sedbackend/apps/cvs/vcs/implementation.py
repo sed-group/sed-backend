@@ -135,31 +135,26 @@ def delete_vcs(vcs_id: int, project_id: int, user_id: int) -> bool:
 # ======================================================================================================================
 
 
-def get_all_value_driver(project_id: int) -> List[models.ValueDriver]:
+def get_all_value_driver(vcs_id: int) -> List[models.ValueDriver]:
     try:
         with get_connection() as con:
-            return storage.get_all_value_driver(con, project_id)
-    except project_exceptions.CVSProjectNotFoundException:
+            return storage.get_all_value_driver(con, vcs_id)
+    except exceptions.VCSNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project with id={project_id}.',
+            detail=f'Could not find vcs with id={vcs_id}.',
         )
     except exceptions.ValueDriverNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find value drivers in project with id={project_id}'
+            detail=f'Could not find value drivers in vcs with id={vcs_id}'
         )
 
 
-def get_value_driver(value_driver_id: int, project_id: int, user_id: int) -> models.ValueDriver:
+def get_value_driver(value_driver_id: int) -> models.ValueDriver:
     try:
         with get_connection() as con:
             return storage.get_value_driver(con, value_driver_id)
-    except project_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project with id={project_id}.',
-        )
     except exceptions.ValueDriverNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -172,10 +167,10 @@ def get_value_driver(value_driver_id: int, project_id: int, user_id: int) -> mod
         )
 
 
-def create_value_driver(value_driver_post: models.ValueDriverPost) -> models.ValueDriver:
+def create_value_driver(vcs_id: int, value_driver_post: models.ValueDriverPost) -> models.ValueDriver:
     try:
         with get_connection() as con:
-            result = storage.create_value_driver(con, value_driver_post)
+            result = storage.create_value_driver(con, vcs_id, value_driver_post)
             con.commit()
             return result
     except auth_ex.UnauthorizedOperationException:
@@ -209,10 +204,10 @@ def edit_value_driver(value_driver_id: int,
         )
 
 
-def delete_value_driver(value_driver_id: int, user_id: int) -> bool:
+def delete_value_driver(value_driver_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.delete_value_driver(con, value_driver_id, user_id)
+            res = storage.delete_value_driver(con, value_driver_id)
             con.commit()
             return res
     except exceptions.ValueDriverNotFoundException:
@@ -267,12 +262,12 @@ def get_iso_process(iso_process_id: int) -> models.VCSISOProcess:
 # ======================================================================================================================
 
 
-def get_all_subprocess(vcs_id: int, user_id: int) -> List[models.VCSSubprocess]:
+def get_all_subprocess(vcs_id: int) -> List[models.VCSSubprocess]:
     with get_connection() as con:
-        return storage.get_all_subprocess(con, vcs_id, user_id)
+        return storage.get_all_subprocess(con, vcs_id)
 
 
-def get_subprocess(subprocess_id: int, user_id: int) -> models.VCSSubprocess:
+def get_subprocess(subprocess_id: int) -> models.VCSSubprocess:
     try:
         with get_connection() as con:
             return storage.get_subprocess(con, subprocess_id)
@@ -293,11 +288,10 @@ def get_subprocess(subprocess_id: int, user_id: int) -> models.VCSSubprocess:
         )
 
 
-def create_subprocess(subprocess_post: models.VCSSubprocessPost,
-                      user_id: int) -> models.VCSSubprocess:
+def create_subprocess(vcs_id: int, subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
     try:
         with get_connection() as con:
-            result = storage.create_subprocess(con, subprocess_post)
+            result = storage.create_subprocess(con, vcs_id, subprocess_post)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
@@ -322,11 +316,11 @@ def create_subprocess(subprocess_post: models.VCSSubprocessPost,
         )
 
 
-def edit_subprocess(subprocess_id: int, project_id: int, user_id: int,
+def edit_subprocess(subprocess_id: int,
                     subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
     try:
         with get_connection() as con:
-            result = storage.edit_subprocess(con, subprocess_id, project_id, user_id, subprocess_post)
+            result = storage.edit_subprocess(con, subprocess_id, subprocess_post)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
@@ -356,7 +350,7 @@ def edit_subprocess(subprocess_id: int, project_id: int, user_id: int,
         )
 
 
-def delete_subprocess(subprocess_id: int, user_id: int) -> bool:
+def delete_subprocess(subprocess_id: int) -> bool:
     try:
         with get_connection() as con:
             res = storage.delete_subprocess(con, subprocess_id)
@@ -365,7 +359,7 @@ def delete_subprocess(subprocess_id: int, user_id: int) -> bool:
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project with id={project_id}.',
+            detail=f'Could not find project.',
         )
     except exceptions.SubprocessNotFoundException as e:
         raise HTTPException(
