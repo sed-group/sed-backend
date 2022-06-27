@@ -41,6 +41,11 @@ def populate_processes(db_connection: PooledMySQLConnection, #Old code, needs re
     return processes
 
 class Simulation(object):
+    #@param:
+    #flow_time = the time that entities will flow in the system
+    #interarrival_time = the rate at which entities will flow in the system
+    #interarrival_process = the process at which the entities will start flowing
+    #until = the total simulation time
     def __init__(self, flow_time, interarrival_time, interarrival_process, until) -> None:
         self.flow_time = flow_time
         self.interarrival_time = interarrival_time
@@ -100,6 +105,9 @@ class Simulation(object):
                     'D': [0, 0, 0, 0]})
 
 class Entity(object):
+    #@param
+    #env = the simpy environment
+    #processes = the processes that the entity will go through
     def __init__(self, env, processes) -> None:
         self.env = env
         self.processes = processes
@@ -148,6 +156,11 @@ class Entity(object):
 
 
 class Process(object):
+    #@param
+    #time = the time a process will take
+    #cost = the cost of a process
+    #revenue = the revenue of a process
+    #name = the name of a process
     def __init__(self, time, cost, revenue, name) -> None:
         self.time = time
         self.cost = cost
