@@ -82,9 +82,9 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_rows`
         FOREIGN KEY(`vcs`)
         REFERENCES  `seddb`.`cvs_vcss`(`id`)
         ON DELETE CASCADE
-        ON UPDATE NO ACTION,
-    CONSTRAINT `unique_index`
-        UNIQUE (`index`, `vcs`)
+        ON UPDATE NO ACTION
+    # CONSTRAINT `unique_index`
+      #  UNIQUE (`index`, `vcs`)
 );
 
 # Stakeholder need

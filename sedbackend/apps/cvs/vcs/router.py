@@ -80,9 +80,8 @@ async def delete_vcs(vcs_id: int, project_id: int, user: User = Depends(get_curr
     summary='Returns the table of a a VCS',
     response_model=List[models.VcsRow],
 )
-async def get_vcs_table(vcs_id: int, user: User = Depends(get_current_active_user)) -> List[models.VcsRow]:
-    #implementation.get_vcs(vcs_id, user.id)  # perfoming necessary controls
-    return implementation.get_vcs_table(vcs_id, user.id)
+async def get_vcs_table(vcs_id: int) -> List[models.VcsRow]:
+    return implementation.get_vcs_table(vcs_id)
 
 
 @router.post(

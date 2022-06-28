@@ -782,9 +782,8 @@ def delete_stakeholder_need(db_connection: PooledMySQLConnection, need_id: int) 
 # VCS Rows
 # ======================================================================================================================
 
-def get_vcs_table(db_connection: PooledMySQLConnection, vcs_id: int,  user_id: int) -> List[models.VcsRow]:
+def get_vcs_table(db_connection: PooledMySQLConnection, vcs_id: int) -> List[models.VcsRow]:
     logger.debug(f'Fetching all table for VCS with id={vcs_id}.')
-#    table_rows = get_all_table_rows(db_connection, vcs_id, user_id)
 
     select_statement = MySQLStatementBuilder(db_connection)
     results = select_statement \
@@ -890,6 +889,8 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, updated_vcs_rows: List[
                    vcs_id: int) -> bool:
     logger.debug(f'Editing vcs table')
 
+    new_table_ids = []
+
     for row in updated_vcs_rows:
 
         if row.iso_process is None and row.subprocess is None:
@@ -928,12 +929,34 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, updated_vcs_rows: List[
             )
             life_cycle_storage.create_process_node(db_connection, node, vcs_id)
 
-        [update_stakeholder_need(db_connection, vcs_row_id, need, need.id) for need in row.stakeholder_needs]
+        new_table_ids.append(vcs_row_id)
+
+        curr_needs = get_all_stakeholder_needs(db_connection, vcs_row_id)
+        new_need_ids = []
+
+        for need in row.stakeholder_needs:
+            new_need_ids.append(need.id)
+            update_stakeholder_need(db_connection, vcs_row_id, need, need.id)
+
+        for need in curr_needs:
+            if need.id not in new_need_ids:
+                delete_stakeholder_need(db_connection, need.id)
+
+    curr_table = get_vcs_table(db_connection, vcs_id)
+
+    for row in curr_table:
+        if row.id not in new_table_ids:
+            delete_statement = MySQLStatementBuilder(db_connection)
+            res, rows = delete_statement.delete(CVS_VCS_ROWS_TABLE) \
+                .where('id = %s and vcs = %s', [row.id, vcs_id]) \
+                .execute(return_affected_rows=True, fetch_type=FetchType.FETCH_ONE)
+            if rows == 0:
+                raise exceptions.VCSTableRowFailedDeletionException
 
     return True
 
 
-def delete_vcs_row(db_connection: PooledMySQLConnection,vcs_row_id: int, vcs_id: int) -> bool:
+def delete_vcs_row(db_connection: PooledMySQLConnection, vcs_row_id: int, vcs_id: int) -> bool:
     logger.debug(f'Deleting vcs row with id: {vcs_row_id}')
 
     row = get_vcs_row(db_connection, vcs_row_id)
