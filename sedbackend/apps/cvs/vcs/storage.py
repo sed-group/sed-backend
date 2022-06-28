@@ -715,7 +715,7 @@ def get_all_stakeholder_needs(db_connection: PooledMySQLConnection, vcs_row_id: 
 
 
 def create_stakeholder_need(db_connection: PooledMySQLConnection, vcs_row_id: int,
-                            need: models.StakeholderNeedPost) -> models.StakeholderNeed:
+                            need: models.StakeholderNeedPost) -> int:
     logger.debug(f'Creating stakeholder need for vcs row with id={vcs_row_id}')
 
     try:
@@ -729,24 +729,33 @@ def create_stakeholder_need(db_connection: PooledMySQLConnection, vcs_row_id: in
         logger.debug(f'Error msg: {e.msg}')
         raise exceptions.VCSTableRowNotFoundException
 
-    if need.value_drivers:
-        [add_vcs_need_driver(db_connection, need_id, value_driver) for value_driver in need.value_drivers]
-
-    return get_stakeholder_need(db_connection, need_id)
+    return need_id
 
 
-def update_stakeholder_need(db_connection: PooledMySQLConnection, need_id: int,
-                            need: models.StakeholderNeedPut) -> models.StakeholderNeed:
+def update_stakeholder_need(db_connection: PooledMySQLConnection, vcs_row_id: int,
+                            need: models.StakeholderNeedPost, need_id: int = None) -> models.StakeholderNeed:
     logger.debug(f'Edit stakeholder need for with id={need_id}')
 
-    update_statement = MySQLStatementBuilder(db_connection)
-    update_statement.update(
-        table=CVS_VCS_STAKEHOLDER_NEED_TABLE,
-        set_statement='need = %s, value_dimension = %s, rank_weight = %s',
-        values=[need.need, need.value_dimension, need.rank_weight]
-    )
-    update_statement.where('id = %s', [need_id])
-    _, rows = update_statement.execute(return_affected_rows=True)
+    count = 0
+    if need_id:
+        count_statement = MySQLStatementBuilder(db_connection)
+        count_result = count_statement.count(CVS_VCS_STAKEHOLDER_NEED_TABLE) \
+            .where('id = %s', [need_id]) \
+            .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+        count = count_result['count']
+
+    if need.id or count > 0:
+        update_statement = MySQLStatementBuilder(db_connection)
+        update_statement.update(
+            table=CVS_VCS_STAKEHOLDER_NEED_TABLE,
+            set_statement='need = %s, value_dimension = %s, rank_weight = %s',
+            values=[need.need, need.value_dimension, need.rank_weight]
+        )
+        update_statement.where('id = %s', [need_id])
+        _, rows = update_statement.execute(return_affected_rows=True)
+
+    else:
+        need_id = create_stakeholder_need(db_connection, vcs_row_id, need)
 
     update_vcs_need_driver(db_connection, need_id, need.value_drivers)
 
@@ -818,35 +827,42 @@ def populate_vcs_row(db_connection: PooledMySQLConnection, db_result) -> models.
     )
 
 
+def create_vcs_row(db_connection: PooledMySQLConnection, row: models.VcsRowPost, vcs_id: int) -> int:
+    logger.debug(f'Creating row for VCS with id={vcs_id}.')
+    values = [row.index, vcs_id, row.stakeholder, row.stakeholder_expectations, row.iso_process,
+              row.subprocess]
+
+    insert_statement = MySQLStatementBuilder(db_connection)
+    try:
+        insert_statement \
+            .insert(CVS_VCS_ROWS_TABLE, ['index', 'vcs', 'stakeholder', 'stakeholder_expectations',
+                                         'iso_process', 'subprocess']) \
+            .set_values(values) \
+            .execute(fetch_type=FetchType.FETCH_NONE)
+        vcs_row_id = insert_statement.last_insert_id
+    except Error as e:
+        logger.debug(f'Error msg: {e.msg}')
+        if row.iso_process is not None:
+            raise exceptions.ISOProcessNotFoundException
+        elif row.subprocess is not None:
+            raise exceptions.SubprocessNotFoundException
+        else:
+            raise exceptions.VCSTableRowFailedToUpdateException(e.msg)
+
+    return vcs_row_id
+
+
 def create_vcs_table(db_connection: PooledMySQLConnection, new_vcs_rows: List[models.VcsRowPost], vcs_id: int) -> bool:
     logger.debug(f'Creating table for VCS with id={vcs_id}.')
 
     for row in new_vcs_rows:
 
-        values = [row.index, vcs_id, row.stakeholder, row.stakeholder_expectations, row.iso_process,
-                  row.subprocess]
-        
         if row.iso_process is None and row.subprocess is None:
             raise exceptions.VCSTableProcessAmbiguity
         elif row.iso_process is not None and row.subprocess is not None:
             raise exceptions.VCSTableProcessAmbiguity
-        
-        insert_statement = MySQLStatementBuilder(db_connection)
-        try: 
-            insert_statement \
-                .insert(CVS_VCS_ROWS_TABLE, ['index', 'vcs', 'stakeholder', 'stakeholder_expectations',
-                                             'iso_process', 'subprocess'])\
-                .set_values(values)\
-                .execute(fetch_type=FetchType.FETCH_NONE)
-            vcs_row_id = insert_statement.last_insert_id
-        except Error as e:
-                logger.debug(f'Error msg: {e.msg}')
-                if row.iso_process is not None:
-                    raise exceptions.ISOProcessNotFoundException
-                elif row.subprocess is not None:
-                    raise exceptions.SubprocessNotFoundException
-                else:
-                    raise exceptions.VCSTableRowFailedToUpdateException(e.msg)
+
+        vcs_row_id = create_vcs_row(db_connection, row, vcs_id)
 
         node = life_cycle_models.ProcessNodePost(
             pos_x=0,
@@ -861,7 +877,8 @@ def create_vcs_table(db_connection: PooledMySQLConnection, new_vcs_rows: List[mo
     return True
 
 
-def edit_vcs_table(db_connection: PooledMySQLConnection, updated_vcs_rows: List[models.VcsRowPut], vcs_id: int) -> bool:
+def edit_vcs_table(db_connection: PooledMySQLConnection, updated_vcs_rows: List[models.VcsRowPost],
+                   vcs_id: int) -> bool:
     logger.debug(f'Editing vcs table')
 
     for row in updated_vcs_rows:
@@ -870,17 +887,39 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, updated_vcs_rows: List[
             raise exceptions.VCSTableProcessAmbiguity
         elif row.iso_process is not None and row.subprocess is not None:
             raise exceptions.VCSTableProcessAmbiguity
-        
-        update_statement = MySQLStatementBuilder(db_connection)
-        update_statement.update(
-            table=CVS_VCS_ROWS_TABLE,
-            set_statement=f'`index` = %s, stakeholder = %s, stakeholder_expectations = %s, iso_process = %s, subprocess = %s, vcs = %s',
-            values=[row.index, row.stakeholder, row.stakeholder_expectations, row.iso_process, row.subprocess, vcs_id]
-        )
-        update_statement.where(f'id = %s', [row.id])
-        _, rows = update_statement.execute(return_affected_rows=True)
 
-        [update_stakeholder_need(db_connection, need.id, need) for need in row.stakeholder_needs]
+        count = 0
+        if row.id:
+            count_statement = MySQLStatementBuilder(db_connection)
+            count_result = count_statement.count(CVS_VCS_ROWS_TABLE) \
+                .where(f'id = %s', [row.id]) \
+                .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+            count = count_result['count']
+
+        vcs_row_id = None
+
+        if row.id or count > 0:
+            update_statement = MySQLStatementBuilder(db_connection)
+            update_statement.update(
+                table=CVS_VCS_ROWS_TABLE,
+                set_statement=f'`index` = %s, stakeholder = %s, stakeholder_expectations = %s, iso_process = %s, '
+                              f'subprocess = %s, vcs = %s',
+                values=[row.index, row.stakeholder, row.stakeholder_expectations, row.iso_process, row.subprocess,
+                        vcs_id]
+            )
+            update_statement.where(f'id = %s', [row.id])
+            _, rows = update_statement.execute(return_affected_rows=True)
+
+        else:
+            vcs_row_id = create_vcs_row(db_connection, row, vcs_id)
+            node = life_cycle_models.ProcessNodePost(
+                pos_x=0,
+                pos_y=0,
+                vcs_row=get_vcs_row(db_connection, vcs_row_id)
+            )
+            life_cycle_storage.create_process_node(db_connection, node, vcs_id)
+
+        [update_stakeholder_need(db_connection, vcs_row_id or row.id, need, need.id) for need in row.stakeholder_needs]
 
     return True
 

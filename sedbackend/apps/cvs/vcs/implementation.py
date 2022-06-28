@@ -423,7 +423,7 @@ def get_vcs_table(vcs_id: int, user_id: int) -> List[models.VcsRow]:
         )
 
 
-def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int)-> bool:
+def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int) -> int:
     try:
         with get_connection() as con:
             result = storage.create_vcs_table(con, new_table, vcs_id)
@@ -460,7 +460,8 @@ def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int)-> bool:
             detail='Unauthorized user.',
         )
 
-def edit_vcs_table(updated_vcs_rows: List[models.VcsRowPut], vcs_id: int) -> bool:
+
+def edit_vcs_table(updated_vcs_rows: List[models.VcsRowPost], vcs_id: int) -> bool:
     try: 
         with get_connection() as con:
             res = storage.edit_vcs_table(con, updated_vcs_rows, vcs_id)

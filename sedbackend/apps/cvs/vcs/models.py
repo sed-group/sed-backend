@@ -114,6 +114,8 @@ class StakeholderNeedPut(BaseModel):
 
 
 class StakeholderNeedPost(BaseModel):
+    id: Optional[int] = None
+    vcs_row_id: Optional[int] = None
     need: str
     value_dimension: Optional[str] = None
     value_drivers: Optional[List[int]] = None
@@ -147,6 +149,8 @@ class VcsRowPut(BaseModel):
 
 
 class VcsRowPost(BaseModel):
+    id: Optional[int] = None
+    vcs_id: Optional[int] = None
     index: int
     stakeholder: str
     stakeholder_needs: Optional[List[StakeholderNeedPost]] = None

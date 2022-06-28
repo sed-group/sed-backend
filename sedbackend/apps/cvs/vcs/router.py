@@ -90,16 +90,16 @@ async def get_vcs_table(vcs_id: int, user: User = Depends(get_current_active_use
     summary='Creates the table for a VCS',
     response_model=bool,
 )
-async def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int) -> bool:
-#    implementation.get_vcs(vcs_id, project_id, user.id)  # perfoms necessary controls
+async def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int) -> int:
     return implementation.create_vcs_table(new_table, vcs_id)
+
 
 @router.put(
     '/vcs/{vcs_id}/table',
     summary='Edits rows of the vcs table',
     response_model=bool
 )
-async def edit_vcs_table(updated_table: List[models.VcsRowPut], vcs_id: int) -> bool:
+async def edit_vcs_table(updated_table: List[models.VcsRowPost], vcs_id: int) -> bool:
     return implementation.edit_vcs_table(updated_table, vcs_id)
 
 @router.delete(
