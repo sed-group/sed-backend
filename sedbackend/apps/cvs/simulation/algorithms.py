@@ -1,44 +1,30 @@
 import random as r
 import numpy as np
-from typing import List
+from typing import List, Optional, Tuple
 import simpy
 
+from enum import Enum
 from mysql.connector.pooling import PooledMySQLConnection
 
-import sedbackend.apps
+import models
+from sedbackend.apps.cvs.market_input.models import MarketInputGet
+import sedbackend.apps.cvs.vcs.implementation as vcs_impl
+import sedbackend.apps.cvs.market_input.implementation as mi_impl
+from sedbackend.apps.cvs.vcs.models import VcsRow
+
 TIMESTEP = 1
 
+class TimeFormat(Enum):
+    """
+    The timeformats that can be chosen for a process. The values are the defaults for the
+    simulation (years)
+    """
+    HOUR = 365*24
+    DAY = 365
+    WEEK = 52
+    MONTH = 12
+    YEAR = 1
 
-def run_simulation(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id: int, #Old code, needs rework
-                   time_interval: float) -> sedbackend.apps.cvs.simulation.models.Simulation:
-    simulation = Simulation(db_connection, project_id, vcs_id, user_id)
-    result = simulation.run(time_interval)
-    return result
-
-
-def populate_processes(db_connection: PooledMySQLConnection, #Old code, needs rework
-                       vcs_table_rows: List[sedbackend.apps.cvs.vcs.models.VcsRow]) -> List[
-    sedbackend.apps.cvs.simulation.models.Process]:
-    processes = []
-
-    for table_row in vcs_table_rows:
-        if (table_row.iso_process and table_row.iso_process.category == 'Technical processes') \
-                or (table_row.subprocess and table_row.subprocess.parent_process.category == 'Technical processes'):
-            if table_row.iso_process:
-                name = table_row.iso_process.name
-            else:
-                name = table_row.subprocess.name
-
-            mi = sedbackend.apps.cvs.market_input.storage.get_market_input(db_connection, table_row.node_id)
-            process = sedbackend.apps.cvs.simulation.models.Process(
-                name=name,
-                time=mi.time,
-                cost=mi.cost,
-                revenue=mi.revenue
-            )
-            processes.append(process)
-
-    return processes
 
 class Simulation(object):
     #@param:
@@ -46,13 +32,16 @@ class Simulation(object):
     #interarrival_time = the rate at which entities will flow in the system
     #interarrival_process = the process at which the entities will start flowing
     #until = the total simulation time
-    def __init__(self, flow_time, interarrival_time, interarrival_process, until) -> None:
+    def __init__(self, flow_time, interarrival_time, interarrival_process, until, discount_rate, processes, non_tech_processes) -> None:
         self.flow_time = flow_time
         self.interarrival_time = interarrival_time
         self.interarrival_process = interarrival_process
         self.until = until
+        self.discount_rate = discount_rate
+        self.cum_NPV = [0]
+        self.time_steps = [0]
         self.entities = []
-        self.processes = populate_processes()
+        self.processes = processes 
         self.dsm = dict({'A': [0, 0, 0, 0], 
                          'B': [0, 0, 0.2, 0.8], 
                         'C': [0, 0, 0, 0], 
@@ -83,19 +72,45 @@ class Simulation(object):
             env.process(e.lifecycle(self.get_dsm_after_flow(), [self.interarrival_process]))
             self.entities.append(e)
             
-    #Observes the total time, cost, and revenue for each entity in each timestep. 
+    #Observes the total time, cost, revenue, and NPV for each entity in each timestep. 
     def observe_costs(self, env):
+        total_costs = [0]
+        total_revenue = [0]
+        
+
         while True:
-            print([f'cost: {e.total_cost[-1]}' for e in self.entities])
-            print([f'revenue: {e.total_revenue[-1]}' for e in self.entities])
-            print(f'Time: {env.now}')
-            print(f'Time: {env.now}, total_cost: {sum([e.total_cost[-1] for e in self.entities])}, total_revenue: {sum([e.total_revenue[-1] for e in self.entities])}')
+            # print([f'cost: {e.cost}' for e in self.entities])
+            #print([f'revenue: {e.revenue}' for e in self.entities])
+            #print(f'Time: {env.now}')
+            self.add_static_costs_to_entities()
+            total_costs.append(sum([e.cost for e in self.entities]))
+            total_revenue.append(sum([e.revenue for e in self.entities]))
+            self.time_steps.append(env.now)
+
+
+            
+            self.calculate_NPV(total_costs, total_revenue, time_steps)
+            print(f'Time: {env.now}, total_cost: {sum([e.cost for e in self.entities])}, total_revenue: {sum([e.revenue for e in self.entities])}, cum_NPV: {self.cum_NPV}')
             yield env.timeout(TIMESTEP)
+
 
     #Generates the waiting time as interarrival rate on an exponential distribution
     def generate_interarrival(self):
         return np.random.exponential(self.interarrival_time)
-    
+
+
+    def add_static_costs_to_entities(self): #Adds the costs of the non-technical processes to all active entities. 
+        for e in self.entities:
+            e.cost += self.static_processes_costs / (len(self.entities) * self.until) #This works in the margin of 0.00000002 euros
+
+    def calculate_NPV(self, total_costs, total_revenue, time_steps):
+        timestep_revenue = total_revenue[time_steps[-1]] - total_revenue[time_steps[-2]]
+        timestep_cost = total_costs[time_steps[-1]] - total_costs[time_steps[-2]]
+        
+        net_revenue = timestep_revenue - timestep_cost
+        npv = net_revenue / ((1 + 0.08) ** time_steps[-1])
+        self.cum_NPV.append(self.cum_NPV[-1] + npv)
+        
     def get_dsm_before_flow(self): #Example DSM
         return dict({'A': [0, 0, 0, 0]})
 
@@ -103,6 +118,7 @@ class Simulation(object):
         return dict({'B': [0, 0, 0.2, 0.8], 
                     'C': [0, 0, 0, 0], 
                     'D': [0, 0, 0, 0]})
+
 
 class Entity(object):
     #@param
@@ -140,6 +156,9 @@ class Entity(object):
     def find_active_activities(self, dsm: dict, current_processes):
         active_activities = []
         for process in current_processes:
+            if(process.name not in dsm.keys()):
+                break
+
             transitions = dsm.get(process.name)
             
             if(all([p==0 for p in transitions])): #Checks if all rows are 0, if that is the case then there is nothing more to be done after this process 
@@ -157,18 +176,23 @@ class Entity(object):
 
 class Process(object):
     #@param
-    #time = the time a process will take
+    #time = the time a process will take in years. 
     #cost = the cost of a process
     #revenue = the revenue of a process
     #name = the name of a process
-    def __init__(self, time, cost, revenue, name) -> None:
-        self.time = time
+    #time_format = the unit in which the time is given. 
+    def __init__(self, time, cost, revenue, name, time_format: Optional[TimeFormat] = None) -> None:
+        self.time = self.convert_time_format_to_default(time, time_format)
         self.cost = cost
         self.revenue = revenue
         self.W = 1
         self.WN = False
         self.name = name
     
+    #Converts all times to the correct (default) time format
+    def convert_time_format_to_default(self, time, time_format: Optional[TimeFormat] = None):
+        return (time / time_format.value) if time_format is not None else 0
+
     #Runs a process and adds the cost and the revenue to the entity
     def run_process(self, env, total_cost, total_revenue):
         print(f'Started working on process: {self.name}')
@@ -177,3 +201,60 @@ class Process(object):
         total_cost.append(total_cost[-1] + self.cost)
         total_revenue.append(total_revenue[-1] + self.revenue)
         self.W = 0
+
+
+def run_simulation(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: int, 
+        interarrival_time: float, pid: int, time_interval: float, discount_rate: float,
+        user_id: int) -> models.Simulation:
+    
+    #pid is a processid which means that we need to fetch the processes first. 
+    vcs_rows = vcs_impl.get_vcs_table(vcs_id, user_id)
+    market_input = mi_impl.get_all_market_inputs(vcs_id, user_id)
+
+
+    sim = Simulation(flow_time, interarrival_time, pid, time_interval, discount_rate, populate_processes(vcs_rows, market_input), populate_non_tech_processes(vcs_rows, market_input))
+    sim.run_simulation()
+
+    return models.Simulation(
+        time=sim.time_steps,
+        cumulative_NPV=sim.cum_NPV,
+        processes=sim.processes
+    )
+
+
+def populate_processes(vcs_rows: List[VcsRow], market_input: List[MarketInputGet]) -> List[models.Process]:
+    processes = []
+
+    for row in vcs_rows:
+        if (row.iso_process and row.iso_process.category == 'Technical processes') \
+                or (row.subprocess and row.subprocess.parent_process.category == 'Technical processes'):
+            if row.iso_process:
+                name = row.iso_process.name
+            else:
+                name = row.subprocess.name
+
+            for mi in market_input:
+                if mi.vcs_row == row.id:
+                    process = Process(mi.time, mi.cost, mi.revenue, name)
+                    processes.append(process)
+    return processes
+
+def populate_non_tech_processes(vcs_rows: List[VcsRow], market_input: List[MarketInputGet]) -> List[models.NonTechnicalProcess]:
+    non_tech_processes = []
+    for row in vcs_rows:
+        if (row.iso_process and row.iso_process.category is not 'Technical processes') \
+            or (row.subprocess and row.subprocess.parent_process.category is not 'Techical processes'):
+                if row.iso_process:
+                    name = row.iso_process.name
+                else: 
+                    name = row.subprocess.name
+            
+                for mi in market_input:
+                    if mi.vcs_row == row.id:
+                        non_tech_process = models.NonTechnicalProcess(
+                            name=name,
+                            cost=market_input.cost,
+                            revenue=market_input.revenue
+                        )
+                        non_tech_processes.append(non_tech_process)
+    return non_tech_processes
