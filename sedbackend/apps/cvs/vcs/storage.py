@@ -494,10 +494,12 @@ def populate_iso_process(db_result):
 def get_all_subprocess(db_connection: PooledMySQLConnection, vcs_id: int) -> List[models.VCSSubprocess]:
     logger.debug(f'Fetching all subprocesses for vcs with id={vcs_id}.')
     
-    query = f'SELECT cvs_subprocesses.id, cvs_subprocesses.name, order_index, \
-        iso_process, cvs_iso_processes.name as iso_process_name, category \
-        FROM cvs_subprocesses INNER JOIN cvs_iso_processes ON iso_process = cvs_iso_processes.id\
-        INNER JOIN cvs_vcs_rows ON subprocess = cvs_subprocesses.id'
+    query = f'SELECT cvs_subprocesses.id, cvs_subprocesses.vcs, cvs_subprocesses.name, order_index, \
+        cvs_subprocesses.iso_process, cvs_iso_processes.name as iso_process_name, category \
+        FROM cvs_subprocesses INNER JOIN cvs_iso_processes ON cvs_subprocesses.iso_process = cvs_iso_processes.id \
+        WHERE cvs_subprocesses.vcs = %s'
+
+        #INNER JOIN cvs_vcs_rows ON subprocess = cvs_subprocesses.id'
     with db_connection.cursor(prepared=True) as cursor:
         cursor.execute(query, [vcs_id])
         last_insert_id = cursor.lastrowid
@@ -507,7 +509,6 @@ def get_all_subprocess(db_connection: PooledMySQLConnection, vcs_id: int) -> Lis
             raise exceptions.SubprocessNotFoundException
         
         res = [dict(zip(cursor.column_names, row)) for row in res]
-
         
     subprocess_list = [populate_subprocess(result) for result in res]
 
@@ -518,7 +519,7 @@ def get_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int) -> 
     logger.debug(f'Fetching subprocess with id={subprocess_id}.')
 
     query = f'SELECT cvs_subprocesses.id, cvs_subprocesses.vcs, cvs_subprocesses.name, order_index, \
-        iso_process, cvs_iso_processes.name as iso_process_name, category \
+        cvs_subprocesses.iso_process, cvs_iso_processes.name as iso_process_name, category \
         FROM cvs_subprocesses INNER JOIN cvs_iso_processes ON iso_process = cvs_iso_processes.id\
         WHERE cvs_subprocesses.id = %s'
     with db_connection.cursor(prepared=True) as cursor:

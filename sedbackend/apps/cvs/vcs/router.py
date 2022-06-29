@@ -181,7 +181,7 @@ async def get_all_iso_process() -> List[models.VCSISOProcess]:
 @router.get(
     '/vcs/{vcs_id}/subprocess/all',
     summary='Returns all subprocesses of a project',
-    response_model=ListChunk[models.VCSSubprocess],
+    response_model=List[models.VCSSubprocess],
 )
 async def get_all_subprocess(vcs_id: int) -> List[models.VCSSubprocess]:
     return implementation.get_all_subprocess(vcs_id)
