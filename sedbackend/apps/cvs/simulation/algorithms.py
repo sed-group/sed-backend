@@ -12,7 +12,7 @@ import sedbackend.apps.cvs.vcs.implementation as vcs_impl
 import sedbackend.apps.cvs.market_input.implementation as mi_impl
 from sedbackend.apps.cvs.vcs.models import VcsRow
 
-TIMESTEP = 1
+TIMESTEP = 0.25
 
 class TimeFormat(Enum):
     """
@@ -88,9 +88,8 @@ class Simulation(object):
             self.time_steps.append(env.now)
 
 
-            
-            self.calculate_NPV(total_costs, total_revenue, time_steps)
-            print(f'Time: {env.now}, total_cost: {sum([e.cost for e in self.entities])}, total_revenue: {sum([e.revenue for e in self.entities])}, cum_NPV: {self.cum_NPV}')
+            self.calculate_NPV(total_costs, total_revenue, self.time_steps)
+           # print(f'Time: {env.now}, total_cost: {sum([e.cost for e in self.entities])}, total_revenue: {sum([e.revenue for e in self.entities])}, cum_NPV: {self.cum_NPV}')
             yield env.timeout(TIMESTEP)
 
 
@@ -104,10 +103,10 @@ class Simulation(object):
             e.cost += self.static_processes_costs / (len(self.entities) * self.until) #This works in the margin of 0.00000002 euros
 
     def calculate_NPV(self, total_costs, total_revenue, time_steps):
-        timestep_revenue = total_revenue[time_steps[-1]] - total_revenue[time_steps[-2]]
-        timestep_cost = total_costs[time_steps[-1]] - total_costs[time_steps[-2]]
-        
-        net_revenue = timestep_revenue - timestep_cost
+        timestep_revenue = total_revenue[len(time_steps) -1] - total_revenue[len(time_steps) - 2]
+        timestep_cost = total_costs[len(time_steps) - 1] - total_costs[len(time_steps) - 2]
+
+        net_revenue = timestep_revenue - timestep_cost #Cashflow for the timestep
         npv = net_revenue / ((1 + 0.08) ** time_steps[-1])
         self.cum_NPV.append(self.cum_NPV[-1] + npv)
         
@@ -189,7 +188,7 @@ class Process(object):
         self.WN = False
         self.name = name
     
-    #Converts all times to the correct (default) time format
+    #Converts all times to the correct (default: Years) time format
     def convert_time_format_to_default(self, time, time_format: Optional[TimeFormat] = None):
         return (time / time_format.value) if time_format is not None else 0
 
