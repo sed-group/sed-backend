@@ -815,7 +815,7 @@ def populate_vcs_row(db_connection: PooledMySQLConnection, db_result) -> models.
     if db_result['iso_process'] is not None:
         iso_process = get_iso_process(int(db_result['iso_process']), db_connection)
     elif db_result['subprocess'] is not None:
-        subprocess = get_subprocess(db_connection, db_result['subprocess_id'])
+        subprocess = get_subprocess(db_connection, db_result['subprocess'])
 
     return models.VcsRow(
         id=db_result['id'],
