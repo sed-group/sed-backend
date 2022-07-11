@@ -104,7 +104,18 @@ class StakeholderNeed(BaseModel):
     value_drivers: Optional[List[ValueDriver]] = None
 
 
+class StakeholderNeedPut(BaseModel):
+    id: int
+    vcs_row_id: int
+    need: str
+    value_dimension: Optional[str] = None
+    value_drivers: Optional[List[int]] = None
+    rank_weight: Optional[float] = None
+
+
 class StakeholderNeedPost(BaseModel):
+    id: Optional[int] = None
+    vcs_row_id: Optional[int] = None
     need: str
     value_dimension: Optional[str] = None
     value_drivers: Optional[List[int]] = None
@@ -126,7 +137,20 @@ class VcsRow(BaseModel):
     subprocess: Optional[VCSSubprocess] = None
 
 
+class VcsRowPut(BaseModel):
+    id: int
+    vcs_id: int
+    index: int
+    stakeholder: str
+    stakeholder_needs: Optional[List[StakeholderNeedPut]] = None
+    stakeholder_expectations: str
+    iso_process: Optional[int] = None
+    subprocess: Optional[int] = None
+
+
 class VcsRowPost(BaseModel):
+    id: Optional[int] = None
+    vcs_id: Optional[int] = None
     index: int
     stakeholder: str
     stakeholder_needs: Optional[List[StakeholderNeedPost]] = None

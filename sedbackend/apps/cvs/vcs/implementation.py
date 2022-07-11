@@ -326,7 +326,7 @@ def edit_subprocess(subprocess_id: int,
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project with id={project_id}.',
+            detail=f'Could not find project.',
         )
     except exceptions.SubprocessNotFoundException as e:
         raise HTTPException(
@@ -412,10 +412,10 @@ def update_indices_subprocess(subprocess_ids: List[int], order_indices: List[int
 # ======================================================================================================================
 
 
-def get_vcs_table(vcs_id: int, user_id: int) -> List[models.VcsRow]:
+def get_vcs_table(vcs_id: int) -> List[models.VcsRow]:
     try:
         with get_connection() as con:
-            return storage.get_vcs_table(con, vcs_id,  user_id)
+            return storage.get_vcs_table(con, vcs_id)
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -423,7 +423,7 @@ def get_vcs_table(vcs_id: int, user_id: int) -> List[models.VcsRow]:
         )
 
 
-def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int)-> bool:
+def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int) -> int:
     try:
         with get_connection() as con:
             result = storage.create_vcs_table(con, new_table, vcs_id)
@@ -460,7 +460,8 @@ def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int)-> bool:
             detail='Unauthorized user.',
         )
 
-def edit_vcs_table(updated_vcs_rows: List[models.VcsRow], vcs_id: int) -> bool:
+
+def edit_vcs_table(updated_vcs_rows: List[models.VcsRowPost], vcs_id: int) -> bool:
     try: 
         with get_connection() as con:
             res = storage.edit_vcs_table(con, updated_vcs_rows, vcs_id)

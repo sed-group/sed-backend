@@ -231,7 +231,8 @@ def get_bpmn(db_connection: PooledMySQLConnection, vcs_id: int) -> models.BPMNGe
         raise vcs_exceptions.VCSNotFoundException
 
     return models.BPMNGet(
-        nodes=[*process_nodes, *start_stop_nodes]
+        nodes=process_nodes
+        # [*process_nodes, *start_stop_nodes]
     )
 
 

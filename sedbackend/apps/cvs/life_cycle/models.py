@@ -34,4 +34,4 @@ class StartStopNodePost(NodePost):
 
 
 class BPMNGet(BaseModel):
-    nodes: List[NodeGet]
+    nodes: List[ProcessNodeGet]

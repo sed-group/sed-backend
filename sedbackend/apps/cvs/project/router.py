@@ -10,7 +10,7 @@ router = APIRouter()
 
 
 @router.get(
-    '/project/get/all',
+    '/project/all',
     summary='Returns all of the user\'s CVS projects',
     response_model=ListChunk[models.CVSProject],
 )
@@ -20,7 +20,7 @@ async def get_all_cvs_project(user: User = Depends(get_current_active_user)) \
 
 
 @router.get(
-    '/project/get/segment',
+    '/project/segment',
     summary='Returns a segment of the user\'s CVS projects',
     response_model=ListChunk[models.CVSProject],
 )
@@ -30,7 +30,7 @@ async def get_segment_cvs_project(index: int, segment_length: int, user: User = 
 
 
 @router.get(
-    '/project/get/{project_id}',
+    '/project/{project_id}',
     summary='Returns a CVS project based on id',
     description='Returns a CVS project based on id',
     response_model=models.CVSProject,
@@ -40,7 +40,7 @@ async def get_csv_project(project_id: int, user: User = Depends(get_current_acti
 
 
 @router.post(
-    '/project/create',
+    '/project',
     summary='Creates a new CVS project',
     response_model=models.CVSProject,
 )
@@ -50,7 +50,7 @@ async def create_csv_project(project_post: models.CVSProjectPost,
 
 
 @router.put(
-    '/project/{project_id}/edit',
+    '/project/{project_id}',
     summary='Edits a CVS project',
     response_model=models.CVSProject,
 )
@@ -60,7 +60,7 @@ async def edit_csv_project(project_id: int, project_post: models.CVSProjectPost,
 
 
 @router.delete(
-    '/project/{project_id}/delete',
+    '/project/{project_id}',
     summary='Deletes a CVS project based on id',
     response_model=bool,
 )

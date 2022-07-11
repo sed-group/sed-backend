@@ -80,9 +80,8 @@ async def delete_vcs(vcs_id: int, project_id: int, user: User = Depends(get_curr
     summary='Returns the table of a a VCS',
     response_model=List[models.VcsRow],
 )
-async def get_vcs_table(vcs_id: int, user: User = Depends(get_current_active_user)) -> List[models.VcsRow]:
-    #implementation.get_vcs(vcs_id, user.id)  # perfoming necessary controls
-    return implementation.get_vcs_table(vcs_id, user.id)
+async def get_vcs_table(vcs_id: int) -> List[models.VcsRow]:
+    return implementation.get_vcs_table(vcs_id)
 
 
 @router.post(
@@ -90,16 +89,16 @@ async def get_vcs_table(vcs_id: int, user: User = Depends(get_current_active_use
     summary='Creates the table for a VCS',
     response_model=bool,
 )
-async def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int) -> bool:
-#    implementation.get_vcs(vcs_id, project_id, user.id)  # perfoms necessary controls
+async def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int) -> int:
     return implementation.create_vcs_table(new_table, vcs_id)
+
 
 @router.put(
     '/vcs/{vcs_id}/table',
     summary='Edits rows of the vcs table',
     response_model=bool
 )
-async def edit_vcs_table(updated_table: List[models.VcsRow], vcs_id: int) -> bool:
+async def edit_vcs_table(updated_table: List[models.VcsRowPost], vcs_id: int) -> bool:
     return implementation.edit_vcs_table(updated_table, vcs_id)
 
 @router.delete(
@@ -182,7 +181,7 @@ async def get_all_iso_process() -> List[models.VCSISOProcess]:
 @router.get(
     '/vcs/{vcs_id}/subprocess/all',
     summary='Returns all subprocesses of a project',
-    response_model=ListChunk[models.VCSSubprocess],
+    response_model=List[models.VCSSubprocess],
 )
 async def get_all_subprocess(vcs_id: int) -> List[models.VCSSubprocess]:
     return implementation.get_all_subprocess(vcs_id)

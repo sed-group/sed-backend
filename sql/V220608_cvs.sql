@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_subprocesses`
     `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `vcs`           INT UNSIGNED NOT NULL,
     `name`          TEXT NOT NULL,
-    `order_index`   INT NOT NULL UNIQUE, #TODO ask if it is neccessary to rearrange subprocesses in modal window
+    `order_index`   INT, #TODO ask if it is neccessary to rearrange subprocesses in modal window
     `iso_process`   INT UNSIGNED NOT NULL,
     FOREIGN KEY (`iso_process`)
         REFERENCES `seddb`.`cvs_iso_processes`(`id`)
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_rows`
 (
     `id`                        INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `vcs`                       INT UNSIGNED NOT NULL,
-    `index`                     INT UNSIGNED UNIQUE,
+    `index`                     INT UNSIGNED NOT NULL,
     `stakeholder`               TEXT NOT NULL,
     `stakeholder_expectations`  TEXT NOT NULL,
     `iso_process`               INT UNSIGNED NULL,
@@ -83,6 +83,8 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcs_rows`
         REFERENCES  `seddb`.`cvs_vcss`(`id`)
         ON DELETE CASCADE
         ON UPDATE NO ACTION
+    # CONSTRAINT `unique_index`
+      #  UNIQUE (`index`, `vcs`)
 );
 
 # Stakeholder need
