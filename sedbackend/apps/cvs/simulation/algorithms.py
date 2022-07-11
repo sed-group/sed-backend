@@ -7,7 +7,7 @@ import pandas as pd
 from enum import Enum
 from mysql.connector.pooling import PooledMySQLConnection
 
-import models
+import models as sim_models
 from sedbackend.apps.cvs.market_input.models import MarketInputGet
 import sedbackend.apps.cvs.vcs.implementation as vcs_impl
 import sedbackend.apps.cvs.market_input.implementation as mi_impl
@@ -220,7 +220,7 @@ class Process(object):
 
 def run_simulation(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: int, 
         interarrival_time: float, pid: int, time_interval: float, discount_rate: float,
-        user_id: int) -> models.Simulation:
+        user_id: int) -> sim_models.Simulation:
     
     #pid is a processid which means that we need to fetch the processes first. 
     vcs_rows = vcs_impl.get_vcs_table(vcs_id, user_id)
@@ -230,14 +230,14 @@ def run_simulation(db_connection: PooledMySQLConnection, vcs_id: int, flow_time:
     sim = Simulation(flow_time, interarrival_time, pid, time_interval, discount_rate, populate_processes(vcs_rows, market_input), populate_non_tech_processes(vcs_rows, market_input))
     sim.run_simulation()
 
-    return models.Simulation(
+    return sim_models.Simulation(
         time=sim.time_steps,
         cumulative_NPV=sim.cum_NPV,
         processes=sim.processes
     )
 
 
-def populate_processes(vcs_rows: List[VcsRow], market_input: List[MarketInputGet]) -> List[models.Process]:
+def populate_processes(vcs_rows: List[VcsRow], market_input: List[MarketInputGet]) -> List[sim_models.Process]:
     processes = []
 
     for row in vcs_rows:
@@ -254,7 +254,7 @@ def populate_processes(vcs_rows: List[VcsRow], market_input: List[MarketInputGet
                     processes.append(process)
     return processes
 
-def populate_non_tech_processes(vcs_rows: List[VcsRow], market_input: List[MarketInputGet]) -> List[models.NonTechnicalProcess]:
+def populate_non_tech_processes(vcs_rows: List[VcsRow], market_input: List[MarketInputGet]) -> List[sim_models.NonTechnicalProcess]:
     non_tech_processes = []
     for row in vcs_rows:
         if (row.iso_process and row.iso_process.category is not 'Technical processes') \
@@ -266,7 +266,7 @@ def populate_non_tech_processes(vcs_rows: List[VcsRow], market_input: List[Marke
             
                 for mi in market_input:
                     if mi.vcs_row == row.id:
-                        non_tech_process = models.NonTechnicalProcess(
+                        non_tech_process = sim_models.NonTechnicalProcess(
                             name=name,
                             cost=market_input.cost,
                             revenue=market_input.revenue
