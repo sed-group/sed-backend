@@ -210,9 +210,9 @@ class Process(object):
 
     #Runs a process and adds the cost and the revenue to the entity
     def run_process(self, env, total_cost, total_revenue):
-        print(f'Started working on process: {self.name}')
+        #print(f'Started working on process: {self.name}')
         yield env.timeout(self.time * self.W)
-        print(f'Time after step in lifecycle: {env.now}')
+        #print(f'Time after step in lifecycle: {env.now}')
         total_cost.append(total_cost[-1] + self.cost)
         total_revenue.append(total_revenue[-1] + self.revenue)
         self.W = 0
