@@ -18,7 +18,7 @@ from sedbackend.apps.cvs.design import models, storage, exceptions
 def create_cvs_design(design_post: models.DesignPost, vcs_id: int) -> models.Design:
     try:
         with get_connection() as con:
-            result = storage.create_design(con, design_post, vcs_id)
+            result = storage.create_design_group(con, design_post, vcs_id)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
@@ -41,7 +41,7 @@ def create_cvs_design(design_post: models.DesignPost, vcs_id: int) -> models.Des
 def get_all_design(vcs_id: int) -> List[models.Design]:
     try:
         with get_connection() as con:
-            return storage.get_all_designs(con, vcs_id)
+            return storage.get_all_design_groups(con, vcs_id)
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -62,7 +62,7 @@ def get_all_design(vcs_id: int) -> List[models.Design]:
 def get_design(design_id: int) -> models.Design:
     try:
         with get_connection() as con:
-            result = storage.get_design(con, design_id)
+            result = storage.get_design_group(con, design_id)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
@@ -90,7 +90,7 @@ def get_design(design_id: int) -> models.Design:
 def delete_design(design_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.delete_design(con, design_id)
+            res = storage.delete_design_group(con, design_id)
             con.commit()
             return res
     except project_exceptions.CVSProjectFailedDeletionException:
@@ -118,7 +118,7 @@ def delete_design(design_id: int) -> bool:
 def edit_design(design_id: int, updated_design: models.DesignPost) -> models.Design:
     try:
         with get_connection() as con:
-            result = storage.edit_design(con, design_id, updated_design)
+            result = storage.edit_design_group(con, design_id, updated_design)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
