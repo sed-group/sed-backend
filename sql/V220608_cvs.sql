@@ -202,12 +202,9 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_designs`
     `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `design_group`      INT UNSIGNED NOT NULL,
     `name`              VARCHAR(255) NOT NULL,
-    `vcs`               INT UNSIGNED NOT NULL,
     PRIMARY KEY(`id`),
     FOREIGN KEY(`design_group`)
-        REFERENCES `seddb`.`cvs_design_groups`(`id`),
-    FOREIGN KEY(`vcs`)
-        REFERENCES `seddb`.`cvs_vcss`(`id`)
+        REFERENCES `seddb`.`cvs_design_groups`(`id`)
         ON DELETE CASCADE
 );
 
@@ -228,10 +225,10 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_quantified_objectives`
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_quantified_objective_values`
 (
-    `design`      INT UNSIGNED NOT NULL,
+    `design`            INT UNSIGNED NOT NULL,
     `value_driver`      INT UNSIGNED NOT NULL,
     `design_group`      INT UNSIGNED NOT NULL,
-    `value`       FLOAT,
+    `value`             FLOAT,
     PRIMARY KEY(`design`, `value_driver`, `design_group`),
     FOREIGN KEY(`design`)
         REFERENCES `seddb`.`cvs_designs`(`id`)
