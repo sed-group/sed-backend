@@ -2,6 +2,7 @@ import random as r
 import numpy as np
 from typing import List, Optional, Tuple
 import simpy
+import pandas as pd
 
 from enum import Enum
 from mysql.connector.pooling import PooledMySQLConnection
@@ -32,7 +33,7 @@ class Simulation(object):
     #interarrival_time = the rate at which entities will flow in the system
     #interarrival_process = the process at which the entities will start flowing
     #until = the total simulation time
-    def __init__(self, flow_time, interarrival_time, interarrival_process, until, discount_rate, processes, non_tech_processes) -> None:
+    def __init__(self, flow_time, interarrival_time, interarrival_process, until, discount_rate, processes, non_tech_processes, dsm) -> None:
         self.flow_time = flow_time
         self.interarrival_time = interarrival_time
         self.interarrival_process = interarrival_process
@@ -42,13 +43,16 @@ class Simulation(object):
         self.time_steps = [0]
         self.entities = []
         self.processes = processes 
+        self.dsm_before_flow, self.dsm_after_flow = self.get_dsm_separation(dsm)
+
+        """
         self.dsm = dict({'A': [0, 0, 0, 0], 
                          'B': [0, 0, 0.2, 0.8], 
                         'C': [0, 0, 0, 0], 
                         'D': [0, 0, 0, 0]}) 
                         #Cannot have rework here - since it will cause the work vector to go bananas
                         #'D': [1, 0, 0, 1]
-    
+        """
     #This method sets up the simpy environment and runs the simulation
     def run_simulation(self):
         env = simpy.Environment()
@@ -62,14 +66,14 @@ class Simulation(object):
     def lifecycle(self, env):
         e = Entity(env, self.processes)
         self.entities.append(e)
-        yield env.process(e.lifecycle(self.get_dsm_before_flow(), [self.processes[0]]))
+        yield env.process(e.lifecycle(self.dsm_before_flow, [self.processes[0]]))
         
         end_flow = env.now + self.flow_time
         while env.now < end_flow:
             yield env.timeout(self.generate_interarrival())
         
             e = Entity(env, self.processes)
-            env.process(e.lifecycle(self.get_dsm_after_flow(), [self.interarrival_process]))
+            env.process(e.lifecycle(self.dsm_after_flow, [self.interarrival_process]))
             self.entities.append(e)
             
     #Observes the total time, cost, revenue, and NPV for each entity in each timestep. 
@@ -109,7 +113,19 @@ class Simulation(object):
         net_revenue = timestep_revenue - timestep_cost #Cashflow for the timestep
         npv = net_revenue / ((1 + 0.08) ** time_steps[-1])
         self.cum_NPV.append(self.cum_NPV[-1] + npv)
-        
+
+    #Separates the given DSM into two dictionaries with the before flow and after flow parts of the dsm
+    def get_dsm_separation(self, dsm):
+        before_dsm = dict()
+        dsm = dsm.copy()
+        for p in self.processes:
+            if p.name == self.interarrival_process.name:
+                break
+            before_dsm.update({p.name: dsm.pop(p.name)})
+        return before_dsm,dsm
+
+
+    """    
     def get_dsm_before_flow(self): #Example DSM
         return dict({'A': [0, 0, 0, 0]})
 
@@ -117,7 +133,7 @@ class Simulation(object):
         return dict({'B': [0, 0, 0.2, 0.8], 
                     'C': [0, 0, 0, 0], 
                     'D': [0, 0, 0, 0]})
-
+    """
 
 class Entity(object):
     #@param
@@ -210,7 +226,7 @@ def run_simulation(db_connection: PooledMySQLConnection, vcs_id: int, flow_time:
     vcs_rows = vcs_impl.get_vcs_table(vcs_id, user_id)
     market_input = mi_impl.get_all_market_inputs(vcs_id, user_id)
 
-
+    #BUG entering pid as param to the Simulation. Will fail on the separate dsm method since that one wants an actual process. (or a name)
     sim = Simulation(flow_time, interarrival_time, pid, time_interval, discount_rate, populate_processes(vcs_rows, market_input), populate_non_tech_processes(vcs_rows, market_input))
     sim.run_simulation()
 
@@ -257,3 +273,19 @@ def populate_non_tech_processes(vcs_rows: List[VcsRow], market_input: List[Marke
                         )
                         non_tech_processes.append(non_tech_process)
     return non_tech_processes
+
+def get_dsm_from_csv(path):
+    pf = pd.read_csv(path)
+
+    dsm = dict()
+    for v in pf.values:
+        dsm.update({v[0]: v[1::].tolist()})
+    return dsm
+
+def get_dsm_from_excel(path):
+    pf = pd.read_excel(path)
+
+    dsm = dict()
+    for v in pf.values:
+        dsm.update({v[0]: v[1::].tolist()})
+    return dsm
