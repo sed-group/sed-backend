@@ -13,12 +13,12 @@ class QuantifiedObjective(BaseModel):
     design_group: int
     value_driver: ValueDriver
     name: str
-    unit: str
+    unit: Optional[str] = None
 
 
 class QuantifiedObjectivePost(BaseModel):
     name: str
-    unit: str
+    unit: Optional[str] = None
 
 
 # ======================================================================================================================
@@ -46,12 +46,12 @@ class DesignGroup(BaseModel):
     id: int
     vcs: int
     name: str
-    qo_list: List[QuantifiedObjective]
+    qo_list: Optional[List[QuantifiedObjective]]
 
 
 class DesignGroupPost(BaseModel):
     name: str
-    qo_list: List[QuantifiedObjective]
+    qo_list: Optional[List[int]]
 
 
 # ======================================================================================================================
@@ -68,6 +68,6 @@ class DesignRow(BaseModel):
 
 class DesignRowPost(BaseModel):
     name: str
-    qo_values: List[QuantifiedObjectiveValuePost]
+    qo_values: List[int]
 
 

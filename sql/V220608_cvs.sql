@@ -193,13 +193,14 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_design_groups`
     PRIMARY KEY(`id`),
     FOREIGN KEY(`vcs`)
         REFERENCES `seddb`.`cvs_vcss`(`id`)
+        ON DELETE CASCADE
 );
 
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_designs`
 (
     `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    'design_group'      INT UNSIGNED NOT NULL,
+    `design_group`      INT UNSIGNED NOT NULL,
     `name`              VARCHAR(255) NOT NULL,
     `vcs`               INT UNSIGNED NOT NULL,
     PRIMARY KEY(`id`),

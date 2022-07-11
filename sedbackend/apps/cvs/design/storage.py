@@ -69,7 +69,7 @@ def delete_design_group(db_connection: PooledMySQLConnection, design_group_id: i
     logger.debug(f'Deleting design group with id={design_group_id}')
 
     delete_statement = MySQLStatementBuilder(db_connection)
-    _, rows = delete_statement.delete(DESIGNS_TABLE) \
+    _, rows = delete_statement.delete(DESIGN_GROUPS_TABLE) \
         .where('id = %s', [design_group_id]) \
         .execute(return_affected_rows=True)
 
@@ -135,7 +135,7 @@ def get_qo_value(db_connection: PooledMySQLConnection, design_id: int, value_dri
 
 
 def create_qo_value(db_connection: PooledMySQLConnection, design_group_id: int, design_id: int, value_driver_id: int,
-                    qo: models.QuantifiedObjectiveValue) -> models.QuantifiedObjectiveValue:
+                    qo: models.QuantifiedObjectiveValuePost) -> models.QuantifiedObjectiveValue:
     logger.debug(f'Create quantified objective value for value driver with id = {value_driver_id}'
                  f'and design with id = {design_id}')
 
@@ -144,6 +144,21 @@ def create_qo_value(db_connection: PooledMySQLConnection, design_group_id: int, 
         .insert(table=QUANTIFIED_OBJECTIVE_VALUE_TABLE, columns=QUANTIFIED_OBJECTIVE_VALUE_COLUMNS) \
         .set_values([design_id, design_group_id, value_driver_id, qo.value, qo]) \
         .execute(fetch_type=FetchType.FETCH_NONE)
+
+    return get_qo_value(db_connection, design_id, value_driver_id)
+
+
+def edit_qo_value(db_connection: PooledMySQLConnection, design_group_id: int, design_id: int, value_driver_id: int,
+                  qo: models.QuantifiedObjectiveValuePost) -> models.QuantifiedObjectiveValue:
+    update_statement = MySQLStatementBuilder(db_connection)
+    update_statement.update(
+        table=QUANTIFIED_OBJECTIVE_VALUE_TABLE,
+        set_statement='value = %s',
+        values=[qo.value]
+    )
+    update_statement.where('value_driver = %s and design = %s and design_group = %s',
+                           [value_driver_id, design_id, design_group_id])
+    _, rows = update_statement.execute(return_affected_rows=True)
 
     return get_qo_value(db_connection, design_id, value_driver_id)
 
@@ -188,7 +203,7 @@ def get_all_quantified_objectives(db_connection: PooledMySQLConnection,
 
 def create_quantified_objective(db_connection: PooledMySQLConnection, design_group_id: int, value_driver_id: int,
                                 quantified_objective_post: models.QuantifiedObjectivePost) \
-        -> models.QuantifiedObjective:
+        -> bool:
     logger.debug(f'Create quantified objective for value driver with id = {value_driver_id} '
                  f'in design group with id = {design_group_id}')
 
@@ -202,16 +217,17 @@ def create_quantified_objective(db_connection: PooledMySQLConnection, design_gro
                      quantified_objective_post.unit]) \
         .execute(fetch_type=FetchType.FETCH_NONE)
 
-    return get_quantified_objective(db_connection, design_group_id, value_driver_id)
+    return True
 
 
-def delete_quantified_objective(db_connection: PooledMySQLConnection, value_driver_id: int, design_group_id: int) -> bool:
+def delete_quantified_objective(db_connection: PooledMySQLConnection, value_driver_id: int,
+                                design_group_id: int) -> bool:
     logger.debug(f'Delete quantified objectives with value driver id = {value_driver_id} '
                  f'and design group id = {design_group_id}')
 
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement.delete(QUANTIFIED_OBJECTIVE_TABLE) \
-        .where('value_driver = %s and design = %s', [value_driver_id, design_group_id]) \
+        .where('value_driver = %s and design_group = %s', [value_driver_id, design_group_id]) \
         .execute(return_affected_rows=True)
 
     if rows == 0:
@@ -231,7 +247,7 @@ def edit_quantified_objective(db_connection: PooledMySQLConnection, value_driver
         set_statement='name = %s, unit = %s',
         values=[updated_qo.name, updated_qo.unit]
     )
-    update_statement.where('value_driver = %s and design = %s', [value_driver_id, design_group_id])
+    update_statement.where('value_driver = %s and design_group = %s', [value_driver_id, design_group_id])
     _, rows = update_statement.execute(return_affected_rows=True)
 
     if rows == 0:
@@ -245,6 +261,5 @@ def populate_qo(db_connection: PooledMySQLConnection, db_result) -> models.Quant
         design_group=db_result['design_group'],
         value_driver=get_value_driver(db_connection, db_result['value_driver']),
         name=db_result['name'],
-        value=db_result['value'],
         unit=db_result['unit'],
     )
