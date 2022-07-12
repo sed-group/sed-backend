@@ -8,10 +8,12 @@ router = APIRouter()
 
 
 @router.get(
-    '/project/{project_id}/vcs/{vcs_id}/simulation/run',
+    '/project/vcs/{vcs_id}/simulation/run',
     summary='Run simulation',
     response_model=models.Simulation,
 )
-async def run_simulation(project_id: int, vcs_id: int, time_interval: float,
-                         user: User = Depends(get_current_active_user)) -> models.Simulation:
-    return implementation.run_simulation(project_id, vcs_id, time_interval, user.id)
+async def run_simulation(project_id: int, vcs_id: int, flow_time: float,
+                        flow_rate: float, flow_process_id: int, simulation_runtime: float,
+                        discount_rate: float, user: User = Depends(get_current_active_user)) -> models.Simulation:
+    return implementation.run_simulation(project_id, vcs_id, flow_time, flow_rate, flow_process_id, 
+                                            simulation_runtime, discount_rate, user.id)

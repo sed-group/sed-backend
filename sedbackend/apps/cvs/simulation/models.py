@@ -1,8 +1,6 @@
 from typing import List
 
 from pydantic import BaseModel
-from typing import Optional
-from sedbackend.apps.cvs.simulation.algorithms import TimeFormat
 
 
 class Process(BaseModel):

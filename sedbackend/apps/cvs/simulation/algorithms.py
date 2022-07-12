@@ -7,10 +7,12 @@ import pandas as pd
 from enum import Enum
 from mysql.connector.pooling import PooledMySQLConnection
 
-import models as sim_models
+from sedbackend.apps.cvs.simulation import models as sim_models
 from sedbackend.apps.cvs.market_input.models import MarketInputGet
+from sedbackend.apps.cvs.simulation.exceptions import ProcessNotFoundException
 import sedbackend.apps.cvs.vcs.implementation as vcs_impl
 import sedbackend.apps.cvs.market_input.implementation as mi_impl
+import sedbackend.apps.cvs.life_cycle.implementation as lifecycle_impl
 from sedbackend.apps.cvs.vcs.models import VcsRow
 
 TIMESTEP = 0.25
@@ -33,11 +35,11 @@ class Simulation(object):
     #interarrival_time = the rate at which entities will flow in the system
     #interarrival_process = the process at which the entities will start flowing
     #until = the total simulation time
-    def __init__(self, flow_time, interarrival_time, interarrival_process, until, discount_rate, processes, non_tech_processes, dsm) -> None:
+    def __init__(self, flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, dsm) -> None:
         self.flow_time = flow_time
-        self.interarrival_time = interarrival_time
-        self.interarrival_process = interarrival_process
-        self.until = until
+        self.interarrival_time = flow_rate
+        self.interarrival_process = flow_process
+        self.until = simulation_runtime
         self.discount_rate = discount_rate
         self.cum_NPV = [0]
         self.time_steps = [0]
@@ -218,16 +220,22 @@ class Process(object):
         self.W = 0
 
 
-def run_simulation(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: int, 
-        interarrival_time: float, pid: int, time_interval: float, discount_rate: float,
+def run_simulation(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, flow_time: float, 
+        flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float,
         user_id: int) -> sim_models.Simulation:
     
     #pid is a processid which means that we need to fetch the processes first. 
-    vcs_rows = vcs_impl.get_vcs_table(vcs_id, user_id)
-    market_input = mi_impl.get_all_market_inputs(vcs_id, user_id)
+    vcs_rows = vcs_impl.get_vcs_table(vcs_id)
+    market_input = mi_impl.get_all_market_inputs(project_id, vcs_id, user_id)
+
+    flow_process = None #Should be based on the process id
+
+    #If DSM from excel or csv then do that otherwise fetch from back end
+    #DSM and processes should be gettable at the same time. 
+    dsm = None
 
     #BUG entering pid as param to the Simulation. Will fail on the separate dsm method since that one wants an actual process. (or a name)
-    sim = Simulation(flow_time, interarrival_time, pid, time_interval, discount_rate, populate_processes(vcs_rows, market_input), populate_non_tech_processes(vcs_rows, market_input))
+    sim = Simulation(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, populate_processes(vcs_rows, market_input), populate_non_tech_processes(vcs_rows, market_input), dsm)
     sim.run_simulation()
 
     return sim_models.Simulation(
@@ -236,6 +244,39 @@ def run_simulation(db_connection: PooledMySQLConnection, vcs_id: int, flow_time:
         processes=sim.processes
     )
 
+
+def populate_data(vcs_id: int, user_id: int) -> Tuple[List[Process], List[Process], dict]:
+    
+    dsm = dict()
+    processes = []
+    non_tech_processes = []
+
+    bpmn = lifecycle_impl.get_bpmn(vcs_id)
+    
+    nodes = dict()
+    start_node = None
+    #Need to know how many processes there will be. Is there a way to filter out that from the nodes?
+    #ATM it's just the length of all the nodes. 
+
+    process_amount = len(bpmn.nodes)
+
+    for process_node in bpmn.nodes: #Problem with the indexes - how do we know which process goes where?
+        nodes.update({process_node.id: process_node})
+        if process_node.from_node is None:
+            start_node = process_node.id
+
+    while len(nodes.keys()) > 0: #Skulle kunna enumerate kke. El köra från i till len(nodes) <- det funkar om evauleringen av condition inte sker under runtime. 
+        node = nodes.pop(start_node)
+        if node.vcs_row.iso_process is not None and node.vcs_row.subprocess is None:
+         #   processes.append(Process(time,cost,revenue, node.vcs_row.iso_process.name, time_format))
+            dsm.update({node.vcs_row.iso_process.name: []}) #Fuck här hamnar vi i indexproblem igen...
+        elif node.vcs_row.iso_process is None and node.vcs_row.subprocess is not None:
+          #  processes.append(Process(time,cost,revenue, node.vcs_row.subprocess.name, time_format))
+          continue
+        else:
+            raise ProcessNotFoundException
+
+    return processes, non_tech_processes, dsm
 
 def populate_processes(vcs_rows: List[VcsRow], market_input: List[MarketInputGet]) -> List[sim_models.Process]:
     processes = []
