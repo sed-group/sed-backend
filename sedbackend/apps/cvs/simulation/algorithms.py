@@ -298,8 +298,8 @@ def populate_processes(vcs_rows: List[VcsRow], market_input: List[MarketInputGet
 def populate_non_tech_processes(vcs_rows: List[VcsRow], market_input: List[MarketInputGet]) -> List[sim_models.NonTechnicalProcess]:
     non_tech_processes = []
     for row in vcs_rows:
-        if (row.iso_process and row.iso_process.category is not 'Technical processes') \
-            or (row.subprocess and row.subprocess.parent_process.category is not 'Techical processes'):
+        if (row.iso_process and row.iso_process.category != 'Technical processes') \
+            or (row.subprocess and row.subprocess.parent_process.category != 'Techical processes'):
                 if row.iso_process:
                     name = row.iso_process.name
                 else: 
