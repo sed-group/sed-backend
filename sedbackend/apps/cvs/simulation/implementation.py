@@ -2,7 +2,8 @@ from fastapi import HTTPException
 from starlette import status
 
 import sedbackend.apps
-from sedbackend.apps.cvs.simulation import models, algorithms
+from sedbackend.apps.cvs.life_cycle import storage
+from sedbackend.apps.cvs.simulation import models, algorithms, storage
 
 from sedbackend.apps.core.authentication import exceptions as auth_ex
 from sedbackend.apps.core.db import get_connection
@@ -17,7 +18,7 @@ def run_simulation(project_id: int, vcs_id: int, flow_time: float, flow_rate: fl
                     user_id: int) -> models.Simulation:
     try:
         with get_connection() as con:
-            result = algorithms.run_simulation(con,project_id, vcs_id, flow_time, flow_rate, 
+            result = storage.run_simulation(con,project_id, vcs_id, flow_time, flow_rate, 
                                                     flow_process_id, simulation_runtime, discount_rate, user_id)
             return result
     except auth_ex.UnauthorizedOperationException:
