@@ -12,7 +12,7 @@ DESIGN_GROUPS_TABLE = 'cvs_design_groups'
 DESIGN_GROUPS_COLUMNS = ['id', 'vcs', 'name']
 
 DESIGNS_TABLE = 'cvs_designs'
-DESIGNS_COLUMNS = ['id', 'vcs', 'design_group', 'name']
+DESIGNS_COLUMNS = ['id', 'design_group', 'name']
 
 QUANTIFIED_OBJECTIVE_TABLE = 'cvs_quantified_objectives'
 QUANTIFIED_OBJECTIVE_COLUMNS = ['design_group', 'value_driver', 'name', 'unit']
@@ -181,7 +181,7 @@ def edit_design(db_connection: PooledMySQLConnection, design_id: int, design: mo
             set_statement='name = %s',
             values=[design.name]
         )
-        update_statement.where('design = %s', [design_id])
+        update_statement.where('id = %s', [design_id])
         _, rows = update_statement.execute(return_affected_rows=True)
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
@@ -199,7 +199,7 @@ def delete_design(db_connection: PooledMySQLConnection, design_id: int) -> bool:
 
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement.delete(DESIGNS_TABLE) \
-        .where('design = %s', [design_id]) \
+        .where('id = %s', [design_id]) \
         .execute(return_affected_rows=True)
 
     if rows == 0:

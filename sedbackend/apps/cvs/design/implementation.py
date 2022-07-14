@@ -161,10 +161,10 @@ def get_all_designs(design_group_id: int) -> List[models.Design]:
             res = storage.get_all_designs(con, design_group_id)
             con.commit()
             return res
-    except exceptions.DesignNotFoundException:
+    except exceptions.DesignGroupNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find design'
+            detail=f'Could not find design group'
         )
 
 
