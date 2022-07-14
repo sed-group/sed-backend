@@ -11,7 +11,7 @@ from sedbackend.apps.cvs.design import models, storage, exceptions
 
 
 # ======================================================================================================================
-# CVS Design
+# CVS Design Group
 # ======================================================================================================================
 
 
@@ -135,6 +135,80 @@ def edit_design_group(design_group_id: int, updated_design: models.DesignGroupPo
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs.',
+        )
+
+
+# ======================================================================================================================
+# CVS Design Group
+# ======================================================================================================================
+
+def get_design(design_id: int) -> models.Design:
+    try:
+        with get_connection() as con:
+            res = storage.get_design(con, design_id)
+            con.commit()
+            return res
+    except exceptions.DesignNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find design'
+        )
+
+
+def get_all_designs(design_group_id: int) -> List[models.Design]:
+    try:
+        with get_connection() as con:
+            res = storage.get_all_designs(con, design_group_id)
+            con.commit()
+            return res
+    except exceptions.DesignNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find design'
+        )
+
+
+def create_design(design_group_id: int, design: models.DesignPost) -> bool:
+    try:
+        with get_connection() as con:
+            res = storage.create_design(con, design_group_id, design)
+            con.commit()
+            return res
+    except exceptions.DesignGroupNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find design group'
+        )
+
+
+def edit_design(design_id: int, design: models.DesignPost) -> bool:
+    try:
+        with get_connection() as con:
+            res = storage.edit_design(con, design_id, design)
+            con.commit()
+            return res
+    except exceptions.DesignNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find design'
+        )
+    except exceptions.QuantifiedObjectiveValueNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find quantified objective value'
+        )
+
+
+def delete_design(design_id) -> bool:
+    try:
+        with get_connection() as con:
+            res = storage.delete_design(con, design_id)
+            con.commit()
+            return res
+    except exceptions.DesignNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find design'
         )
 
 

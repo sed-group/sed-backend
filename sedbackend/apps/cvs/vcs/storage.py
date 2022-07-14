@@ -6,8 +6,7 @@ from typing import List
 from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
 from requests import delete
-from mysql.connector import Error,errorcode
-
+from mysql.connector import Error
 
 
 from sedbackend.apps.core.authentication import exceptions as auth_exceptions

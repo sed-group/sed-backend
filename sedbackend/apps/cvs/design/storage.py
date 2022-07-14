@@ -1,5 +1,6 @@
 from typing import List
 
+from mysql.connector import Error
 from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
 
@@ -123,6 +124,90 @@ def populate_design(db_connection, db_result) -> models.Design:
     )
 
 
+def get_design(db_connection: PooledMySQLConnection, design_id: int):
+    logger.debug(f'Get design with id = {design_id}')
+    select_statement = MySQLStatementBuilder(db_connection)
+    result = select_statement \
+        .select(DESIGNS_TABLE, DESIGNS_COLUMNS) \
+        .where('id = %s', [design_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if result is None:
+        raise exceptions.DesignNotFoundException
+
+    return populate_design(db_connection, result)
+
+
+def get_all_designs(db_connection: PooledMySQLConnection, design_group_id) -> List[models.Design]:
+    logger.debug(f'Get all designs in design group with id = {design_group_id}')
+
+    try:
+        select_statement = MySQLStatementBuilder(db_connection)
+        res = select_statement \
+            .select(DESIGNS_TABLE, DESIGNS_COLUMNS) \
+            .where('design_group = %s', [design_group_id]) \
+            .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+    except Error as e:
+        logger.debug(f'Error msg: {e.msg}')
+        raise exceptions.DesignGroupNotFoundException
+
+    designs = []
+    for result in res:
+        designs.append(populate_design(db_connection, result))
+
+    return designs
+
+
+def create_design(db_connection: PooledMySQLConnection, design_group_id: int,
+                  design: models.DesignPost) -> bool:
+    logger.debug(f'Create a design for design group with id = {design_group_id}')
+
+    insert_statement = MySQLStatementBuilder(db_connection)
+    insert_statement \
+        .insert(table=DESIGNS_TABLE, columns=['design_group', 'name']) \
+        .set_values([design_group_id, design.name]) \
+        .execute(fetch_type=FetchType.FETCH_NONE)
+
+    return True
+
+
+def edit_design(db_connection: PooledMySQLConnection, design_id: int, design: models.DesignPost) -> bool:
+    logger.debug(f'Edit design with id = {design_id}')
+
+    try:
+        update_statement = MySQLStatementBuilder(db_connection)
+        update_statement.update(
+            table=DESIGNS_TABLE,
+            set_statement='name = %s',
+            values=[design.name]
+        )
+        update_statement.where('design = %s', [design_id])
+        _, rows = update_statement.execute(return_affected_rows=True)
+    except Error as e:
+        logger.debug(f'Error msg: {e.msg}')
+        raise exceptions.DesignNotFoundException
+
+    for qo_value in design.qo_values:
+        edit_qo_value(db_connection, qo_value.design_group_id, qo_value.design_id, qo_value.value_driver_id,
+                      qo_value.value)
+
+    return True
+
+
+def delete_design(db_connection: PooledMySQLConnection, design_id: int) -> bool:
+    logger.debug(f'Delete design with id = {design_id}')
+
+    delete_statement = MySQLStatementBuilder(db_connection)
+    _, rows = delete_statement.delete(DESIGNS_TABLE) \
+        .where('design = %s', [design_id]) \
+        .execute(return_affected_rows=True)
+
+    if rows == 0:
+        raise exceptions.QuantifiedObjectiveNotFoundException
+
+    return True
+
+
 def get_quantified_objective(db_connection: PooledMySQLConnection,
                              value_driver_id: int, design_group_id: int) -> models.QuantifiedObjective:
     logger.debug(f'Get quantified objective for value driver with id = {value_driver_id} '
@@ -151,7 +236,6 @@ def get_all_quantified_objectives(db_connection: PooledMySQLConnection,
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
     qo_list = []
-
     for result in res:
         qo_list.append(populate_qo(db_connection, result))
 
@@ -264,30 +348,35 @@ def get_all_qo_values(db_connection: PooledMySQLConnection, design_id: int) -> L
 
 
 def create_qo_value(db_connection: PooledMySQLConnection, design_group_id: int, design_id: int, value_driver_id: int,
-                    qo: models.QuantifiedObjectiveValuePost) -> models.QuantifiedObjectiveValue:
+                    value: float) -> models.QuantifiedObjectiveValue:
     logger.debug(f'Create quantified objective value for value driver with id = {value_driver_id}'
                  f'and design with id = {design_id}')
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
         .insert(table=QUANTIFIED_OBJECTIVE_VALUE_TABLE, columns=QUANTIFIED_OBJECTIVE_VALUE_COLUMNS) \
-        .set_values([design_id, design_group_id, value_driver_id, qo.value, qo]) \
+        .set_values([design_id, design_group_id, value_driver_id, value]) \
         .execute(fetch_type=FetchType.FETCH_NONE)
 
     return get_qo_value(db_connection, design_id, value_driver_id)
 
 
 def edit_qo_value(db_connection: PooledMySQLConnection, design_group_id: int, design_id: int, value_driver_id: int,
-                  qo: models.QuantifiedObjectiveValuePost) -> models.QuantifiedObjectiveValue:
-    update_statement = MySQLStatementBuilder(db_connection)
-    update_statement.update(
-        table=QUANTIFIED_OBJECTIVE_VALUE_TABLE,
-        set_statement='value = %s',
-        values=[qo.value]
-    )
-    update_statement.where('value_driver = %s and design = %s and design_group = %s',
-                           [value_driver_id, design_id, design_group_id])
-    _, rows = update_statement.execute(return_affected_rows=True)
+                  value: float) -> models.QuantifiedObjectiveValue:
+
+    try:
+        update_statement = MySQLStatementBuilder(db_connection)
+        update_statement.update(
+            table=QUANTIFIED_OBJECTIVE_VALUE_TABLE,
+            set_statement='value = %s',
+            values=[value]
+        )
+        update_statement.where('value_driver = %s and design = %s and design_group = %s',
+                               [value_driver_id, design_id, design_group_id])
+        _, rows = update_statement.execute(return_affected_rows=True)
+    except Error as e:
+        logger.debug(f'Error msg: {e.msg}')
+        raise exceptions.QuantifiedObjectiveValueNotFoundException
 
     return get_qo_value(db_connection, design_id, value_driver_id)
 

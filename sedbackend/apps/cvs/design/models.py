@@ -27,14 +27,16 @@ class QuantifiedObjectivePost(BaseModel):
 
 
 class QuantifiedObjectiveValue(BaseModel):
-    design_id: int  # PRIMARY KEY(`design`, `value_driver`, `design_group`)
+    design_id: int
     qo: QuantifiedObjective
     value: float
 
 
-class QuantifiedObjectiveValuePost(BaseModel):
+class QuantifiedObjectiveValuePut(BaseModel):
+    design_id: int
+    design_group_id: int
+    value_driver_id: int
     value: float
-
 
 # ======================================================================================================================
 # CVS Design
@@ -72,6 +74,5 @@ class Design(BaseModel):
 
 class DesignPost(BaseModel):
     name: str
-    qo_values: List[int]
-
+    qo_values: Optional[List[QuantifiedObjectiveValuePut]]
 

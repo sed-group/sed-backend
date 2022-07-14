@@ -7,7 +7,7 @@ from sedbackend.apps.cvs.design import models, implementation
 router = APIRouter()
 
 # ======================================================================================================================
-# CVS Design
+# CVS Design Group
 # ======================================================================================================================
 
 
@@ -55,6 +55,55 @@ async def delete_design_group(design_group_id: int) -> bool:
 )
 async def edit_design_group(design_group_id: int, design_post: models.DesignGroupPost) -> models.DesignGroup:
     return implementation.edit_design_group(design_group_id, design_post)
+
+
+# ======================================================================================================================
+# CVS Design Group
+# ======================================================================================================================
+
+@router.get(
+    '/design/{design_id}',
+    summary='Get design',
+    response_model=models.Design
+)
+async def get_design(design_id: int) -> models.Design:
+    return implementation.get_design(design_id)
+
+
+@router.get(
+    '/design_group/{design_group_id}/designs',
+    summary='Get all designs',
+    response_model=List[models.Design]
+)
+async def get_all_designs(design_group_id: int) -> List[models.Design]:
+    return implementation.get_all_designs(design_group_id)
+
+
+@router.post(
+    '/design_group/{design_group_id}/design',
+    summary='Create design',
+    response_model=bool
+)
+async def create_design(design_group_id: int, design: models.DesignPost) -> bool:
+    return implementation.create_design(design_group_id, design)
+
+
+@router.put(
+    '/design/{design_id}',
+    summary='Edit design',
+    response_model=bool
+)
+async def edit_design(design_id: int, design: models.DesignPost) -> bool:
+    return implementation.edit_design(design_id, design)
+
+
+@router.delete(
+    '/design/{design_id}',
+    summary='Delete design',
+    response_model=bool
+)
+async def delete_design(design_id: int) -> bool:
+    return implementation.delete_design(design_id)
 
 
 # ======================================================================================================================
