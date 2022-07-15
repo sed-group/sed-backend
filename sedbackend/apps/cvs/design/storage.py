@@ -187,9 +187,10 @@ def edit_design(db_connection: PooledMySQLConnection, design_id: int, design: mo
         logger.debug(f'Error msg: {e.msg}')
         raise exceptions.DesignNotFoundException
 
-    for qo_value in design.qo_values:
-        edit_qo_value(db_connection, qo_value.design_group_id, qo_value.design_id, qo_value.value_driver_id,
-                      qo_value.value)
+    if design.qo_values is not None:
+        for qo_value in design.qo_values:
+            edit_qo_value(db_connection, qo_value.design_group_id, qo_value.design_id, qo_value.value_driver_id,
+                          qo_value.value)
 
     return True
 

@@ -3,16 +3,9 @@ FROM tiangolo/uvicorn-gunicorn-fastapi:python3.8
 # Copy application to directory which is automatically initialized on start
 COPY . /app
 
-# Cache requirements
-WORKDIR /srv
-ADD ./requirements.txt /srv/requirements.txt
-
 # Install additional deps
 RUN pip install jose
 RUN pip install -r requirements.txt
-
-# Cache
-ADD . /srv
 
 # Copy wait-for-it script
 COPY ./deployment/utils/wait-for-it/wait-for-it.sh /etc/scripts/wait-for-it.sh
