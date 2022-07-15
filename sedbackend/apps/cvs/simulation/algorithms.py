@@ -7,8 +7,6 @@ import pandas as pd
 from enum import Enum
 
 
-
-
 TIMESTEP = 0.25
 
 class TimeFormat(Enum):
@@ -39,6 +37,8 @@ class Simulation(object):
         self.time_steps = [0]
         self.entities = []
         self.processes = processes 
+        self.non_tech_costs = sum([p.cost for p in non_tech_processes])
+        self.non_tech_revenues = sum([p.revenue for p in non_tech_processes])
         self.dsm_before_flow, self.dsm_after_flow = self.get_dsm_separation(dsm)
 
         """
@@ -55,7 +55,6 @@ class Simulation(object):
         env.process(self.lifecycle(env))
         env.process(self.observe_costs(env))
         env.run(until=self.until)
-        #print([(e.total_cost, e.total_revenue) for e in self.entities])
     
     #Initializes the lifecycle in each of the entities. Runs everything before the interarrival
     #process as a single entity. R
@@ -76,20 +75,18 @@ class Simulation(object):
     def observe_costs(self, env):
         total_costs = [0]
         total_revenue = [0]
-        
 
         while True:
             # print([f'cost: {e.cost}' for e in self.entities])
             #print([f'revenue: {e.revenue}' for e in self.entities])
             #print(f'Time: {env.now}')
             self.add_static_costs_to_entities()
-            total_costs.append(sum([e.cost for e in self.entities]))
-            total_revenue.append(sum([e.revenue for e in self.entities]))
+            total_costs.append(sum([e.total_cost[-1] for e in self.entities]))
+            total_revenue.append(sum([e.total_revenue[-1] for e in self.entities]))
             self.time_steps.append(env.now)
 
 
             self.calculate_NPV(total_costs, total_revenue, self.time_steps)
-           # print(f'Time: {env.now}, total_cost: {sum([e.cost for e in self.entities])}, total_revenue: {sum([e.revenue for e in self.entities])}, cum_NPV: {self.cum_NPV}')
             yield env.timeout(TIMESTEP)
 
 
@@ -100,7 +97,7 @@ class Simulation(object):
 
     def add_static_costs_to_entities(self): #Adds the costs of the non-technical processes to all active entities. 
         for e in self.entities:
-            e.cost += self.static_processes_costs / (len(self.entities) * self.until) #This works in the margin of 0.00000002 euros
+            e.cost += self.static_processes_costs * TIMESTEP/ (len(self.entities) * self.until) #This works in the margin of 0.00000002 euros
 
     def calculate_NPV(self, total_costs, total_revenue, time_steps):
         timestep_revenue = total_revenue[len(time_steps) -1] - total_revenue[len(time_steps) - 2]
@@ -119,7 +116,6 @@ class Simulation(object):
                 break
             before_dsm.update({p.name: dsm.pop(p.name)})
         return before_dsm,dsm
-
 
     """    
     def get_dsm_before_flow(self): #Example DSM
@@ -209,6 +205,7 @@ class Process(object):
         #print(f'Started working on process: {self.name}')
         yield env.timeout(self.time * self.W)
         #print(f'Time after step in lifecycle: {env.now}')
+        #non_tech_costs = total_non_tech_cost * self.time / (process_time * amount_of_entities) #Add this to the total cost in order to add non tech costs to processes
         total_cost.append(total_cost[-1] + self.cost)
         total_revenue.append(total_revenue[-1] + self.revenue)
         self.W = 0

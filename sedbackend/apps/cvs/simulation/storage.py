@@ -18,9 +18,45 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, project_id: int, 
                 flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float, 
                 dsm_csv: UploadFile, user_id: int) -> models.Simulation:
     
+    dsm = get_dsm_from_csv(dsm_csv.file) #This should hopefully open up the file for the processor. 
 
-    return run_simulation(db_connection, project_id, vcs_id, flow_time, flow_rate, process_id, simulation_runtime, discount_rate, user_id)
+    query = f'SELECT cvs_vcs_rows.id, cvs_vcs_rows.iso_process, cvs_iso_processes.name as iso_name, \
+            subprocess, cvs_subprocesses.name as sub_name, time, cost, revenue FROM cvs_vcs_rows \
+            LEFT OUTER JOIN cvs_iso_processes ON cvs_vcs_rows.iso_process = cvs_iso_processes.id \
+            LEFT OUTER JOIN cvs_subprocesses ON cvs_vcs_rows.subprocess = cvs_subprocesses.id \
+            LEFT OUTER JOIN cvs_market_input ON cvs_vcs_rows.id = cvs_market_input.vcs_row \
+            WHERE cvs_vcs_rows.vcs = %s'
+    with db_connection.cursor(prepared=True) as cursor:
+        cursor.execute(query, [vcs_id])
+        res = cursor.fetchall()
+        res = [dict(zip(cursor.column_names, row)) for row in res]
+    
+    processes = []
+    
+    for key in dsm.keys():
+        for r in res:
+            if r['iso_name'] is not None and r['sub_name'] is None:
+                if key == r['iso_name']:
+                    p = Process(r['time'], r['cost'], r['revenue'], r['iso_name'], TimeFormat.YEAR)
+            elif r['iso_name'] is None and r['sub_name'] is not None:
+                if key == r['sub_name']:
+                    p = Process(r['time'], r['cost'], r['revenue'], r['sub_name'], TimeFormat.YEAR)
+            else:
+                raise ProcessNotFoundException
+            if r['id'] == process_id:
+                flow_process = p
+            processes.append(p)
+    
+    non_tech_processes = [] #TODO fix the non-tech-processes
 
+    sim = Simulation(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes)
+    sim.run_simulation()
+
+    return models.Simulation(
+        time=sim.time_steps,
+        cumulative_NPV = sim.cum_NPV,
+        processes=sim.processes
+    )
 
 
 def run_simulation(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, flow_time: float, 
@@ -48,7 +84,10 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, vcs_id
     )
 
 def fetch_sim_data(db_connection: PooledMySQLConnection, vcs_id: int):
-
+    #BUG Currently not fetching any data that can tell us if we are in the technical or non-technical processes. 
+    #A way to see this is to check if we have a node or not - oh wait we cannot, that is not how it works...
+    #Fuck jag vill fortfarande hämta ut bpmn, fast med samtliga noder. Denna queryn ger oss i princip bara market inputen
+    #som ska in i processerna. 
     query = f'SELECT cvs_vcs_rows.id, `index`, cvs_vcs_rows.iso_process, cvs_iso_processes.name as iso_name, \
             subprocess, cvs_subprocesses.name as sub_name, from, to, time, cost, revenue FROM cvs_vcs_rows \
             LEFT OUTER JOIN cvs_iso_processes ON cvs_vcs_rows.iso_process = cvs_iso_processes.id \
@@ -78,7 +117,7 @@ def populate_data(db_result) -> Tuple[List[Process], List[Process], dict]:
     #ATM it's just the length of all the nodes. 
 
     
-    for res in db_result:
+    for i,res in enumerate(db_result):
         if res['iso_name'] is not None and res['sub_name'] is None:
             p = Process(res['time'], res['cost'], res['revenue'], res['iso_name'], TimeFormat.YEAR)
         elif res['iso_name'] is None and res['sub_name'] is not None:
@@ -86,6 +125,7 @@ def populate_data(db_result) -> Tuple[List[Process], List[Process], dict]:
         else:
             raise ProcessNotFoundException
         processes.append(p)
+        dsm.update({p.name: [1 if (r['index'] + 1) == i else 0 for r in db_result]})
 
     """
     process_amount = len(bpmn.nodes)
