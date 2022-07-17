@@ -31,34 +31,18 @@ def get_all_market_inputs(vcs_id: int, user_id: int) -> List[models.MarketInputG
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find market input',
         )
-    except project_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project with id={project_id}.',
-        )
 
 
-def create_market_input(project_id: int, vcs_id: int, node_id: int, market_input: models.MarketInputPost,
-                        user_id: int) -> models.MarketInputGet:
+def create_market_input(node_id: int, market_input: models.MarketInputPost) -> models.MarketInputGet:
     try:
         with get_connection() as con:
-            db_result = storage.create_market_input(con, project_id, vcs_id, node_id, market_input, user_id)
+            db_result = storage.create_market_input(con, node_id, market_input)
             con.commit()
             return db_result
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
-        )
-    except vcs_exceptions.VCSNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs with id={vcs_id}.',
-        )
-    except project_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project with id={project_id}.',
         )
     except vcs_exceptions.VCSTableRowNotFoundException:
         raise HTTPException(
@@ -72,27 +56,16 @@ def create_market_input(project_id: int, vcs_id: int, node_id: int, market_input
         )
 
 
-def update_market_input(project_id: int, vcs_id: int, node_id: int, market_input: models.MarketInputPost,
-                        user_id) -> models.MarketInputGet:
+def update_market_input(node_id: int, market_input: models.MarketInputPost) -> models.MarketInputGet:
     try:
         with get_connection() as con:
-            db_result = storage.update_market_input(con, project_id, vcs_id, node_id, market_input, user_id)
+            db_result = storage.update_market_input(con, node_id, market_input)
             con.commit()
             return db_result
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
-        )
-    except vcs_exceptions.VCSNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs with id={vcs_id}.',
-        )
-    except project_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project with id={project_id}.',
         )
     except exceptions.MarketInputNotFoundException:
         raise HTTPException(

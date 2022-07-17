@@ -8,8 +8,9 @@ from sedbackend.apps.cvs.market_input import models, implementation
 
 router = APIRouter()
 
+
 @router.get(
-    '/vcs/{vcs_id}/market_input/all',
+    '/vcs/{vcs_id}/market-input/all',
     summary='Get all market inputs',
     response_model=List[models.MarketInputGet],
 )
@@ -19,20 +20,18 @@ async def get_all_market_input(vcs_id: int,
 
 
 @router.post(
-    '/project/{project_id}/vcs/{vcs_id}/bpmn-node/{node_id}/market_input/create',
+    '/bpmn-node/{node_id}/market-input',
     summary='Creates a market input',
     response_model=models.MarketInputGet,
 )
-async def create_market_input(project_id: int, vcs_id: int, node_id: int, market_input: models.MarketInputPost,
-                              user: User = Depends(get_current_active_user)) -> models.MarketInputGet:
-    return implementation.create_market_input(project_id, vcs_id, node_id, market_input, user.id)
+async def create_market_input(node_id: int, market_input: models.MarketInputPost) -> models.MarketInputGet:
+    return implementation.create_market_input(node_id, market_input)
 
 
 @router.put(
-    '/project/{project_id}/vcs/{vcs_id}/bpmn-node/{node_id}/market_input/edit',
+    '/bpmn-node/{node_id}/market-input/edit',
     summary='Edit market input',
     response_model=models.MarketInputGet,
 )
-async def update_market_input(project_id: int, vcs_id: int, node_id: int, market_input: models.MarketInputPost,
-                              user: User = Depends(get_current_active_user)) -> models.MarketInputGet:
-    return implementation.update_market_input(project_id, vcs_id, node_id, market_input, user.id)
+async def update_market_input(node_id: int, market_input: models.MarketInputPost) -> models.MarketInputGet:
+    return implementation.update_market_input(node_id, market_input)

@@ -6,6 +6,7 @@ from mysql.connector.pooling import PooledMySQLConnection
 from sedbackend.apps.cvs.vcs.storage import get_vcs
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.cvs.market_input import models, exceptions
+from sedbackend.apps.cvs.life_cycle import storage as life_cycle_storage
 
 CVS_MARKET_INPUT_TABLE = 'cvs_market_input'
 CVS_MARKET_INPUT_COLUMN = ['id', 'vcs', 'node', 'time', 'cost', 'revenue']
@@ -53,8 +54,8 @@ def get_all_market_input(db_connection: PooledMySQLConnection, vcs_id: int,
     return [populate_market_input(db_result) for db_result in results]
 
 
-def create_market_input(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, node_id: int,
-                        market_input: models.MarketInputPost, user_id: int) -> models.MarketInputGet:
+def create_market_input(db_connection: PooledMySQLConnection, node_id: int,
+                        market_input: models.MarketInputPost) -> models.MarketInputGet:
     logger.debug(f'Create market input')
 
     select_statement = MySQLStatementBuilder(db_connection)
@@ -66,10 +67,10 @@ def create_market_input(db_connection: PooledMySQLConnection, project_id: int, v
     if db_result is not None:
         raise exceptions.MarketInputAlreadyExistException
 
-    #get_vcs_table_row(db_connection, node_id, project_id, vcs_id, user_id)  # perform checks
+    node = life_cycle_storage.get_process_node(db_connection, node_id)
 
     columns = ['vcs', 'node', 'time', 'cost', 'revenue']
-    values = [vcs_id, node_id, market_input.time, market_input.cost, market_input.revenue]
+    values = [node.vcs_id, node_id, market_input.time, market_input.cost, market_input.revenue]
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
@@ -81,13 +82,9 @@ def create_market_input(db_connection: PooledMySQLConnection, project_id: int, v
     return get_market_input(db_connection, node_id)
 
 
-def update_market_input(db_connection: PooledMySQLConnection, vcs_id: int, node_id: int,
-                        market_input: models.MarketInputPost, user_id: int) -> models.MarketInputGet:
+def update_market_input(db_connection: PooledMySQLConnection, node_id: int,
+                        market_input: models.MarketInputPost) -> models.MarketInputGet:
     logger.debug(f'Update market input with id={node_id}')
-
-    get_vcs(db_connection, vcs_id, user_id)  # perform checks for existing project, vcs and correct user
-
-    get_market_input(db_connection, node_id)  # Performs necessary checks
 
     update_statement = MySQLStatementBuilder(db_connection)
     update_statement.update(
