@@ -37,11 +37,11 @@ def get_market_input(db_connection: PooledMySQLConnection, node_id: int) -> mode
     return populate_market_input(db_result)
 
 
-def get_all_market_input(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
+def get_all_market_input(db_connection: PooledMySQLConnection, vcs_id: int,
                          user_id: int) -> List[models.MarketInputGet]:
     logger.debug(f'Fetching all market inputs for vcs with id={vcs_id}.')
 
-    get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks for existing project, vcs and correct user
+    get_vcs(db_connection, vcs_id, user_id)  # perform checks for existing project, vcs and correct user
 
     select_statement = MySQLStatementBuilder(db_connection)
     results = select_statement \
@@ -81,11 +81,11 @@ def create_market_input(db_connection: PooledMySQLConnection, project_id: int, v
     return get_market_input(db_connection, node_id)
 
 
-def update_market_input(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, node_id: int,
+def update_market_input(db_connection: PooledMySQLConnection, vcs_id: int, node_id: int,
                         market_input: models.MarketInputPost, user_id: int) -> models.MarketInputGet:
     logger.debug(f'Update market input with id={node_id}')
 
-    get_vcs(db_connection, vcs_id, project_id, user_id)  # perform checks for existing project, vcs and correct user
+    get_vcs(db_connection, vcs_id, user_id)  # perform checks for existing project, vcs and correct user
 
     get_market_input(db_connection, node_id)  # Performs necessary checks
 

@@ -10,11 +10,10 @@ from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.market_input import models, storage, exceptions
 
 
-def get_all_market_inputs(project_id: int, vcs_id: int, user_id: int) -> List[
-    models.MarketInputGet]:
+def get_all_market_inputs(vcs_id: int, user_id: int) -> List[models.MarketInputGet]:
     try:
         with get_connection() as con:
-            db_result = storage.get_all_market_input(con, project_id, vcs_id, user_id)
+            db_result = storage.get_all_market_input(con, vcs_id, user_id)
             con.commit()
             return db_result
     except auth_ex.UnauthorizedOperationException:

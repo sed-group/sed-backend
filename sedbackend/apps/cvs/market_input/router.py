@@ -9,13 +9,13 @@ from sedbackend.apps.cvs.market_input import models, implementation
 router = APIRouter()
 
 @router.get(
-    '/project/{project_id}/vcs/{vcs_id}/market_input/get/all',
+    '/vcs/{vcs_id}/market_input/all',
     summary='Get all market inputs',
     response_model=List[models.MarketInputGet],
 )
-async def get_all_market_input(project_id: int, vcs_id: int,
+async def get_all_market_input(vcs_id: int,
                                user: User = Depends(get_current_active_user)) -> List[models.MarketInputGet]:
-    return implementation.get_all_market_inputs(project_id, vcs_id, user.id)
+    return implementation.get_all_market_inputs(vcs_id, user.id)
 
 
 @router.post(
