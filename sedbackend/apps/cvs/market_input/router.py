@@ -14,24 +14,23 @@ router = APIRouter()
     summary='Get all market inputs',
     response_model=List[models.MarketInputGet],
 )
-async def get_all_market_input(vcs_id: int,
-                               user: User = Depends(get_current_active_user)) -> List[models.MarketInputGet]:
-    return implementation.get_all_market_inputs(vcs_id, user.id)
+async def get_all_market_input(vcs_id: int) -> List[models.MarketInputGet]:
+    return implementation.get_all_market_inputs(vcs_id)
 
 
 @router.post(
-    '/bpmn-node/{node_id}/market-input',
+    '/vcs-row/{vcs_row_id}/market-input',
     summary='Creates a market input',
-    response_model=models.MarketInputGet,
+    response_model=bool,
 )
-async def create_market_input(node_id: int, market_input: models.MarketInputPost) -> models.MarketInputGet:
-    return implementation.create_market_input(node_id, market_input)
+async def create_market_input(vcs_row_id: int, market_input: models.MarketInputPost) -> bool:
+    return implementation.create_market_input(vcs_row_id, market_input)
 
 
 @router.put(
-    '/bpmn-node/{node_id}/market-input/edit',
+    '/vcs-row/{vcs_row_id}/market-input',
     summary='Edit market input',
-    response_model=models.MarketInputGet,
+    response_model=bool,
 )
-async def update_market_input(node_id: int, market_input: models.MarketInputPost) -> models.MarketInputGet:
-    return implementation.update_market_input(node_id, market_input)
+async def update_market_input(vcs_row_id: int, market_input: models.MarketInputPost) -> bool:
+    return implementation.update_market_input(vcs_row_id, market_input)

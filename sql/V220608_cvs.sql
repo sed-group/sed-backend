@@ -240,3 +240,19 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_quantified_objective_values`
         REFERENCES `seddb`.`cvs_value_drivers`(`id`)
         ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_input`
+(
+    `vcs_row`           INT UNSIGNED NOT NULL,
+    `vcs`               INT UNSIGNED NOT NULL,
+    `time`              DOUBLE,
+    `cost`              DOUBLE,
+    `revenue`           DOUBLE,
+    PRIMARY KEY (`vcs_row`),
+    FOREIGN KEY(`vcs`)
+        REFERENCES `seddb`.`cvs_vcss`(`id`)
+        ON DELETE CASCADE,
+    FOREIGN KEY(`vcs_row`)
+        REFERENCES `seddb`.`cvs_vcs_rows`(`id`)
+        ON DELETE CASCADE
+)
