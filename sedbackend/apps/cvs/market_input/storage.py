@@ -47,9 +47,9 @@ def get_all_market_input(db_connection: PooledMySQLConnection, vcs_id: int) -> L
         .order_by(['vcs_row'], Sort.ASCENDING) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
-    return [populate_market_input(db_result) for db_result in results]
+    return [populate_market_input(db_connection, db_result) for db_result in results]
 
-
+'''
 def create_market_input(db_connection: PooledMySQLConnection, vcs_row_id: int,
                         market_input: models.MarketInputPost) -> bool:
     logger.debug(f'Create market input')
@@ -75,19 +75,37 @@ def create_market_input(db_connection: PooledMySQLConnection, vcs_row_id: int,
         .execute(fetch_type=FetchType.FETCH_NONE)
 
     return True
-
+'''
 
 def update_market_input(db_connection: PooledMySQLConnection, vcs_row_id: int,
                         market_input: models.MarketInputPost) -> bool:
     logger.debug(f'Update market input with vcs row id={vcs_row_id}')
 
-    update_statement = MySQLStatementBuilder(db_connection)
-    update_statement.update(
-        table=CVS_MARKET_INPUT_TABLE,
-        set_statement='time = %s, cost = %s, revenue = %s',
-        values=[market_input.time, market_input.cost, market_input.revenue],
-    )
-    update_statement.where('vcs_row = %s', [vcs_row_id])
-    _, rows = update_statement.execute(return_affected_rows=True)
+    select_statement = MySQLStatementBuilder(db_connection)
+    db_result = select_statement \
+        .select(CVS_MARKET_INPUT_TABLE, CVS_MARKET_INPUT_COLUMN) \
+        .where('vcs_row = %s', [vcs_row_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if db_result is not None:
+        update_statement = MySQLStatementBuilder(db_connection)
+        update_statement.update(
+            table=CVS_MARKET_INPUT_TABLE,
+            set_statement='time = %s, cost = %s, revenue = %s',
+            values=[market_input.time, market_input.cost, market_input.revenue],
+        )
+        update_statement.where('vcs_row = %s', [vcs_row_id])
+        _, rows = update_statement.execute(return_affected_rows=True)
+    else:
+        vcs_row = vcs_storage.get_vcs_row(db_connection, vcs_row_id)
+
+        columns = ['vcs', 'vcs_row', 'time', 'cost', 'revenue']
+        values = [vcs_row.vcs_id, vcs_row_id, market_input.time, market_input.cost, market_input.revenue]
+
+        insert_statement = MySQLStatementBuilder(db_connection)
+        insert_statement \
+            .insert(table=CVS_MARKET_INPUT_TABLE, columns=columns) \
+            .set_values(values) \
+            .execute(fetch_type=FetchType.FETCH_NONE)
 
     return True

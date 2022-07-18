@@ -31,8 +31,8 @@ def get_all_market_inputs(vcs_id: int) -> List[models.MarketInputGet]:
             detail=f'Could not find market input',
         )
 
-
-def create_market_input(vcs_row_id: int, market_input: models.MarketInputPost) ->  bool:
+'''
+def create_market_input(vcs_row_id: int, market_input: models.MarketInputPost) -> bool:
     try:
         with get_connection() as con:
             db_result = storage.create_market_input(con, vcs_row_id, market_input)
@@ -53,6 +53,7 @@ def create_market_input(vcs_row_id: int, market_input: models.MarketInputPost) -
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Market input already exist for vcs row with id={vcs_row_id}.',
         )
+'''
 
 
 def update_market_input(vcs_row_id: int, market_input: models.MarketInputPost) -> bool:
