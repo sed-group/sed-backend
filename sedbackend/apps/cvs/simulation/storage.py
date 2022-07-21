@@ -1,4 +1,5 @@
 import imp
+from multiprocessing import Pool
 from fastapi import UploadFile
 from mysql.connector.pooling import PooledMySQLConnection
 import pandas as pd
@@ -8,7 +9,7 @@ from typing import List
 from sedbackend.apps.cvs.simulation import models
 from sedbackend.apps.cvs.simulation.algorithms import *
 from sedbackend.apps.cvs.market_input.models import MarketInputGet
-from sedbackend.apps.cvs.simulation.exceptions import ProcessNotFoundException
+import sedbackend.apps.cvs.simulation.exceptions as e
 import sedbackend.apps.cvs.vcs.implementation as vcs_impl
 import sedbackend.apps.cvs.market_input.implementation as mi_impl
 import sedbackend.apps.cvs.life_cycle.implementation as lifecycle_impl
@@ -18,19 +19,14 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, project_id: int, 
                 flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float, 
                 dsm_csv: UploadFile, user_id: int) -> models.Simulation:
     
-    dsm = get_dsm_from_csv(dsm_csv.file) #This should hopefully open up the file for the processor. 
+    if dsm_csv is None:
+        raise e.DSMFileNotFoundException
 
-    query = f'SELECT cvs_vcs_rows.id, cvs_vcs_rows.iso_process, cvs_iso_processes.name as iso_name, \
-            subprocess, cvs_subprocesses.name as sub_name, time, cost, revenue FROM cvs_vcs_rows \
-            LEFT OUTER JOIN cvs_iso_processes ON cvs_vcs_rows.iso_process = cvs_iso_processes.id \
-            LEFT OUTER JOIN cvs_subprocesses ON cvs_vcs_rows.subprocess = cvs_subprocesses.id \
-            LEFT OUTER JOIN cvs_market_input ON cvs_vcs_rows.id = cvs_market_input.vcs_row \
-            WHERE cvs_vcs_rows.vcs = %s'
-    with db_connection.cursor(prepared=True) as cursor:
-        cursor.execute(query, [vcs_id])
-        res = cursor.fetchall()
-        res = [dict(zip(cursor.column_names, row)) for row in res]
-    
+    dsm = get_dsm_from_csv(dsm_csv.file) #This should hopefully open up the file for the processor. 
+    if dsm is None:
+        raise e.DSMFileNotFoundException
+
+    res = get_sim_data(db_connection, vcs_id)
     processes = []
     
     for key in dsm.keys():
@@ -42,7 +38,7 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, project_id: int, 
                 if key == r['sub_name']:
                     p = Process(r['time'], r['cost'], r['revenue'], r['sub_name'], TimeFormat.YEAR)
             else:
-                raise ProcessNotFoundException
+                raise e.ProcessNotFoundException
             if r['id'] == process_id:
                 flow_process = p
             processes.append(p)
@@ -58,6 +54,57 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, project_id: int, 
         processes=sim.processes
     )
 
+def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, flow_time: float,
+                flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float, 
+                dsm_xlsx: UploadFile, user_id: int) -> models.Simulation:
+    if dsm_xlsx is None:
+        raise e.DSMFileNotFoundException
+
+    dsm = get_dsm_from_excel(dsm_xlsx.file) #This should hopefully open up the file for the processor. 
+    if dsm is None:
+        raise e.DSMFileNotFoundException
+    
+    res = get_sim_data(db_connection, vcs_id)
+    processes = []
+    
+    for key in dsm.keys():
+        for r in res:
+            if r['iso_name'] is not None and r['sub_name'] is None:
+                if key == r['iso_name']:
+                    p = Process(r['time'], r['cost'], r['revenue'], r['iso_name'], TimeFormat.YEAR)
+            elif r['iso_name'] is None and r['sub_name'] is not None:
+                if key == r['sub_name']:
+                    p = Process(r['time'], r['cost'], r['revenue'], r['sub_name'], TimeFormat.YEAR)
+            else:
+                raise e.ProcessNotFoundException
+            if r['id'] == process_id:
+                flow_process = p
+            processes.append(p)
+    
+    non_tech_processes = [] #TODO fix the non-tech-processes
+
+    sim = Simulation(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes)
+    sim.run_simulation()
+
+    return models.Simulation(
+        time=sim.time_steps,
+        cumulative_NPV = sim.cum_NPV,
+        processes=sim.processes
+    )
+    
+
+def get_sim_data(db_connection: PooledMySQLConnection, vcs_id: int):
+    query = f'SELECT cvs_vcs_rows.id, cvs_vcs_rows.iso_process, cvs_iso_processes.name as iso_name, \
+            subprocess, cvs_subprocesses.name as sub_name, time, cost, revenue FROM cvs_vcs_rows \
+            LEFT OUTER JOIN cvs_iso_processes ON cvs_vcs_rows.iso_process = cvs_iso_processes.id \
+            LEFT OUTER JOIN cvs_subprocesses ON cvs_vcs_rows.subprocess = cvs_subprocesses.id \
+            LEFT OUTER JOIN cvs_market_input ON cvs_vcs_rows.id = cvs_market_input.vcs_row \
+            WHERE cvs_vcs_rows.vcs = %s'
+    with db_connection.cursor(prepared=True) as cursor:
+        cursor.execute(query, [vcs_id])
+        res = cursor.fetchall()
+        res = [dict(zip(cursor.column_names, row)) for row in res]
+    return res
 
 def run_simulation(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, flow_time: float, 
         flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float,
