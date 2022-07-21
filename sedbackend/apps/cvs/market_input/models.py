@@ -1,10 +1,10 @@
 from pydantic import BaseModel
+from sedbackend.apps.cvs.vcs import models as vcs_models
 
 
 class MarketInputGet(BaseModel):
-    id: int
     vcs: int
-    node: int
+    vcs_row: vcs_models.VcsRow
     time: float
     cost: float
     revenue: float

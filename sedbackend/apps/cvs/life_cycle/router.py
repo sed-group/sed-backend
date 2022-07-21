@@ -6,7 +6,7 @@ router = APIRouter()
 
 
 @router.post(
-    '/vcs/{vcs_id}/node/start_stop',
+    '/vcs/{vcs_id}/node/start-stop',
     summary='Creates a start/stop node for BPMN',
     response_model=models.StartStopNodeGet,
 )

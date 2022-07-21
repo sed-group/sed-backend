@@ -121,7 +121,6 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_value_drivers`
     `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `vcs`               INT UNSIGNED NOT NULL,
     `name`              TEXT NOT NULL,
-    `unit`              TEXT NULL,
     FOREIGN KEY(`vcs`)
         REFERENCES  `seddb`.`cvs_vcss`(`id`)
         ON DELETE CASCADE
@@ -186,28 +185,74 @@ CREATE TABLE IF NOT EXISTS  `seddb`.`cvs_process_nodes`
         ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_design_groups`
+(
+    `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `vcs`               INT UNSIGNED NOT NULL,
+    `name`              VARCHAR(255) NOT NULL,
+    PRIMARY KEY(`id`),
+    FOREIGN KEY(`vcs`)
+        REFERENCES `seddb`.`cvs_vcss`(`id`)
+        ON DELETE CASCADE
+);
+
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_designs`
 (
     `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `design_group`      INT UNSIGNED NOT NULL,
     `name`              VARCHAR(255) NOT NULL,
-    `description`       TEXT DEFAULT NULL,
-    `vcs`               INT UNSIGNED NOT NULL,
     PRIMARY KEY(`id`),
-    FOREIGN KEY(`vcs`)
-        REFERENCES `seddb`.`cvs_vcss`(`id`)
+    FOREIGN KEY(`design_group`)
+        REFERENCES `seddb`.`cvs_design_groups`(`id`)
+        ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_quantified_objectives`
 (
     `value_driver`      INT UNSIGNED NOT NULL,
-    `design`            INT UNSIGNED NOT NULL,
+    `design_group`      INT UNSIGNED NOT NULL,
     `name`              VARCHAR(63) NOT NULL,
-    `value`             DOUBLE NOT NULL,
     `unit`              VARCHAR(63) NOT NULL,
-    PRIMARY KEY(`value_driver`, `design`),
-    FOREIGN KEY(`design`)
-        REFERENCES `seddb`.`cvs_designs`(`id`),
+    PRIMARY KEY(`value_driver`, `design_group`),
+    FOREIGN KEY(`design_group`)
+        REFERENCES `seddb`.`cvs_design_groups`(`id`)
+        ON DELETE CASCADE,
     FOREIGN KEY(`value_driver`)
         REFERENCES `seddb`.`cvs_value_drivers`(`id`)
+        ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_quantified_objective_values`
+(
+    `design`            INT UNSIGNED NOT NULL,
+    `value_driver`      INT UNSIGNED NOT NULL,
+    `design_group`      INT UNSIGNED NOT NULL,
+    `value`             FLOAT,
+    PRIMARY KEY(`design`, `value_driver`, `design_group`),
+    FOREIGN KEY(`design`)
+        REFERENCES `seddb`.`cvs_designs`(`id`)
+        ON DELETE CASCADE,
+    FOREIGN KEY(`design_group`)
+        REFERENCES `seddb`.`cvs_design_groups`(`id`)
+        ON DELETE CASCADE,
+    FOREIGN KEY(`value_driver`)
+        REFERENCES `seddb`.`cvs_value_drivers`(`id`)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_input`
+(
+    `vcs_row`           INT UNSIGNED NOT NULL,
+    `vcs`               INT UNSIGNED NOT NULL,
+    `time`              DOUBLE,
+    `cost`              DOUBLE,
+    `revenue`           DOUBLE,
+    PRIMARY KEY (`vcs_row`),
+    FOREIGN KEY(`vcs`)
+        REFERENCES `seddb`.`cvs_vcss`(`id`)
+        ON DELETE CASCADE,
+    FOREIGN KEY(`vcs_row`)
+        REFERENCES `seddb`.`cvs_vcs_rows`(`id`)
+        ON DELETE CASCADE
+)

@@ -32,12 +32,12 @@ async def get_segment_vcs(project_id: int, index: int, segment_length: int,
 '''
 
 @router.get(
-    '/project/{project_id}/vcs/{vcs_id}',
+    '/vcs/{vcs_id}',
     summary='Returns a VCS',
     response_model=models.VCS,
 )
-async def get_vcs(vcs_id: int, project_id: int, user: User = Depends(get_current_active_user)) -> models.VCS:
-    return implementation.get_vcs(vcs_id, project_id, user.id)
+async def get_vcs(vcs_id: int, user: User = Depends(get_current_active_user)) -> models.VCS:
+    return implementation.get_vcs(vcs_id, user.id)
 
 
 @router.post(
@@ -51,13 +51,13 @@ async def create_vcs(vcs_post: models.VCSPost, project_id: int,
 
 
 @router.put(
-    '/project/{project_id}/vcs/{vcs_id}',
+    '/vcs/{vcs_id}',
     summary='Edits a VCS',
     response_model=models.VCS,
 )
-async def edit_vcs(vcs_id: int, project_id: int, vcs_post: models.VCSPost,
+async def edit_vcs(vcs_id: int, vcs_post: models.VCSPost,
                    user: User = Depends(get_current_active_user)) -> models.VCS:
-    return implementation.edit_vcs(vcs_id, project_id, user.id, vcs_post)
+    return implementation.edit_vcs(vcs_id, user.id, vcs_post)
 
 
 @router.delete(
@@ -65,9 +65,8 @@ async def edit_vcs(vcs_id: int, project_id: int, vcs_post: models.VCSPost,
     summary='Deletes a VCS based on id',
     response_model=bool,
 )
-async def delete_vcs(vcs_id: int, project_id: int, user: User = Depends(get_current_active_user)) -> bool:
-    return implementation.delete_vcs(vcs_id, project_id, user.id)
-
+async def delete_vcs(vcs_id: int, user: User = Depends(get_current_active_user)) -> bool:
+    return implementation.delete_vcs(vcs_id, user.id)
 
 
 # ======================================================================================================================

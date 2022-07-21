@@ -35,15 +35,10 @@ def get_segment_vcs(project_id: int, index: int, segment_length: int, user_id: i
         )
 
 
-def get_vcs(vcs_id: int, project_id: int, user_id: int) -> models.VCS:
+def get_vcs(vcs_id: int, user_id: int) -> models.VCS:
     try:
         with get_connection() as con:
-            return storage.get_vcs(con, vcs_id, project_id, user_id)
-    except project_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Could not find project with id={project_id}.',
-        )
+            return storage.get_vcs(con, vcs_id, user_id)
     except exceptions.VCSNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -74,17 +69,12 @@ def create_vcs(vcs_post: models.VCSPost, project_id: int, user_id: int) -> model
         )
 
 
-def edit_vcs(vcs_id: int, project_id: int, user_id: int, vcs_post: models.VCSPost) -> models.VCS:
+def edit_vcs(vcs_id: int, user_id: int, vcs_post: models.VCSPost) -> models.VCS:
     try:
         with get_connection() as con:
-            result = storage.edit_vcs(con, vcs_id, project_id, user_id, vcs_post)
+            result = storage.edit_vcs(con, vcs_id, user_id, vcs_post)
             con.commit()
             return result
-    except project_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project with id={project_id}.',
-        )
     except exceptions.VCSNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -102,17 +92,12 @@ def edit_vcs(vcs_id: int, project_id: int, user_id: int, vcs_post: models.VCSPos
         )
 
 
-def delete_vcs(vcs_id: int, project_id: int, user_id: int) -> bool:
+def delete_vcs(vcs_id: int, user_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.delete_vcs(con, vcs_id, project_id, user_id)
+            res = storage.delete_vcs(con, vcs_id, user_id)
             con.commit()
             return res
-    except project_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project with id={project_id}.',
-        )
     except exceptions.VCSNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
