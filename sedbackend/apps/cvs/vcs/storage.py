@@ -25,7 +25,7 @@ CVS_VALUE_DIMENSION_TABLE = 'cvs_value_dimensions'
 CVS_VALUE_DIMENSION_COLUMNS = ['id', 'name', 'priority', 'vcs_row']
 
 CVS_VALUE_DRIVER_TABLE = 'cvs_value_drivers'
-CVS_VALUE_DRIVER_COLUMNS = ['id', 'vcs', 'name', 'unit']
+CVS_VALUE_DRIVER_COLUMNS = ['id', 'vcs', 'name']
 
 CVS_VCS_ROW_DRIVERS_TABLE = 'cvs_rowDrivers'
 CVS_VCS_ROW_DRIVERS_COLUMNS = ['vcs_row', 'value_driver']
@@ -431,8 +431,7 @@ def populate_value_driver(db_result) -> models.ValueDriver:
     return models.ValueDriver(
         id=db_result['id'],
         vcs_id=db_result['vcs'],
-        name=db_result['name'],
-        unit=db_result['unit']
+        name=db_result['name']
     )
 
 
@@ -967,3 +966,98 @@ def delete_vcs_row(db_connection: PooledMySQLConnection, vcs_row_id: int, vcs_id
         cursor.execute(update_indices_q, [vcs_id, row.index])
 
     return True
+
+
+# Duplicate a vcs n times
+def duplicate_vcs(db_connection: PooledMySQLConnection, vcs_id: int, n: int, user_id: int) -> List[models.VCS]:
+    vcs = get_vcs(db_connection, vcs_id, user_id)
+    vcs_list = []
+    for i in range(n):
+        vcs_post = models.VCSPost(
+            name=f'{vcs.name} ({n + 1})',
+            description=vcs.description,
+            year_from=vcs.year_from,
+            year_to=vcs.year_to
+        )
+        new_vcs = create_vcs(db_connection, vcs_post, vcs.project.id, user_id)
+        vcs_list.append(new_vcs)
+    return vcs_list
+
+
+# Duplicate value drivers
+def duplicate_value_driver(db_connection: PooledMySQLConnection, vcs_id: int,
+                           value_drivers: List[models.ValueDriver]) -> List[int]:
+    new_value_drivers = []
+    for vd in value_drivers:
+        try:
+            insert_statement = MySQLStatementBuilder(db_connection)
+            insert_statement \
+                .insert(table=CVS_VALUE_DRIVER_TABLE,
+                        columns=['vcs', 'name']) \
+                .set_values([vcs_id, vd.name]) \
+                .execute(fetch_type=FetchType.FETCH_NONE)
+            new_value_drivers.append(insert_statement.last_insert_id)
+        except Error as e:
+            logger.debug(f'Error msg: {e.msg}')
+            raise exceptions.VCSNotFoundException
+
+    return new_value_drivers
+
+
+def duplicate_stakeholder_need(db_connection: PooledMySQLConnection, vcs_row_id: int,
+                               needs: List[models.StakeholderNeed], vd_old_new: dict) -> bool:
+    for need in needs:
+        try:
+            insert_statement = MySQLStatementBuilder(db_connection)
+            insert_statement \
+                .insert(table=CVS_VCS_STAKEHOLDER_NEED_TABLE,
+                        columns=['vcs_row', 'need', 'value_dimension', 'rank_weight']) \
+                .set_values([vcs_row_id, need.need, need.value_dimension, need.rank_weight]) \
+                .execute(fetch_type=FetchType.FETCH_NONE)
+            need_id = insert_statement.last_insert_id
+
+            # todo add value driver to need
+            for vd in need.value_drivers:
+                add_vcs_need_driver(db_connection, need_id, vd_old_new[vd.id])
+        except Error as e:
+            logger.debug(f'Error msg: {e.msg}')
+            raise exceptions.VCSNotFoundException
+
+    return True
+
+
+# Duplicate vcs table
+def duplicate_vcs_table(db_connection: PooledMySQLConnection, vcs_id: int,
+                        table: List[models.VcsRow], vd_old_new: dict) -> bool:
+    for row in table:
+        try:
+            insert_statement = MySQLStatementBuilder(db_connection)
+            insert_statement \
+                .insert(table=CVS_VCS_ROWS_TABLE,
+                        columns=['vcs', 'index', 'stakeholder', 'stakeholder_expectations', 'iso_process',
+                                 'subprocess']) \
+                .set_values([vcs_id, row.index, row.stakeholder, row.stakeholder_expectations, row.iso_process,
+                             row.subprocess]) \
+                .execute(fetch_type=FetchType.FETCH_NONE)
+            row_id = insert_statement.last_insert_id
+            duplicate_stakeholder_need(db_connection, row_id, row.stakeholder_needs, vd_old_new)
+        except Error as e:
+            logger.debug(f'Error msg: {e.msg}')
+            raise exceptions.VCSNotFoundException
+
+    return True
+
+
+def duplicate_whole_vcs(db_connection: PooledMySQLConnection, vcs_id: int, n: int, user_id: int) -> List[models.VCS]:
+    logger.debug(f'Duplicate vcs with id = {vcs_id}, {n} times')
+
+    table = get_vcs_table(db_connection, vcs_id)
+    value_drivers = get_all_value_driver(db_connection, vcs_id)
+
+    vcs_list = duplicate_vcs(db_connection, vcs_id, n, user_id)
+    for vcs in vcs_list:
+        value_drivers_new = duplicate_value_driver(db_connection, vcs.id, value_drivers)
+        vd_old_new = {value_drivers[i].id: value_drivers_new[i] for i in range(len(value_drivers))}
+        duplicate_vcs_table(db_connection, vcs.id, table, vd_old_new)
+
+    return vcs_list

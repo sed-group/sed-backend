@@ -231,3 +231,11 @@ async def update_indices_subprocess(subprocess_ids: List[int], order_indices: Li
                                     user: User = Depends(get_current_active_user)) -> bool:
     return implementation.update_indices_subprocess(subprocess_ids, order_indices, project_id, user.id)
 
+
+@router.post(
+    '/vcs/{vcs_id}/duplicate/{n}',
+    summary='Duplicate VCS n times',
+    response_model=List[models.VCS],
+)
+async def duplicate_vcs(vcs_id: int, n: int, user: User = Depends(get_current_active_user)) -> List[models.VCS]:
+    return implementation.duplicate_vcs(vcs_id, n, user.id)

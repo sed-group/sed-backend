@@ -28,7 +28,7 @@ async def create_market_input(vcs_row_id: int, market_input: models.MarketInputP
 
 @router.put(
     '/vcs-row/{vcs_row_id}/market-input',
-    summary='Edit market input',
+    summary='Edit/create market input',
     response_model=bool,
 )
 async def update_market_input(vcs_row_id: int, market_input: models.MarketInputPost) -> bool:

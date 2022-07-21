@@ -82,12 +82,10 @@ class ValueDriver(BaseModel):
     id: int
     vcs_id: int
     name: str
-    unit: Optional[str] = None
 
 
 class ValueDriverPost(BaseModel):
     name: str
-    unit: Optional[str] = None
 
 
 # ======================================================================================================================
