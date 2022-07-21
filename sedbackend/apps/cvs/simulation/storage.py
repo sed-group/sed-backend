@@ -183,7 +183,7 @@ def populate_data(db_result) -> Tuple[List[Process], List[Process], dict]:
         elif res['iso_name'] is None and res['sub_name'] is not None:
             p = Process(res['time'], res['cost'], res['revenue'], res['sub_name'], TimeFormat.YEAR)
         else:
-            raise ProcessNotFoundException
+            raise e.ProcessNotFoundException
         processes.append(p)
         dsm.update({p.name: [1 if (r['index'] + 1) == i else 0 for r in db_result]})
 
