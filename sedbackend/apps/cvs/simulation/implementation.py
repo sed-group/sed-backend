@@ -1,5 +1,6 @@
 from fastapi import HTTPException, UploadFile
 from starlette import status
+import tempfile
 
 from sedbackend.apps.cvs.life_cycle import storage
 from sedbackend.apps.cvs.simulation import models, algorithms, storage
@@ -124,3 +125,5 @@ def run_xlsx_simulation(project_id: int, vcs_id: int, flow_time: float, flow_rat
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not read uploaded file'
         )
+
+

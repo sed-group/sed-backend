@@ -1,4 +1,4 @@
-import imp
+import tempfile
 from multiprocessing import Pool
 from fastapi import UploadFile
 from mysql.connector.pooling import PooledMySQLConnection
@@ -18,13 +18,19 @@ from sedbackend.apps.cvs.vcs.models import VcsRow
 def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, flow_time: float,
                 flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float, 
                 dsm_csv: UploadFile, user_id: int) -> models.Simulation:
-    
-    if dsm_csv is None:
-        raise e.DSMFileNotFoundException
 
-    dsm = get_dsm_from_csv(dsm_csv.file) #This should hopefully open up the file for the processor. 
-    if dsm is None:
-        raise e.DSMFileNotFoundException
+    try:
+        tmp_csv = tempfile.TemporaryFile()  #Workaround because current python version doesn't support 
+        tmp_csv.write(dsm_csv.file.read())      #readable() attribute on SpooledTemporaryFile which UploadFile 
+        tmp_csv.seek(0)                     #is an alias for. PR is accepted for python v3.12, see https://github.com/python/cpython/pull/29560
+        if dsm_csv is None:
+            raise e.DSMFileNotFoundException
+
+        dsm = get_dsm_from_csv(tmp_csv) #This should hopefully open up the file for the processor. 
+        if dsm is None:
+            raise e.DSMFileNotFoundException
+    finally:
+        tmp_csv.close()
 
     res = get_sim_data(db_connection, vcs_id)
     processes = []
@@ -57,13 +63,20 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, project_id: int, 
 def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, flow_time: float,
                 flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float, 
                 dsm_xlsx: UploadFile, user_id: int) -> models.Simulation:
-    if dsm_xlsx is None:
-        raise e.DSMFileNotFoundException
 
-    dsm = get_dsm_from_excel(dsm_xlsx.file) #This should hopefully open up the file for the processor. 
-    if dsm is None:
-        raise e.DSMFileNotFoundException
-    
+    try:
+        tmp_xlsx = tempfile.TemporaryFile()  #Workaround because current python version doesn't support 
+        tmp_xlsx.write(dsm_xlsx.file.read()) #readable() attribute on SpooledTemporaryFile which UploadFile 
+        tmp_xlsx.seek(0)                     #is an alias for. PR is accepted for python v3.12, see https://github.com/python/cpython/pull/29560
+        if dsm_xlsx is None:
+            raise e.DSMFileNotFoundException
+
+        dsm = get_dsm_from_excel(tmp_xlsx) #This should hopefully open up the file for the processor. 
+        if dsm is None:
+            raise e.DSMFileNotFoundException
+    finally:
+        tmp_xlsx.close()
+
     res = get_sim_data(db_connection, vcs_id)
     processes = []
     
