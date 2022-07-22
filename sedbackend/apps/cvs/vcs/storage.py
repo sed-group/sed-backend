@@ -974,7 +974,7 @@ def duplicate_vcs(db_connection: PooledMySQLConnection, vcs_id: int, n: int, use
     vcs_list = []
     for i in range(n):
         vcs_post = models.VCSPost(
-            name=f'{vcs.name} ({n + 1})',
+            name=f'{vcs.name} ({i + 1})',
             description=vcs.description,
             year_from=vcs.year_from,
             year_to=vcs.year_to
@@ -1036,8 +1036,9 @@ def duplicate_vcs_table(db_connection: PooledMySQLConnection, vcs_id: int,
                 .insert(table=CVS_VCS_ROWS_TABLE,
                         columns=['vcs', 'index', 'stakeholder', 'stakeholder_expectations', 'iso_process',
                                  'subprocess']) \
-                .set_values([vcs_id, row.index, row.stakeholder, row.stakeholder_expectations, row.iso_process,
-                             row.subprocess]) \
+                .set_values([vcs_id, row.index, row.stakeholder, row.stakeholder_expectations,
+                             row.iso_process.id if row.iso_process is not None else None,
+                             row.subprocess.id if row.subprocess is not None else None]) \
                 .execute(fetch_type=FetchType.FETCH_NONE)
             row_id = insert_statement.last_insert_id
             duplicate_stakeholder_need(db_connection, row_id, row.stakeholder_needs, vd_old_new)
