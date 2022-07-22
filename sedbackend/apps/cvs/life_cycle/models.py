@@ -22,7 +22,7 @@ class ProcessNodeGet(NodeGet):
 
 
 class ProcessNodePost(NodePost):
-    vcs_row: vcs_models.VcsRow
+    vcs_row_id: int
 
 
 class StartStopNodeGet(NodeGet):

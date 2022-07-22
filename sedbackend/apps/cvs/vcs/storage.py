@@ -1042,6 +1042,12 @@ def duplicate_vcs_table(db_connection: PooledMySQLConnection, vcs_id: int,
                 .execute(fetch_type=FetchType.FETCH_NONE)
             row_id = insert_statement.last_insert_id
             duplicate_stakeholder_need(db_connection, row_id, row.stakeholder_needs, vd_old_new)
+            node = life_cycle_models.ProcessNodePost(
+                pos_x=0,
+                pos_y=0,
+                vcs_row_id=row_id
+            )
+            life_cycle_storage.create_process_node(db_connection, node, vcs_id)
         except Error as e:
             logger.debug(f'Error msg: {e.msg}')
             raise exceptions.VCSNotFoundException

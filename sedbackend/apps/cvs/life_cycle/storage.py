@@ -134,7 +134,7 @@ def create_process_node(db_connection: PooledMySQLConnection, node: models.Proce
     try:
         insert_statement \
             .insert(table=CVS_PROCESS_NODES_TABLE, columns=['id', 'vcs_row']) \
-            .set_values([node_id, node.vcs_row.id]) \
+            .set_values([node_id, node.vcs_row_id]) \
             .execute(fetch_type=FetchType.FETCH_NONE)
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
