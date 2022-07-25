@@ -913,11 +913,11 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, updated_vcs_rows: List[
             _, rows = update_statement.execute(return_affected_rows=True)
 
         else:
-            vcs_row_id = create_vcs_row(db_connection, row, vcs_id)
+            vcs_row_id: int = create_vcs_row(db_connection, row, vcs_id)
             node = life_cycle_models.ProcessNodePost(
                 pos_x=0,
                 pos_y=0,
-                vcs_row=get_vcs_row(db_connection, vcs_row_id)
+                vcs_row_id=vcs_row_id
             )
             life_cycle_storage.create_process_node(db_connection, node, vcs_id)
 
