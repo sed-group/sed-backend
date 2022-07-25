@@ -17,11 +17,11 @@ INSERT INTO cvs_iso_processes values (14, 'Measurement', 'Project processes');
 
 INSERT INTO cvs_iso_processes values (15, 'Stakeholder requirements definition', 'Technical processes');
 INSERT INTO cvs_iso_processes values (16, 'Requirements analysis', 'Technical processes');
-INSERT INTO cvs_iso_processes values (17, 'Architectual design', 'Technical processes');
+INSERT INTO cvs_iso_processes values (17, 'Architectural design', 'Technical processes');
 INSERT INTO cvs_iso_processes values (18, 'Implementation', 'Technical processes');
 INSERT INTO cvs_iso_processes values (19, 'Integration', 'Technical processes');
 INSERT INTO cvs_iso_processes values (20, 'Verification', 'Technical processes');
-INSERT INTO cvs_iso_processes values (21, 'Transisition', 'Technical processes');
+INSERT INTO cvs_iso_processes values (21, 'Transition', 'Technical processes');
 INSERT INTO cvs_iso_processes values (22, 'Validation', 'Technical processes');
 INSERT INTO cvs_iso_processes values (23, 'Operation', 'Technical processes');
 INSERT INTO cvs_iso_processes values (24, 'Maintenance', 'Technical processes');

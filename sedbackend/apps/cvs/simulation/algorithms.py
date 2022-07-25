@@ -40,7 +40,7 @@ class Simulation(object):
         self.non_tech_costs = sum([p.cost for p in non_tech_processes])
         self.non_tech_revenues = sum([p.revenue for p in non_tech_processes])
         self.dsm_before_flow, self.dsm_after_flow = self.get_dsm_separation(dsm)
-
+        print(len(processes))
         """
         self.dsm = dict({'A': [0, 0, 0, 0], 
                          'B': [0, 0, 0.2, 0.8], 
@@ -68,11 +68,14 @@ class Simulation(object):
             yield env.timeout(self.generate_interarrival())
         
             e = Entity(env, self.processes)
-            env.process(e.lifecycle(self.dsm_after_flow, [self.interarrival_process]))
             self.entities.append(e)
+            env.process(e.lifecycle(self.dsm_after_flow, [self.interarrival_process]))
+        
+        print('Done')
+            
             
     #Observes the total time, cost, revenue, and NPV for each entity in each timestep. 
-    def observe_costs(self, env):
+    def observe_costs(self, env): #TODO fix calculation of NPV. Currently it's bonkers
         total_costs = [0]
         total_revenue = [0]
 
@@ -80,7 +83,7 @@ class Simulation(object):
             # print([f'cost: {e.cost}' for e in self.entities])
             #print([f'revenue: {e.revenue}' for e in self.entities])
             #print(f'Time: {env.now}')
-            self.add_static_costs_to_entities()
+            #self.add_static_costs_to_entities()
             total_costs.append(sum([e.total_cost[-1] for e in self.entities]))
             total_revenue.append(sum([e.total_revenue[-1] for e in self.entities]))
             self.time_steps.append(env.now)
@@ -95,16 +98,17 @@ class Simulation(object):
         return np.random.exponential(self.interarrival_time)
 
 
-    def add_static_costs_to_entities(self): #Adds the costs of the non-technical processes to all active entities. 
-        for e in self.entities:
-            e.cost += self.static_processes_costs * TIMESTEP/ (len(self.entities) * self.until) #This works in the margin of 0.00000002 euros
+    #def add_static_costs_to_entities(self): #Adds the costs of the non-technical processes to all active entities. 
+    #    for e in self.entities:
+    #        e.total_cost.append(e.total_cost[-1] + self.static_processes_costs * TIMESTEP/ (len(self.entities) * self.until))  #This works in the margin of 0.00000002 euros
 
     def calculate_NPV(self, total_costs, total_revenue, time_steps):
         timestep_revenue = total_revenue[len(time_steps) -1] - total_revenue[len(time_steps) - 2]
         timestep_cost = total_costs[len(time_steps) - 1] - total_costs[len(time_steps) - 2]
+        #print(timestep_revenue, timestep_cost)
 
         net_revenue = timestep_revenue - timestep_cost #Cashflow for the timestep
-        npv = net_revenue / ((1 + 0.08) ** time_steps[-1])
+        npv = net_revenue / ((1 + self.discount_rate) ** time_steps[-1])
         self.cum_NPV.append(self.cum_NPV[-1] + npv)
 
     #Separates the given DSM into two dictionaries with the before flow and after flow parts of the dsm
@@ -150,13 +154,15 @@ class Entity(object):
                 if activity.time < min_time:
                     min_time = activity.time
             
-            start_time = self.env.now
+            #start_time = self.env.now
             yield self.env.timeout(min_time)
        
-            for activity in active_activities: #This loop is probably unneccessary since we do not check W anywhere atm
-                if activity.W > 0:
-                    activity.W = (self.env.now - start_time) / activity.time
+            #for activity in active_activities: #This loop is probably unneccessary since we do not check W anywhere atm
+            #    if activity.W > 0:
+            #        activity.W = (self.env.now - start_time) / activity.time
             active_activities = self.find_active_activities(dsm, active_activities) #Find subsequent activities
+
+        print(f'Entity: {self} done, total time: {sum([p.time for p in self.processes])}')
     
     #Finds the active processes for the lifecycle based on the dsm and the current state
     #That the lifecycle is in. 

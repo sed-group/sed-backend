@@ -16,6 +16,5 @@ class NonTechnicalProcess(BaseModel):
 
 class Simulation(BaseModel):
     time: List[float]
-#    surplus_values: List[float]
     cumulative_NPV: List[float]
     processes: List[Process]
