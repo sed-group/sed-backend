@@ -15,6 +15,15 @@ import sedbackend.apps.cvs.market_input.implementation as mi_impl
 import sedbackend.apps.cvs.life_cycle.implementation as lifecycle_impl
 from sedbackend.apps.cvs.vcs.models import VcsRow
 
+
+TIME_FORMAT_DICT = dict({
+    'year': TimeFormat.YEAR, 
+    'month': TimeFormat.MONTH, 
+    'week': TimeFormat.WEEK, 
+    'day': TimeFormat.DAY, 
+    'hour': TimeFormat.HOUR})
+
+
 def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, flow_time: float,
                 flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float, 
                 dsm_csv: UploadFile, user_id: int) -> models.Simulation:
@@ -36,21 +45,20 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, project_id: int, 
     processes = []
     non_tech_processes = [] #TODO fix the non-tech-processes
     
-    
     print(dsm.keys())
     for key in dsm.keys():
         p = None
         for r in res:
             if r['iso_name'] is not None and r['sub_name'] is None:
                 if key == r['iso_name']:
-                    p = Process(r['time'], r['cost'], r['revenue'], r['iso_name'], TimeFormat.YEAR)
+                    p = Process(r['time'], r['cost'], r['revenue'], r['iso_name'], TIME_FORMAT_DICT.get(r['time_unit'].lower()))
                     processes.append(p)
                     if r['id'] == process_id:
                         flow_process = p
                     break
             elif r['iso_name'] is None and r['sub_name'] is not None:
                 if key == r['sub_name']:
-                    p = Process(r['time'], r['cost'], r['revenue'], r['sub_name'], TimeFormat.YEAR)
+                    p = Process(r['time'], r['cost'], r['revenue'], r['sub_name'], TIME_FORMAT_DICT.get(r['time_unit'].lower()))
                     processes.append(p)
                     if r['id'] == process_id:
                         flow_process = p
@@ -108,14 +116,14 @@ def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, project_id: int,
         for r in res:
             if r['iso_name'] is not None and r['sub_name'] is None:
                 if key == r['iso_name']:
-                    p = Process(r['time'], r['cost'], r['revenue'], r['iso_name'], TimeFormat.YEAR)
+                    p = Process(r['time'], r['cost'], r['revenue'], r['iso_name'], TIME_FORMAT_DICT.get(r['time_unit'].lower()))
                     processes.append(p)
                     if r['id'] == process_id:
                         flow_process = p
                     break
             elif r['iso_name'] is None and r['sub_name'] is not None:
                 if key == r['sub_name']:
-                    p = Process(r['time'], r['cost'], r['revenue'], r['sub_name'], TimeFormat.YEAR)
+                    p = Process(r['time'], r['cost'], r['revenue'], r['sub_name'], TIME_FORMAT_DICT.get(r['time_unit'].lower()))
                     processes.append(p)
                     if r['id'] == process_id:
                         flow_process = p
@@ -148,7 +156,7 @@ def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, project_id: int,
 
 def get_sim_data(db_connection: PooledMySQLConnection, vcs_id: int):
     query = f'SELECT cvs_vcs_rows.id, cvs_vcs_rows.iso_process, cvs_iso_processes.name as iso_name, category, \
-            subprocess, cvs_subprocesses.name as sub_name, time, cost, revenue FROM cvs_vcs_rows \
+            subprocess, cvs_subprocesses.name as sub_name, time, time_unit, cost, revenue FROM cvs_vcs_rows \
             LEFT OUTER JOIN cvs_iso_processes ON cvs_vcs_rows.iso_process = cvs_iso_processes.id \
             LEFT OUTER JOIN cvs_subprocesses ON cvs_vcs_rows.subprocess = cvs_subprocesses.id \
             LEFT OUTER JOIN cvs_market_input ON cvs_vcs_rows.id = cvs_market_input.vcs_row \
@@ -171,14 +179,14 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, vcs_id
     for row in res:
         if row['iso_name'] is not None and row['sub_name'] is None:
             if row['category'] != 'Technical processes':
-                non_tech_processes.append(Process(row['time'], row['cost'], row['revenue'], row['iso_name'], TimeFormat.YEAR))
+                non_tech_processes.append(Process(row['time'], row['cost'], row['revenue'], row['iso_name'], TIME_FORMAT_DICT.get(r['time_unit'].lower())))
             else:
-                p = Process(row['time'], row['cost'], row['revenue'], row['iso_name'], TimeFormat.YEAR)
+                p = Process(row['time'], row['cost'], row['revenue'], row['iso_name'], TIME_FORMAT_DICT.get(row['time_unit'].lower()))
                 processes.append(p)
                 if row['id'] == process_id:
                     flow_process = p     
         elif row['iso_name'] is None and row['sub_name'] is not None:
-            p = Process(row['time'], row['cost'], row['revenue'], row['sub_name'], TimeFormat.YEAR)
+            p = Process(row['time'], row['cost'], row['revenue'], row['sub_name'], TIME_FORMAT_DICT.get(row['time_unit'].lower()))
             processes.append(p)
             if row['id'] == process_id:
                 flow_process = p
