@@ -41,7 +41,6 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, project_id: int, 
         p = None
         for r in res:
             if r['iso_name'] is not None and r['sub_name'] is None:
-                print('Fst')
                 if key == r['iso_name']:
                     p = Process(r['time'], r['cost'], r['revenue'], r['iso_name'], TimeFormat.YEAR)
                     processes.append(p)
@@ -50,7 +49,6 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, project_id: int, 
 
                     break
             elif r['iso_name'] is None and r['sub_name'] is not None:
-                print('snd')
                 if key == r['sub_name']:
                     p = Process(r['time'], r['cost'], r['revenue'], r['sub_name'], TimeFormat.YEAR)
                     processes.append(p)
@@ -123,7 +121,7 @@ def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, project_id: int,
     
     non_tech_processes = [] #TODO fix the non-tech-processes
 
-    sim = Simulation(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes)
+    sim = Simulation(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, dsm)
     sim.run_simulation()
 
     return models.Simulation(
@@ -134,12 +132,12 @@ def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, project_id: int,
     
 
 def get_sim_data(db_connection: PooledMySQLConnection, vcs_id: int):
-    query = f'SELECT cvs_vcs_rows.id, cvs_vcs_rows.iso_process, cvs_iso_processes.name as iso_name, \
+    query = f'SELECT cvs_vcs_rows.id, cvs_vcs_rows.iso_process, cvs_iso_processes.name as iso_name, category, \
             subprocess, cvs_subprocesses.name as sub_name, time, cost, revenue FROM cvs_vcs_rows \
             LEFT OUTER JOIN cvs_iso_processes ON cvs_vcs_rows.iso_process = cvs_iso_processes.id \
             LEFT OUTER JOIN cvs_subprocesses ON cvs_vcs_rows.subprocess = cvs_subprocesses.id \
             LEFT OUTER JOIN cvs_market_input ON cvs_vcs_rows.id = cvs_market_input.vcs_row \
-            WHERE cvs_vcs_rows.vcs = %s'
+            WHERE cvs_vcs_rows.vcs = %s ORDER BY `index`'
     with db_connection.cursor(prepared=True) as cursor:
         cursor.execute(query, [vcs_id])
         res = cursor.fetchall()
@@ -150,18 +148,31 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, vcs_id
         flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float,
         user_id: int) -> models.Simulation:
     
-    #pid is a processid which means that we need to fetch the processes first. 
-    vcs_rows = vcs_impl.get_vcs_table(vcs_id)
-    market_input = mi_impl.get_all_market_inputs(project_id, vcs_id, user_id)
+    res = get_sim_data(db_connection, vcs_id)
 
-    flow_process = None #Should be based on the process id
+    
+    processes = []
+    non_tech_processes = []
+    for row in res:
+        if row['iso_name'] is not None and row['sub_name'] is None:
+            if row['category'] != 'Technical processes':
+                non_tech_processes.append(Process(row['time'], row['cost'], row['revenue'], row['iso_name'], TimeFormat.YEAR))
+            else:
+                p = Process(row['time'], row['cost'], row['revenue'], row['iso_name'], TimeFormat.YEAR)
+                processes.append(p)
+                if row['id'] == process_id:
+                    flow_process = p     
+        elif row['iso_name'] is None and row['sub_name'] is not None:
+            p = Process(row['time'], row['cost'], row['revenue'], row['sub_name'], TimeFormat.YEAR)
+            processes.append(p)
+            if row['id'] == process_id:
+                flow_process = p
+        else:
+            raise e.ProcessNotFoundException
 
-    #If DSM from excel or csv then do that otherwise fetch from back end
-    #DSM and processes should be gettable at the same time. 
-    dsm = None
+    dsm = create_simple_dsm(processes) #TODO Change to using BPMN
 
-    #BUG entering pid as param to the Simulation. Will fail on the separate dsm method since that one wants an actual process. (or a name)
-    sim = Simulation(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, populate_processes(vcs_rows, market_input), populate_non_tech_processes(vcs_rows, market_input), dsm)
+    sim = Simulation(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, dsm)
     sim.run_simulation()
 
     return models.Simulation(
@@ -170,107 +181,19 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, vcs_id
         processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in sim.processes]
     )
 
-def fetch_sim_data(db_connection: PooledMySQLConnection, vcs_id: int):
-    #BUG Currently not fetching any data that can tell us if we are in the technical or non-technical processes. 
-    #A way to see this is to check if we have a node or not - oh wait we cannot, that is not how it works...
-    #Fuck jag vill fortfarande hämta ut bpmn, fast med samtliga noder. Denna queryn ger oss i princip bara market inputen
-    #som ska in i processerna. 
-    query = f'SELECT cvs_vcs_rows.id, `index`, cvs_vcs_rows.iso_process, cvs_iso_processes.name as iso_name, \
-            subprocess, cvs_subprocesses.name as sub_name, from, to, time, cost, revenue FROM cvs_vcs_rows \
-            LEFT OUTER JOIN cvs_iso_processes ON cvs_vcs_rows.iso_process = cvs_iso_processes.id \
-            LEFT OUTER JOIN cvs_subprocesses ON cvs_vcs_rows.subprocess = cvs_subprocesses.id \
-            LEFT OUTER JOIN cvs_process_nodes ON cvs_vcs_rows.id = cvs_process_nodes.vcs_row \
-            LEFT OUTER JOIN cvs_nodes ON cvs_process_nodes.id = cvs_nodes.id \
-            LEFT OUTER JOIN cvs_market_input ON cvs_vcs_rows.id = cvs_market_input.vcs_row \
-            WHERE cvs_vcs_rows.vcs = %s ORDER BY `index`'
-    with db_connection.cursor(prepared=True) as cursor:
-        cursor.execute(query, [vcs_id])
-        res = cursor.fetchall()
+#TODO Change dsm creation to follow BPMN and the nodes in the BPMN. 
+#Currently the DSM only goes from one process to the other following the order of the index in the VCS
+def create_simple_dsm(processes: List[Process]) -> dict:
+    l = len(processes)
 
-        res = [dict(zip(cursor.column_names, row)) for row in res]
-
-
-    return populate_data(res)
-
-def populate_data(db_result) -> Tuple[List[Process], List[Process], dict]:
-    
+    index_list = list(range(0, l))
     dsm = dict()
-    processes = []
-    non_tech_processes = []
+    for i, p in enumerate(processes):
+        dsm.update({p.name: [1 if i + 1 == j else 0 for j in index_list]})
 
-    nodes = dict()
-    start_node = None
-    #Need to know how many processes there will be. Is there a way to filter out that from the nodes?
-    #ATM it's just the length of all the nodes. 
+    print(dsm)
+    return dsm
 
-    
-    for i,res in enumerate(db_result):
-        if res['iso_name'] is not None and res['sub_name'] is None:
-            p = Process(res['time'], res['cost'], res['revenue'], res['iso_name'], TimeFormat.YEAR)
-        elif res['iso_name'] is None and res['sub_name'] is not None:
-            p = Process(res['time'], res['cost'], res['revenue'], res['sub_name'], TimeFormat.YEAR)
-        else:
-            raise e.ProcessNotFoundException
-        processes.append(p)
-        dsm.update({p.name: [1 if (r['index'] + 1) == i else 0 for r in db_result]})
-
-    """
-    process_amount = len(bpmn.nodes)
-
-    for process_node in bpmn.nodes: #Problem with the indexes - how do we know which process goes where?
-        nodes.update({process_node.id: process_node})
-        if process_node.from_node is None:
-            start_node = process_node.id
-
-    while len(nodes.keys()) > 0: #Skulle kunna enumerate kke. El köra från i till len(nodes) <- det funkar om evauleringen av condition inte sker under runtime. 
-        node = nodes.pop(start_node)
-        if node.vcs_row.iso_process is not None and node.vcs_row.subprocess is None:
-         #   processes.append(Process(time,cost,revenue, node.vcs_row.iso_process.name, time_format))
-            dsm.update({node.vcs_row.iso_process.name: []}) #Fuck här hamnar vi i indexproblem igen...
-        elif node.vcs_row.iso_process is None and node.vcs_row.subprocess is not None:
-          #  processes.append(Process(time,cost,revenue, node.vcs_row.subprocess.name, time_format))
-          continue
-        else:
-            raise ProcessNotFoundException
-    """
-    return processes, non_tech_processes, dsm
-
-def populate_processes(vcs_rows: List[VcsRow], market_input: List[MarketInputGet]) -> List[models.Process]:
-    processes = []
-
-    for row in vcs_rows:
-        if (row.iso_process and row.iso_process.category == 'Technical processes') \
-                or (row.subprocess and row.subprocess.parent_process.category == 'Technical processes'):
-            if row.iso_process:
-                name = row.iso_process.name
-            else:
-                name = row.subprocess.name
-
-            for mi in market_input:
-                if mi.vcs_row == row.id:
-                    process = Process(mi.time, mi.cost, mi.revenue, name)
-                    processes.append(process)
-    return processes
-
-def populate_non_tech_processes(vcs_rows: List[VcsRow], market_input: List[MarketInputGet]) -> List[models.NonTechnicalProcess]:
-    non_tech_processes = []
-    for row in vcs_rows:
-        if (row.iso_process and row.iso_process.category != 'Technical processes') \
-            or (row.subprocess and row.subprocess.parent_process.category != 'Techical processes'):
-                if row.iso_process:
-                    name = row.iso_process.name
-                else: 
-                    name = row.subprocess.name
-            
-                for mi in market_input:
-                    if mi.vcs_row == row.id:
-                        non_tech_process = models.NonTechnicalProcess(
-                            name=name,
-                            cost=market_input.cost,
-                            revenue=market_input.revenue
-                        )
-                        non_tech_processes.append(non_tech_process)
-    return non_tech_processes
 
 def get_dsm_from_csv(path):
     pf = pd.read_csv(path)

@@ -9,6 +9,7 @@ from enum import Enum
 
 TIMESTEP = 0.25
 
+
 class TimeFormat(Enum):
     """
     The timeformats that can be chosen for a process. The values are the defaults for the
@@ -40,7 +41,9 @@ class Simulation(object):
         self.non_tech_costs = sum([p.cost for p in non_tech_processes])
         self.non_tech_revenues = sum([p.revenue for p in non_tech_processes])
         self.dsm_before_flow, self.dsm_after_flow = self.get_dsm_separation(dsm)
-        print(len(processes))
+        r.seed(0)
+        np.random.seed(0)
+
         """
         self.dsm = dict({'A': [0, 0, 0, 0], 
                          'B': [0, 0, 0.2, 0.8], 
@@ -84,8 +87,12 @@ class Simulation(object):
             #print([f'revenue: {e.revenue}' for e in self.entities])
             #print(f'Time: {env.now}')
             #self.add_static_costs_to_entities()
-            total_costs.append(sum([e.total_cost[-1] for e in self.entities]))
-            total_revenue.append(sum([e.total_revenue[-1] for e in self.entities]))
+            
+            #total_costs.append(sum([e.total_cost[-1] for e in self.entities]))
+            #total_revenue.append(sum([e.total_revenue[-1] for e in self.entities]))
+            
+            total_costs.append(sum([e.cost for e in self.entities]))
+            total_revenue.append(sum([e.revenue for e in self.entities]))
             self.time_steps.append(env.now)
 
 
@@ -141,16 +148,18 @@ class Entity(object):
         self.total_time = [0]
         self.total_cost = [0]
         self.total_revenue = [0]
+        self.cost = 0
+        self.revenue = 0
     
     #Runs the lifecycle for this entity. 
     #Can choose between processes but cannot run multiple processes in parallell
     def lifecycle(self, dsm, current_processes):
         active_activities = current_processes
         while len(active_activities) > 0:
-            print(f'curr time {self.env.now}')
+            #print(f'curr time {self.env.now}')
             min_time = active_activities[0].time #For yielding in case there are multiple processes running in parallell
             for activity in active_activities:
-                self.env.process(activity.run_process(self.env, self.total_cost, self.total_revenue))
+                self.env.process(activity.run_process(self.env, self.total_cost, self.total_revenue, self))
                 if activity.time < min_time:
                     min_time = activity.time
             
@@ -207,12 +216,17 @@ class Process(object):
         return (time / time_format.value) if time_format is not None else 0
 
     #Runs a process and adds the cost and the revenue to the entity
-    def run_process(self, env, total_cost, total_revenue):
+    def run_process(self, env, total_cost, total_revenue, entity):
         #print(f'Started working on process: {self.name}')
         yield env.timeout(self.time * self.W)
         #print(f'Time after step in lifecycle: {env.now}')
         #non_tech_costs = total_non_tech_cost * self.time / (process_time * amount_of_entities) #Add this to the total cost in order to add non tech costs to processes
-        total_cost.append(total_cost[-1] + self.cost)
-        total_revenue.append(total_revenue[-1] + self.revenue)
+        
+        entity.cost += self.cost
+        entity.revenue += self.revenue
+        
+        #total_cost.append(total_cost[-1] + self.cost)
+        #total_revenue.append(total_revenue[-1] + self.revenue)
+        
         self.W = 0
 
