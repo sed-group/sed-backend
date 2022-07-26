@@ -41,17 +41,9 @@ class Simulation(object):
         self.non_tech_costs = sum([p.cost for p in non_tech_processes])
         self.non_tech_revenues = sum([p.revenue for p in non_tech_processes])
         self.dsm_before_flow, self.dsm_after_flow = self.get_dsm_separation(dsm)
-        r.seed(0)
-        np.random.seed(0)
+        r.seed(0) #Remove for production
+        np.random.seed(0) #Remove for production
 
-        """
-        self.dsm = dict({'A': [0, 0, 0, 0], 
-                         'B': [0, 0, 0.2, 0.8], 
-                        'C': [0, 0, 0, 0], 
-                        'D': [0, 0, 0, 0]}) 
-                        #Cannot have rework here - since it will cause the work vector to go bananas
-                        #'D': [1, 0, 0, 1]
-        """
     #This method sets up the simpy environment and runs the simulation
     def run_simulation(self):
         env = simpy.Environment()
@@ -83,9 +75,7 @@ class Simulation(object):
         total_revenue = [0]
 
         while True:
-            # print([f'cost: {e.cost}' for e in self.entities])
-            #print([f'revenue: {e.revenue}' for e in self.entities])
-            #print(f'Time: {env.now}')
+          
             #self.add_static_costs_to_entities()
             
             #total_costs.append(sum([e.total_cost[-1] for e in self.entities]))
@@ -127,16 +117,6 @@ class Simulation(object):
                 break
             before_dsm.update({p.name: dsm.pop(p.name)})
         return before_dsm,dsm
-
-    """    
-    def get_dsm_before_flow(self): #Example DSM
-        return dict({'A': [0, 0, 0, 0]})
-
-    def get_dsm_after_flow(self): #Example DSM
-        return dict({'B': [0, 0, 0.2, 0.8], 
-                    'C': [0, 0, 0, 0], 
-                    'D': [0, 0, 0, 0]})
-    """
 
 class Entity(object):
     #@param

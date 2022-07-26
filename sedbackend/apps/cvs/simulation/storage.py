@@ -34,8 +34,9 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, project_id: int, 
 
     res = get_sim_data(db_connection, vcs_id)
     processes = []
+    non_tech_processes = [] #TODO fix the non-tech-processes
     
-    #flow_process = None
+    
     print(dsm.keys())
     for key in dsm.keys():
         p = None
@@ -46,7 +47,6 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, project_id: int, 
                     processes.append(p)
                     if r['id'] == process_id:
                         flow_process = p
-
                     break
             elif r['iso_name'] is None and r['sub_name'] is not None:
                 if key == r['sub_name']:
@@ -57,17 +57,23 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, project_id: int, 
                     break
             else:
                 raise e.ProcessNotFoundException
-            #if r['id'] == process_id:
-             #   flow_process = p
         
     
+    for r in res:
+        if r['iso_name'] is not None:
+            if r['iso_name'] not in dsm.keys() and r['category'] != 'Technical process':
+                p = models.NonTechnicalProcess(name=r['iso_name'], cost=r['cost'], revenue=r['revenue'])
+                non_tech_processes.append(p)
+        elif r['sub_name'] is not None:
+            if r['sub_name'] not in dsm.keys():
+                p = models.NonTechnicalProcess(name=r['sub_name'], cost=r['cost'], revenue=r['revenue'])
+                non_tech_processes.append(p)
     
-        
         print([p.name for p in processes])
 
     print(flow_process.name)        
     
-    non_tech_processes = [] #TODO fix the non-tech-processes
+   
 
     sim = Simulation(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, dsm)
     sim.run_simulation()
@@ -89,7 +95,7 @@ def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, project_id: int,
         if dsm_xlsx is None:
             raise e.DSMFileNotFoundException
 
-        dsm = get_dsm_from_excel(tmp_xlsx) #This should hopefully open up the file for the processor. 
+        dsm = get_dsm_from_excel(tmp_xlsx)
         if dsm is None:
             raise e.DSMFileNotFoundException
     finally:
@@ -117,9 +123,18 @@ def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, project_id: int,
             else:
                 raise e.ProcessNotFoundException
             
-            
+
+    non_tech_processes = []   
+    for r in res:
+        if r['iso_name'] is not None:
+            if r['iso_name'] not in dsm.keys() and r['category'] != 'Technical process':
+                p = models.NonTechnicalProcess(name=r['iso_name'], cost=r['cost'], revenue=r['revenue'])
+                non_tech_processes.append(p)
+        elif r['sub_name'] is not None:
+            if r['sub_name'] not in dsm.keys():
+                p = models.NonTechnicalProcess(name=r['sub_name'], cost=r['cost'], revenue=r['revenue'])
+                non_tech_processes.append(p)
     
-    non_tech_processes = [] #TODO fix the non-tech-processes
 
     sim = Simulation(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, dsm)
     sim.run_simulation()
@@ -210,3 +225,21 @@ def get_dsm_from_excel(path):
     for v in pf.values:
         dsm.update({v[0]: v[1::].tolist()})
     return dsm
+
+
+"""
+Query for fetching categories for both subprocesses and normal processes. 
+
+SELECT cvs_vcs_rows.id, `index`, cvs_vcs_rows.iso_process, cvs_iso_processes.name as iso_name, category,
+            subprocess, sub_name,  sub_cat,  `from`, `to`, time, cost, revenue FROM cvs_vcs_rows 
+            LEFT OUTER JOIN cvs_iso_processes ON cvs_vcs_rows.iso_process = cvs_iso_processes.id 
+			LEFT OUTER JOIN (SELECT cvs_subprocesses.id as sub_id, category as sub_cat, cvs_subprocesses.name as sub_name FROM cvs_subprocesses INNER JOIN cvs_iso_processes ON cvs_iso_processes.id = cvs_subprocesses.iso_process) as sub1
+            ON sub1.sub_id = cvs_vcs_rows.subprocess
+            #cvs_subprocesses ON cvs_vcs_rows.subprocess = cvs_subprocesses.id
+            LEFT OUTER JOIN cvs_process_nodes ON cvs_vcs_rows.id = cvs_process_nodes.vcs_row 
+            LEFT OUTER JOIN cvs_nodes ON cvs_process_nodes.id = cvs_nodes.id 
+            LEFT OUTER JOIN cvs_market_input ON cvs_vcs_rows.id = cvs_market_input.vcs_row 
+            WHERE cvs_vcs_rows.vcs = 5 ORDER BY `index`;
+
+
+"""
