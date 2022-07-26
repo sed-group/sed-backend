@@ -348,7 +348,8 @@ def update_vcs_need_driver(db_connection: PooledMySQLConnection, need_id: int, v
         .where('stakeholder_need = %s', [need_id]) \
         .execute(return_affected_rows=True)
 
-    [add_vcs_need_driver(db_connection, need_id, value_driver_id) for value_driver_id in value_drivers]
+    if value_drivers is not None:
+        [add_vcs_need_driver(db_connection, need_id, value_driver_id) for value_driver_id in value_drivers]
 
     return True
 
@@ -378,8 +379,8 @@ def create_value_driver(db_connection: PooledMySQLConnection, vcs_id: int,
     try:
         insert_statement = MySQLStatementBuilder(db_connection)
         insert_statement \
-            .insert(table=CVS_VALUE_DRIVER_TABLE, columns=['vcs', 'name', 'unit']) \
-            .set_values([vcs_id, value_driver_post.name, value_driver_post.unit]) \
+            .insert(table=CVS_VALUE_DRIVER_TABLE, columns=['vcs', 'name']) \
+            .set_values([vcs_id, value_driver_post.name]) \
             .execute(fetch_type=FetchType.FETCH_NONE)
         value_driver_id = insert_statement.last_insert_id
     except Error as e:
@@ -698,7 +699,6 @@ def get_all_stakeholder_needs(db_connection: PooledMySQLConnection, vcs_row_id: 
             .where(f'vcs_row = %s', [vcs_row_id]) \
             .order_by(['id'], Sort.ASCENDING) \
             .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
         raise exceptions.VCSTableRowNotFoundException
@@ -751,7 +751,7 @@ def update_stakeholder_need(db_connection: PooledMySQLConnection, vcs_row_id: in
     else:
         need_id = create_stakeholder_need(db_connection, vcs_row_id, need)
 
-    update_vcs_need_driver(db_connection, need_id, need.value_drivers)
+    update_vcs_need_driver(db_connection, need_id, need.value_drivers)    
 
     return get_stakeholder_need(db_connection, need_id)
 
