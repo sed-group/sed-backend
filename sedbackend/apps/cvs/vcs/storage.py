@@ -665,7 +665,7 @@ def populate_stakeholder_need(db_connection: PooledMySQLConnection, result) -> m
     logger.debug(f'Populating model for stakeholder need with id={result["id"]}.')
     return models.StakeholderNeed(
         id=result['id'],
-        vcs_row_id=result['vcs_row'],
+        #vcs_row_id=result['vcs_row'],
         need=result['need'],
         value_dimension=result['value_dimension'],
         value_drivers=get_vcs_need_drivers(db_connection, result['id']),
