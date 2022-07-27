@@ -54,17 +54,19 @@ class Simulation(object):
     #Initializes the lifecycle in each of the entities. Runs everything before the interarrival
     #process as a single entity. R
     def lifecycle(self, env):
-        e = Entity(env, self.processes)
+        total_ent_amount = (1 / self.interarrival_time) * self.flow_time
+
+        e = Entity(env, self.processes, self.non_tech_costs)
         self.entities.append(e)
-        yield env.process(e.lifecycle(self.dsm_before_flow, [self.processes[0]]))
+        yield env.process(e.lifecycle(self.dsm_before_flow, [self.processes[0]], 1))
         
         end_flow = env.now + self.flow_time
         while env.now < end_flow:
             yield env.timeout(self.generate_interarrival())
         
-            e = Entity(env, self.processes)
+            e = Entity(env, self.processes, self.non_tech_costs)
             self.entities.append(e)
-            env.process(e.lifecycle(self.dsm_after_flow, [self.interarrival_process]))
+            env.process(e.lifecycle(self.dsm_after_flow, [self.interarrival_process], total_ent_amount))
         
         print('Done')
             
@@ -122,7 +124,7 @@ class Entity(object):
     #@param
     #env = the simpy environment
     #processes = the processes that the entity will go through
-    def __init__(self, env, processes) -> None:
+    def __init__(self, env, processes, total_non_tech_costs) -> None:
         self.env = env
         self.processes = processes
         self.total_time = [0]
@@ -130,16 +132,17 @@ class Entity(object):
         self.total_revenue = [0]
         self.cost = 0
         self.revenue = 0
+        self.total_non_tech_costs = total_non_tech_costs
     
     #Runs the lifecycle for this entity. 
     #Can choose between processes but cannot run multiple processes in parallell
-    def lifecycle(self, dsm, current_processes):
+    def lifecycle(self, dsm, current_processes, ent_amount):
         active_activities = current_processes
         while len(active_activities) > 0:
             #print(f'curr time {self.env.now}')
             min_time = active_activities[0].time #For yielding in case there are multiple processes running in parallell
             for activity in active_activities:
-                self.env.process(activity.run_process(self.env, self.total_cost, self.total_revenue, self))
+                self.env.process(activity.run_process(self.env, self, ent_amount, self.total_non_tech_costs))
                 if activity.time < min_time:
                     min_time = activity.time
             
@@ -183,20 +186,21 @@ class Process(object):
     #revenue = the revenue of a process
     #name = the name of a process
     #time_format = the unit in which the time is given. 
-    def __init__(self, time, cost, revenue, name, time_format: Optional[TimeFormat] = None) -> None:
+    def __init__(self, time, cost, revenue, name, add_non_tech: bool, time_format: Optional[TimeFormat] = None) -> None:
         self.time = self.convert_time_format_to_default(time, time_format)
         self.cost = cost
         self.revenue = revenue
         self.W = 1
         self.WN = False
         self.name = name
+        self.add_non_tech = add_non_tech
     
     #Converts all times to the correct (default: Years) time format
     def convert_time_format_to_default(self, time, time_format: Optional[TimeFormat] = None):
         return (time / time_format.value) if time_format is not None else 0
 
     #Runs a process and adds the cost and the revenue to the entity
-    def run_process(self, env, total_cost, total_revenue, entity):
+    def run_process(self, env, entity, ent_amount, non_tech_costs):
         #print(f'Started working on process: {self.name}')
         yield env.timeout(self.time * self.W)
         #print(f'Time after step in lifecycle: {env.now}')
@@ -205,6 +209,10 @@ class Process(object):
         entity.cost += self.cost
         entity.revenue += self.revenue
         
+        if self.add_non_tech:
+            added_cost = non_tech_costs * self.time / (sum([p.time for p in entity.processes]) * ent_amount)
+            entity.cost += added_cost
+
         #total_cost.append(total_cost[-1] + self.cost)
         #total_revenue.append(total_revenue[-1] + self.revenue)
         

@@ -24,9 +24,9 @@ TIME_FORMAT_DICT = dict({
     'hour': TimeFormat.HOUR})
 
 
-def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, flow_time: float,
+def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: float,
                 flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float, 
-                dsm_csv: UploadFile, user_id: int) -> models.Simulation:
+                add_cost_to_process: bool, dsm_csv: UploadFile, user_id: int) -> models.Simulation:
 
     try:
         tmp_csv = tempfile.TemporaryFile()  #Workaround because current python version doesn't support 
@@ -51,14 +51,14 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, project_id: int, 
         for r in res:
             if r['iso_name'] is not None and r['sub_name'] is None:
                 if key == r['iso_name']:
-                    p = Process(r['time'], r['cost'], r['revenue'], r['iso_name'], TIME_FORMAT_DICT.get(r['time_unit'].lower()))
+                    p = Process(r['time'], r['cost'], r['revenue'], r['iso_name'], add_cost_to_process, TIME_FORMAT_DICT.get(r['time_unit'].lower()))
                     processes.append(p)
                     if r['id'] == process_id:
                         flow_process = p
                     break
             elif r['iso_name'] is None and r['sub_name'] is not None:
                 if key == r['sub_name']:
-                    p = Process(r['time'], r['cost'], r['revenue'], r['sub_name'], TIME_FORMAT_DICT.get(r['time_unit'].lower()))
+                    p = Process(r['time'], r['cost'], r['revenue'], r['sub_name'], add_cost_to_process, TIME_FORMAT_DICT.get(r['time_unit'].lower()))
                     processes.append(p)
                     if r['id'] == process_id:
                         flow_process = p
@@ -92,9 +92,9 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, project_id: int, 
         processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in sim.processes]
     )
 
-def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, flow_time: float,
+def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: float,
                 flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float, 
-                dsm_xlsx: UploadFile, user_id: int) -> models.Simulation:
+                add_cost_to_process: bool, dsm_xlsx: UploadFile, user_id: int) -> models.Simulation:
 
     try:
         tmp_xlsx = tempfile.TemporaryFile()  #Workaround because current python version doesn't support 
@@ -116,14 +116,14 @@ def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, project_id: int,
         for r in res:
             if r['iso_name'] is not None and r['sub_name'] is None:
                 if key == r['iso_name']:
-                    p = Process(r['time'], r['cost'], r['revenue'], r['iso_name'], TIME_FORMAT_DICT.get(r['time_unit'].lower()))
+                    p = Process(r['time'], r['cost'], r['revenue'], r['iso_name'], add_cost_to_process, TIME_FORMAT_DICT.get(r['time_unit'].lower()))
                     processes.append(p)
                     if r['id'] == process_id:
                         flow_process = p
                     break
             elif r['iso_name'] is None and r['sub_name'] is not None:
                 if key == r['sub_name']:
-                    p = Process(r['time'], r['cost'], r['revenue'], r['sub_name'], TIME_FORMAT_DICT.get(r['time_unit'].lower()))
+                    p = Process(r['time'], r['cost'], r['revenue'], r['sub_name'], add_cost_to_process, TIME_FORMAT_DICT.get(r['time_unit'].lower()))
                     processes.append(p)
                     if r['id'] == process_id:
                         flow_process = p
@@ -152,24 +152,10 @@ def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, project_id: int,
         cumulative_NPV = sim.cum_NPV,
         processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in sim.processes]
     )
-    
 
-def get_sim_data(db_connection: PooledMySQLConnection, vcs_id: int):
-    query = f'SELECT cvs_vcs_rows.id, cvs_vcs_rows.iso_process, cvs_iso_processes.name as iso_name, category, \
-            subprocess, cvs_subprocesses.name as sub_name, time, time_unit, cost, revenue FROM cvs_vcs_rows \
-            LEFT OUTER JOIN cvs_iso_processes ON cvs_vcs_rows.iso_process = cvs_iso_processes.id \
-            LEFT OUTER JOIN cvs_subprocesses ON cvs_vcs_rows.subprocess = cvs_subprocesses.id \
-            LEFT OUTER JOIN cvs_market_input ON cvs_vcs_rows.id = cvs_market_input.vcs_row \
-            WHERE cvs_vcs_rows.vcs = %s ORDER BY `index`'
-    with db_connection.cursor(prepared=True) as cursor:
-        cursor.execute(query, [vcs_id])
-        res = cursor.fetchall()
-        res = [dict(zip(cursor.column_names, row)) for row in res]
-    return res
-
-def run_simulation(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, flow_time: float, 
+def run_simulation(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: float, 
         flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float,
-        user_id: int) -> models.Simulation:
+        add_cost_to_process: bool, user_id: int) -> models.Simulation:
     
     res = get_sim_data(db_connection, vcs_id)
 
@@ -179,14 +165,15 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, vcs_id
     for row in res:
         if row['iso_name'] is not None and row['sub_name'] is None:
             if row['category'] != 'Technical processes':
-                non_tech_processes.append(Process(row['time'], row['cost'], row['revenue'], row['iso_name'], TIME_FORMAT_DICT.get(r['time_unit'].lower())))
+                non_tech = models.NonTechnicalProcess(cost=row['cost'], revenue=row['revenue'], name=row['iso_name'])
+                non_tech_processes.append(non_tech)
             else:
-                p = Process(row['time'], row['cost'], row['revenue'], row['iso_name'], TIME_FORMAT_DICT.get(row['time_unit'].lower()))
+                p = Process(row['time'], row['cost'], row['revenue'], row['iso_name'], add_cost_to_process, TIME_FORMAT_DICT.get(row['time_unit'].lower()))
                 processes.append(p)
                 if row['id'] == process_id:
                     flow_process = p     
         elif row['iso_name'] is None and row['sub_name'] is not None:
-            p = Process(row['time'], row['cost'], row['revenue'], row['sub_name'], TIME_FORMAT_DICT.get(row['time_unit'].lower()))
+            p = Process(row['time'], row['cost'], row['revenue'], row['sub_name'], add_cost_to_process, TIME_FORMAT_DICT.get(row['time_unit'].lower()))
             processes.append(p)
             if row['id'] == process_id:
                 flow_process = p
@@ -203,6 +190,21 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, vcs_id
         cumulative_NPV=sim.cum_NPV,
         processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in sim.processes]
     )
+
+
+def get_sim_data(db_connection: PooledMySQLConnection, vcs_id: int):
+    query = f'SELECT cvs_vcs_rows.id, cvs_vcs_rows.iso_process, cvs_iso_processes.name as iso_name, category, \
+            subprocess, cvs_subprocesses.name as sub_name, time, time_unit, cost, revenue FROM cvs_vcs_rows \
+            LEFT OUTER JOIN cvs_iso_processes ON cvs_vcs_rows.iso_process = cvs_iso_processes.id \
+            LEFT OUTER JOIN cvs_subprocesses ON cvs_vcs_rows.subprocess = cvs_subprocesses.id \
+            LEFT OUTER JOIN cvs_market_input ON cvs_vcs_rows.id = cvs_market_input.vcs_row \
+            WHERE cvs_vcs_rows.vcs = %s ORDER BY `index`'
+    with db_connection.cursor(prepared=True) as cursor:
+        cursor.execute(query, [vcs_id])
+        res = cursor.fetchall()
+        res = [dict(zip(cursor.column_names, row)) for row in res]
+    return res
+
 
 #TODO Change dsm creation to follow BPMN and the nodes in the BPMN. 
 #Currently the DSM only goes from one process to the other following the order of the index in the VCS

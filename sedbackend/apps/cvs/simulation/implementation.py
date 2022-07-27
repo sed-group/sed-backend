@@ -13,13 +13,13 @@ from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.market_input import exceptions as market_input_exceptions
 
 
-def run_simulation(project_id: int, vcs_id: int, flow_time: float, flow_rate: float, 
+def run_simulation(vcs_id: int, flow_time: float, flow_rate: float, 
                     flow_process_id: int, simulation_runtime: float, discount_rate: float, 
-                    user_id: int) -> models.Simulation:
+                    add_cost_to_process: bool, user_id: int) -> models.Simulation:
     try:
         with get_connection() as con:
-            result = storage.run_simulation(con,project_id, vcs_id, flow_time, flow_rate, 
-                                                    flow_process_id, simulation_runtime, discount_rate, user_id)
+            result = storage.run_simulation(con, vcs_id, flow_time, flow_rate, flow_process_id, 
+                                simulation_runtime, discount_rate, add_cost_to_process, user_id)
             return result
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
@@ -34,7 +34,7 @@ def run_simulation(project_id: int, vcs_id: int, flow_time: float, flow_rate: fl
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project with id={project_id}.',
+            detail=f'Could not find project.',
         )
     except market_input_exceptions.MarketInputNotFoundException:
         raise HTTPException(
@@ -48,13 +48,13 @@ def run_simulation(project_id: int, vcs_id: int, flow_time: float, flow_rate: fl
         )
 
 
-def run_csv_simulation(project_id: int, vcs_id: int, flow_time: float, flow_rate: float, 
+def run_csv_simulation(vcs_id: int, flow_time: float, flow_rate: float, 
                         flow_process_id: int, simulation_runtime: float, discount_rate: float, 
-                        dsm_csv: UploadFile, user_id: int) -> models.Simulation:
+                        add_cost_to_process: bool, dsm_csv: UploadFile, user_id: int) -> models.Simulation:
     try: 
         with get_connection() as con:
-            res = storage.run_sim_with_csv_dsm(con, project_id, vcs_id, flow_time, flow_rate,
-                                flow_process_id, simulation_runtime, discount_rate, dsm_csv, user_id)
+            res = storage.run_sim_with_csv_dsm(con, vcs_id, flow_time, flow_rate, flow_process_id, 
+                                simulation_runtime, discount_rate, add_cost_to_process, dsm_csv, user_id)
             return res
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
@@ -69,7 +69,7 @@ def run_csv_simulation(project_id: int, vcs_id: int, flow_time: float, flow_rate
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project with id={project_id}.',
+            detail=f'Could not find project.',
         )
     except market_input_exceptions.MarketInputNotFoundException:
         raise HTTPException(
@@ -87,13 +87,13 @@ def run_csv_simulation(project_id: int, vcs_id: int, flow_time: float, flow_rate
             detail=f'Could not read uploaded file'
         )
 
-def run_xlsx_simulation(project_id: int, vcs_id: int, flow_time: float, flow_rate: float, 
-                        flow_process_id: int, simulation_runtime: float, discount_rate: float, 
+def run_xlsx_simulation(vcs_id: int, flow_time: float, flow_rate: float, flow_process_id: int, 
+                        simulation_runtime: float, discount_rate: float, add_cost_to_process: bool, 
                         dsm_xlsx: UploadFile, user_id: int) -> models.Simulation:
     try: 
         with get_connection() as con:
-            res = storage.run_sim_with_xlsx_dsm(con, project_id, vcs_id, flow_time, flow_rate,
-                                flow_process_id, simulation_runtime, discount_rate, dsm_xlsx, user_id)
+            res = storage.run_sim_with_xlsx_dsm(con, vcs_id, flow_time, flow_rate, flow_process_id, 
+                            simulation_runtime, discount_rate, add_cost_to_process, dsm_xlsx, user_id)
             return res
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
@@ -108,7 +108,7 @@ def run_xlsx_simulation(project_id: int, vcs_id: int, flow_time: float, flow_rat
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project with id={project_id}.',
+            detail=f'Could not find project.',
         )
     except market_input_exceptions.MarketInputNotFoundException:
         raise HTTPException(
