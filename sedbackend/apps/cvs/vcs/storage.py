@@ -348,7 +348,8 @@ def update_vcs_need_driver(db_connection: PooledMySQLConnection, need_id: int, v
         .where('stakeholder_need = %s', [need_id]) \
         .execute(return_affected_rows=True)
 
-    [add_vcs_need_driver(db_connection, need_id, value_driver_id) for value_driver_id in value_drivers]
+    if value_drivers is not None:
+        [add_vcs_need_driver(db_connection, need_id, value_driver_id) for value_driver_id in value_drivers]
 
     return True
 
@@ -378,8 +379,8 @@ def create_value_driver(db_connection: PooledMySQLConnection, vcs_id: int,
     try:
         insert_statement = MySQLStatementBuilder(db_connection)
         insert_statement \
-            .insert(table=CVS_VALUE_DRIVER_TABLE, columns=['vcs', 'name', 'unit']) \
-            .set_values([vcs_id, value_driver_post.name, value_driver_post.unit]) \
+            .insert(table=CVS_VALUE_DRIVER_TABLE, columns=['vcs', 'name']) \
+            .set_values([vcs_id, value_driver_post.name]) \
             .execute(fetch_type=FetchType.FETCH_NONE)
         value_driver_id = insert_statement.last_insert_id
     except Error as e:
@@ -664,7 +665,7 @@ def populate_stakeholder_need(db_connection: PooledMySQLConnection, result) -> m
     logger.debug(f'Populating model for stakeholder need with id={result["id"]}.')
     return models.StakeholderNeed(
         id=result['id'],
-        vcs_row_id=result['vcs_row'],
+        #vcs_row_id=result['vcs_row'],
         need=result['need'],
         value_dimension=result['value_dimension'],
         value_drivers=get_vcs_need_drivers(db_connection, result['id']),
@@ -698,7 +699,6 @@ def get_all_stakeholder_needs(db_connection: PooledMySQLConnection, vcs_row_id: 
             .where(f'vcs_row = %s', [vcs_row_id]) \
             .order_by(['id'], Sort.ASCENDING) \
             .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
         raise exceptions.VCSTableRowNotFoundException
@@ -751,7 +751,7 @@ def update_stakeholder_need(db_connection: PooledMySQLConnection, vcs_row_id: in
     else:
         need_id = create_stakeholder_need(db_connection, vcs_row_id, need)
 
-    update_vcs_need_driver(db_connection, need_id, need.value_drivers)
+    update_vcs_need_driver(db_connection, need_id, need.value_drivers)    
 
     return get_stakeholder_need(db_connection, need_id)
 
@@ -863,16 +863,17 @@ def create_vcs_table(db_connection: PooledMySQLConnection, new_vcs_rows: List[mo
             raise exceptions.VCSTableProcessAmbiguity
 
         vcs_row_id = create_vcs_row(db_connection, row, vcs_id)
-
+        
         node = life_cycle_models.ProcessNodePost(
             pos_x=0,
             pos_y=0,
-            vcs_row=get_vcs_row(db_connection, vcs_row_id)
+            vcs_row_id=vcs_row_id
         )
 
         life_cycle_storage.create_process_node(db_connection, node, vcs_id)
 
-        [create_stakeholder_need(db_connection, vcs_row_id, need) for need in row.stakeholder_needs]
+        if row.stakeholder_needs is not None:
+            [create_stakeholder_need(db_connection, vcs_row_id, need) for need in row.stakeholder_needs]
 
     return True
 
@@ -926,9 +927,10 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, updated_vcs_rows: List[
         curr_needs = get_all_stakeholder_needs(db_connection, vcs_row_id)
         new_need_ids = []
 
-        for need in row.stakeholder_needs:
-            new_need_ids.append(need.id)
-            update_stakeholder_need(db_connection, vcs_row_id, need, need.id)
+        if row.stakeholder_needs is not None:
+            for need in row.stakeholder_needs:
+                new_need_ids.append(need.id)
+                update_stakeholder_need(db_connection, vcs_row_id, need, need.id)
 
         for need in curr_needs:
             if need.id not in new_need_ids:
