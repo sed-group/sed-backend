@@ -863,16 +863,17 @@ def create_vcs_table(db_connection: PooledMySQLConnection, new_vcs_rows: List[mo
             raise exceptions.VCSTableProcessAmbiguity
 
         vcs_row_id = create_vcs_row(db_connection, row, vcs_id)
-
+        
         node = life_cycle_models.ProcessNodePost(
             pos_x=0,
             pos_y=0,
-            vcs_row=get_vcs_row(db_connection, vcs_row_id)
+            vcs_row_id=vcs_row_id
         )
 
         life_cycle_storage.create_process_node(db_connection, node, vcs_id)
 
-        [create_stakeholder_need(db_connection, vcs_row_id, need) for need in row.stakeholder_needs]
+        if row.stakeholder_needs is not None:
+            [create_stakeholder_need(db_connection, vcs_row_id, need) for need in row.stakeholder_needs]
 
     return True
 
@@ -926,9 +927,10 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, updated_vcs_rows: List[
         curr_needs = get_all_stakeholder_needs(db_connection, vcs_row_id)
         new_need_ids = []
 
-        for need in row.stakeholder_needs:
-            new_need_ids.append(need.id)
-            update_stakeholder_need(db_connection, vcs_row_id, need, need.id)
+        if row.stakeholder_needs is not None:
+            for need in row.stakeholder_needs:
+                new_need_ids.append(need.id)
+                update_stakeholder_need(db_connection, vcs_row_id, need, need.id)
 
         for need in curr_needs:
             if need.id not in new_need_ids:
