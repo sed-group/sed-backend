@@ -41,8 +41,8 @@ class Simulation(object):
         self.non_tech_costs = sum([p.cost for p in non_tech_processes])
         self.non_tech_revenues = sum([p.revenue for p in non_tech_processes])
         self.dsm_before_flow, self.dsm_after_flow = self.get_dsm_separation(dsm)
-        r.seed(0) #Remove for production
-        np.random.seed(0) #Remove for production
+        #r.seed(0) #Remove for production
+        #np.random.seed(0) #Remove for production
 
     #This method sets up the simpy environment and runs the simulation
     def run_simulation(self):
@@ -83,6 +83,9 @@ class Simulation(object):
             #total_costs.append(sum([e.total_cost[-1] for e in self.entities]))
             #total_revenue.append(sum([e.total_revenue[-1] for e in self.entities]))
             
+            #IF add costs continously THEN
+            #self.add_static_costs_to_entities()
+
             total_costs.append(sum([e.cost for e in self.entities]))
             total_revenue.append(sum([e.revenue for e in self.entities]))
             self.time_steps.append(env.now)
@@ -97,9 +100,9 @@ class Simulation(object):
         return np.random.exponential(self.interarrival_time)
 
 
-    #def add_static_costs_to_entities(self): #Adds the costs of the non-technical processes to all active entities. 
-    #    for e in self.entities:
-    #        e.total_cost.append(e.total_cost[-1] + self.static_processes_costs * TIMESTEP/ (len(self.entities) * self.until))  #This works in the margin of 0.00000002 euros
+    def add_static_costs_to_entities(self): #Adds the costs of the non-technical processes to all active entities. 
+        for e in self.entities:
+            e.total_cost.append(e.total_cost[-1] + self.static_processes_costs * TIMESTEP/ (len(self.entities) * self.until))  #This works in the margin of 0.00000002 euros
 
     def calculate_NPV(self, total_costs, total_revenue, time_steps):
         timestep_revenue = total_revenue[len(time_steps) -1] - total_revenue[len(time_steps) - 2]

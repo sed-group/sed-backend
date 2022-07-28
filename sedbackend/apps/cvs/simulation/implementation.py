@@ -126,4 +126,16 @@ def run_xlsx_simulation(vcs_id: int, flow_time: float, flow_rate: float, flow_pr
             detail=f'Could not read uploaded file'
         )
 
-
+def run_sim_mp(vcs_id: int, flow_time: float, flow_rate: float, 
+                    flow_process_id: int, simulation_runtime: float, discount_rate: float, 
+                    add_cost_to_process: bool, user_id: int) -> models.Simulation:
+    try: 
+        with get_connection() as con:
+            result = storage.run_sim_mp(con, vcs_id, flow_time, flow_rate, flow_process_id, 
+                                simulation_runtime, discount_rate, add_cost_to_process, user_id)
+            return result
+    except vcs_exceptions.GenericDatabaseException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Fel'
+        )

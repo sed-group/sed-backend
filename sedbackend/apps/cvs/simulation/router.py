@@ -40,3 +40,14 @@ async def run_xlsx_simulation(vcs_id: int, flow_time: float, flow_rate: float, f
                             dsm_xlsx: UploadFile = File(default=None), user: User = Depends(get_current_active_user)) -> models.Simulation:
     return implementation.run_xlsx_simulation(vcs_id, flow_time, flow_rate, flow_process_id, simulation_runtime, 
                                                 discount_rate, add_cost_to_process, dsm_xlsx, user.id)
+
+@router.post(
+    '/project/vcs/{vcs_id}/simulation/run-multiprocessing',
+    summary='Run simulation with mp',
+    response_model=models.Simulation,
+)
+async def run_sim_mp(vcs_id: int, flow_time: float, flow_rate: float, 
+                        flow_process_id: int, simulation_runtime: float, discount_rate: float, 
+                        add_cost_to_process: bool, user: User = Depends(get_current_active_user)) -> models.Simulation:
+    return implementation.run_sim_mp(vcs_id, flow_time, flow_rate, flow_process_id, 
+                                            simulation_runtime, discount_rate, add_cost_to_process, user.id)

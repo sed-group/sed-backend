@@ -3,6 +3,7 @@ from multiprocessing import Pool
 from fastapi import UploadFile
 from mysql.connector.pooling import PooledMySQLConnection
 import pandas as pd
+import multiprocessing as mp
 
 from typing import List
 
@@ -191,6 +192,62 @@ def run_simulation(db_connection: PooledMySQLConnection, vcs_id: int, flow_time:
         processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in sim.processes]
     )
 
+
+def run_sim_mp(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: float, 
+        flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float,
+        add_cost_to_process: bool, user_id: int) -> models.Simulation:
+
+    res = get_sim_data(db_connection, vcs_id)
+
+    
+    processes = []
+    non_tech_processes = []
+    for row in res:
+        if row['iso_name'] is not None and row['sub_name'] is None:
+            if row['category'] != 'Technical processes':
+                non_tech = models.NonTechnicalProcess(cost=row['cost'], revenue=row['revenue'], name=row['iso_name'])
+                non_tech_processes.append(non_tech)
+            else:
+                p = Process(row['time'], row['cost'], row['revenue'], row['iso_name'], add_cost_to_process, TIME_FORMAT_DICT.get(row['time_unit'].lower()))
+                processes.append(p)
+                if row['id'] == process_id:
+                    flow_process = p     
+        elif row['iso_name'] is None and row['sub_name'] is not None:
+            p = Process(row['time'], row['cost'], row['revenue'], row['sub_name'], add_cost_to_process, TIME_FORMAT_DICT.get(row['time_unit'].lower()))
+            processes.append(p)
+            if row['id'] == process_id:
+                flow_process = p
+        else:
+            raise e.ProcessNotFoundException
+
+    dsm = create_simple_dsm(processes) #TODO Change to using BPMN
+
+    pool = mp.Pool(mp.cpu_count())
+
+    mp_processes = [pool.apply_async(func=mp_run_sim, args=(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, dsm)) for _ in range(300)]
+
+    res = [f.get() for f in mp_processes]
+
+    npvs = [npv for _, npv in res]
+    timesteps, _ = res[0]
+
+    mean_NPVs = []
+
+    for npv in np.array(npvs).transpose():
+        mean_NPVs.append(np.mean(npv))
+
+
+    return models.Simulation(
+        time=timesteps,
+        cumulative_NPV=mean_NPVs,
+        processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in processes]
+    )
+
+def mp_run_sim(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, dsm):
+    sim = Simulation(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, dsm)
+    sim.run_simulation()
+
+    return sim.time_steps, sim.cum_NPV
 
 def get_sim_data(db_connection: PooledMySQLConnection, vcs_id: int):
     query = f'SELECT cvs_vcs_rows.id, cvs_vcs_rows.iso_process, cvs_iso_processes.name as iso_name, category, \
