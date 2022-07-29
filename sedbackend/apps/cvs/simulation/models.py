@@ -22,6 +22,7 @@ class NonTechCost(Enum):
     TO_TECHNICAL_PROCESS = 'to_process'
     LUMP_SUM = 'lump_sum'
     CONTINOUSLY = 'continously'
+    NO_ADDED_COST = 'no_cost'
 
 
 class Process(BaseModel):
