@@ -241,13 +241,13 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_quantified_objective_values`
         ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_input`
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_design_mi_formulas`
 (
     `vcs_row`           INT UNSIGNED NOT NULL,
-    `time`              DOUBLE,
+    `time`              TEXT,
     `time_unit`         VARCHAR(5),
-    `cost`              DOUBLE,
-    `revenue`           DOUBLE,
+    `cost`              TEXT,
+    `revenue`           TEXT,
     PRIMARY KEY (`vcs_row`),
     FOREIGN KEY(`vcs_row`)
         REFERENCES `seddb`.`cvs_vcs_rows`(`id`)
