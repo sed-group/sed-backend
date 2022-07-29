@@ -244,15 +244,13 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_quantified_objective_values`
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_input`
 (
     `vcs_row`           INT UNSIGNED NOT NULL,
-    `vcs`               INT UNSIGNED NOT NULL,
     `time`              DOUBLE,
+    `time_unit`         VARCHAR(5),
     `cost`              DOUBLE,
     `revenue`           DOUBLE,
     PRIMARY KEY (`vcs_row`),
-    FOREIGN KEY(`vcs`)
-        REFERENCES `seddb`.`cvs_vcss`(`id`)
-        ON DELETE CASCADE,
     FOREIGN KEY(`vcs_row`)
         REFERENCES `seddb`.`cvs_vcs_rows`(`id`)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT `check_unit` CHECK (`time_unit` IN ('HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR'))
 )

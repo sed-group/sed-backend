@@ -257,7 +257,6 @@ def edit_value_dimension(db_connection: PooledMySQLConnection, dimension_id: int
     
     return get_value_dimension(db_connection, dimension_id, vcs_row)
 
-
 def populate_value_dimension(db_result, vcs_row: int) -> models.ValueDimension:
     return models.ValueDimension(
         id=db_result['id'],
@@ -347,7 +346,8 @@ def update_vcs_need_driver(db_connection: PooledMySQLConnection, need_id: int, v
         .where('stakeholder_need = %s', [need_id]) \
         .execute(return_affected_rows=True)
 
-    [add_vcs_need_driver(db_connection, need_id, value_driver_id) for value_driver_id in value_drivers]
+    if value_drivers is not None:
+        [add_vcs_need_driver(db_connection, need_id, value_driver_id) for value_driver_id in value_drivers]
 
     return True
 
@@ -657,7 +657,7 @@ def populate_stakeholder_need(db_connection: PooledMySQLConnection, result) -> m
     logger.debug(f'Populating model for stakeholder need with id={result["id"]}.')
     return models.StakeholderNeed(
         id=result['id'],
-        vcs_row_id=result['vcs_row'],
+        #vcs_row_id=result['vcs_row'],
         need=result['need'],
         value_dimension=result['value_dimension'],
         value_drivers=get_vcs_need_drivers(db_connection, result['id']),
@@ -860,12 +860,13 @@ def create_vcs_table(db_connection: PooledMySQLConnection, new_vcs_rows: List[mo
         node = life_cycle_models.ProcessNodePost(
             pos_x=0,
             pos_y=0,
-            vcs_row=get_vcs_row(db_connection, vcs_row_id)
+            vcs_row_id=vcs_row_id
         )
 
         life_cycle_storage.create_process_node(db_connection, node, vcs_id)
 
-        [create_stakeholder_need(db_connection, vcs_row_id, need) for need in row.stakeholder_needs]
+        if row.stakeholder_needs is not None:
+            [create_stakeholder_need(db_connection, vcs_row_id, need) for need in row.stakeholder_needs]
 
     return True
 
@@ -919,9 +920,10 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, updated_vcs_rows: List[
         curr_needs = get_all_stakeholder_needs(db_connection, vcs_row_id)
         new_need_ids = []
 
-        for need in row.stakeholder_needs:
-            new_need_ids.append(need.id)
-            update_stakeholder_need(db_connection, vcs_row_id, need, need.id)
+        if row.stakeholder_needs is not None:
+            for need in row.stakeholder_needs:
+                new_need_ids.append(need.id)
+                update_stakeholder_need(db_connection, vcs_row_id, need, need.id)
 
         for need in curr_needs:
             if need.id not in new_need_ids:

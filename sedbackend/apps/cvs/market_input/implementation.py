@@ -72,3 +72,8 @@ def update_market_input(vcs_row_id: int, market_input: models.MarketInputPost) -
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find market input with vcs row id={vcs_row_id}',
         )
+    except exceptions.WrongTimeUnitException as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Time unit has to be one of [year, month, week, day, hour]. Submitted value was: {e.time_unit}'
+        )
