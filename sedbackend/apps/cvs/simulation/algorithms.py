@@ -22,13 +22,21 @@ class TimeFormat(Enum):
     YEAR = 1
 
 
+class NonTechCost(Enum):
+    """
+    The ways of choosing how to apply the non-technical process costs
+    """
+    TO_TECHNICAL_PROCESS = 1
+    LUMP_SUM = 2
+    CONTINOUSLY = 3
+
 class Simulation(object):
     #@param:
     #flow_time = the time that entities will flow in the system
     #interarrival_time = the rate at which entities will flow in the system
     #interarrival_process = the process at which the entities will start flowing
     #until = the total simulation time
-    def __init__(self, flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, dsm) -> None:
+    def __init__(self, flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, non_tech_addition, dsm) -> None:
         self.flow_time = flow_time
         self.interarrival_time = flow_rate
         self.interarrival_process = flow_process
@@ -40,6 +48,7 @@ class Simulation(object):
         self.processes = processes 
         self.non_tech_costs = sum([p.cost for p in non_tech_processes])
         self.non_tech_revenues = sum([p.revenue for p in non_tech_processes])
+        self.add_non_tech = non_tech_addition
         self.dsm_before_flow, self.dsm_after_flow = self.get_dsm_separation(dsm)
         #r.seed(0) #Remove for production
         #np.random.seed(0) #Remove for production
@@ -68,6 +77,7 @@ class Simulation(object):
             self.entities.append(e)
             env.process(e.lifecycle(self.dsm_after_flow, [self.interarrival_process], total_ent_amount))
         
+
         print('Done')
             
             
@@ -75,6 +85,9 @@ class Simulation(object):
     def observe_costs(self, env): #TODO fix calculation of NPV. Currently it's bonkers
         total_costs = [0]
         total_revenue = [0]
+
+        if self.add_non_tech == NonTechCost.LUMP_SUM:
+            total_costs[0] += self.non_tech_costs
 
         while True:
           
@@ -84,7 +97,8 @@ class Simulation(object):
             #total_revenue.append(sum([e.total_revenue[-1] for e in self.entities]))
             
             #IF add costs continously THEN
-            #self.add_static_costs_to_entities()
+            if self.add_non_tech == NonTechCost.CONTINOUSLY:
+                self.add_static_costs_to_entities()
 
             total_costs.append(sum([e.cost for e in self.entities]))
             total_revenue.append(sum([e.revenue for e in self.entities]))
@@ -189,7 +203,7 @@ class Process(object):
     #revenue = the revenue of a process
     #name = the name of a process
     #time_format = the unit in which the time is given. 
-    def __init__(self, time, cost, revenue, name, add_non_tech: bool, time_format: Optional[TimeFormat] = None) -> None:
+    def __init__(self, time, cost, revenue, name, add_non_tech: NonTechCost, time_format: Optional[TimeFormat] = None) -> None:
         self.time = self.convert_time_format_to_default(time, time_format)
         self.cost = cost
         self.revenue = revenue
@@ -212,7 +226,7 @@ class Process(object):
         entity.cost += self.cost
         entity.revenue += self.revenue
         
-        if self.add_non_tech:
+        if self.add_non_tech == NonTechCost.TO_TECHNICAL_PROCESS:
             added_cost = non_tech_costs * self.time / (sum([p.time for p in entity.processes]) * ent_amount)
             entity.cost += added_cost
 

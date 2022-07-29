@@ -24,10 +24,15 @@ TIME_FORMAT_DICT = dict({
     'day': TimeFormat.DAY, 
     'hour': TimeFormat.HOUR})
 
+ADD_NON_TECH_COSTS_DICT = dict({
+    'to_process': NonTechCost.TO_TECHNICAL_PROCESS,
+    'lump_sum': NonTechCost.LUMP_SUM,
+    'continously': NonTechCost.CONTINOUSLY
+})
 
 def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: float,
                 flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float, 
-                add_cost_to_process: bool, dsm_csv: UploadFile, user_id: int) -> models.Simulation:
+                non_tech_add: str, dsm_csv: UploadFile, user_id: int) -> models.Simulation:
 
     try:
         tmp_csv = tempfile.TemporaryFile()  #Workaround because current python version doesn't support 
@@ -52,14 +57,14 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flow
         for r in res:
             if r['iso_name'] is not None and r['sub_name'] is None:
                 if key == r['iso_name']:
-                    p = Process(r['time'], r['cost'], r['revenue'], r['iso_name'], add_cost_to_process, TIME_FORMAT_DICT.get(r['time_unit'].lower()))
+                    p = Process(r['time'], r['cost'], r['revenue'], r['iso_name'], ADD_NON_TECH_COSTS_DICT.get(non_tech_add), TIME_FORMAT_DICT.get(r['time_unit'].lower()))
                     processes.append(p)
                     if r['id'] == process_id:
                         flow_process = p
                     break
             elif r['iso_name'] is None and r['sub_name'] is not None:
                 if key == r['sub_name']:
-                    p = Process(r['time'], r['cost'], r['revenue'], r['sub_name'], add_cost_to_process, TIME_FORMAT_DICT.get(r['time_unit'].lower()))
+                    p = Process(r['time'], r['cost'], r['revenue'], r['sub_name'], ADD_NON_TECH_COSTS_DICT.get(non_tech_add), TIME_FORMAT_DICT.get(r['time_unit'].lower()))
                     processes.append(p)
                     if r['id'] == process_id:
                         flow_process = p
@@ -95,7 +100,7 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flow
 
 def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: float,
                 flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float, 
-                add_cost_to_process: bool, dsm_xlsx: UploadFile, user_id: int) -> models.Simulation:
+                non_tech_add: str, dsm_xlsx: UploadFile, user_id: int) -> models.Simulation:
 
     try:
         tmp_xlsx = tempfile.TemporaryFile()  #Workaround because current python version doesn't support 
@@ -117,14 +122,14 @@ def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flo
         for r in res:
             if r['iso_name'] is not None and r['sub_name'] is None:
                 if key == r['iso_name']:
-                    p = Process(r['time'], r['cost'], r['revenue'], r['iso_name'], add_cost_to_process, TIME_FORMAT_DICT.get(r['time_unit'].lower()))
+                    p = Process(r['time'], r['cost'], r['revenue'], r['iso_name'], ADD_NON_TECH_COSTS_DICT.get(non_tech_add), TIME_FORMAT_DICT.get(r['time_unit'].lower()))
                     processes.append(p)
                     if r['id'] == process_id:
                         flow_process = p
                     break
             elif r['iso_name'] is None and r['sub_name'] is not None:
                 if key == r['sub_name']:
-                    p = Process(r['time'], r['cost'], r['revenue'], r['sub_name'], add_cost_to_process, TIME_FORMAT_DICT.get(r['time_unit'].lower()))
+                    p = Process(r['time'], r['cost'], r['revenue'], r['sub_name'], ADD_NON_TECH_COSTS_DICT.get(non_tech_add), TIME_FORMAT_DICT.get(r['time_unit'].lower()))
                     processes.append(p)
                     if r['id'] == process_id:
                         flow_process = p
@@ -156,7 +161,7 @@ def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flo
 
 def run_simulation(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: float, 
         flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float,
-        add_cost_to_process: bool, user_id: int) -> models.Simulation:
+        non_tech_add: str, user_id: int) -> models.Simulation:
     
     res = get_sim_data(db_connection, vcs_id)
 
@@ -169,12 +174,12 @@ def run_simulation(db_connection: PooledMySQLConnection, vcs_id: int, flow_time:
                 non_tech = models.NonTechnicalProcess(cost=row['cost'], revenue=row['revenue'], name=row['iso_name'])
                 non_tech_processes.append(non_tech)
             else:
-                p = Process(row['time'], row['cost'], row['revenue'], row['iso_name'], add_cost_to_process, TIME_FORMAT_DICT.get(row['time_unit'].lower()))
+                p = Process(row['time'], row['cost'], row['revenue'], row['iso_name'], ADD_NON_TECH_COSTS_DICT.get(non_tech_add), TIME_FORMAT_DICT.get(row['time_unit'].lower()))
                 processes.append(p)
                 if row['id'] == process_id:
                     flow_process = p     
         elif row['iso_name'] is None and row['sub_name'] is not None:
-            p = Process(row['time'], row['cost'], row['revenue'], row['sub_name'], add_cost_to_process, TIME_FORMAT_DICT.get(row['time_unit'].lower()))
+            p = Process(row['time'], row['cost'], row['revenue'], row['sub_name'], ADD_NON_TECH_COSTS_DICT.get(non_tech_add), TIME_FORMAT_DICT.get(row['time_unit'].lower()))
             processes.append(p)
             if row['id'] == process_id:
                 flow_process = p
@@ -195,7 +200,7 @@ def run_simulation(db_connection: PooledMySQLConnection, vcs_id: int, flow_time:
 
 def run_sim_mp(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: float, 
         flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float,
-        add_cost_to_process: bool, user_id: int) -> models.Simulation:
+        non_tech_add: str, user_id: int) -> models.Simulation:
 
     res = get_sim_data(db_connection, vcs_id)
 
