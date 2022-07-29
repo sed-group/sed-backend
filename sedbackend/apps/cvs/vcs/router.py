@@ -114,12 +114,12 @@ async def delete_vcs_row(row_id: int, vcs_id: int) -> bool:
 
 
 @router.get(
-    '/vcs/{vcs_id}/value-driver/all',
-    summary='Returns all of value drivers of a project that are associated with a row',
+    '/value-driver/all',
+    summary='Returns all of value drivers',
     response_model=List[models.ValueDriver],
 )
-async def get_all_value_driver(vcs_id: int) -> List[models.ValueDriver]:
-    return implementation.get_all_value_driver(vcs_id)
+async def get_all_value_driver(user: User = Depends(get_current_active_user)) -> List[models.ValueDriver]:
+    return implementation.get_all_value_driver(user.id)
 
 
 @router.get(
@@ -132,12 +132,13 @@ async def get_value_driver(value_driver_id: int) -> models.ValueDriver:
 
 
 @router.post(
-    '/vcs/{vcs_id}/value-driver',
-    summary='Creates a new value driver in a project',
+    '/value-driver',
+    summary='Creates a new value driver',
     response_model=models.ValueDriver,
 )
-async def create_value_driver(value_driver_post: models.ValueDriverPost, vcs_id: int) -> models.ValueDriver:
-    return implementation.create_value_driver(vcs_id, value_driver_post)
+async def create_value_driver(value_driver_post: models.ValueDriverPost,
+                              user: User = Depends(get_current_active_user)) -> models.ValueDriver:
+    return implementation.create_value_driver(user.id, value_driver_post)
 
 
 @router.put(
@@ -145,8 +146,8 @@ async def create_value_driver(value_driver_post: models.ValueDriverPost, vcs_id:
     summary='Edits a value driver',
     response_model=models.ValueDriver,
 )
-async def edit_value_driver(value_driver_id: int, vcs_post: models.ValueDriverPost) -> models.ValueDriver:
-    return implementation.edit_value_driver(value_driver_id, vcs_post)
+async def edit_value_driver(value_driver_id: int, value_driver_post: models.ValueDriverPost) -> models.ValueDriver:
+    return implementation.edit_value_driver(value_driver_id, value_driver_post)
 
 
 @router.delete(

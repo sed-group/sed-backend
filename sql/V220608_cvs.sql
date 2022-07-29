@@ -119,10 +119,10 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_value_dimensions`
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_value_drivers`
 (
     `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `vcs`               INT UNSIGNED NOT NULL,
+    `user`              INT UNSIGNED NOT NULL,
     `name`              TEXT NOT NULL,
-    FOREIGN KEY(`vcs`)
-        REFERENCES  `seddb`.`cvs_vcss`(`id`)
+    FOREIGN KEY(`user`)
+        REFERENCES  `seddb`.`users`(`id`)
         ON DELETE CASCADE
 );
 

@@ -80,7 +80,6 @@ class ValueDimensionPost(BaseModel):
 
 class ValueDriver(BaseModel):
     id: int
-    vcs_id: int
     name: str
 
 

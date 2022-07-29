@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from starlette import status
 
 from sedbackend.apps.core.authentication import exceptions as auth_ex
+from sedbackend.apps.core.users import exceptions as user_ex
 from sedbackend.apps.core.db import get_connection
 import sedbackend.apps.cvs.project.exceptions as project_exceptions
 from sedbackend.apps.cvs.vcs import models, storage, exceptions
@@ -120,19 +121,19 @@ def delete_vcs(vcs_id: int, user_id: int) -> bool:
 # ======================================================================================================================
 
 
-def get_all_value_driver(vcs_id: int) -> List[models.ValueDriver]:
+def get_all_value_driver(user_id: int) -> List[models.ValueDriver]:
     try:
         with get_connection() as con:
-            return storage.get_all_value_driver(con, vcs_id)
-    except exceptions.VCSNotFoundException:
+            return storage.get_all_value_driver(con, user_id)
+    except user_ex.UserNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs with id={vcs_id}.',
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Could not find user with id={user_id}.',
         )
     except exceptions.ValueDriverNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find value drivers in vcs with id={vcs_id}'
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Could not find value drivers for user with id={user_id}'
         )
 
 
@@ -152,10 +153,10 @@ def get_value_driver(value_driver_id: int) -> models.ValueDriver:
         )
 
 
-def create_value_driver(vcs_id: int, value_driver_post: models.ValueDriverPost) -> models.ValueDriver:
+def create_value_driver(user_id: int, value_driver_post: models.ValueDriverPost) -> models.ValueDriver:
     try:
         with get_connection() as con:
-            result = storage.create_value_driver(con, vcs_id, value_driver_post)
+            result = storage.create_value_driver(con, user_id, value_driver_post)
             con.commit()
             return result
     except auth_ex.UnauthorizedOperationException:

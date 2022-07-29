@@ -14,6 +14,7 @@ from sedbackend.apps.cvs.project.storage import get_cvs_project
 from sedbackend.apps.cvs.vcs import models, exceptions, implementation
 from sedbackend.apps.cvs.life_cycle import storage as life_cycle_storage, models as life_cycle_models
 from sedbackend.libs.datastructures.pagination import ListChunk
+from sedbackend.apps.core.users import exceptions as user_exceptions
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, Sort, FetchType
 
 DEBUG_ERROR_HANDLING = True #Set to false in production
@@ -25,7 +26,7 @@ CVS_VALUE_DIMENSION_TABLE = 'cvs_value_dimensions'
 CVS_VALUE_DIMENSION_COLUMNS = ['id', 'name', 'priority', 'vcs_row']
 
 CVS_VALUE_DRIVER_TABLE = 'cvs_value_drivers'
-CVS_VALUE_DRIVER_COLUMNS = ['id', 'vcs', 'name']
+CVS_VALUE_DRIVER_COLUMNS = ['id', 'user', 'name']
 
 CVS_VCS_ROW_DRIVERS_TABLE = 'cvs_rowDrivers'
 CVS_VCS_ROW_DRIVERS_COLUMNS = ['vcs_row', 'value_driver']
@@ -256,6 +257,7 @@ def edit_value_dimension(db_connection: PooledMySQLConnection, dimension_id: int
     
     return get_value_dimension(db_connection, dimension_id, vcs_row)
 
+
 def populate_value_dimension(db_result, vcs_row: int) -> models.ValueDimension:
     return models.ValueDimension(
         id=db_result['id'],
@@ -282,11 +284,11 @@ def populate_value_dimension(db_result, vcs_row: int) -> models.ValueDimension:
 '''
 
 
-def get_all_value_driver(db_connection: PooledMySQLConnection, vcs_id: int) -> List[models.ValueDriver]:
-    logger.debug(f'Fetching all value drivers for vcs with id={vcs_id}.')
+def get_all_value_driver(db_connection: PooledMySQLConnection, user_id: int) -> List[models.ValueDriver]:
+    logger.debug(f'Fetching all value drivers for user with id={user_id}.')
 
-    where_statement = f'vcs = %s'
-    where_values = [vcs_id]
+    where_statement = f'user = %s'
+    where_values = [user_id]
     try:
         select_statement = MySQLStatementBuilder(db_connection)
         results = select_statement \
@@ -297,9 +299,6 @@ def get_all_value_driver(db_connection: PooledMySQLConnection, vcs_id: int) -> L
 
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
-        raise exceptions.VCSNotFoundException
-
-    if results is None:
         raise exceptions.ValueDriverNotFoundException
 
     return [populate_value_driver(result) for result in results]
@@ -371,38 +370,33 @@ def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int)
     return populate_value_driver(result)
 
 
-def create_value_driver(db_connection: PooledMySQLConnection, vcs_id: int,
+def create_value_driver(db_connection: PooledMySQLConnection, user_id: int,
                         value_driver_post: models.ValueDriverPost) -> models.ValueDriver:
     logger.debug(f'Creating a value driver')
 
     try:
         insert_statement = MySQLStatementBuilder(db_connection)
         insert_statement \
-            .insert(table=CVS_VALUE_DRIVER_TABLE, columns=['vcs', 'name', 'unit']) \
-            .set_values([vcs_id, value_driver_post.name, value_driver_post.unit]) \
+            .insert(table=CVS_VALUE_DRIVER_TABLE, columns=['user', 'name']) \
+            .set_values([user_id, value_driver_post.name]) \
             .execute(fetch_type=FetchType.FETCH_NONE)
         value_driver_id = insert_statement.last_insert_id
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
-        raise exceptions.VCSNotFoundException
+        raise user_exceptions.UserNotFoundException
 
     return get_value_driver(db_connection, value_driver_id)
 
 
-def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int, 
-            new_value_driver: models.ValueDriverPost) -> models.ValueDriver:
+def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int,
+                      new_value_driver: models.ValueDriverPost) -> models.ValueDriver:
     logger.debug(f'Editing value driver with id={value_driver_id}.')
 
-    #old_value_driver = get_value_driver(db_connection, value_driver_id, project_id, user_id)
-    #if old_value_driver.name == new_value_driver.name:  # No change
-    #    return old_value_driver
-
-    # Updating
     update_statement = MySQLStatementBuilder(db_connection)
     update_statement.update(
         table=CVS_VALUE_DRIVER_TABLE,
-        set_statement='name = %s, unit = %s',
-        values=[new_value_driver.name, new_value_driver.unit],
+        set_statement='name = %s',
+        values=[new_value_driver.name],
     )
     update_statement.where('id = %s', [value_driver_id])
     _, rows = update_statement.execute(return_affected_rows=True)
@@ -430,7 +424,6 @@ def delete_value_driver(db_connection: PooledMySQLConnection, value_driver_id: i
 def populate_value_driver(db_result) -> models.ValueDriver:
     return models.ValueDriver(
         id=db_result['id'],
-        vcs_id=db_result['vcs'],
         name=db_result['name']
     )
 
