@@ -1,3 +1,4 @@
+from operator import mod
 from fastapi import Depends, APIRouter, UploadFile, File
 
 from sedbackend.apps.core.authentication.utils import get_current_active_user
@@ -14,9 +15,9 @@ router = APIRouter()
 )
 async def run_simulation(vcs_id: int, flow_time: float, flow_rate: float, 
                         flow_process_id: int, simulation_runtime: float, discount_rate: float, 
-                        add_cost_to_process: bool, user: User = Depends(get_current_active_user)) -> models.Simulation:
+                        non_tech_add: models.NonTechCost, user: User = Depends(get_current_active_user)) -> models.Simulation:
     return implementation.run_simulation(vcs_id, flow_time, flow_rate, flow_process_id, 
-                                            simulation_runtime, discount_rate, add_cost_to_process, user.id)
+                                            simulation_runtime, discount_rate, non_tech_add, user.id)
 
 @router.post(
     '/project/vcs/{vcs_id}/sim/csv',
@@ -24,10 +25,10 @@ async def run_simulation(vcs_id: int, flow_time: float, flow_rate: float,
     response_model=models.Simulation,
 )
 async def run_csv_simulation(vcs_id: int, flow_time: float, flow_rate: float, flow_process_id: int, 
-                        simulation_runtime: float, discount_rate: float, add_cost_to_process: bool,
+                        simulation_runtime: float, discount_rate: float, non_tech_add: models.NonTechCost,
                         dsm_csv: UploadFile = File(default=None), user: User = Depends(get_current_active_user)) -> models.Simulation:
     return implementation.run_csv_simulation(vcs_id, flow_time, flow_rate, flow_process_id, simulation_runtime, 
-                                            discount_rate, add_cost_to_process, dsm_csv, user.id)
+                                            discount_rate, non_tech_add, dsm_csv, user.id)
 
 
 @router.post(
@@ -36,10 +37,10 @@ async def run_csv_simulation(vcs_id: int, flow_time: float, flow_rate: float, fl
     response_model=models.Simulation,
 )
 async def run_xlsx_simulation(vcs_id: int, flow_time: float, flow_rate: float, flow_process_id: int, 
-                            simulation_runtime: float, discount_rate: float, add_cost_to_process: bool,
+                            simulation_runtime: float, discount_rate: float, non_tech_add: models.NonTechCost,
                             dsm_xlsx: UploadFile = File(default=None), user: User = Depends(get_current_active_user)) -> models.Simulation:
     return implementation.run_xlsx_simulation(vcs_id, flow_time, flow_rate, flow_process_id, simulation_runtime, 
-                                                discount_rate, add_cost_to_process, dsm_xlsx, user.id)
+                                                discount_rate, non_tech_add, dsm_xlsx, user.id)
 
 @router.post(
     '/project/vcs/{vcs_id}/simulation/run-multiprocessing',
@@ -48,6 +49,6 @@ async def run_xlsx_simulation(vcs_id: int, flow_time: float, flow_rate: float, f
 )
 async def run_sim_mp(vcs_id: int, flow_time: float, flow_rate: float, 
                         flow_process_id: int, simulation_runtime: float, discount_rate: float, 
-                        add_cost_to_process: bool, user: User = Depends(get_current_active_user)) -> models.Simulation:
+                        non_tech_add: models.NonTechCost, user: User = Depends(get_current_active_user)) -> models.Simulation:
     return implementation.run_sim_mp(vcs_id, flow_time, flow_rate, flow_process_id, 
-                                            simulation_runtime, discount_rate, add_cost_to_process, user.id)
+                                            simulation_runtime, discount_rate, non_tech_add, user.id)

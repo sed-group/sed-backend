@@ -1,10 +1,13 @@
 import random as r
 import numpy as np
 from typing import List, Optional, Tuple
+
 import simpy
 import pandas as pd
 
 from enum import Enum
+from sedbackend.apps.cvs.simulation.models import NonTechCost
+
 
 
 TIMESTEP = 0.25
@@ -20,15 +23,6 @@ class TimeFormat(Enum):
     WEEK = 52
     MONTH = 12
     YEAR = 1
-
-
-class NonTechCost(Enum):
-    """
-    The ways of choosing how to apply the non-technical process costs
-    """
-    TO_TECHNICAL_PROCESS = 1
-    LUMP_SUM = 2
-    CONTINOUSLY = 3
 
 class Simulation(object):
     #@param:
@@ -50,8 +44,8 @@ class Simulation(object):
         self.non_tech_revenues = sum([p.revenue for p in non_tech_processes])
         self.add_non_tech = non_tech_addition
         self.dsm_before_flow, self.dsm_after_flow = self.get_dsm_separation(dsm)
-        #r.seed(0) #Remove for production
-        #np.random.seed(0) #Remove for production
+        r.seed(0) #Remove for production
+        np.random.seed(0) #Remove for production
 
     #This method sets up the simpy environment and runs the simulation
     def run_simulation(self):
@@ -78,7 +72,7 @@ class Simulation(object):
             env.process(e.lifecycle(self.dsm_after_flow, [self.interarrival_process], total_ent_amount))
         
 
-        print('Done')
+        #print('Done')
             
             
     #Observes the total time, cost, revenue, and NPV for each entity in each timestep. 
@@ -87,17 +81,13 @@ class Simulation(object):
         total_revenue = [0]
 
         if self.add_non_tech == NonTechCost.LUMP_SUM:
+            #print('Lump sum')
             total_costs[0] += self.non_tech_costs
 
-        while True:
-          
-            #self.add_static_costs_to_entities()
-            
-            #total_costs.append(sum([e.total_cost[-1] for e in self.entities]))
-            #total_revenue.append(sum([e.total_revenue[-1] for e in self.entities]))
-            
-            #IF add costs continously THEN
+        while True:         
+
             if self.add_non_tech == NonTechCost.CONTINOUSLY:
+                #print('Added static costs')
                 self.add_static_costs_to_entities()
 
             total_costs.append(sum([e.cost for e in self.entities]))
@@ -116,7 +106,7 @@ class Simulation(object):
 
     def add_static_costs_to_entities(self): #Adds the costs of the non-technical processes to all active entities. 
         for e in self.entities:
-            e.total_cost.append(e.total_cost[-1] + self.static_processes_costs * TIMESTEP/ (len(self.entities) * self.until))  #This works in the margin of 0.00000002 euros
+            e.cost +=  self.non_tech_costs * TIMESTEP/ (len(self.entities) * self.until)  #This works in the margin of 0.00000002 euros
 
     def calculate_NPV(self, total_costs, total_revenue, time_steps):
         timestep_revenue = total_revenue[len(time_steps) -1] - total_revenue[len(time_steps) - 2]
@@ -171,7 +161,7 @@ class Entity(object):
             #        activity.W = (self.env.now - start_time) / activity.time
             active_activities = self.find_active_activities(dsm, active_activities) #Find subsequent activities
 
-        print(f'Entity: {self} done, total time: {sum([p.time for p in self.processes])}')
+        #print(f'Entity: {self} done, total time: {sum([p.time for p in self.processes])}')
     
     #Finds the active processes for the lifecycle based on the dsm and the current state
     #That the lifecycle is in. 
@@ -227,6 +217,7 @@ class Process(object):
         entity.revenue += self.revenue
         
         if self.add_non_tech == NonTechCost.TO_TECHNICAL_PROCESS:
+            #print('Process add')
             added_cost = non_tech_costs * self.time / (sum([p.time for p in entity.processes]) * ent_amount)
             entity.cost += added_cost
 
