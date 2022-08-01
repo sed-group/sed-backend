@@ -54,3 +54,4 @@ def populate_formula(db_result, design_group_id) -> models.FormulaRowGet:
         revenue=db_result['revenue'],
         quantified_objectives=design_impl.get_all_quantified_objectives(design_group_id)
     )
+

@@ -254,3 +254,10 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_design_mi_formulas`
         ON DELETE CASCADE,
     CONSTRAINT `check_unit` CHECK (`time_unit` IN ('HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR'))
 )
+
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_inputs`
+(
+    `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `name`          TEXT NOT NULL,
+    `unit`          TEXT NOT NULL
+)
