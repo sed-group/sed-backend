@@ -7,3 +7,9 @@ class WrongTimeUnitException(Exception):
 
 class VCSNotFoundException(Exception):
     pass
+
+class FormulasFailedUpdateException(Exception):
+    pass
+
+class FormulasFailedDeletionException(Exception):
+    pass

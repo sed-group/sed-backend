@@ -253,11 +253,30 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_design_mi_formulas`
         REFERENCES `seddb`.`cvs_vcs_rows`(`id`)
         ON DELETE CASCADE,
     CONSTRAINT `check_unit` CHECK (`time_unit` IN ('HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR'))
-)
+);
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_inputs`
 (
     `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `project`       INT UNSIGNED NOT NULL,
     `name`          TEXT NOT NULL,
-    `unit`          TEXT NOT NULL
-)
+    `unit`          TEXT NOT NULL,
+    PRIMARY KEY(`id`),
+    FOREIGN KEY(`project`)
+        REFERENCES `seddb`.`cvs_projects`(`id`)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS `seddb`.`market_values`
+(
+    `vcs`           INT UNSIGNED NOT NULL,
+    `market_input`  INT UNSIGNED NOT NULL,
+    `value`         FLOAT NOT NULL,
+    PRIMARY KEY(`vcs`,`market_input`),
+    FOREIGN KEY(`vcs`)
+        REFERENCES `seddb`.`cvs_vcss`(`id`)
+        ON DELETE CASCADE,
+    FOREIGN KEY(`market_input`)
+        REFERENCES `seddb`.`cvs_market_inputs`(`id`)
+        ON DELETE CASCADE,
+);

@@ -6,7 +6,7 @@ from sedbackend.apps.cvs.market_input import models, implementation
 
 router = APIRouter()
 
-
+"""
 @router.get(
     '/vcs/{vcs_id}/market-input/all',
     summary='Get all market inputs',
@@ -33,3 +33,5 @@ async def create_market_input(vcs_row_id: int, market_input: models.MarketInputP
 )
 async def update_market_input(vcs_row_id: int, market_input: models.MarketInputPost) -> bool:
     return implementation.update_market_input(vcs_row_id, market_input)
+
+"""

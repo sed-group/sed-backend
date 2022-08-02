@@ -7,13 +7,13 @@ from starlette import status
 from sedbackend.apps.core.authentication import exceptions as auth_ex
 from sedbackend.apps.core.db import get_connection
 from sedbackend.apps.cvs.link_design_lifecycle import models, storage
-from sedbackend.apps.cvs.link_design_lifecycle.exceptions import FormulasNotFoundException, VCSNotFoundException, WrongTimeUnitException
+from sedbackend.apps.cvs.link_design_lifecycle.exceptions import FormulasFailedDeletionException, FormulasFailedUpdateException, FormulasNotFoundException, VCSNotFoundException, WrongTimeUnitException
 
 
 def create_formulas(vcs_row_id: int, formulas: models.FormulaPost) -> bool:
     with get_connection() as con:
         try: 
-            storage.create_formulas(con, vcs_row_id, formulas)
+            return storage.create_formulas(con, vcs_row_id, formulas)
         except FormulasNotFoundException:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -25,10 +25,22 @@ def create_formulas(vcs_row_id: int, formulas: models.FormulaPost) -> bool:
                 detail=f'Wrong time unit. Given unit: {e.time_unit}'
             )
 
+
+def edit_formulas(vcs_row_id: int, new_formulas: models.FormulaPost) -> bool:
+    with get_connection() as con:
+        try:
+            return storage.edit_formulas(con, vcs_row_id, new_formulas)
+        except FormulasFailedUpdateException:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f'Failed to update formulas'
+            )
+
+
 def get_all_formulas(vcs_id: int, design_group: int) -> List[models.FormulaRowGet]:
     with get_connection() as con:
         try:
-            storage.get_all_formulas(con, vcs_id, design_group)
+            return storage.get_all_formulas(con, vcs_id, design_group)
         except VCSNotFoundException:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -38,4 +50,15 @@ def get_all_formulas(vcs_id: int, design_group: int) -> List[models.FormulaRowGe
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, 
                 detail=f'Wrong time unit. Given unit: {e.time_unit}'
+            )
+
+
+def delete_formulas(vcs_row_id: int) -> bool:
+    with get_connection() as con:
+        try:
+            return storage.delete_formulas(con, vcs_row_id)
+        except FormulasFailedDeletionException:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f'Could not delete formulas with row id: {vcs_row_id}'
             )

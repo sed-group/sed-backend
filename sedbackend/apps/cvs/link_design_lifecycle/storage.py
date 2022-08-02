@@ -31,6 +31,26 @@ def create_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, formu
     
     return False
 
+def edit_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, formulas: models.FormulaPost) -> bool:
+    logger.debug(f'Editing formulas')
+
+    columns = CVS_FORMULAS_COLUMNS[1:]
+    set_statement = ', '.join([col + ' = %s' for col in columns])
+
+    values = [formulas.time, formulas.time_unit, formulas.cost, formulas.revenue]
+
+    update_statement = MySQLStatementBuilder(db_connection)
+    res = update_statement \
+        .update(table=CVS_FORMULAS_TABLE, set_statement=set_statement, values=values) \
+        .where('vcs_row = %s', [vcs_row_id])\
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=False)
+    
+    if res is None:
+        raise exceptions.FormulasFailedUpdateException
+    
+    return True
+
+
 def get_all_formulas(db_connection: PooledMySQLConnection, vcs_id: int, design_group_id: int) -> List[models.FormulaRowGet]:
     logger.debug(f'Fetching all formulas with vcs_id={vcs_id}')
 
@@ -55,3 +75,16 @@ def populate_formula(db_result, design_group_id) -> models.FormulaRowGet:
         quantified_objectives=design_impl.get_all_quantified_objectives(design_group_id)
     )
 
+def delete_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int) -> bool:
+    logger.debug(f'Deleting formulas with vcs_row_id: {vcs_row_id}')
+
+    delete_statement = MySQLStatementBuilder(db_connection)
+    rows,_ = delete_statement \
+        .delete(CVS_FORMULAS_TABLE) \
+        .where('vcs_row = %s', [vcs_row_id])\
+        .execute(fetch_type=FetchType.FETCH_ALL)
+    
+    if len(rows) != 1:
+        raise exceptions.FormulasFailedDeletionException
+    
+    return True
