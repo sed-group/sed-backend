@@ -13,7 +13,9 @@ from sedbackend.apps.cvs.link_design_lifecycle.exceptions import FormulasFailedD
 def create_formulas(vcs_row_id: int, formulas: models.FormulaPost) -> bool:
     with get_connection() as con:
         try: 
-            return storage.create_formulas(con, vcs_row_id, formulas)
+            res = storage.create_formulas(con, vcs_row_id, formulas)
+            con.commit()
+            return res
         except FormulasNotFoundException:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -29,7 +31,9 @@ def create_formulas(vcs_row_id: int, formulas: models.FormulaPost) -> bool:
 def edit_formulas(vcs_row_id: int, new_formulas: models.FormulaPost) -> bool:
     with get_connection() as con:
         try:
-            return storage.edit_formulas(con, vcs_row_id, new_formulas)
+            res = storage.edit_formulas(con, vcs_row_id, new_formulas)
+            con.commit()
+            return res
         except FormulasFailedUpdateException:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -40,7 +44,9 @@ def edit_formulas(vcs_row_id: int, new_formulas: models.FormulaPost) -> bool:
 def get_all_formulas(vcs_id: int, design_group: int) -> List[models.FormulaRowGet]:
     with get_connection() as con:
         try:
-            return storage.get_all_formulas(con, vcs_id, design_group)
+            res = storage.get_all_formulas(con, vcs_id, design_group)
+            con.commit()
+            return res
         except VCSNotFoundException:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -56,7 +62,9 @@ def get_all_formulas(vcs_id: int, design_group: int) -> List[models.FormulaRowGe
 def delete_formulas(vcs_row_id: int) -> bool:
     with get_connection() as con:
         try:
-            return storage.delete_formulas(con, vcs_row_id)
+            res = storage.delete_formulas(con, vcs_row_id)
+            con.commit()
+            return res
         except FormulasFailedDeletionException:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
