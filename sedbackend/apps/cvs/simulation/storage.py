@@ -5,17 +5,19 @@ from mysql.connector.pooling import PooledMySQLConnection
 import pandas as pd
 import multiprocessing as mp
 
+import desim.interface as des
+from desim.data import NonTechCost, TimeFormat
+from desim.simulation import Process
+
 from typing import List
 
 from sedbackend.apps.cvs.simulation import models
-from sedbackend.apps.cvs.simulation.algorithms import *
 from sedbackend.apps.cvs.market_input.models import MarketInputGet
 import sedbackend.apps.cvs.simulation.exceptions as e
 import sedbackend.apps.cvs.vcs.implementation as vcs_impl
 import sedbackend.apps.cvs.market_input.implementation as mi_impl
 import sedbackend.apps.cvs.life_cycle.implementation as lifecycle_impl
 from sedbackend.apps.cvs.vcs.models import VcsRow
-
 
 TIME_FORMAT_DICT = dict({
     'year': TimeFormat.YEAR, 
@@ -82,14 +84,15 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flow
     #print(flow_process.name)        
     
    
-
-    sim = Simulation(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, non_tech_add, dsm)
-    sim.run_simulation()
+    sim = des.Des()
+    time, cum_npv, _, _ = sim.run_simulation(flow_time, flow_rate, flow_process, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
+    #sim = Simulation(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, non_tech_add, dsm)
+    #sim.run_simulation()
 
     return models.Simulation(
-        time=sim.time_steps,
-        cumulative_NPV = sim.cum_NPV,
-        processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in sim.processes]
+        time=time,
+        cumulative_NPV = cum_npv,
+        processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in processes]
     )
 
 def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: float,
@@ -143,14 +146,14 @@ def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flo
                 p = models.NonTechnicalProcess(name=r['sub_name'], cost=r['cost'], revenue=r['revenue'])
                 non_tech_processes.append(p)
     
-
-    sim = Simulation(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, non_tech_add, dsm)
-    sim.run_simulation()
+    sim = des.Des()
+    #sim = Simulation(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, non_tech_add, dsm)
+    time, cum_npv, _, _ = sim.run_simulation(flow_time, flow_rate, flow_process, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
 
     return models.Simulation(
-        time=sim.time_steps,
-        cumulative_NPV = sim.cum_NPV,
-        processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in sim.processes]
+        time=time,
+        cumulative_NPV = cum_npv,
+        processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in processes]
     )
 
 def run_simulation(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: float, 
@@ -182,13 +185,13 @@ def run_simulation(db_connection: PooledMySQLConnection, vcs_id: int, flow_time:
 
     dsm = create_simple_dsm(processes) #TODO Change to using BPMN
 
-    sim = Simulation(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, non_tech_add, dsm)
-    sim.run_simulation()
-
+    sim = des.Des()
+    time, cum_npv, _, _ = sim.run_simulation(flow_time, flow_rate, flow_process, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
+    
     return models.Simulation(
-        time=sim.time_steps,
-        cumulative_NPV=sim.cum_NPV,
-        processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in sim.processes]
+        time=time,
+        cumulative_NPV=cum_npv,
+        processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in processes]
     )
 
 
@@ -221,33 +224,14 @@ def run_sim_mp(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: flo
 
     dsm = create_simple_dsm(processes) #TODO Change to using BPMN
 
-    pool = mp.Pool(mp.cpu_count())
-
-    mp_processes = [pool.apply_async(func=mp_run_sim, args=(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, non_tech_add, dsm)) for _ in range(300)]
-
-    res = [f.get() for f in mp_processes]
-
-    npvs = [npv for _, npv in res]
-    timesteps, _ = res[0]
-
-    mean_NPVs = []
-
-    for npv in np.array(npvs).transpose():
-        mean_NPVs.append(np.mean(npv))
-
+    sim = des.Des()
+    time, cum_npv, cost, revenue = sim.run_parallell_simulations(flow_time, flow_rate, flow_process, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
 
     return models.Simulation(
-        time=timesteps,
-        cumulative_NPV=mean_NPVs,
+        time=time,
+        cumulative_NPV=cum_npv,
         processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in processes]
     )
-
-
-def mp_run_sim(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, non_tech_add, dsm):
-    sim = Simulation(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, non_tech_add, dsm)
-    sim.run_simulation()
-
-    return sim.time_steps, sim.cum_NPV
 
 def get_sim_data(db_connection: PooledMySQLConnection, vcs_id: int):
     query = f'SELECT cvs_vcs_rows.id, cvs_vcs_rows.iso_process, cvs_iso_processes.name as iso_name, category, \
