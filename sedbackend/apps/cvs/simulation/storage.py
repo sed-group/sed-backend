@@ -242,6 +242,7 @@ def run_sim_mp(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: flo
         processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in processes]
     )
 
+
 def mp_run_sim(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, non_tech_add, dsm):
     sim = Simulation(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, non_tech_add, dsm)
     sim.run_simulation()
