@@ -267,7 +267,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_inputs`
         ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS `seddb`.`market_values`
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_values`
 (
     `vcs`           INT UNSIGNED NOT NULL,
     `market_input`  INT UNSIGNED NOT NULL,

@@ -8,6 +8,10 @@ from sedbackend.apps.core.db import get_connection
 from sedbackend.apps.cvs.project import exceptions as proj_exceptions
 from sedbackend.apps.cvs.market_input import models, storage, exceptions
 
+#############################################################################################################################
+# Market Inputs
+#############################################################################################################################
+
 
 def get_all_market_inputs(project_id: int) -> List[models.MarketInputGet]:
     try:
@@ -88,4 +92,44 @@ def delete_market_input(mi_id: int) -> bool:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not delete market input with id: {mi_id}'
+        )
+
+#############################################################################################################################
+# Market Values
+#############################################################################################################################
+
+def create_market_value(mi_id: int, vcs_id: int, value: float) -> bool:
+    try:
+        with get_connection() as con:
+            res = storage.create_market_value(con, mi_id, vcs_id, value)
+            con.commit()
+            return res
+    except exceptions.MarketInputNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find market input with id={mi_id}',
+        )
+
+def get_all_market_values(project_id: int) -> List[models.MarketValueGet]:
+    try:
+        with get_connection() as con:
+            res = storage.get_all_market_values(con, project_id)
+            con.commit()
+            return res
+    except proj_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    
+def delete_market_value(vcs_id: int, mi_id: int) -> bool:
+    try:
+        with get_connection() as con:
+            res = storage.delete_market_value(con, vcs_id, mi_id)
+            con.commit()
+            return res
+    except exceptions.MarketInputFailedDeletionException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not delete market input value with mi_id: {mi_id} and vcs_id: {vcs_id}'
         )
