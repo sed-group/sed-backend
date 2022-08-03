@@ -13,12 +13,12 @@ from sedbackend.apps.cvs.design import implementation as design_impl
 
 
 CVS_FORMULAS_TABLE = 'cvs_design_mi_formulas'
-CVS_FORMULAS_COLUMNS = ['vcs_row', 'time', 'time_unit', 'cost', 'revenue']
+CVS_FORMULAS_COLUMNS = ['vcs_row', 'time', 'time_unit', 'cost', 'revenue', 'rate']
 
 def create_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, formulas: models.FormulaPost) -> bool:
     logger.debug(f'Creating formulas')
 
-    values = [vcs_row_id, formulas.time, formulas.time_unit, formulas.cost, formulas.revenue]
+    values = [vcs_row_id, formulas.time, formulas.time_unit, formulas.cost, formulas.revenue, formulas.rate]
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
@@ -37,7 +37,7 @@ def edit_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, formula
     columns = CVS_FORMULAS_COLUMNS[1:]
     set_statement = ', '.join([col + ' = %s' for col in columns])
 
-    values = [formulas.time, formulas.time_unit, formulas.cost, formulas.revenue]
+    values = [formulas.time, formulas.time_unit, formulas.cost, formulas.revenue, formulas.rate]
 
     update_statement = MySQLStatementBuilder(db_connection)
     res = update_statement \
@@ -72,6 +72,7 @@ def populate_formula(db_result, design_group_id) -> models.FormulaRowGet:
         time_unit=db_result['time_unit'],
         cost=db_result['cost'],
         revenue=db_result['revenue'],
+        rate=db_result['rate'],
         quantified_objectives=design_impl.get_all_quantified_objectives(design_group_id)
     )
 

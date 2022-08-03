@@ -11,8 +11,8 @@ router = APIRouter()
     summary='Create formulas for time, cost, and revenue',
     response_model=bool,
 )
-async def create_formulas(vcs_row_id: int, time: str, time_unit: models.TimeFormat, cost: str, revenue: str) -> bool:
-    return implementation.create_formulas(vcs_row_id, models.FormulaPost(time=time, time_unit=time_unit, cost=cost, revenue=revenue))
+async def create_formulas(vcs_row_id: int, time: str, time_unit: models.TimeFormat, cost: str, revenue: str, rate: models.Rate) -> bool:
+    return implementation.create_formulas(vcs_row_id, models.FormulaPost(time=time, time_unit=time_unit, cost=cost, revenue=revenue, rate=rate))
 
 @router.get(
     '/vcs/{vcs_id}/formulas/all',

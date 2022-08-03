@@ -17,18 +17,25 @@ class TimeFormat(Enum):
     MONTH = 12
     YEAR = 1
 
+class Rate(Enum):
+    PRODUCT = 'per_product'
+    PROJECT = 'per_project'
+
 class FormulaGet(BaseModel):
     vcs_row: vcs_models.VcsRow
     time: str
     time_unit: TimeFormat
     cost: str
     revenue: str
+    rate: Rate
+    
 
 class FormulaPost(BaseModel):
     time: str
     time_unit: TimeFormat
     cost: str
     revenue: str
+    rate: Rate
 
 
 class FormulaRowGet(FormulaGet):
