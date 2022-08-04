@@ -1001,6 +1001,11 @@ def duplicate_value_driver(db_connection: PooledMySQLConnection, vcs_id: int,
 '''
 
 
+# Todo duplicate quantified objectives
+def duplicate_quantified_objectives(db_connection: PooledMySQLConnection, vcs_id: int, qo_list: List[int]) -> List[int]:
+    return []
+
+
 def duplicate_stakeholder_need(db_connection: PooledMySQLConnection, vcs_row_id: int,
                                needs: List[models.StakeholderNeed]) -> bool:
     for need in needs:
@@ -1013,7 +1018,6 @@ def duplicate_stakeholder_need(db_connection: PooledMySQLConnection, vcs_row_id:
                 .execute(fetch_type=FetchType.FETCH_NONE)
             need_id = insert_statement.last_insert_id
 
-            # todo add value driver to need
             for vd in need.value_drivers:
                 add_vcs_need_driver(db_connection, need_id, vd.id)
         except Error as e:
