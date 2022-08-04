@@ -27,6 +27,7 @@ protobuf==3.14.0
 pyasn1==0.4.8
 pycparser==2.20
 pydantic==1.7.2
+pyparser~=3.0.9
 python-jose==3.2.0
 python-multipart==0.0.5
 PyYAML==5.3.1
