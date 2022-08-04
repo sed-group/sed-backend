@@ -31,3 +31,6 @@ class QuantifiedObjectiveValueNotFoundException(Exception):
 
 class QuantifiedObjectiveValueNotDeleted(Exception):
     pass
+
+class QuantifiedObjectiveNotInFormulas(Exception):
+    pass

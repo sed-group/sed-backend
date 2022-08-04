@@ -19,15 +19,14 @@ async def get_all_market_input(project_id: int) -> List[models.MarketInputGet]:
     return implementation.get_all_market_inputs(project_id)
 
 
-'''
+
 @router.post(
-    '/vcs-row/{vcs_row_id}/market-input',
+    '/project/{project_id}/market-input',
     summary='Creates a market input',
     response_model=bool,
 )
-async def create_market_input(vcs_row_id: int, market_input: models.MarketInputPost) -> bool:
-    return implementation.create_market_input(vcs_row_id, market_input)
-'''
+async def create_market_input(project_id: int, market_input: models.MarketInputPost) -> bool:
+    return implementation.create_market_input(project_id, market_input)
 
 
 @router.put(

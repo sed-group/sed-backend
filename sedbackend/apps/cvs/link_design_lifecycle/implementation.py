@@ -41,10 +41,10 @@ def edit_formulas(vcs_row_id: int, new_formulas: models.FormulaPost) -> bool:
             )
 
 
-def get_all_formulas(vcs_id: int, design_group: int) -> List[models.FormulaRowGet]:
+def get_all_formulas(vcs_id: int) -> List[models.FormulaRowGet]:
     with get_connection() as con:
         try:
-            res = storage.get_all_formulas(con, vcs_id, design_group)
+            res = storage.get_all_formulas(con, vcs_id)
             con.commit()
             return res
         except VCSNotFoundException:

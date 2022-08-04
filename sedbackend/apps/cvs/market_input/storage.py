@@ -1,15 +1,16 @@
+from multiprocessing import Pool
 from typing import List
 
 from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
-from sedbackend.apps.cvs import market_input, vcs
+from sedbackend.apps.cvs import market_input, project, vcs
 
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.cvs.market_input import models, exceptions
 from sedbackend.apps.cvs.life_cycle import storage as life_cycle_storage
 
 CVS_MARKET_INPUT_TABLE = 'cvs_market_inputs'
-CVS_MARKET_INPUT_COLUMN = ['id', 'project', 'time', 'time_unit', 'cost', 'revenue']
+CVS_MARKET_INPUT_COLUMN = ['id', 'project', 'name', 'unit']
 
 CVS_MARKET_VALUES_TABLE = 'cvs_market_values'
 CVS_MARKET_VALUES_COLUMN = ['vcs', 'market_input', 'value']
@@ -53,33 +54,19 @@ def get_all_market_input(db_connection: PooledMySQLConnection, project_id: int) 
 
     return [populate_market_input(db_result) for db_result in results]
 
-'''
-def create_market_input(db_connection: PooledMySQLConnection, vcs_row_id: int,
+
+def create_market_input(db_connection: PooledMySQLConnection, project_id: int,
                         market_input: models.MarketInputPost) -> bool:
     logger.debug(f'Create market input')
 
-    select_statement = MySQLStatementBuilder(db_connection)
-    db_result = select_statement \
-        .select(CVS_MARKET_INPUT_TABLE, CVS_MARKET_INPUT_COLUMN) \
-        .where('vcs_row = %s', [vcs_row_id]) \
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-
-    if db_result is not None:
-        raise exceptions.MarketInputAlreadyExistException
-
-    vcs_row = vcs_storage.get_vcs_row(db_connection, vcs_row_id)
-
-    columns = ['vcs', 'vcs_row', 'time', 'cost', 'revenue']
-    values = [vcs_row.vcs_id, vcs_row_id, market_input.time, market_input.cost, market_input.revenue]
-
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
-        .insert(table=CVS_MARKET_INPUT_TABLE, columns=columns) \
-        .set_values(values) \
+        .insert(table=CVS_MARKET_INPUT_TABLE, columns=CVS_MARKET_INPUT_COLUMN[1:]) \
+        .set_values([project_id, market_input.name, market_input.unit]) \
         .execute(fetch_type=FetchType.FETCH_NONE)
 
     return True
-'''
+
 
 def update_market_input(db_connection: PooledMySQLConnection, mi_id: int, project_id: int,
                         market_input: models.MarketInputPost) -> bool:
@@ -127,6 +114,20 @@ def delete_market_input(db_connection: PooledMySQLConnection, mi_id: int) -> boo
     
     return True
 
+def get_all_formula_market_inputs(db_connection: PooledMySQLConnection, formulas_id: int) -> List[models.MarketValueGet]:
+    logger.debug(f'Fetching all market inputs for formulas with vcs_row id: {formulas_id}')
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    res = select_statement \
+        .select(CVS_MARKET_INPUT_TABLE, CVS_MARKET_INPUT_COLUMN)\
+        .inner_join('cvs_formulas_market_inputs', 'market_input = id')\
+        .where('formulas = %s', [formulas_id])\
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+    
+    if res is None:
+        raise exceptions.MarketInputFormulasNotFoundException
+    
+    return [populate_market_input(r) for r in res]
 
 #############################################################################################################################
 # Market Values
@@ -134,7 +135,7 @@ def delete_market_input(db_connection: PooledMySQLConnection, mi_id: int) -> boo
 
 def populate_market_values(db_result) -> models.MarketValueGet:
     return models.MarketValueGet(
-        vcs_name=db_result['name'],
+        vcs_name=db_result['vcs'],
         market_input_id=db_result['market_input'],
         value=db_result['value']
     )
@@ -158,17 +159,17 @@ def create_market_value(db_connection: PooledMySQLConnection, mi_id: int, vcs_id
 def get_all_market_values(db_connection: PooledMySQLConnection, project_id: int) -> List[models.MarketValueGet]:
     logger.debug(f'Fetching all market values for project with id: {project_id}')
 
-    columns = CVS_MARKET_VALUES_COLUMN.append('name') #BUG Potential -> if name appears in both vcs and market input we might get errors here
+    columns = CVS_MARKET_VALUES_COLUMN 
 
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement \
         .select(CVS_MARKET_VALUES_TABLE, columns) \
-        .inner_join('cvs_vcss', 'vcs = cvs_vcss.id') \
         .inner_join('cvs_market_inputs', 'market_input = cvs_market_inputs.id') \
         .where('project = %s', [project_id]) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
     
     return [populate_market_values(r) for r in res]
+
 
 
 def delete_market_value(db_connection: PooledMySQLConnection, vcs_id: int, mi_id: int) -> bool:

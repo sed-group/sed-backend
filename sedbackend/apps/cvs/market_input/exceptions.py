@@ -11,3 +11,6 @@ class WrongTimeUnitException(Exception):
 
 class MarketInputFailedDeletionException(Exception):
     pass
+
+class MarketInputFormulasNotFoundException(Exception):
+    pass

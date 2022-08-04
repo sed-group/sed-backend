@@ -16,6 +16,6 @@ class MarketInputPost(BaseModel):
 ######################################################################################################################
 
 class MarketValueGet(BaseModel):
-    vcs_name: str
+    vcs_id: int
     market_input_id: int
     value: float

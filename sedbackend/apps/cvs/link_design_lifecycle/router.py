@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 from fastapi import Depends, APIRouter
 
@@ -11,16 +11,24 @@ router = APIRouter()
     summary='Create formulas for time, cost, and revenue',
     response_model=bool,
 )
-async def create_formulas(vcs_row_id: int, time: str, time_unit: models.TimeFormat, cost: str, revenue: str, rate: models.Rate) -> bool:
-    return implementation.create_formulas(vcs_row_id, models.FormulaPost(time=time, time_unit=time_unit, cost=cost, revenue=revenue, rate=rate))
+async def create_formulas(vcs_row_id: int, time: str, time_unit: models.TimeFormat, cost: str, revenue: str, 
+        rate: models.Rate, quantified_objective_ids: List[models.QuantifiedObjectivePost], market_input_ids: List[int]) -> bool:
+    return implementation.create_formulas(vcs_row_id, models.FormulaPost(
+                                                        time=time, 
+                                                        time_unit=time_unit, 
+                                                        cost=cost, 
+                                                        revenue=revenue, 
+                                                        rate=rate,
+                                                        quantified_objective_ids=quantified_objective_ids,
+                                                        market_input_ids=market_input_ids))
 
 @router.get(
     '/vcs/{vcs_id}/formulas/all',
     summary=f'Get all formulas for a single vcs',
     response_model=List[models.FormulaGet]
 )
-async def get_all_formulas(vcs_id: int, design_group: int) -> List[models.FormulaRowGet]:
-    return implementation.get_all_formulas(vcs_id, design_group)
+async def get_all_formulas(vcs_id: int) -> List[models.FormulaRowGet]:
+    return implementation.get_all_formulas(vcs_id)
 
 @router.put(
     '/vcs-row/{vcs_row_id}/formulas',
