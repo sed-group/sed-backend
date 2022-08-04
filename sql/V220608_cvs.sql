@@ -191,7 +191,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_design_groups`
     `vcs`               INT UNSIGNED NOT NULL,
     `name`              VARCHAR(255) NOT NULL,
     PRIMARY KEY(`id`),
-    CONSTRAINT `din_mamma` FOREIGN KEY(`vcs`)
+    FOREIGN KEY(`vcs`)
         REFERENCES `seddb`.`cvs_vcss`(`id`)
         ON DELETE CASCADE
 );
