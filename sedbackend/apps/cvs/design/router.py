@@ -154,3 +154,29 @@ async def edit_quantified_objective(value_driver_id: int, design_group_id: int,
 async def create_quantified_objective(quantified_objective_post: models.QuantifiedObjectivePost, design_group_id: int,
                                       value_driver_id: int) -> bool:
     return implementation.create_quantified_objective(design_group_id, value_driver_id, quantified_objective_post)
+
+
+@router.post(
+    '/quantified-objective/value',
+    summary='Create a value for a quantified objective',
+    response_model=models.QuantifiedObjectiveValue
+)
+async def create_qo_value(design_group_id: int, design_id: int, value_driver_id: int, value: float) -> models.QuantifiedObjectiveValue:
+    return implementation.create_qo_value(design_group_id, design_id, value_driver_id, value)
+
+@router.put(
+    '/quantified-objective/value',
+    summary='Edit a value for a quantified objective',
+    response_model=models.QuantifiedObjectiveValue
+)
+async def edit_qo_value(design_group_id: int, design_id: int, value_driver_id: int,
+                  value: float) -> models.QuantifiedObjectiveValue:
+    return implementation.edit_qo_value(design_group_id, design_id, value_driver_id, value)
+
+@router.get(
+    '/design/{design_id}/quantified-objective/all',
+    summary='Fetch all quantified objective values for a single design',
+    response_model=List[models.QuantifiedObjectiveValue]
+)
+async def get_all_qo_values(design_id: int) -> List[models.QuantifiedObjectiveValue]:
+    return implementation.get_all_qo_values(design_id)
