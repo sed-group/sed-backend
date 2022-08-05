@@ -82,6 +82,7 @@ class NumericStringParser(object):
                 # https://docs.python.org/3.0/whatsnew/3.0.html#ordering-comparisons
                 "sgn" : lambda a: abs(a)>epsilon and ((a > 0) - (a < 0)) or 0}
         self.exprStack = []
+
     def evaluateStack(self, s ):
         op = s.pop()
         if op == 'unary -':
@@ -100,7 +101,12 @@ class NumericStringParser(object):
             return 0
         else:
             return float( op )
+
     def eval(self, num_string, parseAll = True):
+        """
+        Evaluates a mathematical expression consisting of numbers and mathematical operators. 
+        
+        """
         self.exprStack = []
         results = self.bnf.parseString(num_string, parseAll)
         val = self.evaluateStack( self.exprStack[:] )
