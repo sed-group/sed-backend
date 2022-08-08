@@ -1,16 +1,20 @@
 import tempfile
-from multiprocessing import Pool
 from fastapi import UploadFile
 from mysql.connector.pooling import PooledMySQLConnection
 import pandas as pd
 import multiprocessing as mp
+
 
 import desim.interface as des
 from desim.data import NonTechCost, TimeFormat
 from desim.simulation import Process
 
 from typing import List
+from sedbackend.apps.cvs.design.models import QuantifiedObjective
+from sedbackend.libs.mysqlutils.builder import FetchType, MySQLStatementBuilder
 
+from sedbackend.libs.parsing.parser import NumericStringParser
+from sedbackend.libs.parsing import expressions as expr
 from sedbackend.apps.cvs.simulation import models
 from sedbackend.apps.cvs.market_input.models import MarketInputGet
 import sedbackend.apps.cvs.simulation.exceptions as e
@@ -18,6 +22,7 @@ import sedbackend.apps.cvs.vcs.implementation as vcs_impl
 import sedbackend.apps.cvs.market_input.implementation as mi_impl
 import sedbackend.apps.cvs.life_cycle.implementation as lifecycle_impl
 from sedbackend.apps.cvs.vcs.models import VcsRow
+from sedbackend.apps.cvs.design import implementation as design_impl
 
 TIME_FORMAT_DICT = dict({
     'year': TimeFormat.YEAR, 
@@ -47,6 +52,13 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flow
     processes = []
     non_tech_processes = [] #TODO fix the non-tech-processes
     
+    nsp = NumericStringParser()
+    quantified_objectives = get_quantified_values(db_connection, res[5]['id'], 2)
+    print(quantified_objectives)
+    market_inputs = get_market_values(db_connection, res[5]['id'], vcs_id)
+    print(market_inputs)
+    cost = nsp.eval(parse_formula(res[5]['time'], quantified_objectives, market_inputs))
+    print(cost)
     #print(dsm.keys())
     for key in dsm.keys():
         p = None
@@ -238,7 +250,7 @@ def get_sim_data(db_connection: PooledMySQLConnection, vcs_id: int):
             subprocess, cvs_subprocesses.name as sub_name, time, time_unit, cost, revenue FROM cvs_vcs_rows \
             LEFT OUTER JOIN cvs_iso_processes ON cvs_vcs_rows.iso_process = cvs_iso_processes.id \
             LEFT OUTER JOIN cvs_subprocesses ON cvs_vcs_rows.subprocess = cvs_subprocesses.id \
-            LEFT OUTER JOIN cvs_market_input ON cvs_vcs_rows.id = cvs_market_input.vcs_row \
+            LEFT OUTER JOIN cvs_design_mi_formulas ON cvs_vcs_rows.id = cvs_design_mi_formulas.vcs_row \
             WHERE cvs_vcs_rows.vcs = %s ORDER BY `index`'
     with db_connection.cursor(prepared=True) as cursor:
         cursor.execute(query, [vcs_id])
@@ -246,6 +258,39 @@ def get_sim_data(db_connection: PooledMySQLConnection, vcs_id: int):
         res = [dict(zip(cursor.column_names, row)) for row in res]
     return res
 
+def get_quantified_values(db_connection: PooledMySQLConnection, vcs_row_id: int, design: int):
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    res = select_statement \
+        .select('cvs_quantified_objective_values', ['name', 'value'])\
+        .inner_join('cvs_quantified_objectives', 'cvs_quantified_objective_values.value_driver = cvs_quantified_objectives.value_driver') \
+        .inner_join('cvs_formulas_quantified_objectives', 'cvs_formulas_quantified_objectives.value_driver = cvs_quantified_objective_values.value_driver')\
+        .where('formulas = %s and design = %s', [vcs_row_id, design])\
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+    
+    return res
+
+def get_market_values(db_connection: PooledMySQLConnection, vcs_row_id: int, vcs: int):
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    res = select_statement \
+        .select('cvs_market_values', ['name', 'value'])\
+        .inner_join('cvs_market_inputs', 'cvs_market_values.market_input = cvs_market_inputs.id')\
+        .inner_join('cvs_formulas_market_inputs', 'cvs_formulas_market_inputs.market_input = cvs_market_values.market_input')\
+        .where('formulas = %s and vcs = %s', [vcs_row_id, vcs])\
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+    
+    return res
+
+def parse_formula(formula: str, qo_values, mi_values):
+    new_formula = formula
+    for qo in qo_values: 
+        new_formula = expr.replace_all(qo['name'], qo['value'], new_formula)
+    
+    for mi in mi_values:
+        new_formula = expr.replace_all(mi['name'], mi['value'], new_formula)
+    
+    return new_formula
 
 #TODO Change dsm creation to follow BPMN and the nodes in the BPMN. 
 #Currently the DSM only goes from one process to the other following the order of the index in the VCS

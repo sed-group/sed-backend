@@ -2,7 +2,7 @@ import re
 
 
 
-def replace_all(pattern, replacement, str):
+def replace_all(pattern, replacement, string):
     """
     Replaces all *exact* matches of pattern in str with replacement. 
 
@@ -12,7 +12,7 @@ def replace_all(pattern, replacement, str):
 
     :return string:
     """
-    new_string = re.sub(r'\b' + pattern + r'\b', str(replacement), str)
+    new_string = re.sub(r'\b' + pattern + r'\b', str(replacement), string)
     return new_string
 
 

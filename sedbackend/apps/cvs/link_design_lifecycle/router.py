@@ -25,7 +25,7 @@ async def create_formulas(vcs_row_id: int, time: str, time_unit: models.TimeForm
 @router.get(
     '/vcs/{vcs_id}/formulas/all',
     summary=f'Get all formulas for a single vcs',
-    response_model=List[models.FormulaGet]
+    response_model=List[models.FormulaRowGet]
 )
 async def get_all_formulas(vcs_id: int) -> List[models.FormulaRowGet]:
     return implementation.get_all_formulas(vcs_id)

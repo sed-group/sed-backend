@@ -8,9 +8,11 @@ from mysql.connector.pooling import PooledMySQLConnection
 from sedbackend.apps.cvs.design.models import QuantifiedObjective
 
 from sedbackend.apps.cvs.link_design_lifecycle import models, exceptions
+from sedbackend.apps.cvs.vcs.storage import get_value_driver
 from sedbackend.libs.mysqlutils.builder import FetchType, MySQLStatementBuilder
 from sedbackend.apps.cvs.market_input import implementation as market_impl
 from sedbackend.apps.cvs.design import implementation as design_impl
+from sedbackend.apps.cvs.vcs import models as vcs_m
 
 
 CVS_FORMULAS_TABLE = 'cvs_design_mi_formulas'
@@ -96,8 +98,8 @@ def populate_formula(db_result) -> models.FormulaRowGet:
         cost=db_result['cost'],
         revenue=db_result['revenue'],
         rate=db_result['rate'],
-        quantified_objectives=design_impl.get_all_formula_quantified_objectives(db_result['vcs_row']),
-        market_inputs=market_impl.get_all_formula_market_inputs(db_result['vcs_row'])
+        market_inputs=market_impl.get_all_formula_market_inputs(db_result['vcs_row']),
+        quantified_objectives=design_impl.get_all_formula_quantified_objectives(db_result['vcs_row'])
     )
 
 def delete_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int) -> bool:
