@@ -3,16 +3,19 @@ from sedbackend.apps.cvs.vcs import models as vcs_models
 
 
 class MarketInputGet(BaseModel):
-    vcs: int
-    vcs_row: vcs_models.VcsRow
-    time: float
-    time_unit: str
-    cost: float
-    revenue: float
-
+    id: int
+    name: str
+    unit: str
 
 class MarketInputPost(BaseModel):
-    time: float
-    time_unit: str
-    cost: float
-    revenue: float
+    name: str
+    unit: str
+
+######################################################################################################################
+# Market Values
+######################################################################################################################
+
+class MarketValueGet(BaseModel):
+    vcs_id: int
+    market_input_id: int
+    value: float
