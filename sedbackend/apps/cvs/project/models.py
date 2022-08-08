@@ -8,6 +8,7 @@ class CVSProject(BaseModel):
     id: int
     name: str
     description: str
+    currency: str
     owner: User
     datetime_created: datetime
 
@@ -15,3 +16,4 @@ class CVSProject(BaseModel):
 class CVSProjectPost(BaseModel):
     name: str
     description: Optional[str] = None
+    currency: Optional[str] = None

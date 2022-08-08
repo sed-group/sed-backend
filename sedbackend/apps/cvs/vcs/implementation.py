@@ -498,3 +498,35 @@ def duplicate_vcs(vcs_id: int, n: int, user_id: int) -> List[models.VCS]:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find VCS'
         )
+
+def get_vcs_row(vcs_row: int) -> models.VcsRow:
+    try: 
+        with get_connection() as con:
+            res = storage.get_vcs_row(con, vcs_row)
+            con.commit()
+            return res
+    except exceptions.VCSTableProcessAmbiguity as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Both ISO process and subprocess was provided for table row with index={e.table_row_id}.',
+        )
+    except exceptions.ValueDriverNotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find value driver with id={e.value_driver_id}.',
+        )
+    except exceptions.ISOProcessNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='No such ISO process'
+        )
+    except exceptions.SubprocessNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='No such subprocess'
+        )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )

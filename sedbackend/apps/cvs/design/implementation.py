@@ -365,6 +365,18 @@ def edit_quantified_objective(value_driver_id: int, design_group_id: int,
             detail=f'Could not find vcs.',
         )
 
+def get_all_formula_quantified_objectives(formulas_id: int) -> List[models.QuantifiedObjective]:
+    try:
+        with get_connection() as con:
+            res = storage.get_all_formula_quantified_objectives(con, formulas_id)
+            con.commit()
+            return res
+    except exceptions.QuantifiedObjectiveNotInFormulas:
+        raise HTTPException(
+             status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find quantified objectives for formula'
+        )
+        
 def get_all_qo_values(design_id: int) -> List[models.QuantifiedObjectiveValue]:
     try:
         with get_connection() as con:
@@ -412,6 +424,11 @@ def create_qo_value(design_group_id: int, design_id: int, value_driver_id: int, 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find design.',
+        )
+    except vcs_exceptions.ValueDriverNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Could not find value driver.'
         )
     except vcs_exceptions.VCSNotFoundException:
         raise HTTPException(

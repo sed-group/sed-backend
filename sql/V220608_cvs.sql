@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_projects`
     `id`               INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `name`             VARCHAR(255) NULL     DEFAULT 'Unnamed project',
     `description`      TEXT         NULL     DEFAULT NULL,
+    `currency`         VARCHAR(10)   NULL     DEFAULT '€',
     `owner_id`         INT UNSIGNED NOT NULL,
     `datetime_created` DATETIME(3)  NOT NULL DEFAULT NOW(3),
     PRIMARY KEY (`id`),
@@ -241,16 +242,71 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_quantified_objective_values`
         ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_input`
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_design_mi_formulas`
 (
     `vcs_row`           INT UNSIGNED NOT NULL,
-    `time`              DOUBLE,
+    `time`              TEXT,
     `time_unit`         VARCHAR(5),
-    `cost`              DOUBLE,
-    `revenue`           DOUBLE,
+    `cost`              TEXT,
+    `revenue`           TEXT,
+    `rate`              TEXT,
     PRIMARY KEY (`vcs_row`),
     FOREIGN KEY(`vcs_row`)
         REFERENCES `seddb`.`cvs_vcs_rows`(`id`)
         ON DELETE CASCADE,
-    CONSTRAINT `check_unit` CHECK (`time_unit` IN ('HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR'))
-)
+    CONSTRAINT `check_unit` CHECK (`time_unit` IN ('HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR')),
+    CONSTRAINT `check_rate` CHECK (`rate` IN ('per_product', 'per_project'))
+);
+
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_inputs`
+(
+    `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `project`       INT UNSIGNED NOT NULL,
+    `name`          TEXT NOT NULL,
+    `unit`          TEXT NOT NULL,
+    PRIMARY KEY(`id`),
+    FOREIGN KEY(`project`)
+        REFERENCES `seddb`.`cvs_projects`(`id`)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_values`
+(
+    `vcs`           INT UNSIGNED NOT NULL,
+    `market_input`  INT UNSIGNED NOT NULL,
+    `value`         FLOAT NOT NULL,
+    PRIMARY KEY(`vcs`,`market_input`),
+    FOREIGN KEY(`vcs`)
+        REFERENCES `seddb`.`cvs_vcss`(`id`)
+        ON DELETE CASCADE,
+    FOREIGN KEY(`market_input`)
+        REFERENCES `seddb`.`cvs_market_inputs`(`id`)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_formulas_market_inputs`
+(
+    `formulas`      INT UNSIGNED NOT NULL,
+    `market_input`  INT UNSIGNED NOT NULL,
+    PRIMARY KEY(`formulas`, `market_input`),
+    FOREIGN KEY (`formulas`)
+        REFERENCES `seddb`.`cvs_design_mi_formulas`(`vcs_row`)
+        ON DELETE CASCADE,
+    FOREIGN KEY(`market_input`)
+        REFERENCES `seddb`.`cvs_market_inputs`(`id`)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_formulas_quantified_objectives`
+(
+    `formulas`      INT UNSIGNED NOT NULL,
+    `value_driver`      INT UNSIGNED NOT NULL,
+    `design_group`      INT UNSIGNED NOT NULL,
+    PRIMARY KEY(`formulas`, `value_driver`, `design_group`),
+    FOREIGN KEY (`formulas`)
+        REFERENCES `seddb`.`cvs_design_mi_formulas`(`vcs_row`)
+        ON DELETE CASCADE,
+    FOREIGN KEY(`value_driver`, `design_group`)
+        REFERENCES `seddb`.`cvs_quantified_objectives`(`value_driver`, `design_group`)
+        ON DELETE CASCADE
+);

@@ -9,7 +9,7 @@ from sedbackend.libs.datastructures.pagination import ListChunk
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, Sort, FetchType
 
 CVS_PROJECT_TABLE = 'cvs_projects'
-CVS_PROJECT_COLUMNS = ['id', 'name', 'description', 'owner_id', 'datetime_created']
+CVS_PROJECT_COLUMNS = ['id', 'name', 'description', 'currency', 'owner_id', 'datetime_created']
 
 
 def get_all_cvs_project(db_connection: PooledMySQLConnection, user_id: int) -> ListChunk[models.CVSProject]:
@@ -90,8 +90,8 @@ def create_cvs_project(db_connection: PooledMySQLConnection, project: models.CVS
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
-        .insert(table=CVS_PROJECT_TABLE, columns=['name', 'description', 'owner_id']) \
-        .set_values([project.name, project.description, user_id]) \
+        .insert(table=CVS_PROJECT_TABLE, columns=['name', 'description', 'currency', 'owner_id']) \
+        .set_values([project.name, project.description, project.currency, user_id]) \
         .execute(fetch_type=FetchType.FETCH_NONE)
 
     project_id = insert_statement.last_insert_id
@@ -113,8 +113,8 @@ def edit_cvs_project(db_connection: PooledMySQLConnection, project_id: int, user
     update_statement = MySQLStatementBuilder(db_connection)
     update_statement.update(
         table=CVS_PROJECT_TABLE,
-        set_statement='name = %s, description = %s',
-        values=[new_project.name, new_project.description],
+        set_statement='name = %s, description = %s, currency = %s',
+        values=[new_project.name, new_project.description, new_project.currency],
     )
     update_statement.where('id = %s', [project_id])
     _, rows = update_statement.execute(return_affected_rows=True)
@@ -157,6 +157,7 @@ def populate_cvs_project(db_connection: PooledMySQLConnection,
         id=db_result['id'],
         name=db_result['name'],
         description=db_result['description'],
+        currency=db_result['currency'],
         owner=db_get_user_safe_with_id(db_connection, db_result['owner_id']),
         datetime_created=db_result['datetime_created'],
     )

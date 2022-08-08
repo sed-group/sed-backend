@@ -1,3 +1,4 @@
+from multiprocessing import Pool
 from typing import List
 
 from mysql.connector import Error
@@ -297,7 +298,24 @@ def edit_quantified_objective(db_connection: PooledMySQLConnection, value_driver
 
     return get_quantified_objective(db_connection, value_driver_id, design_group_id)
 
+def get_all_formula_quantified_objectives(db_connection: PooledMySQLConnection, formula_id: int) -> List[models.QuantifiedObjective]:
+    logger.debug(f'Fetching all quantified objectives for formulas with vcs_row: {formula_id}')
 
+    columns = []
+    select_statement = MySQLStatementBuilder(db_connection)
+    res = select_statement \
+        .select(QUANTIFIED_OBJECTIVE_TABLE, QUANTIFIED_OBJECTIVE_COLUMNS) \
+        .inner_join('cvs_formulas_quantified_objectives', \
+            'cvs_formulas_quantified_objectives.value_driver = cvs_quantified_objectives.value_driver \
+                and cvs_formulas_quantified_objectives.design_group = cvs_quantified_objectives.design_group') \
+        .where('formulas = %s', [formula_id])\
+        .execute(fetch_type=FetchType.FETCH_ALL)
+    
+    if res is None:
+        raise exceptions.QuantifiedObjectiveNotInFormulas
+    
+    return [populate_qo(db_connection, r) for r in res]
+    
 def populate_qo(db_connection: PooledMySQLConnection, db_result) -> models.QuantifiedObjective:
     return models.QuantifiedObjective(
         design_group=db_result['design_group'],
