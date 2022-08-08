@@ -49,7 +49,7 @@ def get_all_market_input(db_connection: PooledMySQLConnection, project_id: int) 
     results = select_statement \
         .select(CVS_MARKET_INPUT_TABLE, CVS_MARKET_INPUT_COLUMN) \
         .where('project = %s', [project_id]) \
-        .order_by(['vcs_row'], Sort.ASCENDING) \
+        .order_by(['id'], Sort.ASCENDING) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
     return [populate_market_input(db_result) for db_result in results]
@@ -135,7 +135,7 @@ def get_all_formula_market_inputs(db_connection: PooledMySQLConnection, formulas
 
 def populate_market_values(db_result) -> models.MarketValueGet:
     return models.MarketValueGet(
-        vcs_name=db_result['vcs'],
+        vcs_id=db_result['vcs'],
         market_input_id=db_result['market_input'],
         value=db_result['value']
     )
@@ -146,12 +146,12 @@ def create_market_value(db_connection: PooledMySQLConnection, mi_id: int, vcs_id
     values = [vcs_id, mi_id, value]
     
     insert_statement = MySQLStatementBuilder(db_connection)
-    res = insert_statement \
+    insert_statement \
         .insert(CVS_MARKET_VALUES_TABLE, CVS_MARKET_VALUES_COLUMN) \
         .set_values(values) \
         .execute(fetch_type=FetchType.FETCH_NONE)
     
-    if res is None:
+    if insert_statement.last_insert_id is None:
         return False
 
     return True

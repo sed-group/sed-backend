@@ -254,7 +254,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_design_mi_formulas`
         REFERENCES `seddb`.`cvs_vcs_rows`(`id`)
         ON DELETE CASCADE,
     CONSTRAINT `check_unit` CHECK (`time_unit` IN ('HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR')),
-    CONSTRAINT `check_rate` CHECK (`rate` IN ('per_product', 'per_project')),
+    CONSTRAINT `check_rate` CHECK (`rate` IN ('per_product', 'per_project'))
 );
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_inputs`
@@ -280,7 +280,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_values`
         ON DELETE CASCADE,
     FOREIGN KEY(`market_input`)
         REFERENCES `seddb`.`cvs_market_inputs`(`id`)
-        ON DELETE CASCADE,
+        ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_formulas_market_inputs`
@@ -296,7 +296,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_formulas_market_inputs`
         ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS `sedb`.`cvs_formulas_quantified_objectives`
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_formulas_quantified_objectives`
 (
     `formulas`      INT UNSIGNED NOT NULL,
     `value_driver`      INT UNSIGNED NOT NULL,

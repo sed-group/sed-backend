@@ -25,7 +25,7 @@ CVS_FORMULAS_MARKET_INPUTS_COLUMNS = ['formulas', 'market_input']
 def create_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, formulas: models.FormulaPost) -> bool:
     logger.debug(f'Creating formulas')
 
-    values = [vcs_row_id, formulas.time, formulas.time_unit, formulas.cost, formulas.revenue, formulas.rate]
+    values = [vcs_row_id, formulas.time, formulas.time_unit.value, formulas.cost, formulas.revenue, formulas.rate.value]
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
@@ -33,13 +33,17 @@ def create_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, formu
         .set_values(values=values) \
         .execute(fetch_type=FetchType.FETCH_ONE)
     
+    
     for qo in formulas.quantified_objective_ids:
+        insert_statement = MySQLStatementBuilder(db_connection)
         insert_statement \
             .insert(table=CVS_FORMULAS_QUANTIFIED_OBJECTIVES_TABLE, columns=CVS_FORMULAS_QUANTIFIED_OBJECTIVES_COLUMNS) \
             .set_values([vcs_row_id, qo.value_driver_id, qo.design_group_id]) \
             .execute(fetch_type=FetchType.FETCH_NONE)
 
+
     for mi_id in formulas.market_input_ids:
+        insert_statement = MySQLStatementBuilder(db_connection)
         insert_statement \
             .insert(table=CVS_FORMULAS_MARKET_INPUTS_TABLE, columns=CVS_FORMULAS_MARKET_INPUTS_COLUMNS) \
             .set_values([vcs_row_id, mi_id]) \
@@ -56,7 +60,7 @@ def edit_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, formula
     columns = CVS_FORMULAS_COLUMNS[1:]
     set_statement = ', '.join([col + ' = %s' for col in columns])
 
-    values = [formulas.time, formulas.time_unit, formulas.cost, formulas.revenue, formulas.rate]
+    values = [formulas.time, formulas.time_unit.value, formulas.cost, formulas.revenue, formulas.rate.value]
 
     update_statement = MySQLStatementBuilder(db_connection)
     res = update_statement \
