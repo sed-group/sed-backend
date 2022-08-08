@@ -3,3 +3,6 @@ class ProcessNotFoundException(Exception):
 
 class DSMFileNotFoundException(Exception):
     pass
+
+class EntityRateOutOfOrderException(Exception):
+    pass

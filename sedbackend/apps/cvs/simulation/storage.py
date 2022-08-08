@@ -292,6 +292,15 @@ def parse_formula(formula: str, qo_values, mi_values):
     
     return new_formula
 
+def check_entity_rate(db_results):
+    rate_check = True
+    for i in range(len(db_results)- 1):
+        if db_results[i]['rate'] == 'per_product' and db_results[i+1]['rate'] == 'per_project': #TODO check for technical/non-technical processes
+            rate_check = False
+            break
+    
+    return rate_check
+
 #TODO Change dsm creation to follow BPMN and the nodes in the BPMN. 
 #Currently the DSM only goes from one process to the other following the order of the index in the VCS
 def create_simple_dsm(processes: List[Process]) -> dict:
