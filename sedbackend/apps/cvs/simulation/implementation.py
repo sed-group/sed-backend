@@ -7,7 +7,7 @@ from sedbackend.apps.cvs.simulation import models, storage
 from sedbackend.apps.core.authentication import exceptions as auth_ex
 from sedbackend.apps.core.db import get_connection
 from sedbackend.apps.cvs.project import exceptions as project_exceptions
-from sedbackend.apps.cvs.simulation.exceptions import DSMFileNotFoundException, FormulaEvalException, ProcessNotFoundException, RateWrongOrderException
+from sedbackend.apps.cvs.simulation.exceptions import DSMFileNotFoundException, FormulaEvalException, NegativeTimeException, ProcessNotFoundException, RateWrongOrderException
 from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.market_input import exceptions as market_input_exceptions
 
@@ -54,6 +54,11 @@ def run_simulation(vcs_id: int, flow_time: float, flow_rate: float,
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Wrong order of rate of entities. Per project assigned after per product'
+        )
+    except NegativeTimeException as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Formula at process with id: {e.process_id} evaluated to negative time'
         )
 
 
@@ -105,6 +110,11 @@ def run_csv_simulation(vcs_id: int, flow_time: float, flow_rate: float,
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Wrong order of rate of entities. Per project assigned after per product'
         )
+    except NegativeTimeException as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Formula at process with id: {e.process_id} evaluated to negative time'
+        )
 
 def run_xlsx_simulation(vcs_id: int, flow_time: float, flow_rate: float, flow_process_id: int, 
                         simulation_runtime: float, discount_rate: float, non_tech_add: models.NonTechCost, 
@@ -154,6 +164,11 @@ def run_xlsx_simulation(vcs_id: int, flow_time: float, flow_rate: float, flow_pr
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Wrong order of rate of entities. Per project assigned after per product'
         )
+    except NegativeTimeException as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Formula at process with id: {e.process_id} evaluated to negative time'
+        )
 
 def run_sim_mp(vcs_id: int, flow_time: float, flow_rate: float, 
                     flow_process_id: int, simulation_runtime: float, discount_rate: float, 
@@ -177,4 +192,9 @@ def run_sim_mp(vcs_id: int, flow_time: float, flow_rate: float,
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Wrong order of rate of entities. Per project assigned after per product'
+        )
+    except NegativeTimeException as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Formula at process with id: {e.process_id} evaluated to negative time'
         )
