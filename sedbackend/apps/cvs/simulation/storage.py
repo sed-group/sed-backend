@@ -1,15 +1,18 @@
+
 import tempfile
 from fastapi import UploadFile
 from mysql.connector.pooling import PooledMySQLConnection
 import pandas as pd
 import multiprocessing as mp
 
+from fastapi.logger import logger
 
 import desim.interface as des
 from desim.data import NonTechCost, TimeFormat
 from desim.simulation import Process
 
 from typing import List
+from sedbackend.apps.cvs import vcs
 from sedbackend.apps.cvs.design.models import QuantifiedObjective
 from sedbackend.libs.mysqlutils.builder import FetchType, MySQLStatementBuilder
 
@@ -35,30 +38,26 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flow
                 flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float, 
                 non_tech_add: models.NonTechCost, dsm_csv: UploadFile, user_id: int) -> models.Simulation:
 
+    if dsm_csv is None:
+        raise e.DSMFileNotFoundException
+    
     try:
         tmp_csv = tempfile.TemporaryFile()  #Workaround because current python version doesn't support 
         tmp_csv.write(dsm_csv.file.read())      #readable() attribute on SpooledTemporaryFile which UploadFile 
         tmp_csv.seek(0)                     #is an alias for. PR is accepted for python v3.12, see https://github.com/python/cpython/pull/29560
-        if dsm_csv is None:
-            raise e.DSMFileNotFoundException
 
         dsm = get_dsm_from_csv(tmp_csv) #This should hopefully open up the file for the processor. 
         if dsm is None:
             raise e.DSMFileNotFoundException
+    except Exception as exc:
+        logger.debug(exc)
     finally:
         tmp_csv.close()
 
     res = get_sim_data(db_connection, vcs_id)
-    processes = []
-    non_tech_processes = [] #TODO fix the non-tech-processes
-    
-    nsp = NumericStringParser()
-    quantified_objectives = get_quantified_values(db_connection, res[5]['id'], 2)
-    print(quantified_objectives)
-    market_inputs = get_market_values(db_connection, res[5]['id'], vcs_id)
-    print(market_inputs)
-    cost = nsp.eval(parse_formula(res[5]['time'], quantified_objectives, market_inputs))
-    print(cost)
+
+    processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id)
+    """
     #print(dsm.keys())
     for key in dsm.keys():
         p = None
@@ -95,9 +94,10 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flow
 
     #print(flow_process.name)        
     
-   
+   """
+
     sim = des.Des()
-    time, cum_npv, _, _ = sim.run_simulation(flow_time, flow_rate, flow_process, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
+    time, cum_npv, _, _ = sim.run_simulation(flow_time, flow_rate, process_id, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
     #sim = Simulation(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, non_tech_add, dsm)
     #sim.run_simulation()
 
@@ -125,8 +125,9 @@ def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flo
         tmp_xlsx.close()
 
     res = get_sim_data(db_connection, vcs_id)
-    processes = []
+    #processes = []
     
+    """
     for key in dsm.keys():
         for r in res:
             if r['iso_name'] is not None and r['sub_name'] is None:
@@ -157,10 +158,12 @@ def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flo
             if r['sub_name'] not in dsm.keys():
                 p = models.NonTechnicalProcess(name=r['sub_name'], cost=r['cost'], revenue=r['revenue'])
                 non_tech_processes.append(p)
-    
+    """
+
+    processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id)
     sim = des.Des()
     #sim = Simulation(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, non_tech_add, dsm)
-    time, cum_npv, _, _ = sim.run_simulation(flow_time, flow_rate, flow_process, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
+    time, cum_npv, _, _ = sim.run_simulation(flow_time, flow_rate, process_id, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
 
     return models.Simulation(
         time=time,
@@ -174,7 +177,7 @@ def run_simulation(db_connection: PooledMySQLConnection, vcs_id: int, flow_time:
     
     res = get_sim_data(db_connection, vcs_id)
 
-    
+    """
     processes = []
     non_tech_processes = []
     for row in res:
@@ -194,11 +197,13 @@ def run_simulation(db_connection: PooledMySQLConnection, vcs_id: int, flow_time:
                 flow_process = p
         else:
             raise e.ProcessNotFoundException
-
+    """
+    processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id)
+    
     dsm = create_simple_dsm(processes) #TODO Change to using BPMN
 
     sim = des.Des()
-    time, cum_npv, _, _ = sim.run_simulation(flow_time, flow_rate, flow_process, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
+    time, cum_npv, _, _ = sim.run_simulation(flow_time, flow_rate, process_id, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
     
     return models.Simulation(
         time=time,
@@ -212,8 +217,15 @@ def run_sim_mp(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: flo
         non_tech_add: models.NonTechCost, user_id: int) -> models.Simulation:
 
     res = get_sim_data(db_connection, vcs_id)
+    processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id)
 
-    
+
+    dsm = create_simple_dsm(processes) #TODO Change to using BPMN
+
+    sim = des.Des()
+    time, cum_npv, cost, revenue = sim.run_parallell_simulations(flow_time, flow_rate, process_id, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
+
+    """
     processes = []
     non_tech_processes = []
     for row in res:
@@ -233,17 +245,62 @@ def run_sim_mp(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: flo
                 flow_process = p
         else:
             raise e.ProcessNotFoundException
-
-    dsm = create_simple_dsm(processes) #TODO Change to using BPMN
-
-    sim = des.Des()
-    time, cum_npv, cost, revenue = sim.run_parallell_simulations(flow_time, flow_rate, flow_process, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
+    """
 
     return models.Simulation(
         time=time,
         cumulative_NPV=cum_npv,
         processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in processes]
     )
+
+def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: PooledMySQLConnection, vcs: int, technical_processes: List = [], non_tech_processes: List = []):
+    nsp = NumericStringParser()
+
+    for row in db_results:
+        qo_values = get_quantified_values(db_connection, row['id'], 2)
+        mi_values = get_market_values(db_connection, row['id'], vcs)
+        if row['iso_name'] is not None and row['sub_name'] is None:
+            if row['category'] != 'Technical processes':
+                try:
+                    non_tech = models.NonTechnicalProcess(cost=nsp.eval(parse_formula(row['cost'], qo_values, mi_values)), 
+                        revenue=nsp.eval(parse_formula(row['revenue'], qo_values, mi_values)), name=row['iso_name'])
+                except Exception as exc:
+                    logger.debug(f'{exc.__class__}, {exc}')
+                    raise e.FormulaEvalException(row['id'])
+                non_tech_processes.append(non_tech)
+            else:
+                try:
+                    p = Process(row['id'], 
+                        nsp.eval(parse_formula(row['time'], qo_values, mi_values)), 
+                        nsp.eval(parse_formula(row['cost'], qo_values, mi_values)), 
+                        nsp.eval(parse_formula(row['revenue'], qo_values, mi_values)), 
+                        row['iso_name'], non_tech_add, TIME_FORMAT_DICT.get(row['time_unit'].lower())
+                        )
+                    if p.time < 0:
+                        print(f'Problem at process: {p.id}')
+                except Exception as exc:
+                    logger.debug(f'{exc.__class__}, {exc}')
+                    raise e.FormulaEvalException(row['id'])
+                technical_processes.append(p)    
+        elif row['iso_name'] is None and row['sub_name'] is not None:
+            try:
+                p = Process(row['id'], 
+                    nsp.eval(parse_formula(row['time'], qo_values, mi_values)), 
+                    nsp.eval(parse_formula(row['cost'], qo_values, mi_values)), 
+                    nsp.eval(parse_formula(row['revenue'], qo_values, mi_values)), 
+                    row['sub_name'], non_tech_add, TIME_FORMAT_DICT.get(row['time_unit'].lower())
+                    )
+                
+                if p.time < 0:
+                    print(f'Problem at process: {p.id}')
+            except Exception as exc:
+                logger.debug(f'{exc.__class__}, {exc}')
+                raise e.FormulaEvalException(row['id'])
+            technical_processes.append(p)
+        else:
+            raise e.ProcessNotFoundException
+    
+    return technical_processes, non_tech_processes
 
 def get_sim_data(db_connection: PooledMySQLConnection, vcs_id: int):
     query = f'SELECT cvs_vcs_rows.id, cvs_vcs_rows.iso_process, cvs_iso_processes.name as iso_name, category, \
@@ -311,7 +368,7 @@ def create_simple_dsm(processes: List[Process]) -> dict:
     for i, p in enumerate(processes):
         dsm.update({p.name: [1 if i + 1 == j else 0 for j in index_list]})
 
-    #print(dsm)
+    print(dsm)
     return dsm
 
 

@@ -65,14 +65,17 @@ def edit_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, formula
     values = [formulas.time, formulas.time_unit.value, formulas.cost, formulas.revenue, formulas.rate.value]
 
     update_statement = MySQLStatementBuilder(db_connection)
-    res = update_statement \
+    _, rows = update_statement \
         .update(table=CVS_FORMULAS_TABLE, set_statement=set_statement, values=values) \
         .where('vcs_row = %s', [vcs_row_id])\
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=False)
+        .execute(return_affected_rows=True)
     
-    if res is None:
+    if rows < 1:
         raise exceptions.FormulasFailedUpdateException
     
+    if rows > 1:
+        raise exceptions.TooManyFormulasUpdatedException
+        
     return True
 
 
@@ -109,7 +112,7 @@ def delete_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int) -> bo
     rows,_ = delete_statement \
         .delete(CVS_FORMULAS_TABLE) \
         .where('vcs_row = %s', [vcs_row_id])\
-        .execute(fetch_type=FetchType.FETCH_ALL)
+        .execute(return_affected_rows=True)
     
     if len(rows) != 1:
         raise exceptions.FormulasFailedDeletionException
