@@ -10,3 +10,6 @@ class EntityRateOutOfOrderException(Exception):
 class FormulaEvalException(Exception):
     def __init__(self, process_id) -> None:
         self.process_id = process_id
+
+class RateWrongOrderException(Exception):
+    pass

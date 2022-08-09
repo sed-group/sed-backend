@@ -56,7 +56,11 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flow
 
     res = get_sim_data(db_connection, vcs_id)
 
+    if not check_entity_rate(res, process_id):
+        raise e.RateWrongOrderException
+    
     processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id)
+
     """
     #print(dsm.keys())
     for key in dsm.keys():
@@ -127,6 +131,10 @@ def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flo
     res = get_sim_data(db_connection, vcs_id)
     #processes = []
     
+    if not check_entity_rate(res, process_id):
+        raise e.RateWrongOrderException
+    
+
     """
     for key in dsm.keys():
         for r in res:
@@ -162,7 +170,7 @@ def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flo
 
     processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id)
     sim = des.Des()
-    #sim = Simulation(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, non_tech_add, dsm)
+    
     time, cum_npv, _, _ = sim.run_simulation(flow_time, flow_rate, process_id, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
 
     return models.Simulation(
@@ -177,6 +185,9 @@ def run_simulation(db_connection: PooledMySQLConnection, vcs_id: int, flow_time:
     
     res = get_sim_data(db_connection, vcs_id)
 
+    if not check_entity_rate(res, process_id):
+        raise e.RateWrongOrderException
+    
     """
     processes = []
     non_tech_processes = []
@@ -217,6 +228,10 @@ def run_sim_mp(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: flo
         non_tech_add: models.NonTechCost, user_id: int) -> models.Simulation:
 
     res = get_sim_data(db_connection, vcs_id)
+    
+    if not check_entity_rate(res, process_id):
+        raise e.RateWrongOrderException
+    
     processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id)
 
 
@@ -343,18 +358,23 @@ def parse_formula(formula: str, qo_values, mi_values):
     new_formula = formula
     for qo in qo_values: 
         new_formula = expr.replace_all(qo['name'], qo['value'], new_formula)
-    
     for mi in mi_values:
         new_formula = expr.replace_all(mi['name'], mi['value'], new_formula)
     
     return new_formula
 
-def check_entity_rate(db_results):
+def check_entity_rate(db_results, flow_process_id: int):
     rate_check = True
+    flow_process_index = len(db_results)
+
+
     for i in range(len(db_results)- 1):
-        if db_results[i]['rate'] == 'per_product' and db_results[i+1]['rate'] == 'per_project': #TODO check for technical/non-technical processes
-            rate_check = False
-            break
+        if db_results[i]['id'] == flow_process_id: 
+            flow_process_index = i
+        if db_results[i]['rate'] == 'per_product' and db_results[i+1]['rate'] == 'per_project' and i >= flow_process_index: #TODO check for technical/non-technical processes
+            if db_results[i]['category'] != 'Technical processes':
+                rate_check = False
+                break
     
     return rate_check
 
