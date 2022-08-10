@@ -46,5 +46,5 @@ class FormulaPost(BaseModel):
 
 
 class FormulaRowGet(FormulaGet):
-    quantified_objectives: Optional [List[design_models.QuantifiedObjective]] = None
-    market_inputs: Optional [List[mi_models.MarketInputGet]] = None
+    quantified_objectives: List[design_models.QuantifiedObjective]
+    market_inputs: List[mi_models.MarketInputGet]

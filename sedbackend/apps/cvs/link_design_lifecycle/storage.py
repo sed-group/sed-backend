@@ -8,9 +8,11 @@ from mysql.connector.pooling import PooledMySQLConnection
 from sedbackend.apps.cvs.design.models import QuantifiedObjective
 
 from sedbackend.apps.cvs.link_design_lifecycle import models, exceptions
+from sedbackend.apps.cvs.vcs.storage import get_value_driver
 from sedbackend.libs.mysqlutils.builder import FetchType, MySQLStatementBuilder
 from sedbackend.apps.cvs.market_input import implementation as market_impl
 from sedbackend.apps.cvs.design import implementation as design_impl
+from sedbackend.apps.cvs.vcs import models as vcs_m
 
 
 CVS_FORMULAS_TABLE = 'cvs_design_mi_formulas'
@@ -63,14 +65,17 @@ def edit_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, formula
     values = [formulas.time, formulas.time_unit.value, formulas.cost, formulas.revenue, formulas.rate.value]
 
     update_statement = MySQLStatementBuilder(db_connection)
-    res = update_statement \
+    _, rows = update_statement \
         .update(table=CVS_FORMULAS_TABLE, set_statement=set_statement, values=values) \
         .where('vcs_row = %s', [vcs_row_id])\
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=False)
+        .execute(return_affected_rows=True)
     
-    if res is None:
+    if rows < 1:
         raise exceptions.FormulasFailedUpdateException
     
+    if rows > 1:
+        raise exceptions.TooManyFormulasUpdatedException
+        
     return True
 
 
@@ -96,8 +101,8 @@ def populate_formula(db_result) -> models.FormulaRowGet:
         cost=db_result['cost'],
         revenue=db_result['revenue'],
         rate=db_result['rate'],
-        quantified_objectives=design_impl.get_all_formula_quantified_objectives(db_result['vcs_row']),
-        market_inputs=market_impl.get_all_formula_market_inputs(db_result['vcs_row'])
+        market_inputs=market_impl.get_all_formula_market_inputs(db_result['vcs_row']),
+        quantified_objectives=design_impl.get_all_formula_quantified_objectives(db_result['vcs_row'])
     )
 
 def delete_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int) -> bool:
@@ -107,7 +112,7 @@ def delete_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int) -> bo
     rows,_ = delete_statement \
         .delete(CVS_FORMULAS_TABLE) \
         .where('vcs_row = %s', [vcs_row_id])\
-        .execute(fetch_type=FetchType.FETCH_ALL)
+        .execute(return_affected_rows=True)
     
     if len(rows) != 1:
         raise exceptions.FormulasFailedDeletionException

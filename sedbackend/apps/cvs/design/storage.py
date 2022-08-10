@@ -301,15 +301,15 @@ def edit_quantified_objective(db_connection: PooledMySQLConnection, value_driver
 def get_all_formula_quantified_objectives(db_connection: PooledMySQLConnection, formula_id: int) -> List[models.QuantifiedObjective]:
     logger.debug(f'Fetching all quantified objectives for formulas with vcs_row: {formula_id}')
 
-    columns = []
+    columns = ['cvs_quantified_objectives.design_group', 'cvs_quantified_objectives.value_driver'] + QUANTIFIED_OBJECTIVE_COLUMNS[2:]
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement \
-        .select(QUANTIFIED_OBJECTIVE_TABLE, QUANTIFIED_OBJECTIVE_COLUMNS) \
+        .select(QUANTIFIED_OBJECTIVE_TABLE, columns) \
         .inner_join('cvs_formulas_quantified_objectives', \
             'cvs_formulas_quantified_objectives.value_driver = cvs_quantified_objectives.value_driver \
                 and cvs_formulas_quantified_objectives.design_group = cvs_quantified_objectives.design_group') \
         .where('formulas = %s', [formula_id])\
-        .execute(fetch_type=FetchType.FETCH_ALL)
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
     
     if res is None:
         raise exceptions.QuantifiedObjectiveNotInFormulas

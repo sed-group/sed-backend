@@ -13,3 +13,6 @@ class FormulasFailedUpdateException(Exception):
 
 class FormulasFailedDeletionException(Exception):
     pass
+
+class TooManyFormulasUpdatedException(Exception):
+    pass

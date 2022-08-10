@@ -29,3 +29,9 @@ class Simulation(BaseModel):
     time: List[float]
     cumulative_NPV: List[float]
     processes: List[Process]
+
+class SimulationMonteCarlo(BaseModel):
+    time: List[float]
+    mean_NPV: List[float]
+    max_NPVs: List[float]
+    mean_payback_time: float

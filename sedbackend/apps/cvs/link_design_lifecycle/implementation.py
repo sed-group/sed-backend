@@ -7,7 +7,7 @@ from starlette import status
 from sedbackend.apps.core.authentication import exceptions as auth_ex
 from sedbackend.apps.core.db import get_connection
 from sedbackend.apps.cvs.link_design_lifecycle import models, storage
-from sedbackend.apps.cvs.link_design_lifecycle.exceptions import FormulasFailedDeletionException, FormulasFailedUpdateException, FormulasNotFoundException, VCSNotFoundException, WrongTimeUnitException
+from sedbackend.apps.cvs.link_design_lifecycle.exceptions import FormulasFailedDeletionException, FormulasFailedUpdateException, FormulasNotFoundException, TooManyFormulasUpdatedException, VCSNotFoundException, WrongTimeUnitException
 
 
 def create_formulas(vcs_row_id: int, formulas: models.FormulaPost) -> bool:
@@ -37,7 +37,12 @@ def edit_formulas(vcs_row_id: int, new_formulas: models.FormulaPost) -> bool:
         except FormulasFailedUpdateException:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f'Failed to update formulas'
+                detail=f'No formulas updated. Are the formulas changed?'
+            )
+        except TooManyFormulasUpdatedException:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f'Too many formulas tried to be updated.'
             )
 
 
