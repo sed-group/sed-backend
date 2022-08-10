@@ -109,3 +109,9 @@ class VCSStakeholderNeedNotFound(Exception):
 
 class VCSStakeholderNeedFailedDeletionException(Exception):
     pass
+
+class VCSStakeholderNeedFailedCreationException(Exception):
+    pass
+
+class VCSStakeholderNeedFailedToUpdateException(Exception):
+    pass

@@ -714,7 +714,7 @@ def create_stakeholder_need(db_connection: PooledMySQLConnection, vcs_row_id: in
         need_id = insert_statement.last_insert_id
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
-        # raise exceptions.VCSTableRowNotFoundException
+        raise exceptions.VCSStakeholderNeedFailedCreationException
 
     return need_id
 
@@ -732,14 +732,18 @@ def update_stakeholder_need(db_connection: PooledMySQLConnection, vcs_row_id: in
         count = count_result['count']
 
     if need.id and count > 0:
-        update_statement = MySQLStatementBuilder(db_connection)
-        update_statement.update(
-            table=CVS_VCS_STAKEHOLDER_NEED_TABLE,
-            set_statement='need = %s, value_dimension = %s, rank_weight = %s',
-            values=[need.need, need.value_dimension, need.rank_weight]
-        )
-        update_statement.where('id = %s', [need_id])
-        _, rows = update_statement.execute(return_affected_rows=True)
+        try:
+            update_statement = MySQLStatementBuilder(db_connection)
+            update_statement.update(
+                table=CVS_VCS_STAKEHOLDER_NEED_TABLE,
+                set_statement='need = %s, value_dimension = %s, rank_weight = %s',
+                values=[need.need, need.value_dimension, need.rank_weight]
+            )
+            update_statement.where('id = %s', [need_id])
+            _, rows = update_statement.execute(return_affected_rows=True)
+        except Error as e:
+            logger.debug(f'Error msg: {e.msg}')
+            raise exceptions.VCSStakeholderNeedFailedToUpdateException
 
     else:
         need_id = create_stakeholder_need(db_connection, vcs_row_id, need)
