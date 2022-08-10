@@ -4,7 +4,7 @@ from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
 
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
-from sedbackend.apps.cvs.life_cycle import exceptions, models
+from sedbackend.apps.cvs.life_cycle import exceptions, models, implementation as impl
 from sedbackend.apps.cvs.vcs import storage as vcs_storage, exceptions as vcs_exceptions
 from mysql.connector import Error
 
@@ -21,7 +21,7 @@ CVS_START_STOP_NODES_COLUMNS = CVS_NODES_COLUMNS + ['type']
 # TODO error handling
 
 def populate_process_node(db_connection, result) -> models.ProcessNodeGet:
-    logger.debug(f'Populating model for process node with id={result["id"]}')
+    logger.debug(f'Populating model for process node with id={result["id"]} ')
 
     return models.ProcessNodeGet(
         id=result['id'],
@@ -76,7 +76,7 @@ def get_process_node(db_connection: PooledMySQLConnection, node_id: int) -> mode
             .inner_join(CVS_NODES_TABLE, 'cvs_nodes.id = cvs_process_nodes.id') \
             .where('cvs_nodes.id = %s', [node_id]) \
             .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-
+       
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
         raise exceptions.NodeNotFoundException
@@ -107,9 +107,10 @@ def create_node(db_connection: PooledMySQLConnection, node: models.NodePost, vcs
     columns = ['vcs', 'pos_x', 'pos_y']
     values = [vcs_id, node.pos_x, node.pos_y]
 
-    insert_statement = MySQLStatementBuilder(db_connection)
-    node_id = None
+    
+#    node_id = None
     try:
+        insert_statement = MySQLStatementBuilder(db_connection)
         insert_statement \
             .insert(table=CVS_NODES_TABLE, columns=columns) \
             .set_values(values) \
@@ -120,6 +121,7 @@ def create_node(db_connection: PooledMySQLConnection, node: models.NodePost, vcs
         if vcs_id is not None:
             raise vcs_exceptions.VCSNotFoundException
 
+    logger.debug('Created standard node')
     return node_id
 
 
@@ -128,18 +130,21 @@ def create_process_node(db_connection: PooledMySQLConnection, node: models.Proce
     logger.debug(f'Create a process node for vcs with id={vcs_id}.')
 
     node_id = create_node(db_connection, node, vcs_id)
-
-    insert_statement = MySQLStatementBuilder(db_connection)
+    
 
     try:
+        insert_statement = MySQLStatementBuilder(db_connection)
         insert_statement \
             .insert(table=CVS_PROCESS_NODES_TABLE, columns=['id', 'vcs_row']) \
             .set_values([node_id, node.vcs_row_id]) \
-            .execute(fetch_type=FetchType.FETCH_NONE)
+            .execute(fetch_type=FetchType.FETCH_NONE, return_affected_rows=True)
+        #node_id = insert_statement.last_insert_id
+        logger.debug(f'Finished process node creation with node id {node_id}')
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
         raise vcs_exceptions.VCSNotFoundException
 
+    logger.debug('Before getting process node')
     return get_process_node(db_connection, node_id)
 
 
