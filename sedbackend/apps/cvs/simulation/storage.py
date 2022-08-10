@@ -11,7 +11,7 @@ import desim.interface as des
 from desim.data import NonTechCost, TimeFormat, SimResults
 from desim.simulation import Process
 
-from typing import List
+from typing import List, Optional
 
 from sedbackend.libs.mysqlutils.builder import FetchType, MySQLStatementBuilder
 
@@ -19,7 +19,6 @@ from sedbackend.libs.parsing.parser import NumericStringParser
 from sedbackend.libs.parsing import expressions as expr
 from sedbackend.apps.cvs.simulation import models
 import sedbackend.apps.cvs.simulation.exceptions as e
-import sedbackend.apps.cvs.vcs.implementation as vcs_impl
 import sedbackend.apps.cvs.market_input.implementation as mi_impl
 import sedbackend.apps.cvs.life_cycle.implementation as lifecycle_impl
 from sedbackend.apps.cvs.vcs.models import VcsRow
@@ -34,7 +33,8 @@ TIME_FORMAT_DICT = dict({
 
 def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: float,
                 flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float, 
-                non_tech_add: models.NonTechCost, dsm_csv: UploadFile, user_id: int) -> models.Simulation:
+                non_tech_add: models.NonTechCost, dsm_csv: UploadFile, design_ids: List[int], 
+                normalized_npv: bool, user_id: int) -> List[models.Simulation]:
 
     if dsm_csv is None:
         raise e.DSMFileNotFoundException
@@ -57,22 +57,33 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flow
     if not check_entity_rate(res, process_id):
         raise e.RateWrongOrderException
     
-    processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id)
 
-    sim = des.Des()
-    time, cum_npv, _, _ = sim.run_simulation(flow_time, flow_rate, process_id, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
+    if design_ids is None or []:
+        for design in design_impl.get_all_designs(1):
+            design_ids.append(design.id)
+
+    design_results = []
+    for design_id in design_ids:
+        processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id)
+
+        sim = des.Des()
+        time, cum_npv, _, _ = sim.run_simulation(flow_time, flow_rate, process_id, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
     #sim = Simulation(flow_time, flow_rate, flow_process, simulation_runtime, discount_rate, processes, non_tech_processes, non_tech_add, dsm)
     #sim.run_simulation()
 
-    return models.Simulation(
-        time=time,
-        cumulative_NPV = cum_npv,
-        processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in processes]
-    )
+        design_res = models.Simulation(
+            time=time,
+            cumulative_NPV = cum_npv,
+            processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in processes]
+            )
+        design_results.append(design_res)
+    
+    return design_results
 
 def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: float,
                 flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float, 
-                non_tech_add: models.NonTechCost, dsm_xlsx: UploadFile, user_id: int) -> models.Simulation:
+                non_tech_add: models.NonTechCost, dsm_xlsx: UploadFile, design_ids: List[int], 
+                normalized_npv: bool, user_id: int) -> List[models.Simulation]:
 
     if dsm_xlsx is None:
             raise e.DSMFileNotFoundException
@@ -96,84 +107,123 @@ def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flo
     if not check_entity_rate(res, process_id):
         raise e.RateWrongOrderException
 
-    processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id)
-    sim = des.Des()
-    
-    try:
-        time, cum_npv, _, _ = sim.run_simulation(flow_time, flow_rate, process_id, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
-    except Exception as exc:
-        logger.debug(f'{exc.__class__}, {exc}')
-        raise e.SimulationFailedException
 
-    return models.Simulation(
-        time=time,
-        cumulative_NPV = cum_npv,
-        processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in processes]
-    )
+    if design_ids is None or []:
+        for design in design_impl.get_all_designs(1):
+            design_ids.append(design.id)
+
+    design_results = []
+    for design_id in design_ids:
+        processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id)
+        sim = des.Des()
+    
+        try:
+            time, cum_npv, _, _ = sim.run_simulation(flow_time, flow_rate, process_id, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
+        except Exception as exc:
+            logger.debug(f'{exc.__class__}, {exc}')
+            raise e.SimulationFailedException
+
+        design_res = models.Simulation(
+            time=time,
+            cumulative_NPV = cum_npv,
+            processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in processes]
+        )
+
+        design_results.append(design_res)
+    
+    return design_results
 
 def run_simulation(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: float, 
         flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float,
-        non_tech_add: models.NonTechCost, user_id: int) -> models.Simulation:
+        non_tech_add: models.NonTechCost, design_ids: List[int], normalized_npv: bool,  user_id: int) -> models.Simulation:
     
     res = get_sim_data(db_connection, vcs_id)
 
     if not check_entity_rate(res, process_id):
         raise e.RateWrongOrderException
     
-    processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id)
+    if design_ids is None or []:
+        for design in design_impl.get_all_designs(1):
+            design_ids.append(design.id)
+
+    design_results = []
+    for design_id in design_ids:
+        processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id)
     
-    dsm = create_simple_dsm(processes) #TODO Change to using BPMN
+        dsm = create_simple_dsm(processes) #TODO Change to using BPMN
 
-    sim = des.Des()
+        sim = des.Des()
 
-    try:
-        time, cum_npv, _, _ = sim.run_simulation(flow_time, flow_rate, process_id, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
+        try:
+            time, cum_npv, _, _ = sim.run_simulation(flow_time, flow_rate, process_id, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
     
-    except Exception as exc:
-        logger.debug(f'{exc.__class__}, {exc}')
-        raise e.SimulationFailedException
+        except Exception as exc:
+            logger.debug(f'{exc.__class__}, {exc}')
+            raise e.SimulationFailedException
 
-    return models.Simulation(
-        time=time,
-        cumulative_NPV=cum_npv,
-        processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in processes]
-    )
+        design_res = models.Simulation(
+            time=time,
+            cumulative_NPV=cum_npv,
+            processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in processes]
+        )
+        design_results.append(design_res)
+    
+    return design_results
 
 
-def run_sim_mp(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: float, 
+def run_sim_monte_carlo(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: float, 
         flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float,
-        non_tech_add: models.NonTechCost, user_id: int) -> models.Simulation:
+        non_tech_add: models.NonTechCost, design_ids: List[int], 
+        runs: int, normalized_npv: bool, 
+        user_id: int = None) -> List[models.SimulationMonteCarlo]:
 
     res = get_sim_data(db_connection, vcs_id)
     #print(res)
     if not check_entity_rate(res, process_id):
         raise e.RateWrongOrderException
     
-    processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id)
+   
 
+    if design_ids is None or []:
+        for design in design_impl.get_all_designs(1):
+            design_ids.append(design.id)
 
-    dsm = create_simple_dsm(processes) #TODO Change to using BPMN
+    design_results = []
+    for design_id in design_ids:
+        processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id)
 
-    sim = des.Des()
+        dsm = create_simple_dsm(processes) #TODO Change to using BPMN AND move out of the for loop
+        
 
-    try:
-        results = sim.run_parallell_simulations(flow_time, flow_rate, process_id, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
+        sim = des.Des()
+
+        try:
+            results = sim.run_parallell_simulations(flow_time, flow_rate, process_id, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime, runs)
     
-    except Exception as exc:
-        logger.debug(f'{exc.__class__}, {exc}')
-        raise e.SimulationFailedException
+        except Exception as exc:
+            logger.debug(f'{exc.__class__}, {exc}')
+            raise e.SimulationFailedException
 
-    return models.Simulation(
-        time=results.timesteps[-1],
-        cumulative_NPV=results.mean_npv(),
-        processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in processes]
-    )
+        if normalized_npv:
+            m_npv = results.normalize_npv()
+        else:
+            m_npv = results.mean_npv()
 
-def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: PooledMySQLConnection, vcs: int, technical_processes: List = [], non_tech_processes: List = []):
+        sim_res = models.SimulationMonteCarlo(
+            time=results.timesteps[-1],
+            mean_NPV=m_npv,
+            max_NPVs=results.all_max_npv(),
+            mean_payback_time=results.mean_npv_payback_time()
+            )
+        design_results.append(sim_res)
+    
+    return design_results
+
+def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: PooledMySQLConnection, vcs: int, design: int, technical_processes: List = [], non_tech_processes: List = []):
     nsp = NumericStringParser()
 
     for row in db_results:
-        qo_values = get_quantified_values(db_connection, row['id'], 2)
+        qo_values = get_quantified_values(db_connection, row['id'], design)
         mi_values = get_market_values(db_connection, row['id'], vcs)
         if row['category'] != 'Technical processes':
             try:

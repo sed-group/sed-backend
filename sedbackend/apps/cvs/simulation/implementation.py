@@ -2,6 +2,8 @@ from fastapi import HTTPException, UploadFile
 from starlette import status
 import tempfile
 
+from typing import List, Optional
+
 from sedbackend.apps.cvs.simulation import models, storage
 
 from sedbackend.apps.core.authentication import exceptions as auth_ex
@@ -14,11 +16,12 @@ from sedbackend.apps.cvs.market_input import exceptions as market_input_exceptio
 
 def run_simulation(vcs_id: int, flow_time: float, flow_rate: float, 
                     flow_process_id: int, simulation_runtime: float, discount_rate: float, 
-                    non_tech_add: models.NonTechCost, user_id: int) -> models.Simulation:
+                    non_tech_add: models.NonTechCost, design_ids: List[int], 
+                    normalized_npv: bool, user_id: int) -> List[models.Simulation]:
     try:
         with get_connection() as con:
             result = storage.run_simulation(con, vcs_id, flow_time, flow_rate, flow_process_id, 
-                                simulation_runtime, discount_rate, non_tech_add, user_id)
+                                simulation_runtime, discount_rate, non_tech_add, design_ids, normalized_npv, user_id)
             return result
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
@@ -64,11 +67,13 @@ def run_simulation(vcs_id: int, flow_time: float, flow_rate: float,
 
 def run_csv_simulation(vcs_id: int, flow_time: float, flow_rate: float, 
                         flow_process_id: int, simulation_runtime: float, discount_rate: float, 
-                        non_tech_add: models.NonTechCost, dsm_csv: UploadFile, user_id: int) -> models.Simulation:
+                        non_tech_add: models.NonTechCost, dsm_csv: UploadFile, design_ids: List[int], 
+                        normalized_npv: bool, user_id: int) -> List[models.Simulation]:
     try: 
         with get_connection() as con:
             res = storage.run_sim_with_csv_dsm(con, vcs_id, flow_time, flow_rate, flow_process_id, 
-                                simulation_runtime, discount_rate, non_tech_add, dsm_csv, user_id)
+                                simulation_runtime, discount_rate, non_tech_add, dsm_csv, design_ids, 
+                                normalized_npv, user_id)
             return res
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
@@ -118,11 +123,12 @@ def run_csv_simulation(vcs_id: int, flow_time: float, flow_rate: float,
 
 def run_xlsx_simulation(vcs_id: int, flow_time: float, flow_rate: float, flow_process_id: int, 
                         simulation_runtime: float, discount_rate: float, non_tech_add: models.NonTechCost, 
-                        dsm_xlsx: UploadFile, user_id: int) -> models.Simulation:
+                        dsm_xlsx: UploadFile, design_ids: List[int], normalized_npv: bool, 
+                        user_id: int) -> List[models.Simulation]:
     try: 
         with get_connection() as con:
             res = storage.run_sim_with_xlsx_dsm(con, vcs_id, flow_time, flow_rate, flow_process_id, 
-                            simulation_runtime, discount_rate, non_tech_add, dsm_xlsx, user_id)
+                            simulation_runtime, discount_rate, non_tech_add, dsm_xlsx, design_ids, normalized_npv, user_id)
             return res
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
@@ -170,13 +176,16 @@ def run_xlsx_simulation(vcs_id: int, flow_time: float, flow_rate: float, flow_pr
             detail=f'Formula at process with id: {e.process_id} evaluated to negative time'
         )
 
-def run_sim_mp(vcs_id: int, flow_time: float, flow_rate: float, 
+def run_sim_monte_carlo(vcs_id: int, flow_time: float, flow_rate: float, 
                     flow_process_id: int, simulation_runtime: float, discount_rate: float, 
-                    non_tech_add: models.NonTechCost, user_id: int) -> models.Simulation:
+                    non_tech_add: models.NonTechCost, design_ids: List[int], 
+                    runs: int, normalized_npv: bool, 
+                    user_id: int = None) -> List[models.SimulationMonteCarlo]:
     try: 
         with get_connection() as con:
-            result = storage.run_sim_mp(con, vcs_id, flow_time, flow_rate, flow_process_id, 
-                                simulation_runtime, discount_rate, non_tech_add, user_id)
+            result = storage.run_sim_monte_carlo(con, vcs_id, flow_time, flow_rate, flow_process_id, 
+                                simulation_runtime, discount_rate, non_tech_add, design_ids, runs, 
+                                normalized_npv, user_id)
             return result
     except vcs_exceptions.GenericDatabaseException:
         raise HTTPException(
