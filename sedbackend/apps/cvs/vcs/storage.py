@@ -907,7 +907,7 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, updated_vcs_rows: List[
                 values=[row.index, row.stakeholder, row.stakeholder_expectations, row.iso_process, row.subprocess,
                         vcs_id]
             )
-            update_statement.where(f'id = %s', [row.id, vcs_id])
+            update_statement.where(f'id = %s', [row.id])
             _, rows = update_statement.execute(return_affected_rows=True)
         elif row.id and count <= 0:
             raise exceptions.VCSTableRowFailedToUpdateException #Happens when an incorrect id is given. I.e when the id already exists, but belongs to a different vcs. 
