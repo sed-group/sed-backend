@@ -18,7 +18,7 @@ class NodePost(BaseModel):
 
 
 class ProcessNodeGet(NodeGet):
-    vcs_row: vcs_models.VcsRow
+    vcs_row: Optional[vcs_models.VcsRow] = None
 
 
 class ProcessNodePost(NodePost):

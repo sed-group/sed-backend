@@ -445,6 +445,11 @@ def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int) -> int:
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
+    except exceptions.VCSStakeholderNeedFailedCreationException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Could not create stakeholder need'
+        )
 
 
 def edit_vcs_table(updated_vcs_rows: List[models.VcsRowPost], vcs_id: int) -> bool:
@@ -472,6 +477,11 @@ def edit_vcs_table(updated_vcs_rows: List[models.VcsRowPost], vcs_id: int) -> bo
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Could not delete value dimension'
+        )
+    except exceptions.VCSStakeholderNeedFailedToUpdateException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Stakeholder need failed to update'
         )
 
 def delete_vcs_row(vcs_row_id: int, vcs_id: int) -> bool:

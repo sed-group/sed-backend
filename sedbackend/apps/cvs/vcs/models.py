@@ -2,7 +2,7 @@ import enum
 from datetime import datetime
 from typing import Optional, List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, confloat
 
 from sedbackend.apps.cvs.project.models import CVSProject
 
@@ -96,7 +96,7 @@ class StakeholderNeed(BaseModel):
     id: int
     #vcs_row_id: int
     need: str
-    rank_weight: Optional[float] = None
+    rank_weight: Optional[confloat(ge=0, le=1)] = None
     value_dimension: Optional[str] = None
     value_drivers: Optional[List[ValueDriver]] = None
 
@@ -118,7 +118,7 @@ class StakeholderNeedPost(BaseModel):
     need: str
     value_dimension: Optional[str] = None
     value_drivers: Optional[List[int]] = None
-    rank_weight: Optional[float] = None
+    rank_weight: Optional[confloat(ge=0, le=1)] = None
 
 
 # ======================================================================================================================
@@ -150,7 +150,7 @@ class VcsRowPut(BaseModel):
 
 class VcsRowPost(BaseModel):
     id: Optional[int] = None
-    vcs_id: Optional[int] = None
+    #vcs_id: Optional[int] = None
     index: int
     stakeholder: str
     stakeholder_needs: Optional[List[StakeholderNeedPost]] = None
