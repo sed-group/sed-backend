@@ -150,7 +150,7 @@ class VcsRowPut(BaseModel):
 
 class VcsRowPost(BaseModel):
     id: Optional[int] = None
-    vcs_id: Optional[int] = None
+    #vcs_id: Optional[int] = None
     index: int
     stakeholder: str
     stakeholder_needs: Optional[List[StakeholderNeedPost]] = None
