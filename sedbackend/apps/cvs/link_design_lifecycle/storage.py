@@ -5,7 +5,6 @@ from typing import List
 
 from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
-from sedbackend.apps.cvs.design.models import QuantifiedObjective
 
 from sedbackend.apps.cvs.link_design_lifecycle import models, exceptions
 from sedbackend.apps.cvs.vcs.storage import get_value_driver

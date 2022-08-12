@@ -11,6 +11,11 @@ class DesignNotFoundException(Exception):
 class DesignGroupNotFoundException(Exception):
     pass
 
+class DesignGroupInsertException(Exception):
+    pass
+
+class DesignInsertException(Exception):
+    pass
 
 # ======================================================================================================================
 # Quantified Objectives

@@ -282,6 +282,20 @@ def populate_value_dimension(db_result, vcs_row: int) -> models.ValueDimension:
         res = [dict(zip(cursor.column_names, row)) for row in res]
 '''
 
+def get_all_value_driver_vcs(db_connection: PooledMySQLConnection, vcs_id: int) -> List[models.ValueDriver]:
+    logger.debug(f'Fetching all value drivers for vcs with id={vcs_id}')
+
+    try:
+        select_statement = MySQLStatementBuilder(db_connection)
+        results = select_statement \
+            .select(CVS_VALUE_DRIVER_TABLE, CVS_VALUE_DRIVER_TABLE) \
+            .inner_join('cvs_vcs_need_drivers', 'value_driver = cvs_value_drivers.id')\
+            .inner_join('cvs_stakeholder_needs', 'stakeholder_need = cvs_stakeholder_needs.id') \
+            .inner_join('cvs_vcs_rows', 'vcs_row = cvs_vcs_row.id') \
+            .where('vcs = %s', [vcs_id])
+    except Exception as e:
+        logger.debug(f'{e.__class__}, {e}')
+        raise exceptions.ValueDriverNotFoundException
 
 def get_all_value_driver(db_connection: PooledMySQLConnection, user_id: int) -> List[models.ValueDriver]:
     logger.debug(f'Fetching all value drivers for user with id={user_id}.')

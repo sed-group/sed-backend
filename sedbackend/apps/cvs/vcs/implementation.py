@@ -136,6 +136,23 @@ def get_all_value_driver(user_id: int) -> List[models.ValueDriver]:
             detail=f'Could not find value drivers for user with id={user_id}'
         )
 
+def get_all_value_driver_vcs(vcs_id: int) -> List[models.ValueDriver]:
+    try:
+        with get_connection() as con:
+            res = storage.get_all_value_driver_vcs(con, vcs_id)
+            con.commit()
+            return res
+    except exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id: {vcs_id}'
+        )
+    except exceptions.ValueDriverNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Could not find value drivers'
+        )
+
 
 def get_value_driver(value_driver_id: int) -> models.ValueDriver:
     try:

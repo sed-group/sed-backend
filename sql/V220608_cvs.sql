@@ -122,6 +122,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_value_drivers`
     `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `user`              INT UNSIGNED NOT NULL,
     `name`              TEXT NOT NULL,
+    `unit`              VARCHAR(10) NULL,
     FOREIGN KEY(`user`)
         REFERENCES  `seddb`.`users`(`id`)
         ON DELETE CASCADE
@@ -189,14 +190,26 @@ CREATE TABLE IF NOT EXISTS  `seddb`.`cvs_process_nodes`
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_design_groups`
 (
     `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `vcs`               INT UNSIGNED NOT NULL,
+    `project`           INT UNSIGNED NOT NULL,
     `name`              VARCHAR(255) NOT NULL,
     PRIMARY KEY(`id`),
-    FOREIGN KEY(`vcs`)
-        REFERENCES `seddb`.`cvs_vcss`(`id`)
+    FOREIGN KEY(`project`)
+        REFERENCES `seddb`.`cvs_projects`(`id`)
         ON DELETE CASCADE
 );
 
+CREATE TABLE `seddb`.`cvs_design_group_drivers`
+(
+    `design_group`      INT UNSIGNED NOT NULL, 
+    `value_driver`      INT UNSIGNED NOT NULL,
+    PRIMARY KEY(`design_group`, `value_driver`),
+    FOREIGN KEY (`design_group`)
+        REFERENCES `seddb`.`cvs_design_groups`(`id`)
+        ON DELETE CASCADE,
+    FOREIGN KEY (`value_driver`)
+        REFERENCES `seddb`.`cvs_value_drivers`(`id`)
+        ON DELETE CASCADE
+);
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_designs`
 (
@@ -209,6 +222,21 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_designs`
         ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vd_design_values`
+(
+    `value_driver`      INT UNSIGNED NOT NULL,
+    `design`            INT UNSIGNED NOT NULL,
+    `value`             FLOAT NOT NULL,
+    PRIMARY KEY(`value_driver`, `design`),
+    FOREIGN KEY(`value_driver`)
+        REFERENCES `seddb`.`cvs_value_drivers`(`id`)
+        ON DELETE CASCADE,
+    FOREIGN KEY(`design`)
+        REFERENCES `seddb`.`cvs_designs`(`id`)
+        ON DELETE CASCADE
+);
+
+"""
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_quantified_objectives`
 (
     `value_driver`      INT UNSIGNED NOT NULL,
@@ -241,6 +269,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_quantified_objective_values`
         REFERENCES `seddb`.`cvs_value_drivers`(`id`)
         ON DELETE CASCADE
 );
+"""
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_design_mi_formulas`
 (

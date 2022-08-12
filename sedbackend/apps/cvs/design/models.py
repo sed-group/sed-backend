@@ -1,9 +1,9 @@
-from typing import Optional, List
+from typing import Optional, List, Any
 
 from pydantic import BaseModel
 
 from sedbackend.apps.cvs.vcs.models import VCS, ValueDriver, VcsRow
-
+"""
 # ======================================================================================================================
 # CVS Design Quantified Objectives
 # ======================================================================================================================
@@ -37,42 +37,42 @@ class QuantifiedObjectiveValuePut(BaseModel):
     design_group_id: int
     value_driver_id: int
     value: float
+"""
 
 # ======================================================================================================================
-# CVS Design
+# CVS Design Groups
 # ======================================================================================================================
 
 
 class DesignGroup(BaseModel):
     id: int
-    vcs: int
     name: str
-    qo_list: Optional[List[QuantifiedObjective]]
+    vds: List[ValueDriver]
 
 
 class DesignGroupPost(BaseModel):
     name: str
-    qo_list: Optional[List[int]]
+    vd_ids: List[int]
 
-
-class DesignGroupPut(BaseModel):
-    name: str
-    qo_list: Optional[List[QuantifiedObjective]]
 
 
 # ======================================================================================================================
-# CVS Design Row
+# CVS Designs
 # ======================================================================================================================
 
+
+class ValueDriverDesignValue(BaseModel):
+    vd_id: int
+    value: int
+    def __eq__(self, other: Any) -> bool:
+        return self.vd_id == other.vd_id and self.value == other.value
 
 class Design(BaseModel):
     id: int
-    design_group: int
     name: str
-    qo_values: List[QuantifiedObjectiveValue]
+    vd_design_values: List[ValueDriverDesignValue]
 
 
 class DesignPost(BaseModel):
     name: str
-    qo_values: Optional[List[QuantifiedObjectiveValuePut]]
-
+    vd_design_values: List[ValueDriverDesignValue]
