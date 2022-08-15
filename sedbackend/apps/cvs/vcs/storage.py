@@ -26,7 +26,7 @@ CVS_VALUE_DIMENSION_TABLE = 'cvs_value_dimensions'
 CVS_VALUE_DIMENSION_COLUMNS = ['id', 'name', 'priority', 'vcs_row']
 
 CVS_VALUE_DRIVER_TABLE = 'cvs_value_drivers'
-CVS_VALUE_DRIVER_COLUMNS = ['id', 'user', 'name']
+CVS_VALUE_DRIVER_COLUMNS = ['id', 'user', 'name', 'unit']
 
 CVS_VCS_ROW_DRIVERS_TABLE = 'cvs_rowDrivers'
 CVS_VCS_ROW_DRIVERS_COLUMNS = ['vcs_row', 'value_driver']
@@ -391,8 +391,8 @@ def create_value_driver(db_connection: PooledMySQLConnection, user_id: int,
     try:
         insert_statement = MySQLStatementBuilder(db_connection)
         insert_statement \
-            .insert(table=CVS_VALUE_DRIVER_TABLE, columns=['user', 'name']) \
-            .set_values([user_id, value_driver_post.name]) \
+            .insert(table=CVS_VALUE_DRIVER_TABLE, columns=['user', 'name', 'unit']) \
+            .set_values([user_id, value_driver_post.name, value_driver_post.unit]) \
             .execute(fetch_type=FetchType.FETCH_NONE)
         value_driver_id = insert_statement.last_insert_id
     except Error as e:
@@ -409,8 +409,8 @@ def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int
     update_statement = MySQLStatementBuilder(db_connection)
     update_statement.update(
         table=CVS_VALUE_DRIVER_TABLE,
-        set_statement='name = %s',
-        values=[new_value_driver.name],
+        set_statement='name = %s, unit = %s',
+        values=[new_value_driver.name, new_value_driver.unit],
     )
     update_statement.where('id = %s', [value_driver_id])
     _, rows = update_statement.execute(return_affected_rows=True)
@@ -438,7 +438,8 @@ def delete_value_driver(db_connection: PooledMySQLConnection, value_driver_id: i
 def populate_value_driver(db_result) -> models.ValueDriver:
     return models.ValueDriver(
         id=db_result['id'],
-        name=db_result['name']
+        name=db_result['name'],
+        unit=db_result['unit']
     )
 
 

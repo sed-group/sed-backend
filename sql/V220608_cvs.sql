@@ -236,7 +236,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vd_design_values`
         ON DELETE CASCADE
 );
 
-"""
+/*
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_quantified_objectives`
 (
     `value_driver`      INT UNSIGNED NOT NULL,
@@ -269,7 +269,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_quantified_objective_values`
         REFERENCES `seddb`.`cvs_value_drivers`(`id`)
         ON DELETE CASCADE
 );
-"""
+*/
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_design_mi_formulas`
 (
@@ -326,16 +326,16 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_formulas_market_inputs`
         ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS `seddb`.`cvs_formulas_quantified_objectives`
+
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_formulas_value_drivers`
 (
     `formulas`      INT UNSIGNED NOT NULL,
     `value_driver`      INT UNSIGNED NOT NULL,
-    `design_group`      INT UNSIGNED NOT NULL,
-    PRIMARY KEY(`formulas`, `value_driver`, `design_group`),
+    PRIMARY KEY(`formulas`, `value_driver`),
     FOREIGN KEY (`formulas`)
         REFERENCES `seddb`.`cvs_design_mi_formulas`(`vcs_row`)
         ON DELETE CASCADE,
-    FOREIGN KEY(`value_driver`, `design_group`)
-        REFERENCES `seddb`.`cvs_quantified_objectives`(`value_driver`, `design_group`)
+    FOREIGN KEY(`value_driver`)
+        REFERENCES `seddb`.`cvs_value_drivers`(`id`)
         ON DELETE CASCADE
 );
