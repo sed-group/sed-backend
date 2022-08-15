@@ -130,7 +130,7 @@ def edit_design_group(db_connection: PooledMySQLConnection, design_group_id: int
     
 
     vds = [vd.id for vd in get_all_drivers_design_group(db_connection, design_group_id)]
-    
+
     to_delete = list(filter(lambda x: x not in design_group.vd_ids, vds))
 
     to_add = list(filter(lambda x: x not in vds, design_group.vd_ids))
@@ -214,7 +214,8 @@ def create_design(db_connection: PooledMySQLConnection, design_group_id: int,
         .execute(fetch_type=FetchType.FETCH_NONE)
     design_id = insert_statement.last_insert_id
 
-    [add_value_to_design_vd(db_connection, design_id, d_val.vd_id, d_val.value) for d_val in design.vd_design_values]
+    if design.vd_design_values is not None:
+        [add_value_to_design_vd(db_connection, design_id, d_val.vd_id, d_val.value) for d_val in design.vd_design_values]
 
     return True
 
@@ -236,6 +237,8 @@ def add_value_to_design_vd(db_connection: PooledMySQLConnection, design_id: int,
 def edit_design(db_connection: PooledMySQLConnection, design_id: int, design: models.DesignPost) -> bool:
     logger.debug(f'Edit design with id = {design_id}')
 
+    get_design(db_connection, design_id) #Checks if design is in DB
+
     try:
         update_statement = MySQLStatementBuilder(db_connection)
         update_statement.update(
@@ -250,18 +253,7 @@ def edit_design(db_connection: PooledMySQLConnection, design_id: int, design: mo
         raise exceptions.DesignNotFoundException
     
     vd_values = get_all_vd_design_values(db_connection, design_id)
-
-
-    for vd_val in design.vd_design_values:
-        if vd_val in vd_values:
-            vd_values.pop(vd_val) #Here if both id and value are equal
-            design.vd_design_values.pop(vd_val)
-        else: 
-            continue
-            #add_vd_to_design_group(db_connection, design_group_id, vd_id)
-            #EDIT value_driver_value
-            
-        
+    
     if vd_values is not None:
         for val in vd_values:
             delete_statement = MySQLStatementBuilder(db_connection)

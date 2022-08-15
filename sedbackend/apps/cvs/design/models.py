@@ -65,7 +65,7 @@ class ValueDriverDesignValue(BaseModel):
     vd_id: int
     value: int
     def __eq__(self, other: Any) -> bool:
-        return self.vd_id == other.vd_id and self.value == other.value
+        return self.vd_id == other.vd_id
 
 class Design(BaseModel):
     id: int
