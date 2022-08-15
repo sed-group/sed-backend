@@ -7,7 +7,10 @@ from sedbackend.apps.core.users.storage import db_get_user_safe_with_id
 from sedbackend.apps.cvs.project import models as models, exceptions as exceptions
 from sedbackend.libs.datastructures.pagination import ListChunk
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, Sort, FetchType
+import sedbackend.apps.core.projects.models as proj_models
+import sedbackend.apps.core.projects.storage as proj_storage
 
+DIFAM_APPLICATION_SID = "MOD.CVS"
 CVS_PROJECT_TABLE = 'cvs_projects'
 CVS_PROJECT_COLUMNS = ['id', 'name', 'description', 'currency', 'owner_id', 'datetime_created']
 
@@ -94,9 +97,13 @@ def create_cvs_project(db_connection: PooledMySQLConnection, project: models.CVS
         .set_values([project.name, project.description, project.currency, user_id]) \
         .execute(fetch_type=FetchType.FETCH_NONE)
 
-    project_id = insert_statement.last_insert_id
+    cvs_project_id = insert_statement.last_insert_id
 
-    return get_cvs_project(db_connection, project_id, user_id)
+    # Insert corresponding subproject row
+    subproject = proj_models.SubProjectPost(application_sid=DIFAM_APPLICATION_SID, native_project_id=cvs_project_id)
+    proj_storage.db_post_subproject(db_connection, subproject, user_id)
+
+    return get_cvs_project(db_connection, cvs_project_id, user_id)
 
 
 def edit_cvs_project(db_connection: PooledMySQLConnection, project_id: int, user_id: int,
