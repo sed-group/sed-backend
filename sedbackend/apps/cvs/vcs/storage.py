@@ -26,7 +26,7 @@ CVS_VALUE_DIMENSION_TABLE = 'cvs_value_dimensions'
 CVS_VALUE_DIMENSION_COLUMNS = ['id', 'name', 'priority', 'vcs_row']
 
 CVS_VALUE_DRIVER_TABLE = 'cvs_value_drivers'
-CVS_VALUE_DRIVER_COLUMNS = ['id', 'user', 'name']
+CVS_VALUE_DRIVER_COLUMNS = ['id', 'user', 'name', 'unit']
 
 CVS_VCS_ROW_DRIVERS_TABLE = 'cvs_rowDrivers'
 CVS_VCS_ROW_DRIVERS_COLUMNS = ['vcs_row', 'value_driver']
@@ -282,6 +282,23 @@ def populate_value_dimension(db_result, vcs_row: int) -> models.ValueDimension:
         res = [dict(zip(cursor.column_names, row)) for row in res]
 '''
 
+def get_all_value_driver_vcs(db_connection: PooledMySQLConnection, vcs_id: int) -> List[models.ValueDriver]:
+    logger.debug(f'Fetching all value drivers for vcs with id={vcs_id}')
+
+    try:
+        select_statement = MySQLStatementBuilder(db_connection)
+        results = select_statement \
+            .select(CVS_VALUE_DRIVER_TABLE, ['cvs_value_drivers.id'] + CVS_VALUE_DRIVER_COLUMNS[1:]) \
+            .inner_join('cvs_vcs_need_drivers', 'value_driver = cvs_value_drivers.id')\
+            .inner_join('cvs_stakeholder_needs', 'stakeholder_need = cvs_stakeholder_needs.id') \
+            .inner_join('cvs_vcs_rows', 'vcs_row = cvs_vcs_rows.id') \
+            .where('vcs = %s', [vcs_id])\
+            .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+    except Exception as e:
+        logger.debug(f'{e.__class__}, {e}')
+        raise exceptions.ValueDriverNotFoundException
+    
+    return [populate_value_driver(res) for res in results]
 
 def get_all_value_driver(db_connection: PooledMySQLConnection, user_id: int) -> List[models.ValueDriver]:
     logger.debug(f'Fetching all value drivers for user with id={user_id}.')
@@ -377,8 +394,8 @@ def create_value_driver(db_connection: PooledMySQLConnection, user_id: int,
     try:
         insert_statement = MySQLStatementBuilder(db_connection)
         insert_statement \
-            .insert(table=CVS_VALUE_DRIVER_TABLE, columns=['user', 'name']) \
-            .set_values([user_id, value_driver_post.name]) \
+            .insert(table=CVS_VALUE_DRIVER_TABLE, columns=['user', 'name', 'unit']) \
+            .set_values([user_id, value_driver_post.name, value_driver_post.unit]) \
             .execute(fetch_type=FetchType.FETCH_NONE)
         value_driver_id = insert_statement.last_insert_id
     except Error as e:
@@ -395,8 +412,8 @@ def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int
     update_statement = MySQLStatementBuilder(db_connection)
     update_statement.update(
         table=CVS_VALUE_DRIVER_TABLE,
-        set_statement='name = %s',
-        values=[new_value_driver.name],
+        set_statement='name = %s, unit = %s',
+        values=[new_value_driver.name, new_value_driver.unit],
     )
     update_statement.where('id = %s', [value_driver_id])
     _, rows = update_statement.execute(return_affected_rows=True)
@@ -424,7 +441,8 @@ def delete_value_driver(db_connection: PooledMySQLConnection, value_driver_id: i
 def populate_value_driver(db_result) -> models.ValueDriver:
     return models.ValueDriver(
         id=db_result['id'],
-        name=db_result['name']
+        name=db_result['name'],
+        unit=db_result['unit']
     )
 
 

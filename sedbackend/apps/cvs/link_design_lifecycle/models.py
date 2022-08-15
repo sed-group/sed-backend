@@ -46,5 +46,5 @@ class FormulaPost(BaseModel):
 
 
 class FormulaRowGet(FormulaGet):
-    quantified_objectives: List[design_models.QuantifiedObjective]
+    value_drivers: List[vcs_models.ValueDriver]
     market_inputs: List[mi_models.MarketInputGet]

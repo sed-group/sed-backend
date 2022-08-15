@@ -81,10 +81,12 @@ class ValueDimensionPost(BaseModel):
 class ValueDriver(BaseModel):
     id: int
     name: str
+    unit: Optional[str] = None
 
 
 class ValueDriverPost(BaseModel):
     name: str
+    unit: Optional[str] = None
 
 
 # ======================================================================================================================

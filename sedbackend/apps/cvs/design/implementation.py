@@ -8,6 +8,7 @@ import sedbackend.apps.cvs.project.exceptions as project_exceptions
 from sedbackend.apps.core.authentication import exceptions as auth_ex
 from sedbackend.apps.core.db import get_connection
 from sedbackend.apps.cvs.design import models, storage, exceptions
+from sedbackend.apps.cvs.vcs.models import ValueDriver
 
 
 # ======================================================================================================================
@@ -15,10 +16,10 @@ from sedbackend.apps.cvs.design import models, storage, exceptions
 # ======================================================================================================================
 
 
-def create_cvs_design_group(design_group_post: models.DesignGroupPost, vcs_id: int) -> models.DesignGroup:
+def create_cvs_design_group(design_group_post: models.DesignGroupPost, project_id: int) -> models.DesignGroup:
     try:
         with get_connection() as con:
-            result = storage.create_design_group(con, design_group_post, vcs_id)
+            result = storage.create_design_group(con, design_group_post, project_id)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
@@ -26,22 +27,23 @@ def create_cvs_design_group(design_group_post: models.DesignGroupPost, vcs_id: i
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project.',
         )
+    except exceptions.DesignGroupInsertException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not add value drivers to design group'
+        )
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
-    except vcs_exceptions.VCSNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs with id={vcs_id}.',
-        )
 
-
-def get_all_design_groups(vcs_id: int) -> List[models.DesignGroup]:
+def get_all_design_groups(project_id: int) -> List[models.DesignGroup]:
     try:
         with get_connection() as con:
-            return storage.get_all_design_groups(con, vcs_id)
+            res = storage.get_all_design_groups(con, project_id)
+            con.commit()
+            return res
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -51,11 +53,6 @@ def get_all_design_groups(vcs_id: int) -> List[models.DesignGroup]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
-        )
-    except vcs_exceptions.VCSNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs with id={vcs_id}.',
         )
 
 
@@ -74,11 +71,6 @@ def get_design_group(design_group_id: int) -> models.DesignGroup:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
-        )
-    except vcs_exceptions.VCSNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs.',
         )
     except exceptions.DesignGroupNotFoundException:
         raise HTTPException(
@@ -108,11 +100,6 @@ def delete_design_group(design_group_id: int) -> bool:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find design with id={design_group_id}.',
         )
-    except vcs_exceptions.VCSNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs.',
-        )
 
 
 def edit_design_group(design_group_id: int, updated_design: models.DesignGroupPost) -> models.DesignGroup:
@@ -126,10 +113,10 @@ def edit_design_group(design_group_id: int, updated_design: models.DesignGroupPo
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project.'
         )
-    except exceptions.DesignNotFoundException:
+    except exceptions.DesignGroupNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find design with id={design_group_id}.',
+            detail=f'Could not find design group with id={design_group_id}.',
         )
     except vcs_exceptions.VCSNotFoundException:
         raise HTTPException(
@@ -139,7 +126,7 @@ def edit_design_group(design_group_id: int, updated_design: models.DesignGroupPo
 
 
 # ======================================================================================================================
-# CVS Design Group
+# CVS Design
 # ======================================================================================================================
 
 def get_design(design_id: int) -> models.Design:
@@ -179,6 +166,11 @@ def create_design(design_group_id: int, design: models.DesignPost) -> bool:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find design group'
         )
+    except exceptions.DesignInsertException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not insert the values provided'
+        )
 
 
 def edit_design(design_id: int, design: models.DesignPost) -> bool:
@@ -211,260 +203,3 @@ def delete_design(design_id) -> bool:
             detail=f'Could not find design'
         )
 
-
-# ======================================================================================================================
-# Quantified Objectives
-# ======================================================================================================================
-
-
-def get_all_quantified_objectives(design_group_id: int) -> List[models.QuantifiedObjective]:
-    try:
-        with get_connection() as con:
-            res = storage.get_all_quantified_objectives(con, design_group_id)
-            con.commit()
-            return res
-    except exceptions.QuantifiedObjectiveNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find quantified objective'
-        )
-    except project_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project.'
-        )
-    except exceptions.DesignGroupNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find design with id={design_group_id}.',
-        )
-    except vcs_exceptions.VCSNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs.',
-        )
-
-
-def get_quantified_objective(value_driver_id: int, design_group_id: int) -> models.QuantifiedObjective:
-    try:
-        with get_connection() as con:
-            res = storage.get_quantified_objective(con, value_driver_id, design_group_id)
-            con.commit()
-            return res
-    except exceptions.QuantifiedObjectiveNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find quantified objective value driver id={value_driver_id} '
-                   f'and design id = {design_group_id}'
-        )
-    except project_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project.'
-        )
-    except exceptions.DesignNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find design.',
-        )
-    except vcs_exceptions.VCSNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs.',
-        )
-    except vcs_exceptions.ValueDriverNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Could not find value driver.',
-        )
-
-
-def create_quantified_objective(design_group_id: int, value_driver_id: int,
-                                quantified_objective_post: models.QuantifiedObjectivePost) \
-        -> bool:
-    try:
-        with get_connection() as con:
-            res = storage.create_quantified_objective(con, design_group_id, value_driver_id, quantified_objective_post)
-            con.commit()
-            return res
-    except project_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project.'
-        )
-    except vcs_exceptions.ValueDriverNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Could not find value driver with id={value_driver_id}.',
-        )
-
-
-def delete_quantified_objective(value_driver_id: int, design_group_id: int) -> bool:
-    try:
-        with get_connection() as con:
-            res = storage.delete_quantified_objective(con, value_driver_id, design_group_id)
-            con.commit()
-            return res
-    except auth_ex.UnauthorizedOperationException:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Unauthorized operation'
-        )
-    except exceptions.QuantifiedObjectiveNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='Could not find quantified objective'
-        )
-    except project_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project.'
-        )
-    except exceptions.DesignGroupNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find design.',
-        )
-    except vcs_exceptions.VCSNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs.',
-        )
-    except vcs_exceptions.ValueDriverNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Could not find value driver.',
-        )
-
-
-def edit_quantified_objective(value_driver_id: int, design_group_id: int,
-                              updated_qo: models.QuantifiedObjectivePost) -> models.QuantifiedObjective:
-    try:
-        with get_connection() as con:
-            res = storage.edit_quantified_objective(con, value_driver_id, design_group_id, updated_qo)
-            con.commit()
-            return res
-    except exceptions.QuantifiedObjectiveNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find quantified objective.'
-        )
-    except project_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project.'
-        )
-    except exceptions.DesignGroupNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find design.',
-        )
-    except vcs_exceptions.VCSNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs.',
-        )
-
-def get_all_formula_quantified_objectives(formulas_id: int) -> List[models.QuantifiedObjective]:
-    try:
-        with get_connection() as con:
-            res = storage.get_all_formula_quantified_objectives(con, formulas_id)
-            con.commit()
-            return res
-    except exceptions.QuantifiedObjectiveNotInFormulas:
-        raise HTTPException(
-             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find quantified objectives for formula'
-        )
-        
-def get_all_qo_values(design_id: int) -> List[models.QuantifiedObjectiveValue]:
-    try:
-        with get_connection() as con:
-            res = storage.get_all_qo_values(con, design_id)
-            con.commit()
-            return res
-    except exceptions.QuantifiedObjectiveNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find quantified objective.'
-        )
-    except project_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project.'
-        )
-    except exceptions.DesignGroupNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find design.',
-        )
-    except vcs_exceptions.VCSNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs.',
-        )
-
-def create_qo_value(design_group_id: int, design_id: int, value_driver_id: int, value: float) -> models.QuantifiedObjectiveValue:
-    try:
-        with get_connection() as con:
-            res = storage.create_qo_value(con, design_group_id, design_id, value_driver_id, value)
-            con.commit()
-            return res
-    except exceptions.QuantifiedObjectiveNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find quantified objective.'
-        )
-    except project_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project.'
-        )
-    except exceptions.DesignGroupNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find design.',
-        )
-    except vcs_exceptions.ValueDriverNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Could not find value driver.'
-        )
-    except vcs_exceptions.VCSNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs.',
-        )
-
-def edit_qo_value(design_group_id: int, design_id: int, value_driver_id: int,
-                  value: float) -> models.QuantifiedObjectiveValue:
-    try:
-        with get_connection() as con:
-            res = storage.edit_qo_value(con, design_group_id, design_id, value_driver_id, value)
-            con.commit()
-            return res
-    except exceptions.QuantifiedObjectiveNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find quantified objective.'
-        )
-    except project_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project.'
-        )
-    except exceptions.DesignGroupNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find design.',
-        )
-    except vcs_exceptions.VCSNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs.',
-        )
-    except exceptions.QuantifiedObjectiveValueNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find quantified objective value.'
-        )
