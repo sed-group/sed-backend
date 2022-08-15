@@ -113,29 +113,33 @@ def edit_design_group(db_connection: PooledMySQLConnection, design_group_id: int
                       design_group: models.DesignGroupPost) -> models.DesignGroup:
     logger.debug(f'Editing Design with id = {design_group_id}')
 
-    update_statement = MySQLStatementBuilder(db_connection)
-    update_statement.update(
-        table=DESIGN_GROUPS_TABLE,
-        set_statement='name = %s',
-        values=[design_group.name]
-    )
-    update_statement.where('id = %s', [design_group_id])
-    _, rows = update_statement.execute(return_affected_rows=True)
+    get_design_group(db_connection, design_group_id) #Check if design group exists in DB
 
-    if rows == 0:
+    try:
+        update_statement = MySQLStatementBuilder(db_connection)
+        update_statement.update(
+            table=DESIGN_GROUPS_TABLE,
+            set_statement='name = %s',
+            values=[design_group.name]
+        )
+        update_statement.where('id = %s', [design_group_id])
+        _, rows = update_statement.execute(return_affected_rows=True)
+    except Exception as e:
+        logger.debug(f'{e.__class__}, {e}')
         raise exceptions.DesignGroupNotFoundException
+    
 
     vds = [vd.id for vd in get_all_drivers_design_group(db_connection, design_group_id)]
+    
+    to_delete = list(filter(lambda x: x not in design_group.vd_ids, vds))
 
-    for vd_id in design_group.vd_ids:
-        if vd_id in vds:
-            vds.pop(vd_id)
-        else:
-            add_vd_to_design_group(db_connection, design_group_id, vd_id)
+    to_add = list(filter(lambda x: x not in vds, design_group.vd_ids))
+    for vd_id in to_add:
+        add_vd_to_design_group(db_connection, design_group_id, vd_id)
             
         
-    if vds is not None:
-        for id in vds:
+    if to_delete is not None:
+        for id in to_delete:
             delete_statement = MySQLStatementBuilder(db_connection)
             delete_statement.delete(DESIGN_GROUP_DRIVER_TABLE)\
                 .where('value_driver = %s', [id])\

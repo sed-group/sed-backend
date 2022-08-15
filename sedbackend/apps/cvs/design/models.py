@@ -75,4 +75,4 @@ class Design(BaseModel):
 
 class DesignPost(BaseModel):
     name: str
-    vd_design_values: List[ValueDriverDesignValue]
+    vd_design_values: Optional[List[ValueDriverDesignValue]]

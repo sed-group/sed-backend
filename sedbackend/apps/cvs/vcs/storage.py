@@ -288,14 +288,17 @@ def get_all_value_driver_vcs(db_connection: PooledMySQLConnection, vcs_id: int) 
     try:
         select_statement = MySQLStatementBuilder(db_connection)
         results = select_statement \
-            .select(CVS_VALUE_DRIVER_TABLE, CVS_VALUE_DRIVER_TABLE) \
+            .select(CVS_VALUE_DRIVER_TABLE, ['cvs_value_drivers.id'] + CVS_VALUE_DRIVER_COLUMNS[1:]) \
             .inner_join('cvs_vcs_need_drivers', 'value_driver = cvs_value_drivers.id')\
             .inner_join('cvs_stakeholder_needs', 'stakeholder_need = cvs_stakeholder_needs.id') \
-            .inner_join('cvs_vcs_rows', 'vcs_row = cvs_vcs_row.id') \
-            .where('vcs = %s', [vcs_id])
+            .inner_join('cvs_vcs_rows', 'vcs_row = cvs_vcs_rows.id') \
+            .where('vcs = %s', [vcs_id])\
+            .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
     except Exception as e:
         logger.debug(f'{e.__class__}, {e}')
         raise exceptions.ValueDriverNotFoundException
+    
+    return [populate_value_driver(res) for res in results]
 
 def get_all_value_driver(db_connection: PooledMySQLConnection, user_id: int) -> List[models.ValueDriver]:
     logger.debug(f'Fetching all value drivers for user with id={user_id}.')

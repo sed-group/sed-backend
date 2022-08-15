@@ -116,7 +116,7 @@ def edit_design_group(design_group_id: int, updated_design: models.DesignGroupPo
     except exceptions.DesignGroupNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find design with id={design_group_id}.',
+            detail=f'Could not find design group with id={design_group_id}.',
         )
     except vcs_exceptions.VCSNotFoundException:
         raise HTTPException(
