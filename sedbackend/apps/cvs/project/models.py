@@ -7,8 +7,8 @@ from sedbackend.apps.core.users.models import User
 class CVSProject(BaseModel):
     id: int
     name: str
-    description: str
-    currency: str
+    description: Optional[str] = None
+    currency: Optional[str] = None
     owner: User
     datetime_created: datetime
 

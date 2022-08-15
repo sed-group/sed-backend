@@ -927,8 +927,8 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, updated_vcs_rows: List[
             )
             update_statement.where(f'id = %s', [row.id])
             _, rows = update_statement.execute(return_affected_rows=True)
-        elif row.id and count <= 0:
-            raise exceptions.VCSTableRowFailedToUpdateException #Happens when an incorrect id is given. I.e when the id already exists, but belongs to a different vcs. 
+        #elif row.id and count <= 0:
+        #    raise exceptions.VCSTableRowFailedToUpdateException #Happens when an incorrect id is given. I.e when the id already exists, but belongs to a different vcs.
         else: 
             vcs_row_id: int = create_vcs_row(db_connection, row, vcs_id)
             node = life_cycle_models.ProcessNodePost(
