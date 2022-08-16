@@ -1,12 +1,15 @@
 from fastapi import Depends, APIRouter
 
 from sedbackend.apps.core.authentication.utils import get_current_active_user
+from sedbackend.apps.core.projects.dependencies import SubProjectAccessChecker
+from sedbackend.apps.core.projects.models import AccessLevel
 from sedbackend.apps.core.users.models import User
 from sedbackend.libs.datastructures.pagination import ListChunk
 from sedbackend.apps.cvs.project import models, implementation
 
 
 router = APIRouter()
+CVS_APP_SID = 'MOD.CVS'
 
 
 @router.get(
