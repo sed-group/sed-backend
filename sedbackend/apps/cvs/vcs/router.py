@@ -83,15 +83,6 @@ async def get_vcs_table(vcs_id: int) -> List[models.VcsRow]:
     return implementation.get_vcs_table(vcs_id)
 
 
-@router.post(
-    '/vcs/{vcs_id}/table',
-    summary='Creates the table for a VCS',
-    response_model=bool,
-)
-async def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int) -> int:
-    return implementation.create_vcs_table(new_table, vcs_id)
-
-
 @router.put(
     '/vcs/{vcs_id}/table',
     summary='Edits rows of the vcs table',
@@ -99,6 +90,7 @@ async def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int) -> i
 )
 async def edit_vcs_table(updated_table: List[models.VcsRowPost], vcs_id: int) -> bool:
     return implementation.edit_vcs_table(updated_table, vcs_id)
+
 
 @router.delete(
     '/vcs/{vcs_id}/row/{row_id}',

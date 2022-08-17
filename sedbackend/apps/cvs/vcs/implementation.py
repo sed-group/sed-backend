@@ -426,49 +426,6 @@ def get_vcs_table(vcs_id: int) -> List[models.VcsRow]:
         )
 
 
-def create_vcs_table(new_table: List[models.VcsRowPost], vcs_id: int) -> int:
-    try:
-        with get_connection() as con:
-            result = storage.create_vcs_table(con, new_table, vcs_id)
-            con.commit()
-            return result
-    except exceptions.VCSTableRowFailedDeletionException as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'Failed to remove VCS table row with id={e.table_row_id}.',
-        )
-    except exceptions.VCSTableProcessAmbiguity as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Both ISO process and subprocess was provided for table row with index={e.table_row_id}.',
-        )
-    except exceptions.ValueDriverNotFoundException as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find value driver with id={e.value_driver_id}.',
-        )
-    except exceptions.ISOProcessNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='No such ISO process'
-        )
-    except exceptions.SubprocessNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='No such subprocess'
-        )
-    except auth_ex.UnauthorizedOperationException:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail='Unauthorized user.',
-        )
-    except exceptions.VCSStakeholderNeedFailedCreationException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='Could not create stakeholder need'
-        )
-
-
 def edit_vcs_table(updated_vcs_rows: List[models.VcsRowPost], vcs_id: int) -> bool:
     try: 
         with get_connection() as con:
@@ -484,6 +441,11 @@ def edit_vcs_table(updated_vcs_rows: List[models.VcsRowPost], vcs_id: int) -> bo
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Ambiguity in iso processes and subprocesses'
+        )
+    except exceptions.VCSandVCSRowIDMismatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'The given vcs id does not match the vcs id of the vcs table'
         )
     except exceptions.ValueDriverFailedDeletionException:
         raise HTTPException(
@@ -525,6 +487,7 @@ def duplicate_vcs(vcs_id: int, n: int, user_id: int) -> List[models.VCS]:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find VCS'
         )
+
 
 def get_vcs_row(vcs_row: int) -> models.VcsRow:
     try: 

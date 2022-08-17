@@ -95,7 +95,12 @@ class VCSTableProcessAmbiguity(Exception):
     def __init__(self, table_row_id: int = None):
         self.table_row_id = table_row_id
 
+
 class VCSRowNotCorrectException(Exception):
+    pass
+
+
+class VCSandVCSRowIDMismatchException(Exception):
     pass
 
 
@@ -115,3 +120,5 @@ class VCSStakeholderNeedFailedCreationException(Exception):
 
 class VCSStakeholderNeedFailedToUpdateException(Exception):
     pass
+
+

@@ -907,12 +907,22 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, updated_vcs_rows: List[
             raise exceptions.VCSTableProcessAmbiguity
 
         count = 0
+        vcs_check = 0
         if row.id:
+            count_statement = MySQLStatementBuilder(db_connection)
+            count_result = count_statement.count(CVS_VCS_ROWS_TABLE) \
+                .where(f'id = %s', [row.id]) \
+                .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+            count = count_result['count']
+
             count_statement = MySQLStatementBuilder(db_connection)
             count_result = count_statement.count(CVS_VCS_ROWS_TABLE) \
                 .where(f'id = %s and vcs = %s', [row.id, vcs_id]) \
                 .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-            count = count_result['count']
+            vcs_check = count_result['count']
+
+        if count > 0 and vcs_check == 0:
+            raise exceptions.VCSandVCSRowIDMismatchException
 
         vcs_row_id = row.id
 
@@ -927,8 +937,6 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, updated_vcs_rows: List[
             )
             update_statement.where(f'id = %s', [row.id])
             _, rows = update_statement.execute(return_affected_rows=True)
-        #elif row.id and count <= 0:
-        #    raise exceptions.VCSTableRowFailedToUpdateException #Happens when an incorrect id is given. I.e when the id already exists, but belongs to a different vcs.
         else: 
             vcs_row_id: int = create_vcs_row(db_connection, row, vcs_id)
             node = life_cycle_models.ProcessNodePost(
