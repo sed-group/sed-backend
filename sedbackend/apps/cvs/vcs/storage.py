@@ -528,10 +528,12 @@ def get_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int) -> 
         cursor.execute(query, [subprocess_id])
         last_insert_id = cursor.lastrowid
         res = cursor.fetchone()
+        if res is None:
+            raise exceptions.SubprocessNotFoundException(subprocess_id)
         res = dict(zip(cursor.column_names, res))
 
-    if res is None:
-        raise exceptions.SubprocessNotFoundException(subprocess_id)
+
+
 
     return populate_subprocess(res)
 
@@ -861,7 +863,6 @@ def create_vcs_row(db_connection: PooledMySQLConnection, row: models.VcsRowPost,
         else:
             raise exceptions.VCSTableRowFailedToUpdateException(e.msg)
             '''
-    
 
     return -1
 
@@ -1008,33 +1009,6 @@ def duplicate_vcs(db_connection: PooledMySQLConnection, vcs_id: int, n: int, use
         new_vcs = create_vcs(db_connection, vcs_post, vcs.project.id, user_id)
         vcs_list.append(new_vcs)
     return vcs_list
-
-
-# Duplicate value drivers
-'''
-def duplicate_value_driver(db_connection: PooledMySQLConnection, vcs_id: int,
-                           value_drivers: List[models.ValueDriver]) -> List[int]:
-    new_value_drivers = []
-    for vd in value_drivers:
-        try:
-            insert_statement = MySQLStatementBuilder(db_connection)
-            insert_statement \
-                .insert(table=CVS_VALUE_DRIVER_TABLE,
-                        columns=['vcs', 'name']) \
-                .set_values([vcs_id, vd.name]) \
-                .execute(fetch_type=FetchType.FETCH_NONE)
-            new_value_drivers.append(insert_statement.last_insert_id)
-        except Error as e:
-            logger.debug(f'Error msg: {e.msg}')
-            raise exceptions.VCSNotFoundException
-
-    return new_value_drivers
-'''
-
-
-# Todo duplicate quantified objectives
-def duplicate_quantified_objectives(db_connection: PooledMySQLConnection, vcs_id: int, qo_list: List[int]) -> List[int]:
-    return []
 
 
 def duplicate_stakeholder_need(db_connection: PooledMySQLConnection, vcs_row_id: int,
