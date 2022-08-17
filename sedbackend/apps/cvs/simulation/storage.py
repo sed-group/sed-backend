@@ -29,7 +29,8 @@ TIME_FORMAT_DICT = dict({
     'month': TimeFormat.MONTH, 
     'week': TimeFormat.WEEK, 
     'day': TimeFormat.DAY, 
-    'hour': TimeFormat.HOUR})
+    'hour': TimeFormat.HOUR,
+    'minutes': TimeFormat.MINUTES})
 
 def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: float,
                 flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float, 
@@ -282,7 +283,7 @@ def get_sim_data(db_connection: PooledMySQLConnection, vcs_id: int):
         res = [dict(zip(cursor.column_names, row)) for row in res]
     return res
 
-def get_quantified_values(db_connection: PooledMySQLConnection, vcs_row_id: int, design: int):
+def get_quantified_values(db_connection: PooledMySQLConnection, vcs_row_id: int, design: int): #TODO fetch value driver values. 
 
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement \
@@ -306,7 +307,7 @@ def get_market_values(db_connection: PooledMySQLConnection, vcs_row_id: int, vcs
     
     return res
 
-def parse_formula(formula: str, qo_values, mi_values):
+def parse_formula(formula: str, qo_values, mi_values): #TODO fix how the formulas are parsed
     new_formula = formula
     for qo in qo_values: 
         new_formula = expr.replace_all(qo['name'], qo['value'], new_formula)
