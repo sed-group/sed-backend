@@ -8,6 +8,7 @@ from mysql.connector.pooling import PooledMySQLConnection
 from sedbackend.apps.cvs.project.exceptions import CVSProjectNotFoundException
 from sedbackend.apps.cvs.vcs.exceptions import ValueDriverNotFoundException
 from sedbackend.apps.cvs.vcs.models import ValueDriver
+from sedbackend.apps.cvs.vcs import storage as vcs_storage
 
 from sedbackend.apps.cvs.vcs.storage import CVS_VALUE_DRIVER_TABLE, get_value_driver
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
@@ -39,10 +40,12 @@ def create_design_group(db_connection: PooledMySQLConnection, design_group: mode
 
     if design_group_id is None or design_group_id < 0:
         raise CVSProjectNotFoundException
-    
-    [add_vd_to_design_group(db_connection, design_group_id, vd_id) for vd_id in design_group.vd_ids]
+
+    value_drivers = vcs_storage.get_all_value_driver_vcs(db_connection, design_group.vcs)
+    [add_vd_to_design_group(db_connection, design_group_id, vd.id) for vd in value_drivers]
 
     return get_design_group(db_connection, design_group_id)
+
 
 def add_vd_to_design_group(db_connection: PooledMySQLConnection, design_group_id: int, vd_id: int) -> bool:
     
@@ -218,6 +221,7 @@ def create_design(db_connection: PooledMySQLConnection, design_group_id: int,
         [add_value_to_design_vd(db_connection, design_id, d_val.vd_id, d_val.value) for d_val in design.vd_design_values]
 
     return True
+
 
 def add_value_to_design_vd(db_connection: PooledMySQLConnection, design_id: int, vd_id: int, value: float) -> bool:
     

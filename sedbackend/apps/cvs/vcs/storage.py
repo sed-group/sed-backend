@@ -532,9 +532,6 @@ def get_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int) -> 
             raise exceptions.SubprocessNotFoundException(subprocess_id)
         res = dict(zip(cursor.column_names, res))
 
-
-
-
     return populate_subprocess(res)
 
 

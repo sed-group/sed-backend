@@ -10,7 +10,7 @@ connection_pool = None
 
 user = 'rw'
 password = Environment.get_variable('MYSQL_PWD_RW')
-# host = 'core-db'
+#host = 'core-db'
 host = 'localhost'
 database = 'seddb'
 #port = 3306

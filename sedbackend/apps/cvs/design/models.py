@@ -52,7 +52,7 @@ class DesignGroup(BaseModel):
 
 class DesignGroupPost(BaseModel):
     name: str
-    vd_ids: List[int]
+    vcs: int
 
 
 
