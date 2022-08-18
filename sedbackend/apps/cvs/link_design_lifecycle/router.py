@@ -12,14 +12,14 @@ router = APIRouter()
     response_model=bool,
 )
 async def create_formulas(vcs_row_id: int, time: str, time_unit: models.TimeFormat, cost: str, revenue: str, 
-        rate: models.Rate, quantified_objective_ids: List[models.QuantifiedObjectivePost], market_input_ids: List[int]) -> bool:
+        rate: models.Rate, value_driver_ids: List[int], market_input_ids: List[int]) -> bool:
     return implementation.create_formulas(vcs_row_id, models.FormulaPost(
                                                         time=time, 
                                                         time_unit=time_unit, 
                                                         cost=cost, 
                                                         revenue=revenue, 
                                                         rate=rate,
-                                                        quantified_objective_ids=quantified_objective_ids,
+                                                        value_driver_ids=value_driver_ids,
                                                         market_input_ids=market_input_ids))
 
 @router.get(

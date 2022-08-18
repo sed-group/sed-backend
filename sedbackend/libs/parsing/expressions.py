@@ -16,3 +16,22 @@ def replace_all(pattern, replacement, string):
     return new_string
 
 
+def get_prefix_ids(prefix, string):
+    """
+    Finds all matching ids with the given prefix. 
+
+    :param prefix: The prefix that will be searched for
+    :param string:
+
+    :return List[int]: A list of all matching ids in the string that have the prefix "prefix"
+    """
+
+    ids = re.findall(r'\b' + prefix + r'[0-9]+', string)
+    
+    num_ids = []
+    for str_id in ids:
+        id = ''.join([n for n in str_id if n.isdigit()])
+        num_ids.append(id)
+    
+    return num_ids
+

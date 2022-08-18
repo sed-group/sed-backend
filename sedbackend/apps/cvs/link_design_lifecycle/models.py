@@ -12,6 +12,7 @@ class TimeFormat(Enum):
     The timeformats that can be chosen for a process. The values are the defaults for the
     simulation (years)
     """
+    MINUTES = 'minutes'
     HOUR = 'hour'
     DAY = 'day'
     WEEK = 'week'
@@ -22,9 +23,6 @@ class Rate(Enum):
     PRODUCT = 'per_product'
     PROJECT = 'per_project'
 
-class QuantifiedObjectivePost(BaseModel):
-    value_driver_id: int
-    design_group_id: int
 
 class FormulaGet(BaseModel):
     vcs_row_id: int
@@ -41,7 +39,7 @@ class FormulaPost(BaseModel):
     cost: str
     revenue: str
     rate: Rate
-    quantified_objective_ids: Optional[List[QuantifiedObjectivePost]] = None
+    value_driver_ids: Optional[List[int]] = None
     market_input_ids: Optional[List[int]] = None
 
 
