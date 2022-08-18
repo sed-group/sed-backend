@@ -855,16 +855,14 @@ def create_vcs_row(db_connection: PooledMySQLConnection, row: models.VcsRowPost,
         return vcs_row_id
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
-        '''
+        
         if row.iso_process is not None:
             raise exceptions.ISOProcessNotFoundException
         elif row.subprocess is not None:
             raise exceptions.SubprocessNotFoundException
         else:
             raise exceptions.VCSTableRowFailedToUpdateException(e.msg)
-            '''
-
-    return -1
+        
 
 
 def create_vcs_table(db_connection: PooledMySQLConnection, new_vcs_rows: List[models.VcsRowPost], vcs_id: int) -> bool:
