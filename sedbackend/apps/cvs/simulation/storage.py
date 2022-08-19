@@ -29,7 +29,8 @@ TIME_FORMAT_DICT = dict({
     'month': TimeFormat.MONTH, 
     'week': TimeFormat.WEEK, 
     'day': TimeFormat.DAY, 
-    'hour': TimeFormat.HOUR})
+    'hour': TimeFormat.HOUR,
+    'minutes': TimeFormat.MINUTES})
 
 def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: float,
                 flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float, 
@@ -135,7 +136,7 @@ def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flo
 
 def run_simulation(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: float, 
         flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float,
-        non_tech_add: models.NonTechCost, design_ids: List[int], normalized_npv: bool,  user_id: int) -> models.Simulation:
+        non_tech_add: models.NonTechCost, design_ids: List[int], normalized_npv: bool,  user_id: int) -> List[models.Simulation]:
     
     res = get_sim_data(db_connection, vcs_id)
 
@@ -223,12 +224,12 @@ def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: Poo
     nsp = NumericStringParser()
 
     for row in db_results:
-        qo_values = get_quantified_values(db_connection, row['id'], design)
+        vd_values = get_vd_design_values(db_connection, row['id'], design)
         mi_values = get_market_values(db_connection, row['id'], vcs)
         if row['category'] != 'Technical processes':
             try:
-                non_tech = models.NonTechnicalProcess(cost=nsp.eval(parse_formula(row['cost'], qo_values, mi_values)), 
-                    revenue=nsp.eval(parse_formula(row['revenue'], qo_values, mi_values)), name=row['iso_name'])
+                non_tech = models.NonTechnicalProcess(cost=nsp.eval(parse_formula(row['cost'], vd_values, mi_values)), 
+                    revenue=nsp.eval(parse_formula(row['revenue'], vd_values, mi_values)), name=row['iso_name'])
             except Exception as exc:
                 logger.debug(f'{exc.__class__}, {exc}')
                 raise e.FormulaEvalException(row['id'])
@@ -236,10 +237,13 @@ def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: Poo
             
         elif row['iso_name'] is not None and row['sub_name'] is None:
             try:
+                time = nsp.eval(parse_formula(row['time'], vd_values, mi_values))
+                cost_formula = parse_formula(row['cost'], vd_values, mi_values)
+                revenue_formula = parse_formula(row['revenue'], vd_values, mi_values)
                 p = Process(row['id'], 
-                    nsp.eval(parse_formula(row['time'], qo_values, mi_values)), 
-                    nsp.eval(parse_formula(row['cost'], qo_values, mi_values)), 
-                    nsp.eval(parse_formula(row['revenue'], qo_values, mi_values)), 
+                    time, 
+                    nsp.eval(expr.replace_all('time', time, cost_formula)), 
+                    nsp.eval(expr.replace_all('time', time, revenue_formula)), 
                     row['iso_name'], non_tech_add, TIME_FORMAT_DICT.get(row['time_unit'].lower())
                     )
                 if p.time < 0:
@@ -250,10 +254,13 @@ def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: Poo
             technical_processes.append(p)    
         elif row['sub_name'] is not None:
             try:
+                time = nsp.eval(parse_formula(row['time'], vd_values, mi_values))
+                cost_formula = parse_formula(row['cost'], vd_values, mi_values)
+                revenue_formula = parse_formula(row['revenue'], vd_values, mi_values)
                 p = Process(row['id'], 
-                    nsp.eval(parse_formula(row['time'], qo_values, mi_values)), 
-                    nsp.eval(parse_formula(row['cost'], qo_values, mi_values)), 
-                    nsp.eval(parse_formula(row['revenue'], qo_values, mi_values)), 
+                    time, 
+                    nsp.eval(expr.replace_all('time', time, cost_formula)), 
+                    nsp.eval(expr.replace_all('time', time, revenue_formula)), 
                     row['sub_name'], non_tech_add, TIME_FORMAT_DICT.get(row['time_unit'].lower())
                     )
                 
@@ -282,13 +289,13 @@ def get_sim_data(db_connection: PooledMySQLConnection, vcs_id: int):
         res = [dict(zip(cursor.column_names, row)) for row in res]
     return res
 
-def get_quantified_values(db_connection: PooledMySQLConnection, vcs_row_id: int, design: int):
+def get_vd_design_values(db_connection: PooledMySQLConnection, vcs_row_id: int, design: int): #TODO fetch value driver values. 
 
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement \
-        .select('cvs_quantified_objective_values', ['name', 'value'])\
-        .inner_join('cvs_quantified_objectives', 'cvs_quantified_objective_values.value_driver = cvs_quantified_objectives.value_driver') \
-        .inner_join('cvs_formulas_quantified_objectives', 'cvs_formulas_quantified_objectives.value_driver = cvs_quantified_objective_values.value_driver')\
+        .select('cvs_vd_design_values', ['id', 'design', 'name',  'value'])\
+        .inner_join('cvs_value_drivers', 'cvs_vd_design_values.value_driver = id') \
+        .inner_join('cvs_formulas_value_drivers', 'cvs_formulas_value_drivers.value_driver = cvs_vd_design_values.value_driver')\
         .where('formulas = %s and design = %s', [vcs_row_id, design])\
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
     
@@ -298,7 +305,7 @@ def get_market_values(db_connection: PooledMySQLConnection, vcs_row_id: int, vcs
 
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement \
-        .select('cvs_market_values', ['name', 'value'])\
+        .select('cvs_market_values', ['id', 'name', 'value'])\
         .inner_join('cvs_market_inputs', 'cvs_market_values.market_input = cvs_market_inputs.id')\
         .inner_join('cvs_formulas_market_inputs', 'cvs_formulas_market_inputs.market_input = cvs_market_values.market_input')\
         .where('formulas = %s and vcs = %s', [vcs_row_id, vcs])\
@@ -306,12 +313,18 @@ def get_market_values(db_connection: PooledMySQLConnection, vcs_row_id: int, vcs
     
     return res
 
-def parse_formula(formula: str, qo_values, mi_values):
+def parse_formula(formula: str, vd_values, mi_values): #TODO fix how the formulas are parsed
     new_formula = formula
-    for qo in qo_values: 
-        new_formula = expr.replace_all(qo['name'], qo['value'], new_formula)
+    vd_ids = expr.get_prefix_ids('vd', new_formula)
+    mi_ids = expr.get_prefix_ids('mi', new_formula)
+    for vd in vd_values:
+        for id in vd_ids:
+            if int(id) == vd['id']:
+                new_formula = expr.replace_all('vd'+id, vd['value'], new_formula)
     for mi in mi_values:
-        new_formula = expr.replace_all(mi['name'], mi['value'], new_formula)
+        for id in mi_ids:
+            if int(id) == mi['id']:
+                new_formula = expr.replace_all('mi'+id, mi['value'], new_formula)
     
     return new_formula
 

@@ -10,7 +10,7 @@ from sedbackend.apps.cvs.vcs.exceptions import ValueDriverNotFoundException
 from sedbackend.apps.cvs.vcs.models import ValueDriver
 from sedbackend.apps.cvs.vcs import storage as vcs_storage
 
-from sedbackend.apps.cvs.vcs.storage import CVS_VALUE_DRIVER_TABLE, get_value_driver
+from sedbackend.apps.cvs.vcs.storage import CVS_VALUE_DRIVER_COLUMNS, CVS_VALUE_DRIVER_TABLE, get_value_driver, populate_value_driver
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.cvs.design import models, exceptions
 
@@ -329,24 +329,21 @@ def get_all_vd_design_values(db_connection: PooledMySQLConnection, design_id: in
     
     return values
     
-"""
-def get_all_formula_value_drivers(db_connection: PooledMySQLConnection, formula_id: int) -> List[models.QuantifiedObjective]:
-    logger.debug(f'Fetching all quantified objectives for formulas with vcs_row: {formula_id}')
 
-    columns = ['cvs_quantified_objectives.design_group', 'cvs_quantified_objectives.value_driver'] + QUANTIFIED_OBJECTIVE_COLUMNS[2:]
+def get_all_formula_value_drivers(db_connection: PooledMySQLConnection, formula_id: int) -> List[models.ValueDriver]:
+    logger.debug(f'Fetching all value drivers for formulas with vcs_row: {formula_id}')
+
+    columns = CVS_VALUE_DRIVER_COLUMNS
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement \
-        .select(QUANTIFIED_OBJECTIVE_TABLE, columns) \
-        .inner_join('cvs_formulas_quantified_objectives', \
-            'cvs_formulas_quantified_objectives.value_driver = cvs_quantified_objectives.value_driver \
-                and cvs_formulas_quantified_objectives.design_group = cvs_quantified_objectives.design_group') \
+        .select(CVS_VALUE_DRIVER_TABLE, columns) \
+        .inner_join('cvs_formulas_value_drivers', \
+            'cvs_formulas_value_drivers.value_driver = id') \
         .where('formulas = %s', [formula_id])\
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
     
     if res is None:
         raise exceptions.QuantifiedObjectiveNotInFormulas
     
-    return [populate_qo(db_connection, r) for r in res]
+    return [populate_value_driver(r) for r in res]
     
-
-"""
