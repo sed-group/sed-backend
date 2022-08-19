@@ -2,8 +2,16 @@ from turtle import end_fill
 from typing import List
 import random
 
+import sedbackend.apps.cvs.design.implementation
+import sedbackend.apps.cvs.design.models
 import sedbackend.apps.cvs.implementation as impl
+import sedbackend.apps.cvs.life_cycle.implementation
+import sedbackend.apps.cvs.life_cycle.models
 import sedbackend.apps.cvs.models as models
+import sedbackend.apps.cvs.project.implementation
+import sedbackend.apps.cvs.project.models
+import sedbackend.apps.cvs.vcs.implementation
+import sedbackend.apps.cvs.vcs.models
 import tests.testutils as tu
 
 def random_project(name: str = None, description: str=None):
@@ -13,7 +21,7 @@ def random_project(name: str = None, description: str=None):
     if description is None:
         description = tu.random_str(20, 200)
     
-    project = models.CVSProjectPost(
+    project = sedbackend.apps.cvs.project.models.CVSProjectPost(
         name = name,
         description = description
     )
@@ -23,11 +31,11 @@ def random_project(name: str = None, description: str=None):
 def seed_random_project(user_id):
     p = random_project()
 
-    new_p = impl.create_cvs_project(p, user_id)
+    new_p = sedbackend.apps.cvs.project.implementation.create_cvs_project(p, user_id)
     return new_p
 
 def delete_project_by_id(project_id, user_id):
-    impl.delete_cvs_project(project_id, user_id)
+    sedbackend.apps.cvs.project.implementation.delete_cvs_project(project_id, user_id)
 
 def random_VCS(name: str =None, description: str=None, year_from: int=None, year_to: int=None):
     if name is None:
@@ -42,7 +50,7 @@ def random_VCS(name: str =None, description: str=None, year_from: int=None, year
     if year_to is None: 
         year_to = year_from + random.randint(5, 25)
     
-    vcs = models.VCSPost(
+    vcs = sedbackend.apps.cvs.vcs.models.VCSPost(
         name=name,
         description=description,
         year_from=year_from,
@@ -54,11 +62,11 @@ def random_VCS(name: str =None, description: str=None, year_from: int=None, year
 def seed_random_vcs(user_id, project_id):
     vcs = random_VCS()
 
-    new_vcs = impl.create_vcs(vcs, project_id, user_id)
+    new_vcs = sedbackend.apps.cvs.vcs.implementation.create_vcs(vcs, project_id, user_id)
 
     return new_vcs
 
-def delete_VCSs(vcs_list: List[models.VCS], project_id, user_id):
+def delete_VCSs(vcs_list: List[sedbackend.apps.cvs.vcs.models.VCS], project_id, user_id):
     id_list = []
     for vcs in vcs_list:
         id_list.append(vcs.id)
@@ -67,26 +75,26 @@ def delete_VCSs(vcs_list: List[models.VCS], project_id, user_id):
 
 def delete_VCS_with_ids(vcs_id_list: List[int], project_id: int, user_id: int):
     for vcsid in vcs_id_list:
-        impl.delete_vcs(vcsid, project_id, user_id)
+        sedbackend.apps.cvs.vcs.implementation.delete_vcs(vcsid, project_id, user_id)
 
 
 def random_value_driver(name: str=None, unit: str=None):
     if name is None:
         name = tu.random_str(5,50)
     
-    return models.VCSValueDriverPost(
+    return sedbackend.apps.cvs.vcs.models.VCSValueDriverPost(
         name=name
     )
 
 def seed_random_value_driver(user_id, project_id):
     value_driver = random_value_driver()
     
-    new_value_driver = impl.create_value_driver(value_driver, project_id, user_id)
+    new_value_driver = sedbackend.apps.cvs.vcs.implementation.create_value_driver(value_driver, project_id, user_id)
 
     return new_value_driver
 
 def delete_vd_by_id(vd_id, project_id, user_id):
-    impl.delete_value_driver(vd_id, project_id, user_id)
+    sedbackend.apps.cvs.vcs.implementation.delete_value_driver(vd_id, project_id, user_id)
 
 def delete_vcs_table_row_by_id(table_row_id):
     print('Delete all vcs table row')
@@ -99,8 +107,8 @@ def random_table_row(project_id,
                     subprocess_id: int= None,
                     stakeholder: str=None,
                     stakeholder_expectations: str=None,
-                    stakeholder_needs: List[models.StakeholderNeedPost] = None
-                    ) -> models.TableRowPost:
+                    stakeholder_needs: List[sedbackend.apps.cvs.vcs.models.StakeholderNeedPost] = None
+                    ) -> sedbackend.apps.cvs.vcs.models.TableRowPost:
     if node_id is None: #This will break everything since after the first iteration it will have a node id
         node_id = None
     
@@ -130,7 +138,7 @@ def random_table_row(project_id,
     if stakeholder_needs is None:
         stakeholder_needs = seed_stakeholder_needs(user_id, project_id)
     
-    table_row = models.TableRowPost(
+    table_row = sedbackend.apps.cvs.vcs.models.TableRowPost(
         node_id=node_id,
         row_index=row_index,
         iso_process_id=iso_process_id,
@@ -148,12 +156,12 @@ def random_subprocess(project_id, user_id, name: str = None, parent_process_id: 
     if parent_process_id is None:
         parent_process_id = random.randint(1,25)
     
-    subprocess = models.VCSSubprocessPost( #TODO fix bug here. Cannot create subprocess without order_index
+    subprocess = sedbackend.apps.cvs.vcs.models.VCSSubprocessPost( #TODO fix bug here. Cannot create subprocess without order_index
         name=name,
         parent_process_id=parent_process_id,
         order_index=random.randint(1,10)
     )
-    subp = impl.create_subprocess(subprocess, project_id, user_id)
+    subp = sedbackend.apps.cvs.vcs.implementation.create_subprocess(subprocess, project_id, user_id)
     return subp
 
 def seed_random_subprocesses(project_id, user_id, amount = 15):
@@ -165,7 +173,7 @@ def seed_random_subprocesses(project_id, user_id, amount = 15):
     return subprocess_list
 
 def delete_subprocess_by_id(subprocess_id, project_id, user_id):
-    impl.delete_subprocess(subprocess_id, project_id, user_id)
+    sedbackend.apps.cvs.vcs.implementation.delete_subprocess(subprocess_id, project_id, user_id)
 
 def delete_subprocesses(subprocesses, project_id, user_id):
     for subp in subprocesses:
@@ -175,7 +183,7 @@ def random_stakeholder_need(user_id,
                         project_id,
                         need: str = None,
                         rank_weight: int = None,
-                        value_driver_ids: List[int]=None) -> models.StakeholderNeedPost:
+                        value_driver_ids: List[int]=None) -> sedbackend.apps.cvs.vcs.models.StakeholderNeedPost:
     if need is None:
         need = tu.random_str(5, 50)
     
@@ -186,14 +194,14 @@ def random_stakeholder_need(user_id,
         vd = seed_random_value_driver(user_id, project_id)
         value_driver_ids = [vd.id] #Should work....
 
-    stakeholder_need = models.StakeholderNeedPost(
+    stakeholder_need = sedbackend.apps.cvs.vcs.models.StakeholderNeedPost(
         need=need,
         rank_weight=rank_weight,
         value_driver_ids=value_driver_ids
     )
     return stakeholder_need
 
-def seed_stakeholder_needs(user_id, project_id, amount=10) -> List[models.StakeholderNeedPost]:
+def seed_stakeholder_needs(user_id, project_id, amount=10) -> List[sedbackend.apps.cvs.vcs.models.StakeholderNeedPost]:
     stakeholder_needs = []
     while amount > 0:
         stakeholder_need = random_stakeholder_need(user_id, project_id)
@@ -202,7 +210,7 @@ def seed_stakeholder_needs(user_id, project_id, amount=10) -> List[models.Stakeh
     
     return stakeholder_needs
 
-def seed_vcs_table_rows(vcs_id, project_id, user_id, amount=15) -> models.TablePost:
+def seed_vcs_table_rows(vcs_id, project_id, user_id, amount=15) -> sedbackend.apps.cvs.vcs.models.TablePost:
     table_rows =  []
     while (amount > 0):
     
@@ -210,10 +218,10 @@ def seed_vcs_table_rows(vcs_id, project_id, user_id, amount=15) -> models.TableP
         table_rows.append(tr)
         amount = amount - 1
     
-    table_model = models.TablePost(
+    table_model = sedbackend.apps.cvs.vcs.models.TablePost(
         table_rows=table_rows
     )
-    vcs_table = impl.create_vcs_table(table_model, vcs_id, project_id, user_id)
+    vcs_table = sedbackend.apps.cvs.vcs.implementation.create_vcs_table(table_model, vcs_id, project_id, user_id)
     return table_model
 
 def random_design(name: str = None, description: str = None):
@@ -223,7 +231,7 @@ def random_design(name: str = None, description: str = None):
     if description is None:
         description = tu.random_str(20,200)
     
-    return models.DesignPost(
+    return sedbackend.apps.cvs.design.models.DesignPost(
         name=name,
         description=description
     )
@@ -232,7 +240,8 @@ def seed_random_designs(project_id, vcs_id, user_id, amount = 15):
     design_list = []
     while amount > 0:
         design = random_design()
-        design_list.append(impl.create_cvs_design(design, vcs_id, project_id, user_id))
+        design_list.append(
+            sedbackend.apps.cvs.design.implementation.create_cvs_design(design, vcs_id, project_id, user_id))
         amount = amount - 1
 
     return design_list
@@ -242,7 +251,7 @@ def delete_designs(designs, project_id, vcs_id, user_id):
         delete_design_by_id(design.id, project_id, vcs_id, user_id)
 
 def delete_design_by_id(design_id, project_id, vcs_id, user_id):
-    impl.delete_design(design_id, vcs_id, project_id, user_id)
+    sedbackend.apps.cvs.design.implementation.delete_design(design_id, vcs_id, project_id, user_id)
 
 def random_quantified_objective(name: str =None, property: float =None, unit: str=None):
     if name is None:
@@ -254,7 +263,7 @@ def random_quantified_objective(name: str =None, property: float =None, unit: st
     if unit is None: 
         unit = tu.random_str(5,50)
     
-    return models.QuantifiedObjectivePost(
+    return sedbackend.apps.cvs.design.models.QuantifiedObjectivePost(
         name=name,
         property=property,
         unit=unit
@@ -265,14 +274,15 @@ def seed_random_quantified_objectives(project_id, vcs_id, design_id, user_id, am
     while amount > 0:
         vd = seed_random_value_driver(user_id, project_id)
         qo = random_quantified_objective()
-        quantified_objectives.append(impl.create_quantified_objective(design_id, vd.id, qo, project_id, vcs_id, user_id))
+        quantified_objectives.append(
+            sedbackend.apps.cvs.design.implementation.create_quantified_objective(design_id, vd.id, qo, project_id, vcs_id, user_id))
         amount = amount - 1
     
     return quantified_objectives
 
 def delete_qo_and_vd(qo_id, vd_id, project_id, vcs_id, design_id, user_id):
-    impl.delete_quantified_objective(qo_id, vd_id, design_id, project_id, vcs_id, user_id)
-    impl.delete_value_driver(vd_id, project_id, user_id)
+    sedbackend.apps.cvs.design.implementation.delete_quantified_objective(qo_id, vd_id, design_id, project_id, vcs_id, user_id)
+    sedbackend.apps.cvs.vcs.implementation.delete_value_driver(vd_id, project_id, user_id)
 
 def delete_quantified_objectives(quantified_objectives, project_id, vcs_id, design_id, user_id):
     for qo in quantified_objectives:
@@ -295,7 +305,7 @@ def random_node(name: str = None, node_type: str = None, pos_x: int = None, pos_
     if pos_y is None:
         pos_y = random.randint(1, 400)
     
-    return models.NodePost(
+    return sedbackend.apps.cvs.life_cycle.models.NodePost(
         name=name,
         node_type=node_type,
         pos_x=pos_x,
@@ -309,7 +319,7 @@ def random_edge(from_node: int, to_node: int, name: str = None, probability: int
     if probability is None:
         probability = 1
     
-    return models.EdgePost(
+    return sedbackend.apps.cvs.life_cycle.models.EdgePost(
         name=name,
         from_node=from_node,
         to_node=to_node,
@@ -326,7 +336,8 @@ def seed_random_bpmn_edges(project_id, vcs_id, user_id, bpmn_nodes, amount = 15)
         to_node = incoming_nodes.pop(random.randint(0, len(incoming_nodes) - 1))
 
         new_edge = random_edge(from_node.id, to_node.id)
-        bpmn_edges.append(impl.create_bpmn_edge(new_edge, project_id, vcs_id, user_id))
+        bpmn_edges.append(
+            sedbackend.apps.cvs.life_cycle.implementation.create_bpmn_edge(new_edge, project_id, vcs_id, user_id))
         amount = amount - 1
     return bpmn_edges
 
@@ -334,15 +345,16 @@ def seed_random_bpmn_nodes(project_id, vcs_id, user_id, amount = 15):
     bpmn_nodes = []
     while amount > 0:
         node = random_node()
-        bpmn_nodes.append(impl.create_bpmn_node(node, project_id, vcs_id, user_id))
+        bpmn_nodes.append(
+            sedbackend.apps.cvs.life_cycle.implementation.create_bpmn_node(node, project_id, vcs_id, user_id))
         amount = amount - 1
     return bpmn_nodes
 
 def delete_bpmn_node(node_id, project_id, vcs_id, user_id):
-    impl.delete_bpmn_node(node_id, project_id, vcs_id, user_id)
+    sedbackend.apps.cvs.life_cycle.implementation.delete_bpmn_node(node_id, project_id, vcs_id, user_id)
 
 def delete_bpmn_edge(edge_id, project_id, vcs_id, user_id):
-    impl.delete_bpmn_edge(edge_id, project_id, vcs_id, user_id)
+    sedbackend.apps.cvs.life_cycle.implementation.delete_bpmn_edge(edge_id, project_id, vcs_id, user_id)
 
 def delete_multiple_bpmn_edges(edges, project_id, vcs_id, user_id):
     for edge in edges:

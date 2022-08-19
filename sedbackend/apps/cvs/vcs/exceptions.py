@@ -1,22 +1,7 @@
 # ======================================================================================================================
-# CVS projects
+# VCS
 # ======================================================================================================================
 
-class CVSProjectNotFoundException(Exception):
-    pass
-
-
-class CVSProjectFailedToUpdateException(Exception):
-    pass
-
-
-class CVSProjectFailedDeletionException(Exception):
-    pass
-
-
-# ======================================================================================================================
-# VCS (Value Creation Strategy)
-# ======================================================================================================================
 
 class VCSNotFoundException(Exception):
     pass
@@ -29,10 +14,22 @@ class VCSFailedToUpdateException(Exception):
 class VCSFailedDeletionException(Exception):
     pass
 
+class GenericDatabaseException(Exception):
+    def __init__(self, msg: str = None):
+        self.msg = msg
+# ======================================================================================================================
+# VCS Value dimensions
+# ======================================================================================================================
 
+class ValueDimensionNotFoundException(Exception):
+    pass
+
+class ValueDimensionFailedDeletionException(Exception):
+    pass
 # ======================================================================================================================
 # VCS Value driver
 # ======================================================================================================================
+
 
 class ValueDriverNotFoundException(Exception):
     def __init__(self, value_driver_id: int = None):
@@ -51,6 +48,7 @@ class ValueDriverFailedDeletionException(Exception):
 # VCS ISO Processes
 # ======================================================================================================================
 
+
 class ISOProcessNotFoundException(Exception):
     pass
 
@@ -58,6 +56,7 @@ class ISOProcessNotFoundException(Exception):
 # ======================================================================================================================
 # VCS Subprocesses
 # ======================================================================================================================
+
 
 class SubprocessNotFoundException(Exception):
     def __init__(self, subprocess_id: int = None):
@@ -78,6 +77,7 @@ class SubprocessFailedDeletionException(Exception):
 # VCS Table
 # ======================================================================================================================
 
+
 class VCSTableRowNotFoundException(Exception):
     pass
 
@@ -95,71 +95,30 @@ class VCSTableProcessAmbiguity(Exception):
     def __init__(self, table_row_id: int = None):
         self.table_row_id = table_row_id
 
-# ======================================================================================================================
-# Design
-# ======================================================================================================================
 
-class DesignNotFoundException(Exception):
+class VCSRowNotCorrectException(Exception):
+    pass
+
+
+class VCSandVCSRowIDMismatchException(Exception):
     pass
 
 
 # ======================================================================================================================
-# Quantified Objectives
+# VCS Stakeholder needs
 # ======================================================================================================================
 
-class QuantifiedObjectiveNotFoundException(Exception):
-    pass
-
-class QuantifiedObjectivesNotDeleted(Exception):
-    pass
-
-# ======================================================================================================================
-# BPMN Table
-# ======================================================================================================================
-
-class NodeNotFoundException(Exception):
+class VCSStakeholderNeedNotFound(Exception):
     pass
 
 
-class NodeIdDontMatchVCSIdException(Exception):
+class VCSStakeholderNeedFailedDeletionException(Exception):
+    pass
+
+class VCSStakeholderNeedFailedCreationException(Exception):
+    pass
+
+class VCSStakeholderNeedFailedToUpdateException(Exception):
     pass
 
 
-class NodeFailedDeletionException(Exception):
-    def __init__(self, node_id: int = None):
-        self.node_id = node_id
-
-
-class NodeFailedToUpdateException(Exception):
-    pass
-
-
-class EdgeNotFoundException(Exception):
-    pass
-
-
-class EdgeFailedDeletionException(Exception):
-    def __init__(self, edge_id: int = None):
-        self.edge_id = edge_id
-
-
-class EdgeFailedToUpdateException(Exception):
-    pass
-
-# ======================================================================================================================
-# Design
-# ======================================================================================================================
-class DesignNotFoundException(Exception):
-    pass
-
-
-# ======================================================================================================================
-# Market input
-# ======================================================================================================================
-
-class MarketInputNotFoundException(Exception):
-    pass
-
-
-class MarketInputAlreadyExistException(Exception):
-    pass
