@@ -55,11 +55,9 @@ class DesignGroupPost(BaseModel):
     vcs: int
 
 
-
 # ======================================================================================================================
 # CVS Designs
 # ======================================================================================================================
-
 
 class ValueDriverDesignValue(BaseModel):
     vd_id: int
@@ -71,6 +69,12 @@ class Design(BaseModel):
     id: int
     name: str
     vd_design_values: List[ValueDriverDesignValue]
+
+
+class DesignPut(BaseModel):
+    id: Optional[int] = None
+    name: str
+    vd_design_values: Optional[List[ValueDriverDesignValue]]
 
 
 class DesignPost(BaseModel):

@@ -89,29 +89,12 @@ async def get_all_designs(design_group_id: int) -> List[models.Design]:
     return implementation.get_all_designs(design_group_id)
 
 
-@router.post(
-    '/design-group/{design_group_id}/design',
-    summary='Create design',
+@router.put(
+    '/design-group/{design_group_id}/designs',
+    summary='Edit designs',
     response_model=bool
 )
-async def create_design(design_group_id: int, design: models.DesignPost) -> bool:
-    return implementation.create_design(design_group_id, design)
+async def edit_design(design_group_id: int, designs: List[models.DesignPut]) -> bool:
+    return implementation.edit_designs(design_group_id, designs)
 
-
-@router.put( #TODO fix!!!!!
-    '/design/{design_id}',
-    summary='Edit design',
-    response_model=bool
-)
-async def edit_design(design_id: int, design: models.DesignPost) -> bool:
-    return implementation.edit_design(design_id, design)
-
-
-@router.delete(
-    '/design/{design_id}',
-    summary='Delete design',
-    response_model=bool
-)
-async def delete_design(design_id: int) -> bool:
-    return implementation.delete_design(design_id)
 

@@ -155,28 +155,10 @@ def get_all_designs(design_group_id: int) -> List[models.Design]:
         )
 
 
-def create_design(design_group_id: int, design: models.DesignPost) -> bool:
+def edit_designs(design_group_id: int, designs: List[models.DesignPut]) -> bool:
     try:
         with get_connection() as con:
-            res = storage.create_design(con, design_group_id, design)
-            con.commit()
-            return res
-    except exceptions.DesignGroupNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find design group'
-        )
-    except exceptions.DesignInsertException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not insert the values provided'
-        )
-
-
-def edit_design(design_id: int, design: models.DesignPost) -> bool:
-    try:
-        with get_connection() as con:
-            res = storage.edit_design(con, design_id, design)
+            res = storage.edit_designs(con, design_group_id, designs)
             con.commit()
             return res
     except exceptions.DesignNotFoundException:
@@ -189,18 +171,15 @@ def edit_design(design_id: int, design: models.DesignPost) -> bool:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find quantified objective value'
         )
-
-
-def delete_design(design_id) -> bool:
-    try:
-        with get_connection() as con:
-            res = storage.delete_design(con, design_id)
-            con.commit()
-            return res
-    except exceptions.DesignNotFoundException:
+    except exceptions.DesignGroupNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find design'
+            detail=f'Could not find design group'
+        )
+    except exceptions.DesignInsertException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not insert the values provided'
         )
 
 
