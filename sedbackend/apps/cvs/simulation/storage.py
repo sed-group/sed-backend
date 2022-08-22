@@ -30,7 +30,7 @@ TIME_FORMAT_DICT = dict({
     'week': TimeFormat.WEEK, 
     'day': TimeFormat.DAY, 
     'hour': TimeFormat.HOUR,
-    #'minutes': TimeFormat.MINUTES
+    'minutes': TimeFormat.MINUTES
 })
 
 def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: float,
