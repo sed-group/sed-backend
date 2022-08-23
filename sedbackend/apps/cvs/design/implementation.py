@@ -16,7 +16,8 @@ from sedbackend.apps.cvs.vcs.models import ValueDriver
 # ======================================================================================================================
 
 
-def create_cvs_design_group(design_group_post: models.DesignGroupPost, project_id: int) -> models.DesignGroup:
+def create_cvs_design_group(design_group_post: models.DesignGroupPost, project_id: int) \
+        -> models.DesignGroup:
     try:
         with get_connection() as con:
             result = storage.create_design_group(con, design_group_post, project_id)
@@ -37,6 +38,7 @@ def create_cvs_design_group(design_group_post: models.DesignGroupPost, project_i
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
+
 
 def get_all_design_groups(project_id: int) -> List[models.DesignGroup]:
     try:
@@ -102,10 +104,10 @@ def delete_design_group(design_group_id: int) -> bool:
         )
 
 
-def edit_design_group(design_group_id: int, updated_design: models.DesignGroupPost) -> models.DesignGroup:
+def edit_design_group(design_group_id: int, design_group: models.DesignGroupPut) -> models.DesignGroup:
     try:
         with get_connection() as con:
-            result = storage.edit_design_group(con, design_group_id, updated_design)
+            result = storage.edit_design_group(con, design_group_id, design_group)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:

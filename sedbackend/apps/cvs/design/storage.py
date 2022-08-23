@@ -42,8 +42,9 @@ def create_design_group(db_connection: PooledMySQLConnection, design_group: mode
     if design_group_id is None or design_group_id < 0:
         raise CVSProjectNotFoundException
 
-    value_drivers = vcs_storage.get_all_value_driver_vcs(db_connection, design_group.vcs)
-    [add_vd_to_design_group(db_connection, design_group_id, vd.id) for vd in value_drivers]
+    if design_group.vcs_id is not None:
+        value_drivers = vcs_storage.get_all_value_driver_vcs(db_connection, design_group.vcs_id)
+        [add_vd_to_design_group(db_connection, design_group_id, vd.id) for vd in value_drivers]
 
     return get_design_group(db_connection, design_group_id)
 
@@ -113,10 +114,10 @@ def delete_design_group(db_connection: PooledMySQLConnection, design_group_id: i
 
 
 def edit_design_group(db_connection: PooledMySQLConnection, design_group_id: int,
-                      design_group: models.DesignGroupPost) -> models.DesignGroup:
+                      design_group: models.DesignGroupPut) -> models.DesignGroup:
     logger.debug(f'Editing Design with id = {design_group_id}')
 
-    get_design_group(db_connection, design_group_id)  # Check if design group exists in DB
+    curr_design_group = get_design_group(db_connection, design_group_id)  # Check if design group exists in DB
 
     try:
         update_statement = MySQLStatementBuilder(db_connection)
@@ -131,7 +132,7 @@ def edit_design_group(db_connection: PooledMySQLConnection, design_group_id: int
         logger.debug(f'{e.__class__}, {e}')
         raise exceptions.DesignGroupNotFoundException
 
-    vds = [vd.id for vd in get_all_drivers_design_group(db_connection, design_group_id)]
+    vds = [vd.id for vd in curr_design_group.vds]
 
     to_delete = list(filter(lambda x: x not in design_group.vd_ids, vds))
 
@@ -140,10 +141,10 @@ def edit_design_group(db_connection: PooledMySQLConnection, design_group_id: int
         add_vd_to_design_group(db_connection, design_group_id, vd_id)
 
     if to_delete is not None:
-        for id in to_delete:
+        for vd_id in to_delete:
             delete_statement = MySQLStatementBuilder(db_connection)
             delete_statement.delete(DESIGN_GROUP_DRIVER_TABLE) \
-                .where('value_driver = %s', [id]) \
+                .where('value_driver = %s', [vd_id]) \
                 .execute(fetch_type=FetchType.FETCH_NONE)
 
     return get_design_group(db_connection, design_group_id)
@@ -362,7 +363,7 @@ def get_all_formula_value_drivers(db_connection: PooledMySQLConnection, formula_
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement \
         .select(CVS_VALUE_DRIVER_TABLE, columns) \
-        .inner_join('cvs_formulas_value_drivers', \
+        .inner_join('cvs_formulas_value_drivers',
                     'cvs_formulas_value_drivers.value_driver = id') \
         .where('formulas = %s', [formula_id]) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)

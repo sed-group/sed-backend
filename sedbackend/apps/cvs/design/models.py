@@ -50,9 +50,14 @@ class DesignGroup(BaseModel):
     vds: List[ValueDriver]
 
 
+class DesignGroupPut(BaseModel):
+    name: str
+    vd_ids: List[int]
+
+
 class DesignGroupPost(BaseModel):
     name: str
-    vcs: int
+    vcs_id: Optional[int] = None
 
 
 # ======================================================================================================================
