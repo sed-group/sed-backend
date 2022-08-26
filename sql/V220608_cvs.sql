@@ -198,7 +198,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_design_groups`
         ON DELETE CASCADE
 );
 
-CREATE TABLE `seddb`.`cvs_design_group_drivers`
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_design_group_drivers`
 (
     `design_group`      INT UNSIGNED NOT NULL, 
     `value_driver`      INT UNSIGNED NOT NULL,
@@ -226,7 +226,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vd_design_values`
 (
     `value_driver`      INT UNSIGNED NOT NULL,
     `design`            INT UNSIGNED NOT NULL,
-    `value`             FLOAT NOT NULL,
+    `value`             DOUBLE(32,5) NOT NULL,
     PRIMARY KEY(`value_driver`, `design`),
     FOREIGN KEY(`value_driver`)
         REFERENCES `seddb`.`cvs_value_drivers`(`id`)
