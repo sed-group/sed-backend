@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from fastapi import Depends, APIRouter
 
@@ -11,16 +11,8 @@ router = APIRouter()
     summary='Create formulas for time, cost, and revenue',
     response_model=bool,
 )
-async def create_formulas(vcs_row_id: int, dg_id: int, time: str, time_unit: models.TimeFormat, cost: str, revenue: str, 
-        rate: models.Rate, value_driver_ids: List[int], market_input_ids: List[int]) -> bool:
-    return implementation.create_formulas(vcs_row_id, dg_id, models.FormulaPost(
-                                                        time=time, 
-                                                        time_unit=time_unit, 
-                                                        cost=cost, 
-                                                        revenue=revenue, 
-                                                        rate=rate,
-                                                        value_driver_ids=value_driver_ids,
-                                                        market_input_ids=market_input_ids))
+async def create_formulas(vcs_row_id: int, dg_id: int, formula: models.FormulaPost) -> bool:
+    return implementation.create_formulas(vcs_row_id, dg_id, formula)
 
 @router.get(
     '/vcs/{vcs_id}/design-group/{dg_id}/formulas/all',

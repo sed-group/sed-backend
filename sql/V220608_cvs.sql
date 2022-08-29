@@ -276,7 +276,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_design_mi_formulas`
     `vcs_row`           INT UNSIGNED NOT NULL,
     `design_group`      INT UNSIGNED NOT NULL,
     `time`              TEXT,
-    `time_unit`         VARCHAR(5),
+    `time_unit`         VARCHAR(10),
     `cost`              TEXT,
     `revenue`           TEXT,
     `rate`              TEXT,
@@ -287,7 +287,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_design_mi_formulas`
     FOREIGN KEY (`design_group`)
         REFERENCES `seddb`.`cvs_design_groups`(`id`)
         ON DELETE CASCADE,
-    CONSTRAINT `check_unit` CHECK (`time_unit` IN ('HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR')),
+    CONSTRAINT `check_unit` CHECK (`time_unit` IN ('MINUTES', 'HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR')),
     CONSTRAINT `check_rate` CHECK (`rate` IN ('per_product', 'per_project'))
 );
 
