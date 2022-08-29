@@ -1,4 +1,3 @@
-from multiprocessing import Pool
 from typing import List
 
 from fastapi.logger import logger
@@ -12,7 +11,7 @@ from sedbackend.apps.cvs.vcs import models as vcs_m
 
 
 CVS_FORMULAS_TABLE = 'cvs_design_mi_formulas'
-CVS_FORMULAS_COLUMNS = ['vcs_row', 'time', 'time_unit', 'cost', 'revenue', 'rate']
+CVS_FORMULAS_COLUMNS = ['vcs_row', 'design_group', 'time', 'time_unit', 'cost', 'revenue', 'rate']
 
 CVS_FORMULAS_VALUE_DRIVERS_TABLE = 'cvs_formulas_value_drivers'
 CVS_FORMULAS_VALUE_DRIVERS_COLUMNS = ['formulas', 'value_driver']
@@ -20,10 +19,10 @@ CVS_FORMULAS_VALUE_DRIVERS_COLUMNS = ['formulas', 'value_driver']
 CVS_FORMULAS_MARKET_INPUTS_TABLE = 'cvs_formulas_market_inputs'
 CVS_FORMULAS_MARKET_INPUTS_COLUMNS = ['formulas', 'market_input']
 
-def create_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, formulas: models.FormulaPost) -> bool:
+def create_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_group_id: int, formulas: models.FormulaPost) -> bool:
     logger.debug(f'Creating formulas')
 
-    values = [vcs_row_id, formulas.time, formulas.time_unit.value, formulas.cost, formulas.revenue, formulas.rate.value]
+    values = [vcs_row_id, design_group_id, formulas.time, formulas.time_unit.value, formulas.cost, formulas.revenue, formulas.rate.value]
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
@@ -52,7 +51,7 @@ def create_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, formu
     
     return False
 
-def edit_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, formulas: models.FormulaPost) -> bool:
+def edit_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_group_id: int, formulas: models.FormulaPost) -> bool:
     logger.debug(f'Editing formulas')
 
     columns = CVS_FORMULAS_COLUMNS[1:]
@@ -63,7 +62,7 @@ def edit_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, formula
     update_statement = MySQLStatementBuilder(db_connection) #TODO update the connection with value drivers and mi also
     _, rows = update_statement \
         .update(table=CVS_FORMULAS_TABLE, set_statement=set_statement, values=values) \
-        .where('vcs_row = %s', [vcs_row_id])\
+        .where('vcs_row = %s and design_group = %s', [vcs_row_id, design_group_id])\
         .execute(return_affected_rows=True)
     
     if rows < 1:
@@ -75,13 +74,13 @@ def edit_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, formula
     return True
 
 
-def get_all_formulas(db_connection: PooledMySQLConnection, vcs_id: int) -> List[models.FormulaRowGet]:
+def get_all_formulas(db_connection: PooledMySQLConnection, vcs_id: int, design_group_id: int) -> List[models.FormulaRowGet]:
     logger.debug(f'Fetching all formulas with vcs_id={vcs_id}')
 
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement.select(CVS_FORMULAS_TABLE, CVS_FORMULAS_COLUMNS) \
         .inner_join('cvs_vcs_rows', 'vcs_row = cvs_vcs_rows.id') \
-        .where('vcs = %s', [vcs_id]) \
+        .where('vcs = %s and design_group = %s', [vcs_id, design_group_id]) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
     
     if res is None:
@@ -92,6 +91,7 @@ def get_all_formulas(db_connection: PooledMySQLConnection, vcs_id: int) -> List[
 def populate_formula(db_result) -> models.FormulaRowGet:
     return models.FormulaRowGet(
         vcs_row_id=db_result['vcs_row'],
+        design_group_id=db_result['design_group'],
         time=db_result['time'],
         time_unit=db_result['time_unit'],
         cost=db_result['cost'],
@@ -101,13 +101,13 @@ def populate_formula(db_result) -> models.FormulaRowGet:
         value_drivers=design_impl.get_all_formula_value_drivers(db_result['vcs_row'])
     )
 
-def delete_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int) -> bool:
+def delete_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_group_id: int) -> bool:
     logger.debug(f'Deleting formulas with vcs_row_id: {vcs_row_id}')
 
     delete_statement = MySQLStatementBuilder(db_connection)
     rows,_ = delete_statement \
         .delete(CVS_FORMULAS_TABLE) \
-        .where('vcs_row = %s', [vcs_row_id])\
+        .where('vcs_row = %s and design_group = %s', [vcs_row_id, design_group_id])\
         .execute(return_affected_rows=True)
     
     if len(rows) != 1:

@@ -26,6 +26,7 @@ class Rate(Enum):
 
 class FormulaGet(BaseModel):
     vcs_row_id: int
+    design_group_id: int
     time: str
     time_unit: TimeFormat
     cost: str

@@ -274,14 +274,18 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_quantified_objective_values`
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_design_mi_formulas`
 (
     `vcs_row`           INT UNSIGNED NOT NULL,
+    `design_group`      INT UNSIGNED NOT NULL,
     `time`              TEXT,
     `time_unit`         VARCHAR(5),
     `cost`              TEXT,
     `revenue`           TEXT,
     `rate`              TEXT,
-    PRIMARY KEY (`vcs_row`),
+    PRIMARY KEY (`vcs_row`, `design_group`),
     FOREIGN KEY(`vcs_row`)
         REFERENCES `seddb`.`cvs_vcs_rows`(`id`)
+        ON DELETE CASCADE,
+    FOREIGN KEY (`design_group`)
+        REFERENCES `seddb`.`cvs_design_groups`(`id`)
         ON DELETE CASCADE,
     CONSTRAINT `check_unit` CHECK (`time_unit` IN ('HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR')),
     CONSTRAINT `check_rate` CHECK (`rate` IN ('per_product', 'per_project'))

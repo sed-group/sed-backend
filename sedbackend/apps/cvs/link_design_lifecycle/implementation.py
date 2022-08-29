@@ -10,10 +10,10 @@ from sedbackend.apps.cvs.link_design_lifecycle import models, storage
 from sedbackend.apps.cvs.link_design_lifecycle.exceptions import FormulasFailedDeletionException, FormulasFailedUpdateException, FormulasNotFoundException, TooManyFormulasUpdatedException, VCSNotFoundException, WrongTimeUnitException
 
 
-def create_formulas(vcs_row_id: int, formulas: models.FormulaPost) -> bool:
+def create_formulas(vcs_row_id: int, dg_id: int, formulas: models.FormulaPost) -> bool:
     with get_connection() as con:
         try: 
-            res = storage.create_formulas(con, vcs_row_id, formulas)
+            res = storage.create_formulas(con, vcs_row_id, dg_id, formulas)
             con.commit()
             return res
         except FormulasNotFoundException:
@@ -28,10 +28,10 @@ def create_formulas(vcs_row_id: int, formulas: models.FormulaPost) -> bool:
             )
 
 
-def edit_formulas(vcs_row_id: int, new_formulas: models.FormulaPost) -> bool:
+def edit_formulas(vcs_row_id: int, design_group_id: int, new_formulas: models.FormulaPost) -> bool:
     with get_connection() as con:
         try:
-            res = storage.edit_formulas(con, vcs_row_id, new_formulas)
+            res = storage.edit_formulas(con, vcs_row_id, design_group_id, new_formulas)
             con.commit()
             return res
         except FormulasFailedUpdateException:
@@ -46,10 +46,10 @@ def edit_formulas(vcs_row_id: int, new_formulas: models.FormulaPost) -> bool:
             )
 
 
-def get_all_formulas(vcs_id: int) -> List[models.FormulaRowGet]:
+def get_all_formulas(vcs_id: int, design_group_id: int) -> List[models.FormulaRowGet]:
     with get_connection() as con:
         try:
-            res = storage.get_all_formulas(con, vcs_id)
+            res = storage.get_all_formulas(con, vcs_id, design_group_id)
             con.commit()
             return res
         except VCSNotFoundException:
@@ -64,10 +64,10 @@ def get_all_formulas(vcs_id: int) -> List[models.FormulaRowGet]:
             )
 
 
-def delete_formulas(vcs_row_id: int) -> bool:
+def delete_formulas(vcs_row_id: int, design_group_id: int) -> bool:
     with get_connection() as con:
         try:
-            res = storage.delete_formulas(con, vcs_row_id)
+            res = storage.delete_formulas(con, vcs_row_id, design_group_id)
             con.commit()
             return res
         except FormulasFailedDeletionException:
