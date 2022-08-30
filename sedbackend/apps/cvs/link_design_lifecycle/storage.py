@@ -52,25 +52,35 @@ def create_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, desig
     return False
 
 def edit_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_group_id: int, formulas: models.FormulaPost) -> bool:
-    logger.debug(f'Editing formulas')
 
-    columns = CVS_FORMULAS_COLUMNS[1:]
-    set_statement = ', '.join([col + ' = %s' for col in columns])
-
-    values = [formulas.time, formulas.time_unit.value, formulas.cost, formulas.revenue, formulas.rate.value]
-
-    update_statement = MySQLStatementBuilder(db_connection) #TODO update the connection with value drivers and mi also
-    _, rows = update_statement \
-        .update(table=CVS_FORMULAS_TABLE, set_statement=set_statement, values=values) \
+    count_statement = MySQLStatementBuilder(db_connection)
+    count = count_statement.count(CVS_FORMULAS_TABLE)\
         .where('vcs_row = %s and design_group = %s', [vcs_row_id, design_group_id])\
-        .execute(return_affected_rows=True)
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=False)
     
-    if rows < 1:
+    if count == 0:
+        create_formulas(db_connection, vcs_row_id, design_group_id, formulas)
+    elif count == 1:
+        logger.debug(f'Editing formulas')
+        columns = CVS_FORMULAS_COLUMNS[1:]
+        set_statement = ', '.join([col + ' = %s' for col in columns])
+
+        values = [formulas.time, formulas.time_unit.value, formulas.cost, formulas.revenue, formulas.rate.value]
+
+        update_statement = MySQLStatementBuilder(db_connection) #TODO update the connection with value drivers and mi also
+        _, rows = update_statement \
+            .update(table=CVS_FORMULAS_TABLE, set_statement=set_statement, values=values) \
+            .where('vcs_row = %s and design_group = %s', [vcs_row_id, design_group_id])\
+            .execute(return_affected_rows=True)
+    
+        if rows < 1:
+            raise exceptions.FormulasFailedUpdateException
+    
+        if rows > 1:
+            raise exceptions.TooManyFormulasUpdatedException
+    else:
         raise exceptions.FormulasFailedUpdateException
     
-    if rows > 1:
-        raise exceptions.TooManyFormulasUpdatedException
-        
     return True
 
 

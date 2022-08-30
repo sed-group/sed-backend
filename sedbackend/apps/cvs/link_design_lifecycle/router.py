@@ -24,7 +24,7 @@ async def get_all_formulas(vcs_id: int, dg_id: int) -> List[models.FormulaRowGet
 
 @router.put(
     '/vcs-row/{vcs_row_id}/design-group/{dg_id}/formulas',
-    summary='Edit the formulas for time, cost, and revenue',
+    summary='Edit or create the formulas for time, cost, and revenue',
     response_model=bool,
 )
 async def edit_formulas(vcs_row_id: int, dg_id: int, new_formulas: models.FormulaPost) -> bool:
