@@ -56,13 +56,16 @@ def edit_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_
     count_statement = MySQLStatementBuilder(db_connection)
     count = count_statement.count(CVS_FORMULAS_TABLE)\
         .where('vcs_row = %s and design_group = %s', [vcs_row_id, design_group_id])\
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=False)
-    
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+    count = count['count']
+
+    logger.debug(f'count: {count}')
+
     if count == 0:
         create_formulas(db_connection, vcs_row_id, design_group_id, formulas)
     elif count == 1:
         logger.debug(f'Editing formulas')
-        columns = CVS_FORMULAS_COLUMNS[1:]
+        columns = CVS_FORMULAS_COLUMNS[2:]
         set_statement = ', '.join([col + ' = %s' for col in columns])
 
         values = [formulas.time, formulas.time_unit.value, formulas.cost, formulas.revenue, formulas.rate.value]
@@ -72,9 +75,6 @@ def edit_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_
             .update(table=CVS_FORMULAS_TABLE, set_statement=set_statement, values=values) \
             .where('vcs_row = %s and design_group = %s', [vcs_row_id, design_group_id])\
             .execute(return_affected_rows=True)
-    
-        if rows < 1:
-            raise exceptions.FormulasFailedUpdateException
     
         if rows > 1:
             raise exceptions.TooManyFormulasUpdatedException
