@@ -7,10 +7,11 @@ from sedbackend.apps.core.authentication import exceptions as auth_ex
 from sedbackend.apps.core.db import get_connection
 from sedbackend.apps.cvs.project import exceptions as proj_exceptions
 from sedbackend.apps.cvs.market_input import models, storage, exceptions
+from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 
-#############################################################################################################################
+########################################################################################################################
 # Market Inputs
-#############################################################################################################################
+########################################################################################################################
 
 
 def get_all_market_inputs(project_id: int) -> List[models.MarketInputGet]:
@@ -36,7 +37,7 @@ def get_all_market_inputs(project_id: int) -> List[models.MarketInputGet]:
         )
 
 
-def create_market_input(project_id: int, market_input: models.MarketInputPost) -> bool:
+def create_market_input(project_id: int, market_input: models.MarketInputPost) -> models.MarketInputGet:
     try:
         with get_connection() as con:
             db_result = storage.create_market_input(con, project_id, market_input)
@@ -47,14 +48,12 @@ def create_market_input(project_id: int, market_input: models.MarketInputPost) -
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
-    
 
 
-
-def update_market_input(market_input_id: int, project_id: int, market_input: models.MarketInputPost) -> bool:
+def update_market_input(market_input_id: int, market_input: models.MarketInputPost) -> bool:
     try:
         with get_connection() as con:
-            db_result = storage.update_market_input(con, market_input_id, project_id, market_input)
+            db_result = storage.update_market_input(con, market_input_id, market_input)
             con.commit()
             return db_result
     except auth_ex.UnauthorizedOperationException:
@@ -67,11 +66,7 @@ def update_market_input(market_input_id: int, project_id: int, market_input: mod
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find market input with id={market_input_id}',
         )
-    except exceptions.WrongTimeUnitException as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Time unit has to be one of [year, month, week, day, hour]. Submitted value was: {e.time_unit}'
-        )
+
 
 def delete_market_input(mi_id: int) -> bool:
     try:
@@ -97,26 +92,34 @@ def get_all_formula_market_inputs(formulas_id: int) -> List[models.MarketInputGe
             detail=f'Could not find market inputs for formula with vcs_row id: {formulas_id}'
         )
 
-#############################################################################################################################
-# Market Values
-#############################################################################################################################
 
-def create_market_value(mi_id: int, vcs_id: int, value: float) -> bool:
+########################################################################################################################
+# Market Values
+########################################################################################################################
+
+
+def update_market_input_value(mi_value: models.MarketInputValue) -> bool:
     try:
         with get_connection() as con:
-            res = storage.create_market_value(con, mi_id, vcs_id, value)
+            res = storage.update_market_input_value(con, mi_value)
             con.commit()
             return res
     except exceptions.MarketInputNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find market input with id={mi_id}',
+            detail=f'Could not find market input with id={mi_value.market_input_id}.',
+        )
+    except vcs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id={mi_value.vcs_id}.',
         )
 
-def get_all_market_values(project_id: int) -> List[models.MarketValueGet]:
+
+def get_all_market_values(project_id: int) -> List[models.MarketInputValue]:
     try:
         with get_connection() as con:
-            res = storage.get_all_market_values(con, project_id)
+            res = storage.get_all_market_input_values(con, project_id)
             con.commit()
             return res
     except proj_exceptions.CVSProjectNotFoundException:
@@ -124,7 +127,8 @@ def get_all_market_values(project_id: int) -> List[models.MarketValueGet]:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project with id={project_id}.',
         )
-    
+
+
 def delete_market_value(vcs_id: int, mi_id: int) -> bool:
     try:
         with get_connection() as con:
