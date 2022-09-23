@@ -307,7 +307,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_input_values`
 (
     `vcs`           INT UNSIGNED NOT NULL,
     `market_input`  INT UNSIGNED NOT NULL,
-    `value`         DOUBLE NOT NULL,
+    `value`         DOUBLE(32,5) NOT NULL,
     PRIMARY KEY(`vcs`,`market_input`),
     FOREIGN KEY(`vcs`)
         REFERENCES `seddb`.`cvs_vcss`(`id`)

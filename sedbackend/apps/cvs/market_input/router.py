@@ -51,19 +51,20 @@ async def delete_market_input(market_input_id: int) -> bool:
 # Market Values
 ########################################################################################################################
 
-@router.post(
+@router.put(
     '/vcs/{vcs_id}/market-input/{market_input_id}/value',
     summary='Create or update value for a market input',
     response_model=bool
 )
 async def update_market_value(vcs_id: int, market_input_id: int, value: float) -> bool:
-    return implementation.update_market_input_value(models.MarketInputValue(vcs_id=vcs_id,
-                                                                            market_input_id=market_input_id,
-                                                                            value=value))
+    return implementation.update_market_input_value(vcs_id, models.MarketInputValue(
+        vcs_id=vcs_id,
+        market_input_id=market_input_id,
+        value=value))
 
 
 @router.get(
-    '/project/{project_id}/market-input/values/all',
+    '/project/{project_id}/market-input/values',
     summary='Fetch all market input values for a project',
     response_model=List[models.MarketInputValue]
 )
@@ -72,7 +73,7 @@ async def get_all_market_values(project_id: int) -> List[models.MarketInputValue
 
 
 @router.delete(
-    '/market-input/{market_input_id}/value',
+    '/vcs/{vcs_id}/market-input/{market_input_id}',
     summary='Delete a market input value',
     response_model=bool
 )

@@ -90,7 +90,7 @@ def delete_market_input(db_connection: PooledMySQLConnection, mi_id: int) -> boo
     _, rows = delete_statement \
         .delete(CVS_MARKET_INPUT_TABLE) \
         .where('id = %s', [mi_id]) \
-        .execute(fetch_type=FetchType.FETCH_ALL)
+        .execute(return_affected_rows=True)
 
     if rows != 1:
         raise exceptions.MarketInputFailedDeletionException
@@ -127,27 +127,28 @@ def populate_market_input_values(db_result) -> models.MarketInputValue:
     )
 
 
-def update_market_input_value(db_connection: PooledMySQLConnection, mi_value: models.MarketInputValue) -> bool:
+def update_market_input_value(db_connection: PooledMySQLConnection, vcs_id: int,
+                              mi_value: models.MarketInputValue) -> bool:
     logger.debug(f'Update market input value')
 
     count_statement = MySQLStatementBuilder(db_connection)
     count_result = count_statement \
         .count(CVS_MARKET_VALUES_TABLE) \
-        .where('vcs = %s AND market_input = %s', [mi_value.vcs_id, mi_value.market_input_id]) \
-        .execute(fetch_type=FetchType.FETCH_ONE)
+        .where('market_input = %s', [mi_value.market_input_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
     count = count_result['count']
 
     if count == 0:
         insert_statement = MySQLStatementBuilder(db_connection)
         insert_statement \
             .insert(table=CVS_MARKET_VALUES_TABLE, columns=CVS_MARKET_VALUES_COLUMN) \
-            .set_values([mi_value.vcs_id, mi_value.market_input_id, mi_value.value]) \
+            .set_values([vcs_id, mi_value.market_input_id, mi_value.value]) \
             .execute(fetch_type=FetchType.FETCH_NONE)
     else:
         update_statement = MySQLStatementBuilder(db_connection)
         update_statement \
             .update(table=CVS_MARKET_VALUES_TABLE, set_statement='value = %s', values=[mi_value.value]) \
-            .where('vcs = %s AND market_input = %s', [mi_value.vcs_id, mi_value.market_input_id]) \
+            .where('vcs = %s AND market_input = %s', [vcs_id, mi_value.market_input_id]) \
             .execute(fetch_type=FetchType.FETCH_NONE)
 
     return True
@@ -169,13 +170,13 @@ def get_all_market_input_values(db_connection: PooledMySQLConnection, project_id
 
 
 def delete_market_value(db_connection: PooledMySQLConnection, vcs_id: int, mi_id: int) -> bool:
-    logger.debug(f'Deleting market input value with vcs_id: {vcs_id} and mi_id: {mi_id}')
+    logger.debug(f'Deleting market input value with vcs id: {vcs_id} and market input id: {mi_id}')
 
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement \
         .delete(CVS_MARKET_VALUES_TABLE) \
         .where('vcs = %s AND market_input = %s', [vcs_id, mi_id]) \
-        .execute(fetch_type=FetchType.FETCH_NONE)
+        .execute(return_affected_rows=True)
 
     if rows != 1:
         raise exceptions.MarketInputFailedDeletionException

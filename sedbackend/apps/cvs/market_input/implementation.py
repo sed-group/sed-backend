@@ -98,10 +98,10 @@ def get_all_formula_market_inputs(formulas_id: int) -> List[models.MarketInputGe
 ########################################################################################################################
 
 
-def update_market_input_value(mi_value: models.MarketInputValue) -> bool:
+def update_market_input_value(vcs_id: int, mi_value: models.MarketInputValue) -> bool:
     try:
         with get_connection() as con:
-            res = storage.update_market_input_value(con, mi_value)
+            res = storage.update_market_input_value(con, vcs_id, mi_value)
             con.commit()
             return res
     except exceptions.MarketInputNotFoundException:
@@ -112,7 +112,7 @@ def update_market_input_value(mi_value: models.MarketInputValue) -> bool:
     except vcs_exceptions.VCSNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs with id={mi_value.vcs_id}.',
+            detail=f'Could not find vcs with id={vcs_id}.',
         )
 
 
@@ -128,7 +128,6 @@ def get_all_market_values(project_id: int) -> List[models.MarketInputValue]:
             detail=f'Could not find project with id={project_id}.',
         )
 
-
 def delete_market_value(vcs_id: int, mi_id: int) -> bool:
     try:
         with get_connection() as con:
@@ -138,5 +137,5 @@ def delete_market_value(vcs_id: int, mi_id: int) -> bool:
     except exceptions.MarketInputFailedDeletionException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not delete market input value with mi_id: {mi_id} and vcs_id: {vcs_id}'
+            detail=f'Could not delete market input value with market input id: {mi_id} and vcs id: {vcs_id}'
         )
