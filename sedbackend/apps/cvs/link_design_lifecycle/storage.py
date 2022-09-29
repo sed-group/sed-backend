@@ -134,12 +134,18 @@ def get_vcs_dg_pairs(db_connection: PooledMySQLConnection) -> List[models.VcsDgP
     from cvs_vcss, cvs_design_groups;
     
     
+    SELECT cvs_vcss.name AS vcs, cvs_design_groups.name AS design_group, 
+    (SELECT (count(*)) FROM cvs_design_mi_formulas inner join cvs_vcs_rows on cvs_vcs_rows.id = vcs_row WHERE cvs_design_mi_formulas.design_group=cvs_design_groups.id and vcs=cvs_vcss.id) 
+    = (select count(*) from cvs_vcs_rows where cvs_vcs_rows.vcs = cvs_vcss.id) as has_formulas
+    from cvs_vcss, cvs_design_groups, 
+    cvs_vcs_rows, cvs_design_mi_formulas where cvs_vcss.id = cvs_vcs_rows.vcs and cvs_design_groups.id = cvs_design_mi_formulas.design_group group by vcs,design_group
     '''
     
     query = "SELECT cvs_vcss.name AS vcs, cvs_design_groups.name AS design_group, \
-    (SELECT (count(*)) FROM cvs_vcs_rows WHERE cvs_vcs_rows.vcs=cvs_vcss.id) = \
-    (SELECT (count(*)) FROM cvs_design_mi_formulas WHERE cvs_design_mi_formulas.design_group=cvs_design_groups.id) AS has_formulas \
-    from cvs_vcss, cvs_design_groups"
+    (SELECT (count(*)) FROM cvs_design_mi_formulas inner join cvs_vcs_rows on cvs_vcs_rows.id = vcs_row WHERE cvs_design_mi_formulas.design_group=cvs_design_groups.id AND vcs=cvs_vcss.id) \
+    = (select count(*) from cvs_vcs_rows where cvs_vcs_rows.vcs = cvs_vcss.id) as has_formulas \
+    from cvs_vcss, cvs_design_groups, \
+    cvs_vcs_rows, cvs_design_mi_formulas WHERE cvs_vcss.id = cvs_vcs_rows.vcs AND cvs_design_groups.id = cvs_design_mi_formulas.design_group GROUP BY vcs,design_group"
 
     with db_connection.cursor(prepared=True) as cursor:
         
