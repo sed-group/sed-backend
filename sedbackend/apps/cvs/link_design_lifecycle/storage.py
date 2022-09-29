@@ -124,3 +124,42 @@ def delete_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, desig
         raise exceptions.FormulasFailedDeletionException
     
     return True
+
+def get_vcs_dg_pairs(db_connection: PooledMySQLConnection) -> List[models.VcsDgPairs]:
+    
+    '''
+    SELECT cvs_vcss.name AS vcs, cvs_design_groups.name AS design_group,
+    (SELECT (count(*)) FROM cvs_vcs_rows WHERE cvs_vcs_rows.vcs=%s) =
+    (SELECT (count(*)) FROM cvs_design_mi_formulas WHERE cvs_design_mi_formulas.design_group=%s) AS has_formulas
+    from cvs_vcss, cvs_design_groups;
+    
+    
+    '''
+    
+    query = "SELECT cvs_vcss.name AS vcs, cvs_design_groups.name AS design_group, \
+    (SELECT (count(*)) FROM cvs_vcs_rows WHERE cvs_vcs_rows.vcs=cvs_vcss.id) = \
+    (SELECT (count(*)) FROM cvs_design_mi_formulas WHERE cvs_design_mi_formulas.design_group=cvs_design_groups.id) AS has_formulas \
+    from cvs_vcss, cvs_design_groups"
+
+    with db_connection.cursor(prepared=True) as cursor:
+        
+        #Log for sanity check
+        logger.debug(f"get_vcs_dg_pairs: '{query}'")
+
+        #Execute query
+        cursor.execute(query)
+        
+
+        #Get result
+        res_dict = []
+        rs = cursor.fetchall()
+        for res in rs:
+
+            zip(cursor.column_names, res)
+            res_dict.append(models.VcsDgPairs(
+                vcs=res[0],
+                design_group=res[1],
+                has_formulas=res[2]
+                ))
+
+    return res_dict

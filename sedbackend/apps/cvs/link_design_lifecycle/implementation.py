@@ -75,3 +75,16 @@ def delete_formulas(vcs_row_id: int, design_group_id: int) -> bool:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f'Could not delete formulas with row id: {vcs_row_id}'
             )
+
+def get_vcs_dg_pairs() -> List[models.VcsDgPairs]:
+    with get_connection() as con:
+        try: 
+            res = storage.get_vcs_dg_pairs(con)
+            con.commit()
+            return res
+        except Exception as e:
+            logger.debug(e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f'Connection to database failed'
+            )

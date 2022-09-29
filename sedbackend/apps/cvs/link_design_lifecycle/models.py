@@ -47,3 +47,8 @@ class FormulaPost(BaseModel):
 class FormulaRowGet(FormulaGet):
     value_drivers: List[vcs_models.ValueDriver]
     market_inputs: List[mi_models.MarketInputGet]
+
+class VcsDgPairs(BaseModel):
+    vcs: str
+    design_group: str
+    has_formulas: int
