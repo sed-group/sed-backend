@@ -1,3 +1,6 @@
+from tkinter import E
+
+
 class ProcessNotFoundException(Exception):
     pass
 
@@ -19,4 +22,7 @@ class NegativeTimeException(Exception):
         self.process_id = process_id
 
 class SimulationFailedException(Exception):
+    pass
+
+class DesignIdsNotFoundException(Exception):
     pass

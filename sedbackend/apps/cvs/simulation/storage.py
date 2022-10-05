@@ -61,8 +61,7 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flow
     
 
     if design_ids is None or []:
-        for design in design_impl.get_all_designs(1):
-            design_ids.append(design.id)
+        raise e.DesignIdsNotFoundException
 
     design_results = []
     for design_id in design_ids:
@@ -111,8 +110,9 @@ def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flo
 
 
     if design_ids is None or []:
-        for design in design_impl.get_all_designs(1):
-            design_ids.append(design.id)
+        #for design in design_impl.get_all_designs(1):
+        #    design_ids.append(design.id)
+        raise e.DesignIdsNotFoundException
 
     design_results = []
     for design_id in design_ids:
@@ -145,8 +145,9 @@ def run_simulation(db_connection: PooledMySQLConnection, vcs_id: int, flow_time:
         raise e.RateWrongOrderException
     
     if design_ids is None or []:
-        for design in design_impl.get_all_designs(1):
-            design_ids.append(design.id)
+        #for design in design_impl.get_all_designs(1):
+        #    design_ids.append(design.id)
+        raise e.DesignIdsNotFoundException
 
     design_results = []
     for design_id in design_ids:
@@ -187,13 +188,14 @@ def run_sim_monte_carlo(db_connection: PooledMySQLConnection, vcs_id: int, flow_
    
 
     if design_ids is None or []:
-        for design in design_impl.get_all_designs(1):
-            design_ids.append(design.id)
+        #for design in design_impl.get_all_designs(1):
+        #    design_ids.append(design.id)
+        raise e.DesignIdsNotFoundException
 
     design_results = []
     for design_id in design_ids:
         processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id)
-
+        logger.debug('Fetched Processes and non-techproc')
         dsm = create_simple_dsm(processes) #TODO Change to using BPMN AND move out of the for loop
         
 
