@@ -76,10 +76,10 @@ def delete_formulas(vcs_row_id: int, design_group_id: int) -> bool:
                 detail=f'Could not delete formulas with row id: {vcs_row_id}'
             )
 
-def get_vcs_dg_pairs() -> List[models.VcsDgPairs]:
+def get_vcs_dg_pairs(project_id: int) -> List[models.VcsDgPairs]:
     with get_connection() as con:
         try: 
-            res = storage.get_vcs_dg_pairs(con)
+            res = storage.get_vcs_dg_pairs(con, project_id)
             con.commit()
             return res
         except Exception as e:

@@ -39,9 +39,9 @@ async def delete_formulas(vcs_row_id: int, dg_id: int) -> bool:
     return implementation.delete_formulas(vcs_row_id, dg_id)
 
 @router.get(
-    '/vcs/design/formula-pairs',
+    '/project/{project_id}/vcs/design/formula-pairs',
     summary=f'Fetch all finished/unfinished vcs-design pairs',
     response_model=List[models.VcsDgPairs]
 )
-async def get_vcs_dg_pairs() -> List[models.VcsDgPairs]:
-    return implementation.get_vcs_dg_pairs()
+async def get_vcs_dg_pairs(project_id: int) -> List[models.VcsDgPairs]:
+    return implementation.get_vcs_dg_pairs(project_id)
