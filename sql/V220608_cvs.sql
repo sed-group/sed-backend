@@ -18,6 +18,23 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_projects`
             ON UPDATE NO ACTION
 );
 
+#Simulation settings
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_simulation_settings`
+(
+    `project`               INT UNSIGNED NOT NULL,
+    `flow_time`             DOUBLE(20, 5) NOT NULL,
+    `flow_rate`             DOUBLE(20, 5) NOT NULL,
+    `simulation_runtime`    DOUBLE(20, 5) NOT NULL,
+    `discount_rate`         DOUBLE(20, 5) NOT NULL,
+    `non_tech_add`          TEXT NOT NULL,
+    PRIMARY KEY (`project`),
+    FOREIGN KEY (`project`)
+        REFERENCES `seddb`.`cvs_projects`(`id`)
+        ON DELETE CASCADE
+        ON UPDATE NO ACTION,
+    CONSTRAINT `check_non_tech` CHECK (`non_tech_add` IN ('to_process', 'lump_sum', 'continously', 'no_cost'))
+);
+
 #Value Creation Strategies
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vcss`
 (
@@ -236,40 +253,6 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vd_design_values`
         ON DELETE CASCADE
 );
 
-/*
-CREATE TABLE IF NOT EXISTS `seddb`.`cvs_quantified_objectives`
-(
-    `value_driver`      INT UNSIGNED NOT NULL,
-    `design_group`      INT UNSIGNED NOT NULL,
-    `name`              VARCHAR(63) NOT NULL,
-    `unit`              VARCHAR(63) NOT NULL,
-    PRIMARY KEY(`value_driver`, `design_group`),
-    FOREIGN KEY(`design_group`)
-        REFERENCES `seddb`.`cvs_design_groups`(`id`)
-        ON DELETE CASCADE,
-    FOREIGN KEY(`value_driver`)
-        REFERENCES `seddb`.`cvs_value_drivers`(`id`)
-        ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS `seddb`.`cvs_quantified_objective_values`
-(
-    `design`            INT UNSIGNED NOT NULL,
-    `value_driver`      INT UNSIGNED NOT NULL,
-    `design_group`      INT UNSIGNED NOT NULL,
-    `value`             FLOAT,
-    PRIMARY KEY(`design`, `value_driver`, `design_group`),
-    FOREIGN KEY(`design`)
-        REFERENCES `seddb`.`cvs_designs`(`id`)
-        ON DELETE CASCADE,
-    FOREIGN KEY(`design_group`)
-        REFERENCES `seddb`.`cvs_design_groups`(`id`)
-        ON DELETE CASCADE,
-    FOREIGN KEY(`value_driver`)
-        REFERENCES `seddb`.`cvs_value_drivers`(`id`)
-        ON DELETE CASCADE
-);
-*/
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_design_mi_formulas`
 (

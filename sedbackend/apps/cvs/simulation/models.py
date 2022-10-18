@@ -35,3 +35,15 @@ class SimulationMonteCarlo(BaseModel):
     mean_NPV: List[float]
     max_NPVs: List[float]
     mean_payback_time: float
+
+
+class EditSimSettings(BaseModel):
+    flow_time: float
+    flow_rate: float
+    simulation_runtime: float
+    discount_rate: float
+    non_tech_add: NonTechCost
+
+class SimSettings(EditSimSettings):
+    project: int
+    

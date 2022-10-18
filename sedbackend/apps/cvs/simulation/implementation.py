@@ -4,6 +4,7 @@ import tempfile
 
 from typing import List, Optional
 
+from fastapi.logger import logger
 from sedbackend.apps.cvs.simulation import models, storage
 
 from sedbackend.apps.core.authentication import exceptions as auth_ex
@@ -226,4 +227,30 @@ def run_sim_monte_carlo(vcs_id: int, flow_time: float, flow_rate: float,
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'No design ids or empty array supplied'
+        )
+
+def get_sim_settings(project_id: int) -> models.SimSettings:
+    try:
+        with get_connection() as con: 
+            result = storage.get_simulation_settings(con, project_id)
+            con.commit()
+            return result
+    except Exception as e:
+        logger.debug(e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Could not send simulation settings'
+        )
+
+def edit_sim_settings(project_id: int, sim_settings: models.EditSimSettings) -> bool:
+    try: 
+        with get_connection() as con:
+            res = storage.edit_simulation_settings(con, project_id, sim_settings)
+            con.commit()
+            return res
+    except Exception as e:
+        logger.debug(e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Could not update simulation settings'
         )

@@ -1,4 +1,5 @@
 
+from multiprocessing.dummy import Pool
 import tempfile
 from fastapi import UploadFile
 from mysql.connector.pooling import PooledMySQLConnection
@@ -23,6 +24,10 @@ import sedbackend.apps.cvs.market_input.implementation as mi_impl
 import sedbackend.apps.cvs.life_cycle.implementation as lifecycle_impl
 from sedbackend.apps.cvs.vcs.models import VcsRow
 from sedbackend.apps.cvs.design import implementation as design_impl
+
+SIM_SETTINGS_TABLE = "cvs_simulation_settings"
+SIM_SETTINGS_COLUMNS = ['project', 'flow_time', 'flow_rate', 'simulation_runtime', 'discount_rate', 'non_tech_add']
+
 
 TIME_FORMAT_DICT = dict({
     'year': TimeFormat.YEAR, 
@@ -304,6 +309,55 @@ def get_vd_design_values(db_connection: PooledMySQLConnection, vcs_row_id: int, 
     
     return res
 
+def get_simulation_settings(db_connection: PooledMySQLConnection, project_id: int):
+    logger.debug(f'Fetching simulation settings for project {project_id}')
+    
+    select_statement = MySQLStatementBuilder(db_connection)
+    res = select_statement.select(SIM_SETTINGS_TABLE, SIM_SETTINGS_COLUMNS) \
+        .where('project = %s', [project_id])\
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+    
+
+    return populate_sim_settings(res)
+
+def  edit_simulation_settings(db_connection: PooledMySQLConnection, project_id: int, sim_settings: models.EditSimSettings):
+    logger.debug(f'Editing simulation settings for project {project_id}')
+
+    count_sim = MySQLStatementBuilder(db_connection)
+    count = count_sim.count(SIM_SETTINGS_TABLE)\
+        .where('project = %s', [project_id])\
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+    
+    count = count['count']
+    logger.debug(count)
+
+    if (count == 1):
+        columns = SIM_SETTINGS_COLUMNS[1:]
+        set_statement = ','.join([col + ' = %s' for col in columns])
+
+        values = [sim_settings.flow_time, sim_settings.flow_rate, sim_settings.simulation_runtime, sim_settings.discount_rate, sim_settings.non_tech_add.value]
+        update_Statement = MySQLStatementBuilder(db_connection)
+        _, rows = update_Statement \
+            .update(table=SIM_SETTINGS_TABLE, set_statement=set_statement, values=values) \
+            .where('project = %s', [project_id])\
+            .execute(return_affected_rows=True)
+        
+    elif(count == 0):
+        create_sim_settings(db_connection, project_id, sim_settings)
+
+    
+    return True
+    
+
+def create_sim_settings(db_connection: PooledMySQLConnection, project_id: int, sim_settings: models.EditSimSettings) -> models.SimSettings:
+    values = [project_id] + [sim_settings.flow_time, sim_settings.flow_rate, sim_settings.simulation_runtime, sim_settings.discount_rate, sim_settings.non_tech_add.value]
+
+    insert_statement = MySQLStatementBuilder(db_connection)
+    insert_statement.insert(SIM_SETTINGS_TABLE, SIM_SETTINGS_COLUMNS)\
+        .set_values(values)\
+        .execute(fetch_type=FetchType.FETCH_NONE)
+    
+
 def get_market_values(db_connection: PooledMySQLConnection, vcs_row_id: int, vcs: int):
 
     select_statement = MySQLStatementBuilder(db_connection)
@@ -374,3 +428,14 @@ def get_dsm_from_excel(path):
     for v in pf.values:
         dsm.update({v[0]: v[1::].tolist()})
     return dsm
+
+def populate_sim_settings(db_result) -> models.SimSettings:
+    logger.debug(f'Populating simulation settings')
+    return models.SimSettings(
+        project=db_result['project'],
+        flow_time=db_result['flow_time'],
+        flow_rate=db_result['flow_rate'],
+        simulation_runtime=db_result['simulation_runtime'],
+        discount_rate=db_result['discount_rate'],
+        non_tech_add=db_result['non_tech_add']
+    )

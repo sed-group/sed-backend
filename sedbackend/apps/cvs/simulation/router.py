@@ -62,3 +62,19 @@ async def run_sim_monte_carlo(vcs_id: int, flow_time: float, flow_rate: float,
     return implementation.run_sim_monte_carlo(vcs_id, flow_time, flow_rate, flow_process_id, 
                                             simulation_runtime, discount_rate, non_tech_add, 
                                             design_ids, runs, normalized_npv, user.id)
+
+@router.get(
+    '/project/{project_id}/simulation/settings',
+    summary='Get settings for project',
+    response_model=models.SimSettings
+)
+async def get_sim_settings(project_id: int) -> models.SimSettings:
+    return implementation.get_sim_settings(project_id)
+
+@router.put(
+    '/project/{project_id}/simulation/settings',
+    summary='Create or update simulation settings',
+    response_model=bool
+)
+async def put_sim_settings(project_id: int, sim_settings: models.EditSimSettings) -> bool:
+    return implementation.edit_sim_settings(project_id, sim_settings)
