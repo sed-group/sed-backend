@@ -35,6 +35,7 @@ class SimulationMonteCarlo(BaseModel):
     mean_NPV: List[float]
     max_NPVs: List[float]
     mean_payback_time: float
+    all_npvs: List[List[float]]
 
 
 class EditSimSettings(BaseModel):

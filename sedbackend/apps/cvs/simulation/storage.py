@@ -222,7 +222,8 @@ def run_sim_monte_carlo(db_connection: PooledMySQLConnection, vcs_id: int, flow_
             time=results.timesteps[-1],
             mean_NPV=m_npv,
             max_NPVs=results.all_max_npv(),
-            mean_payback_time=results.mean_npv_payback_time()
+            mean_payback_time=results.mean_npv_payback_time(),
+            all_npvs=results.npvs
             )
         design_results.append(sim_res)
     
