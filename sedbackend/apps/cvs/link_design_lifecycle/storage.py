@@ -141,11 +141,11 @@ def get_vcs_dg_pairs(db_connection: PooledMySQLConnection, project_id: int) -> L
     cvs_vcs_rows, cvs_design_mi_formulas where cvs_vcss.id = cvs_vcs_rows.vcs and cvs_design_groups.id = cvs_design_mi_formulas.design_group group by vcs,design_group
     '''
 
-    query = "SELECT cvs_vcss.name AS vcs_name, cvs_design_groups.name AS design_group_name, \
+    query = "SELECT cvs_vcss.name AS vcs_name, cvs_vcss.id AS vcs_id, cvs_design_groups.name AS design_group_name, cvs_design_groups.id AS design_group_id, \
     (SELECT count(*) FROM cvs_vcs_rows WHERE cvs_vcs_rows.vcs = cvs_vcss.id) \
     = ((SELECT (count(*)) FROM cvs_design_mi_formulas INNER JOIN cvs_vcs_rows ON cvs_vcs_rows.id = vcs_row WHERE cvs_design_mi_formulas.design_group=cvs_design_groups.id AND vcs=cvs_vcss.id)) \
     AS has_formulas FROM cvs_vcss, cvs_design_groups WHERE cvs_vcss.project = %s AND cvs_design_groups.project = %s \
-    GROUP BY vcs_name, design_group_name;"
+    GROUP BY vcs_name, design_group_name ORDER BY has_formulas DESC;"
 
     with db_connection.cursor(prepared=True) as cursor:
         
@@ -159,12 +159,13 @@ def get_vcs_dg_pairs(db_connection: PooledMySQLConnection, project_id: int) -> L
         res_dict = []
         rs = cursor.fetchall()
         for res in rs:
-
             zip(cursor.column_names, res)
             res_dict.append(models.VcsDgPairs(
                 vcs=res[0],
-                design_group=res[1],
-                has_formulas=res[2]
+                vcs_id=res[1],
+                design_group=res[2],
+                design_group_id=res[3],
+                has_formulas=res[4]
                 ))
 
     return res_dict

@@ -50,5 +50,7 @@ class FormulaRowGet(FormulaGet):
 
 class VcsDgPairs(BaseModel):
     vcs: str
+    vcs_id: int
     design_group: str
+    design_group_id: int
     has_formulas: int
