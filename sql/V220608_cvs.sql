@@ -22,9 +22,13 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_projects`
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_simulation_settings`
 (
     `project`               INT UNSIGNED NOT NULL,
+    `time_unit`             VARCHAR(10),
+    `flow_process`          INT UNSIGNED NULL,
+    `flow_start_time`       DOUBLE(20, 5) NULL,
     `flow_time`             DOUBLE(20, 5) NOT NULL,
-    `flow_rate`             DOUBLE(20, 5) NOT NULL,
-    `simulation_runtime`    DOUBLE(20, 5) NOT NULL,
+    `interarrival_time`     DOUBLE(20, 5) NOT NULL,
+    `start_time`            DOUBLE(20, 5) NOT NULL,
+    `end_time`              DOUBLE(20, 5) NOT NULL,
     `discount_rate`         DOUBLE(20, 5) NOT NULL,
     `non_tech_add`          TEXT NOT NULL,
     PRIMARY KEY (`project`),
@@ -32,7 +36,12 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_simulation_settings`
         REFERENCES `seddb`.`cvs_projects`(`id`)
         ON DELETE CASCADE
         ON UPDATE NO ACTION,
-    CONSTRAINT `check_non_tech` CHECK (`non_tech_add` IN ('to_process', 'lump_sum', 'continously', 'no_cost'))
+    FOREIGN KEY (`flow_process`)
+        REFERENCES `seddb`.`cvs_vcs_rows`(`id`)
+        ON DELETE CASCADE
+        ON UPDATE NO ACTION,
+    CONSTRAINT `check_non_tech` CHECK (`non_tech_add` IN ('to_process', 'lump_sum', 'continously', 'no_cost')),
+    CONSTRAINT `check_time_unit` CHECK (`time_unit` IN ('year', 'month', 'week', 'day', 'hour'))
 );
 
 #Value Creation Strategies

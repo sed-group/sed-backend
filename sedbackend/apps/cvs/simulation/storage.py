@@ -26,7 +26,8 @@ from sedbackend.apps.cvs.vcs.models import VcsRow
 from sedbackend.apps.cvs.design import implementation as design_impl
 
 SIM_SETTINGS_TABLE = "cvs_simulation_settings"
-SIM_SETTINGS_COLUMNS = ['project', 'flow_time', 'flow_rate', 'simulation_runtime', 'discount_rate', 'non_tech_add']
+SIM_SETTINGS_COLUMNS = ['project', 'time_unit', 'flow_process', 'flow_start_time', 'flow_time', 
+    'interarrival_time', 'start_time', 'end_time', 'discount_rate', 'non_tech_add']
 
 
 TIME_FORMAT_DICT = dict({
@@ -336,7 +337,9 @@ def  edit_simulation_settings(db_connection: PooledMySQLConnection, project_id: 
         columns = SIM_SETTINGS_COLUMNS[1:]
         set_statement = ','.join([col + ' = %s' for col in columns])
 
-        values = [sim_settings.flow_time, sim_settings.flow_rate, sim_settings.simulation_runtime, sim_settings.discount_rate, sim_settings.non_tech_add.value]
+        values = [sim_settings.time_unit, sim_settings.flow_process, sim_settings.flow_start_time, sim_settings.flow_time,  
+            sim_settings.interarrival_time, sim_settings.start_time, sim_settings.end_time, 
+            sim_settings.discount_rate, sim_settings.non_tech_add.value]
         update_Statement = MySQLStatementBuilder(db_connection)
         _, rows = update_Statement \
             .update(table=SIM_SETTINGS_TABLE, set_statement=set_statement, values=values) \
@@ -345,13 +348,15 @@ def  edit_simulation_settings(db_connection: PooledMySQLConnection, project_id: 
         
     elif(count == 0):
         create_sim_settings(db_connection, project_id, sim_settings)
-
     
     return True
     
 
 def create_sim_settings(db_connection: PooledMySQLConnection, project_id: int, sim_settings: models.EditSimSettings) -> models.SimSettings:
-    values = [project_id] + [sim_settings.flow_time, sim_settings.flow_rate, sim_settings.simulation_runtime, sim_settings.discount_rate, sim_settings.non_tech_add.value]
+    
+    values = [project_id] + [sim_settings.time_unit, sim_settings.flow_process, sim_settings.flow_start_time, sim_settings.flow_time,  
+            sim_settings.interarrival_time, sim_settings.start_time, sim_settings.end_time, 
+            sim_settings.discount_rate, sim_settings.non_tech_add.value]
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement.insert(SIM_SETTINGS_TABLE, SIM_SETTINGS_COLUMNS)\
@@ -434,9 +439,13 @@ def populate_sim_settings(db_result) -> models.SimSettings:
     logger.debug(f'Populating simulation settings')
     return models.SimSettings(
         project=db_result['project'],
+        time_unit=db_result['time_unit'],
+        flow_process=db_result['flow_process'],
+        flow_start_time=db_result['flow_start_time'],
         flow_time=db_result['flow_time'],
-        flow_rate=db_result['flow_rate'],
-        simulation_runtime=db_result['simulation_runtime'],
+        interarrival_time=db_result['interarrival_time'],
+        start_time=db_result['start_time'],
+        end_time=db_result['end_time'],
         discount_rate=db_result['discount_rate'],
         non_tech_add=db_result['non_tech_add']
     )

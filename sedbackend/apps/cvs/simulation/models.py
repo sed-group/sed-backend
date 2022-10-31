@@ -1,6 +1,7 @@
 from typing import List
 from enum import Enum
 from pydantic import BaseModel
+from typing import  Optional
 
 
 class NonTechCost(Enum):
@@ -39,9 +40,13 @@ class SimulationMonteCarlo(BaseModel):
 
 
 class EditSimSettings(BaseModel):
+    time_unit: str
+    flow_process: Optional[int] = None
+    flow_start_time: Optional[float] = None
     flow_time: float
-    flow_rate: float
-    simulation_runtime: float
+    interarrival_time: float
+    start_time: float
+    end_time: float
     discount_rate: float
     non_tech_add: NonTechCost
 
