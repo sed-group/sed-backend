@@ -1,7 +1,9 @@
 from typing import List
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from sedbackend.apps.core.authentication.utils import get_current_active_user
+from sedbackend.apps.core.users.models import User
 from sedbackend.apps.cvs.market_input import models, implementation
 
 router = APIRouter()
@@ -56,11 +58,24 @@ async def delete_market_input(market_input_id: int) -> bool:
     summary='Create or update value for a market input',
     response_model=bool
 )
-async def update_market_value(vcs_id: int, market_input_id: int, value: float) -> bool:
-    return implementation.update_market_input_value(vcs_id, models.MarketInputValue(
+async def update_market_value(vcs_id: int, market_input_id: int, value: float,
+                              user: User = Depends(get_current_active_user)) -> bool:
+    return implementation.update_market_input_value(models.MarketInputValue(
         vcs_id=vcs_id,
         market_input_id=market_input_id,
-        value=value))
+        value=value),
+        user.id
+    )
+
+
+@router.put(
+    '/market-input-values',
+    summary='Create or update values for market inputs',
+    response_model=bool
+)
+async def update_market_values(mi_values: List[models.MarketInputValue],
+                               user: User = Depends(get_current_active_user)) -> bool:
+    return implementation.update_market_input_values(mi_values, user.id)
 
 
 @router.get(

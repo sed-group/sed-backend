@@ -5,6 +5,7 @@ from mysql.connector.pooling import PooledMySQLConnection
 
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.cvs.market_input import models, exceptions
+from sedbackend.apps.cvs.vcs import storage as vcs_storage
 
 CVS_MARKET_INPUT_TABLE = 'cvs_market_inputs'
 CVS_MARKET_INPUT_COLUMN = ['id', 'project', 'name', 'unit']
@@ -127,9 +128,11 @@ def populate_market_input_values(db_result) -> models.MarketInputValue:
     )
 
 
-def update_market_input_value(db_connection: PooledMySQLConnection, vcs_id: int,
-                              mi_value: models.MarketInputValue) -> bool:
+def update_market_input_value(db_connection: PooledMySQLConnection,
+                              mi_value: models.MarketInputValue, user_id: int) -> bool:
     logger.debug(f'Update market input value')
+    vcs_storage.get_vcs(db_connection, mi_value.vcs_id, user_id)  # check if vcs exists
+    get_market_input(db_connection, mi_value.market_input_id)  # check if market input exists
 
     count_statement = MySQLStatementBuilder(db_connection)
     count_result = count_statement \
@@ -142,14 +145,24 @@ def update_market_input_value(db_connection: PooledMySQLConnection, vcs_id: int,
         insert_statement = MySQLStatementBuilder(db_connection)
         insert_statement \
             .insert(table=CVS_MARKET_VALUES_TABLE, columns=CVS_MARKET_VALUES_COLUMN) \
-            .set_values([vcs_id, mi_value.market_input_id, mi_value.value]) \
+            .set_values([mi_value.vcs_id, mi_value.market_input_id, mi_value.value]) \
             .execute(fetch_type=FetchType.FETCH_NONE)
     else:
         update_statement = MySQLStatementBuilder(db_connection)
         update_statement \
             .update(table=CVS_MARKET_VALUES_TABLE, set_statement='value = %s', values=[mi_value.value]) \
-            .where('vcs = %s AND market_input = %s', [vcs_id, mi_value.market_input_id]) \
+            .where('vcs = %s AND market_input = %s', [mi_value.vcs_id, mi_value.market_input_id]) \
             .execute(fetch_type=FetchType.FETCH_NONE)
+
+    return True
+
+
+def update_market_input_values(db_connection: PooledMySQLConnection,
+                               mi_values: List[models.MarketInputValue], user_id) -> bool:
+    logger.debug(f'Update market input values')
+
+    for mi_value in mi_values:
+        update_market_input_value(db_connection, mi_value, user_id)
 
     return True
 

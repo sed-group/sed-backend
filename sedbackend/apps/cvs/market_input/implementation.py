@@ -98,10 +98,10 @@ def get_all_formula_market_inputs(formulas_id: int) -> List[models.MarketInputGe
 ########################################################################################################################
 
 
-def update_market_input_value(vcs_id: int, mi_value: models.MarketInputValue) -> bool:
+def update_market_input_value(mi_value: models.MarketInputValue, user_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.update_market_input_value(con, vcs_id, mi_value)
+            res = storage.update_market_input_value(con, mi_value, user_id)
             con.commit()
             return res
     except exceptions.MarketInputNotFoundException:
@@ -112,7 +112,25 @@ def update_market_input_value(vcs_id: int, mi_value: models.MarketInputValue) ->
     except vcs_exceptions.VCSNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs with id={vcs_id}.',
+            detail=f'Could not find vcs with id={mi_value.vcs_id}.',
+        )
+
+
+def update_market_input_values(mi_values: List[models.MarketInputValue], user_id) -> bool:
+    try:
+        with get_connection() as con:
+            res = storage.update_market_input_values(con, mi_values, user_id)
+            con.commit()
+            return res
+    except exceptions.MarketInputNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find market input',
+        )
+    except vcs_exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs',
         )
 
 
