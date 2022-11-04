@@ -69,13 +69,13 @@ async def update_market_value(vcs_id: int, market_input_id: int, value: float,
 
 
 @router.put(
-    '/market-input-values',
+    '/project/{project_id}/market-input/values',
     summary='Create or update values for market inputs',
     response_model=bool
 )
-async def update_market_values(mi_values: List[models.MarketInputValue],
+async def update_market_values(mi_values: List[models.MarketInputValue], project_id: int,
                                user: User = Depends(get_current_active_user)) -> bool:
-    return implementation.update_market_input_values(mi_values, user.id)
+    return implementation.update_market_input_values(mi_values, project_id, user.id)
 
 
 @router.get(

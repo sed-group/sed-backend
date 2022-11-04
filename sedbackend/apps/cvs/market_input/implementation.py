@@ -116,10 +116,10 @@ def update_market_input_value(mi_value: models.MarketInputValue, user_id: int) -
         )
 
 
-def update_market_input_values(mi_values: List[models.MarketInputValue], user_id) -> bool:
+def update_market_input_values(mi_values: List[models.MarketInputValue], project_id: int, user_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.update_market_input_values(con, mi_values, user_id)
+            res = storage.update_market_input_values(con, mi_values, project_id, user_id)
             con.commit()
             return res
     except exceptions.MarketInputNotFoundException:

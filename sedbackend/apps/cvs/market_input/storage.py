@@ -137,7 +137,7 @@ def update_market_input_value(db_connection: PooledMySQLConnection,
     count_statement = MySQLStatementBuilder(db_connection)
     count_result = count_statement \
         .count(CVS_MARKET_VALUES_TABLE) \
-        .where('market_input = %s', [mi_value.market_input_id]) \
+        .where('market_input = %s AND vcs = %s', [mi_value.market_input_id, mi_value.vcs_id]) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
     count = count_result['count']
 
@@ -158,8 +158,14 @@ def update_market_input_value(db_connection: PooledMySQLConnection,
 
 
 def update_market_input_values(db_connection: PooledMySQLConnection,
-                               mi_values: List[models.MarketInputValue], user_id) -> bool:
+                               mi_values: List[models.MarketInputValue], project_id: int, user_id: int) -> bool:
     logger.debug(f'Update market input values')
+
+    curr_mi_values = get_all_market_input_values(db_connection, project_id)
+    # delete if no longer exists
+    for value in curr_mi_values:
+        if [value.vcs_id, value.market_input_id] not in [[v.vcs_id, v.market_input_id] for v in mi_values]:
+            delete_market_value(db_connection, value.vcs_id, value.market_input_id)
 
     for mi_value in mi_values:
         update_market_input_value(db_connection, mi_value, user_id)
