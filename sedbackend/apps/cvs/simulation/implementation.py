@@ -15,13 +15,13 @@ from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.market_input import exceptions as market_input_exceptions
 
 
-def run_simulation(vcs_id: int, flow_time: float, flow_rate: float, 
-                    flow_process_id: int, simulation_runtime: float, discount_rate: float, 
+def run_simulation(vcs_ids: List[int], flow_time: float, flow_rate: float, 
+                    flow_process: str, simulation_runtime: float, discount_rate: float, 
                     non_tech_add: models.NonTechCost, design_ids: List[int], 
                     normalized_npv: bool, user_id: int) -> List[models.Simulation]:
     try:
         with get_connection() as con:
-            result = storage.run_simulation(con, vcs_id, flow_time, flow_rate, flow_process_id, 
+            result = storage.run_simulation(con, vcs_ids, flow_time, flow_rate, flow_process, 
                                 simulation_runtime, discount_rate, non_tech_add, design_ids, normalized_npv, user_id)
             return result
     except auth_ex.UnauthorizedOperationException:
@@ -192,14 +192,14 @@ def run_xlsx_simulation(vcs_id: int, flow_time: float, flow_rate: float, flow_pr
             detail=f'No design ids or empty array supplied'
         )
 
-def run_sim_monte_carlo(vcs_id: int, flow_time: float, flow_rate: float, 
-                    flow_process_id: int, simulation_runtime: float, discount_rate: float, 
+def run_sim_monte_carlo(vcs_ids: List[int], flow_time: float, flow_rate: float, 
+                    flow_process: str, simulation_runtime: float, discount_rate: float, 
                     non_tech_add: models.NonTechCost, design_ids: List[int], 
                     runs: int, normalized_npv: bool, 
                     user_id: int = None) -> List[models.SimulationMonteCarlo]:
     try: 
         with get_connection() as con:
-            result = storage.run_sim_monte_carlo(con, vcs_id, flow_time, flow_rate, flow_process_id, 
+            result = storage.run_sim_monte_carlo(con, vcs_ids, flow_time, flow_rate, flow_process, 
                                 simulation_runtime, discount_rate, non_tech_add, design_ids, runs, 
                                 normalized_npv, user_id)
             return result

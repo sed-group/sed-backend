@@ -27,7 +27,7 @@ from sedbackend.apps.cvs.design import implementation as design_impl
 
 SIM_SETTINGS_TABLE = "cvs_simulation_settings"
 SIM_SETTINGS_COLUMNS = ['project', 'time_unit', 'flow_process', 'flow_start_time', 'flow_time', 
-    'interarrival_time', 'start_time', 'end_time', 'discount_rate', 'non_tech_add']
+    'interarrival_time', 'start_time', 'end_time', 'discount_rate', 'non_tech_add', 'monte_carlo']
 
 
 TIME_FORMAT_DICT = dict({
@@ -141,93 +141,95 @@ def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flo
     
     return design_results
 
-def run_simulation(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: float, 
-        flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float,
+def run_simulation(db_connection: PooledMySQLConnection, vcs_ids: List[int], flow_time: float, 
+        flow_rate: float, process: str, simulation_runtime: float, discount_rate: float,
         non_tech_add: models.NonTechCost, design_ids: List[int], normalized_npv: bool,  user_id: int) -> List[models.Simulation]:
     
-    res = get_sim_data(db_connection, vcs_id)
-
-    if not check_entity_rate(res, process_id):
-        raise e.RateWrongOrderException
-    
-    if design_ids is None or []:
-        #for design in design_impl.get_all_designs(1):
-        #    design_ids.append(design.id)
-        raise e.DesignIdsNotFoundException
-
     design_results = []
-    for design_id in design_ids:
-        processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id)
-    
-        dsm = create_simple_dsm(processes) #TODO Change to using BPMN
+    for vcs_id in vcs_ids:
+        res = get_sim_data(db_connection, vcs_id)
 
-        sim = des.Des()
+        if not check_entity_rate(res, process):
+            raise e.RateWrongOrderException
+        
+        if design_ids is None or []:
+            #for design in design_impl.get_all_designs(1):
+            #    design_ids.append(design.id)
+            raise e.DesignIdsNotFoundException
 
-        try:
-            time, cum_npv, _, _ = sim.run_simulation(flow_time, flow_rate, process_id, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
-    
-        except Exception as exc:
-            logger.debug(f'{exc.__class__}, {exc}')
-            raise e.SimulationFailedException
+        
+        for design_id in design_ids:
+            processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id)
+        
+            dsm = create_simple_dsm(processes) #TODO Change to using BPMN
 
-        design_res = models.Simulation(
-            time=time,
-            cumulative_NPV=cum_npv,
-            processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in processes]
-        )
-        design_results.append(design_res)
-    
+            sim = des.Des()
+
+            try:
+                time, cum_npv, _, _ = sim.run_simulation(flow_time, flow_rate, process, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
+        
+            except Exception as exc:
+                logger.debug(f'{exc.__class__}, {exc}')
+                raise e.SimulationFailedException
+
+            design_res = models.Simulation(
+                time=time,
+                cumulative_NPV=cum_npv,
+                processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in processes]
+            )
+            design_results.append(design_res)
+        
     return design_results
 
 
-def run_sim_monte_carlo(db_connection: PooledMySQLConnection, vcs_id: int, flow_time: float, 
-        flow_rate: float, process_id: int, simulation_runtime: float, discount_rate: float,
+def run_sim_monte_carlo(db_connection: PooledMySQLConnection, vcs_ids: List[int], flow_time: float, 
+        flow_rate: float, process: str, simulation_runtime: float, discount_rate: float,
         non_tech_add: models.NonTechCost, design_ids: List[int], 
         runs: int, normalized_npv: bool, 
         user_id: int = None) -> List[models.SimulationMonteCarlo]:
 
-    res = get_sim_data(db_connection, vcs_id)
-    #print(res)
-    if not check_entity_rate(res, process_id):
-        raise e.RateWrongOrderException
-    
-   
-
-    if design_ids is None or []:
-        #for design in design_impl.get_all_designs(1):
-        #    design_ids.append(design.id)
-        raise e.DesignIdsNotFoundException
-
     design_results = []
-    for design_id in design_ids:
-        processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id)
-        logger.debug('Fetched Processes and non-techproc')
-        dsm = create_simple_dsm(processes) #TODO Change to using BPMN AND move out of the for loop
+    for vcs_id in vcs_ids:
+        res = get_sim_data(db_connection, vcs_id)
+        #print(res)
+        if not check_entity_rate(res, process):
+            raise e.RateWrongOrderException
         
-
-        sim = des.Des()
-
-        try:
-            results = sim.run_parallell_simulations(flow_time, flow_rate, process_id, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime, runs)
     
-        except Exception as exc:
-            logger.debug(f'{exc.__class__}, {exc}')
-            raise e.SimulationFailedException
-
-        if normalized_npv:
-            m_npv = results.normalize_npv()
-        else:
-            m_npv = results.mean_npv()
-
-        sim_res = models.SimulationMonteCarlo(
-            time=results.timesteps[-1],
-            mean_NPV=m_npv,
-            max_NPVs=results.all_max_npv(),
-            mean_payback_time=results.mean_npv_payback_time(),
-            all_npvs=results.npvs
-            )
-        design_results.append(sim_res)
+        if design_ids is None or []:
+            #for design in design_impl.get_all_designs(1):
+            #    design_ids.append(design.id)
+            raise e.DesignIdsNotFoundException
     
+        for design_id in design_ids:
+            processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id)
+            logger.debug('Fetched Processes and non-techproc')
+            dsm = create_simple_dsm(processes) #TODO Change to using BPMN AND move out of the for loop
+            
+
+            sim = des.Des()
+
+            try:
+                results = sim.run_parallell_simulations(flow_time, flow_rate, process, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime, runs)
+        
+            except Exception as exc:
+                logger.debug(f'{exc.__class__}, {exc}')
+                raise e.SimulationFailedException
+
+            if normalized_npv:
+                m_npv = results.normalize_npv()
+            else:
+                m_npv = results.mean_npv()
+
+            sim_res = models.SimulationMonteCarlo(
+                time=results.timesteps[-1],
+                mean_NPV=m_npv,
+                max_NPVs=results.all_max_npv(),
+                mean_payback_time=results.mean_npv_payback_time(),
+                all_npvs=results.npvs
+                )
+            design_results.append(sim_res)
+        
     return design_results
 
 def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: PooledMySQLConnection, vcs: int, design: int, technical_processes: List = [], non_tech_processes: List = []):
@@ -339,7 +341,7 @@ def  edit_simulation_settings(db_connection: PooledMySQLConnection, project_id: 
 
         values = [sim_settings.time_unit, sim_settings.flow_process, sim_settings.flow_start_time, sim_settings.flow_time,  
             sim_settings.interarrival_time, sim_settings.start_time, sim_settings.end_time, 
-            sim_settings.discount_rate, sim_settings.non_tech_add.value]
+            sim_settings.discount_rate, sim_settings.non_tech_add.value, sim_settings.monte_carlo]
         update_Statement = MySQLStatementBuilder(db_connection)
         _, rows = update_Statement \
             .update(table=SIM_SETTINGS_TABLE, set_statement=set_statement, values=values) \
@@ -356,7 +358,7 @@ def create_sim_settings(db_connection: PooledMySQLConnection, project_id: int, s
     
     values = [project_id] + [sim_settings.time_unit, sim_settings.flow_process, sim_settings.flow_start_time, sim_settings.flow_time,  
             sim_settings.interarrival_time, sim_settings.start_time, sim_settings.end_time, 
-            sim_settings.discount_rate, sim_settings.non_tech_add.value]
+            sim_settings.discount_rate, sim_settings.non_tech_add.value, sim_settings.monte_carlo]
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement.insert(SIM_SETTINGS_TABLE, SIM_SETTINGS_COLUMNS)\
@@ -391,6 +393,8 @@ def parse_formula(formula: str, vd_values, mi_values): #TODO fix how the formula
     
     return new_formula
 
+
+# TODO change to work with flow_process as a string instead of int. 
 def check_entity_rate(db_results, flow_process_id: int):
     rate_check = True
     flow_process_index = len(db_results)
@@ -447,5 +451,6 @@ def populate_sim_settings(db_result) -> models.SimSettings:
         start_time=db_result['start_time'],
         end_time=db_result['end_time'],
         discount_rate=db_result['discount_rate'],
-        non_tech_add=db_result['non_tech_add']
+        non_tech_add=db_result['non_tech_add'],
+        monte_carlo=db_result['monte_carlo']
     )

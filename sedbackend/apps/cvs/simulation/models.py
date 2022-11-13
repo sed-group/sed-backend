@@ -41,7 +41,7 @@ class SimulationMonteCarlo(BaseModel):
 
 class EditSimSettings(BaseModel):
     time_unit: str
-    flow_process: Optional[int] = None
+    flow_process: Optional[str] = None
     flow_start_time: Optional[float] = None
     flow_time: float
     interarrival_time: float
@@ -49,6 +49,7 @@ class EditSimSettings(BaseModel):
     end_time: float
     discount_rate: float
     non_tech_add: NonTechCost
+    monte_carlo: bool
 
 class SimSettings(EditSimSettings):
     project: int

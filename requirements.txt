@@ -8,7 +8,7 @@ cffi==1.14.4
 chardet==3.0.4
 click==7.1.2
 dnspython==2.0.0
-desim-tool~=0.2.0
+desim-tool~=0.2.2
 ecdsa==0.14.1
 email-validator==1.1.2
 fastapi==0.61.2
