@@ -10,7 +10,7 @@ from sedbackend.libs.mysqlutils import MySQLStatementBuilder, Sort, FetchType
 import sedbackend.apps.core.projects.models as proj_models
 import sedbackend.apps.core.projects.storage as proj_storage
 
-DIFAM_APPLICATION_SID = "MOD.CVS"
+CVS_APPLICATION_SID = "MOD.CVS"
 CVS_PROJECT_TABLE = 'cvs_projects'
 CVS_PROJECT_COLUMNS = ['id', 'name', 'description', 'currency', 'owner_id', 'datetime_created']
 
@@ -68,8 +68,7 @@ def get_segment_cvs_project(db_connection: PooledMySQLConnection, index: int, se
     return chunk
 
 
-def get_cvs_project(db_connection: PooledMySQLConnection, project_id: int,
-                    user_id: int) -> models.CVSProject:
+def get_cvs_project(db_connection: PooledMySQLConnection, project_id: int) -> models.CVSProject:
     logger.debug(f'Fetching CVS project with id={project_id}.')
 
     select_statement = MySQLStatementBuilder(db_connection)
@@ -80,9 +79,6 @@ def get_cvs_project(db_connection: PooledMySQLConnection, project_id: int,
 
     if result is None:
         raise exceptions.CVSProjectNotFoundException
-
-    if result['owner_id'] != user_id:
-        raise auth_exceptions.UnauthorizedOperationException
 
     return populate_cvs_project(db_connection, result)
 
@@ -100,17 +96,17 @@ def create_cvs_project(db_connection: PooledMySQLConnection, project: models.CVS
     cvs_project_id = insert_statement.last_insert_id
 
     # Insert corresponding subproject row
-    subproject = proj_models.SubProjectPost(application_sid=DIFAM_APPLICATION_SID, native_project_id=cvs_project_id)
+    subproject = proj_models.SubProjectPost(application_sid=CVS_APPLICATION_SID, native_project_id=cvs_project_id)
     proj_storage.db_post_subproject(db_connection, subproject, user_id)
 
-    return get_cvs_project(db_connection, cvs_project_id, user_id)
+    return get_cvs_project(db_connection, cvs_project_id)
 
 
-def edit_cvs_project(db_connection: PooledMySQLConnection, project_id: int, user_id: int,
+def edit_cvs_project(db_connection: PooledMySQLConnection, project_id: int,
                      new_project: models.CVSProjectPost) -> models.CVSProject:
     logger.debug(f'Editing CVS project with id={project_id}.')
 
-    old_project = get_cvs_project(db_connection, project_id, user_id)
+    old_project = get_cvs_project(db_connection, project_id)
 
     if (old_project.name, old_project.description) == (new_project.name, new_project.description):
         # No change
@@ -129,7 +125,7 @@ def edit_cvs_project(db_connection: PooledMySQLConnection, project_id: int, user
     if rows == 0:
         raise exceptions.CVSProjectFailedToUpdateException
 
-    return get_cvs_project(db_connection, project_id, user_id)
+    return get_cvs_project(db_connection, project_id)
 
 
 def delete_cvs_project(db_connection: PooledMySQLConnection, project_id: int, user_id: int) -> bool:

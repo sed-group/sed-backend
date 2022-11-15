@@ -39,8 +39,8 @@ async def get_segment_cvs_project(index: int, segment_length: int, user: User = 
     response_model=models.CVSProject,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
-async def get_csv_project(native_project_id: int, user: User = Depends(get_current_active_user)) -> models.CVSProject:
-    return implementation.get_cvs_project(native_project_id, user.id)
+async def get_csv_project(native_project_id: int) -> models.CVSProject:
+    return implementation.get_cvs_project(native_project_id)
 
 
 @router.post(
@@ -59,9 +59,8 @@ async def create_csv_project(project_post: models.CVSProjectPost,
     response_model=models.CVSProject,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def edit_csv_project(native_project_id: int, project_post: models.CVSProjectPost,
-                           user: User = Depends(get_current_active_user)) -> models.CVSProject:
-    return implementation.edit_cvs_project(project_id=native_project_id, user_id=user.id, project_post=project_post)
+async def edit_csv_project(native_project_id: int, project_post: models.CVSProjectPost) -> models.CVSProject:
+    return implementation.edit_cvs_project(project_id=native_project_id, project_post=project_post)
 
 
 @router.delete(
