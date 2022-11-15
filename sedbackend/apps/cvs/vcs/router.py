@@ -20,16 +20,7 @@ router = APIRouter()
 async def get_all_vcs(project_id: int, user: User = Depends(get_current_active_user)) -> ListChunk[models.VCS]:
     return implementation.get_all_vcs(project_id, user.id)
 
-'''
-@router.get(
-    '/project/{project_id}/vcs/get/segment',
-    summary='Returns a segment of the VCSs of a project',
-    response_model=ListChunk[models.VCS],
-)
-async def get_segment_vcs(project_id: int, index: int, segment_length: int,
-                          user: User = Depends(get_current_active_user)) -> ListChunk[models.VCS]:
-    return implementation.get_segment_vcs(project_id, index, segment_length, user.id)
-'''
+
 
 @router.get(
     '/vcs/{vcs_id}',
