@@ -8,3 +8,7 @@ class CVSProjectFailedToUpdateException(Exception):
 
 class CVSProjectFailedDeletionException(Exception):
     pass
+
+
+class CVSProjectNoMatchException(Exception):
+    pass
