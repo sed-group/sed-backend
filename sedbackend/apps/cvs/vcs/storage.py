@@ -274,8 +274,11 @@ def populate_value_dimension(db_result, vcs_row: int) -> models.ValueDimension:
 '''
 
 
-def get_all_value_driver_vcs(db_connection: PooledMySQLConnection, vcs_id: int) -> List[models.ValueDriver]:
+def get_all_value_driver_vcs(db_connection: PooledMySQLConnection, project_id: int,
+                             vcs_id: int) -> List[models.ValueDriver]:
     logger.debug(f'Fetching all value drivers for vcs with id={vcs_id}')
+
+    get_vcs(db_connection, vcs_id, project_id)  # Perform checks for existing VCS and matching project
 
     try:
         select_statement = MySQLStatementBuilder(db_connection)

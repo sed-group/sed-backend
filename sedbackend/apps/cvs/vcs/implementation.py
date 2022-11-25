@@ -158,10 +158,10 @@ def get_all_value_driver(user_id: int) -> List[models.ValueDriver]:
         )
 
 
-def get_all_value_driver_vcs(vcs_id: int) -> List[models.ValueDriver]:
+def get_all_value_driver_vcs(project_id: int, vcs_id: int) -> List[models.ValueDriver]:
     try:
         with get_connection() as con:
-            res = storage.get_all_value_driver_vcs(con, vcs_id)
+            res = storage.get_all_value_driver_vcs(con, project_id, vcs_id)
             con.commit()
             return res
     except exceptions.VCSNotFoundException:
@@ -173,6 +173,11 @@ def get_all_value_driver_vcs(vcs_id: int) -> List[models.ValueDriver]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Could not find value drivers'
+        )
+    except project_exceptions.CVSProjectNoMatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'VCS with id={vcs_id} does not belong to project with id={project_id}.',
         )
 
 

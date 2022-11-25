@@ -8,7 +8,6 @@ import sedbackend.apps.cvs.project.exceptions as project_exceptions
 from sedbackend.apps.core.authentication import exceptions as auth_ex
 from sedbackend.apps.core.db import get_connection
 from sedbackend.apps.cvs.design import models, storage, exceptions
-from sedbackend.apps.cvs.vcs.models import ValueDriver
 
 
 # ======================================================================================================================
@@ -58,10 +57,10 @@ def get_all_design_groups(project_id: int) -> List[models.DesignGroup]:
         )
 
 
-def get_design_group(design_group_id: int) -> models.DesignGroup:
+def get_design_group(project_id: int, design_group_id: int) -> models.DesignGroup:
     try:
         with get_connection() as con:
-            result = storage.get_design_group(con, design_group_id)
+            result = storage.get_design_group(con, project_id, design_group_id)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
@@ -79,12 +78,17 @@ def get_design_group(design_group_id: int) -> models.DesignGroup:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find design with id={design_group_id}.',
         )
+    except project_exceptions.CVSProjectNoMatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Design with id={design_group_id} is not a part of project with id={project_id}.',
+        )
 
 
-def delete_design_group(design_group_id: int) -> bool:
+def delete_design_group(project_id: int, design_group_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.delete_design_group(con, design_group_id)
+            res = storage.delete_design_group(con, project_id, design_group_id)
             con.commit()
             return res
     except project_exceptions.CVSProjectFailedDeletionException:
@@ -102,12 +106,17 @@ def delete_design_group(design_group_id: int) -> bool:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find design with id={design_group_id}.',
         )
+    except project_exceptions.CVSProjectNoMatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Design with id={design_group_id} is not a part of project with id={project_id}.',
+        )
 
 
-def edit_design_group(design_group_id: int, design_group: models.DesignGroupPut) -> models.DesignGroup:
+def edit_design_group(project_id: int, design_group_id: int, design_group: models.DesignGroupPut) -> models.DesignGroup:
     try:
         with get_connection() as con:
-            result = storage.edit_design_group(con, design_group_id, design_group)
+            result = storage.edit_design_group(con, project_id, design_group_id, design_group)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
@@ -124,6 +133,11 @@ def edit_design_group(design_group_id: int, design_group: models.DesignGroupPut)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs.',
+        )
+    except project_exceptions.CVSProjectNoMatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Design group with id={design_group_id} is not a part of project with id={project_id}.',
         )
 
 
@@ -144,10 +158,10 @@ def get_design(design_id: int) -> models.Design:
         )
 
 
-def get_all_designs(design_group_id: int) -> List[models.Design]:
+def get_all_designs(project_id: int, design_group_id: int) -> List[models.Design]:
     try:
         with get_connection() as con:
-            res = storage.get_all_designs(con, design_group_id)
+            res = storage.get_all_designs(con, project_id, design_group_id)
             con.commit()
             return res
     except exceptions.DesignGroupNotFoundException:
@@ -155,12 +169,17 @@ def get_all_designs(design_group_id: int) -> List[models.Design]:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find design group'
         )
+    except project_exceptions.CVSProjectNoMatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Design group with id={design_group_id} is not a part of project with id={project_id}.',
+        )
 
 
-def edit_designs(design_group_id: int, designs: List[models.DesignPut]) -> bool:
+def edit_designs(project_id: int, design_group_id: int, designs: List[models.DesignPut]) -> bool:
     try:
         with get_connection() as con:
-            res = storage.edit_designs(con, design_group_id, designs)
+            res = storage.edit_designs(con, project_id, design_group_id, designs)
             con.commit()
             return res
     except exceptions.DesignNotFoundException:
@@ -182,6 +201,11 @@ def edit_designs(design_group_id: int, designs: List[models.DesignPut]) -> bool:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not insert the values provided'
+        )
+    except project_exceptions.CVSProjectNoMatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Design group with id={design_group_id} is not a part of project with id={project_id}.',
         )
 
 
