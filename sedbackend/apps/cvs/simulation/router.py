@@ -10,17 +10,14 @@ router = APIRouter()
 
 
 @router.get(
-    '/project/simulation/run',
+    '/project/{project_id}/simulation/run',
     summary='Run simulation',
     response_model=models.Simulation,
 )
-async def run_simulation(vcs_ids: List[int], flow_time: float, flow_rate: float, 
-                        flow_process: str, simulation_runtime: float, discount_rate: float, 
-                        non_tech_add: models.NonTechCost, design_ids: Optional[List[int]] = None, 
+async def run_simulation(project_id: int, vcs_ids: List[int], design_ids: Optional[List[int]] = None, 
                         normalized_npv: Optional[bool] = False, 
                         user: User = Depends(get_current_active_user)) -> models.Simulation:
-    return implementation.run_simulation(vcs_ids, flow_time, flow_rate, flow_process, 
-                                            simulation_runtime, discount_rate, non_tech_add, design_ids, normalized_npv, user.id)
+    return implementation.run_simulation(project_id, vcs_ids, design_ids, normalized_npv, user.id)
 
 @router.post(
     '/project/vcs/{vcs_id}/sim/csv',
@@ -50,18 +47,15 @@ async def run_xlsx_simulation(vcs_id: int, flow_time: float, flow_rate: float, f
                                                 discount_rate, non_tech_add, dsm_xlsx, design_ids, normalized_npv, user.id)
 
 @router.post(
-    '/project/simulation/run-multiprocessing',
+    '/project/{project_id}/simulation/run-multiprocessing',
     summary='Run monte carlo simulation with multiprocessing',
     response_model=List[models.SimulationMonteCarlo],
 )
-async def run_sim_monte_carlo(vcs_ids: List[int], flow_time: float, flow_rate: float, 
-                        flow_process: str, simulation_runtime: float, discount_rate: float, 
-                        non_tech_add: models.NonTechCost, design_ids: Optional[List[int]] = None, 
-                        runs: Optional[int] = 300, normalized_npv: Optional[bool] = False,
+async def run_sim_monte_carlo(project_id: int, vcs_ids: List[int], design_ids: Optional[List[int]] = None, 
+                        normalized_npv: Optional[bool] = False,
                         user: User = Depends(get_current_active_user)) -> models.SimulationMonteCarlo:
-    return implementation.run_sim_monte_carlo(vcs_ids, flow_time, flow_rate, flow_process, 
-                                            simulation_runtime, discount_rate, non_tech_add, 
-                                            design_ids, runs, normalized_npv, user.id)
+    return implementation.run_sim_monte_carlo(project_id, vcs_ids,
+                                            design_ids, normalized_npv, user.id)
 
 @router.get(
     '/project/{project_id}/simulation/settings',

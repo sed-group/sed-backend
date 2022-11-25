@@ -50,6 +50,7 @@ class EditSimSettings(BaseModel):
     discount_rate: float
     non_tech_add: NonTechCost
     monte_carlo: bool
+    runs: int
 
 class SimSettings(EditSimSettings):
     project: int

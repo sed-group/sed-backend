@@ -1,10 +1,8 @@
 
-from multiprocessing.dummy import Pool
 import tempfile
 from fastapi import UploadFile
 from mysql.connector.pooling import PooledMySQLConnection
 import pandas as pd
-import multiprocessing as mp
 
 from fastapi.logger import logger
 
@@ -12,7 +10,7 @@ import desim.interface as des
 from desim.data import NonTechCost, TimeFormat, SimResults
 from desim.simulation import Process
 
-from typing import List, Optional
+from typing import List
 
 from sedbackend.libs.mysqlutils.builder import FetchType, MySQLStatementBuilder
 
@@ -20,14 +18,10 @@ from sedbackend.libs.parsing.parser import NumericStringParser
 from sedbackend.libs.parsing import expressions as expr
 from sedbackend.apps.cvs.simulation import models
 import sedbackend.apps.cvs.simulation.exceptions as e
-import sedbackend.apps.cvs.market_input.implementation as mi_impl
-import sedbackend.apps.cvs.life_cycle.implementation as lifecycle_impl
-from sedbackend.apps.cvs.vcs.models import VcsRow
-from sedbackend.apps.cvs.design import implementation as design_impl
 
 SIM_SETTINGS_TABLE = "cvs_simulation_settings"
 SIM_SETTINGS_COLUMNS = ['project', 'time_unit', 'flow_process', 'flow_start_time', 'flow_time', 
-    'interarrival_time', 'start_time', 'end_time', 'discount_rate', 'non_tech_add', 'monte_carlo']
+    'interarrival_time', 'start_time', 'end_time', 'discount_rate', 'non_tech_add', 'monte_carlo', 'runs']
 
 
 TIME_FORMAT_DICT = dict({
@@ -141,11 +135,25 @@ def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, vcs_id: int, flo
     
     return design_results
 
-def run_simulation(db_connection: PooledMySQLConnection, vcs_ids: List[int], flow_time: float, 
-        flow_rate: float, process: str, simulation_runtime: float, discount_rate: float,
-        non_tech_add: models.NonTechCost, design_ids: List[int], normalized_npv: bool,  user_id: int) -> List[models.Simulation]:
+def run_simulation(db_connection: PooledMySQLConnection, project_id: int, vcs_ids: List[int],  design_ids: List[int], normalized_npv: bool,  user_id: int) -> List[models.Simulation]:
     
+    """
+    flow_time: float, 
+        flow_rate: float, process: str, simulation_runtime: float, discount_rate: float,
+        non_tech_add: models.NonTechCost,
+    """
     design_results = []
+
+    settings = get_simulation_settings(db_connection, project_id)
+
+    interarrival = settings['interarrival_time']
+    flow_time = settings['flow_time']
+    runtime = settings['end_time']
+    non_tech_add = settings['non_tech_add']
+    discount_rate = settings['discount_rate']
+    process = settings['flow_process']
+    time_unit = TIME_FORMAT_DICT.get(settings['time_unit'])
+
     for vcs_id in vcs_ids:
         res = get_sim_data(db_connection, vcs_id)
 
@@ -166,15 +174,16 @@ def run_simulation(db_connection: PooledMySQLConnection, vcs_ids: List[int], flo
             sim = des.Des()
 
             try:
-                time, cum_npv, _, _ = sim.run_simulation(flow_time, flow_rate, process, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime)
+                res = sim.run_simulation(flow_time, interarrival, process, processes, non_tech_processes, non_tech_add, dsm, time_unit, 
+                discount_rate, runtime)
         
             except Exception as exc:
                 logger.debug(f'{exc.__class__}, {exc}')
                 raise e.SimulationFailedException
 
             design_res = models.Simulation(
-                time=time,
-                cumulative_NPV=cum_npv,
+                time=res.timesteps[-1],
+                cumulative_NPV=res.npvs[-1],
                 processes=[models.Process(name=p.name, time=p.time, cost=p.cost, revenue=p.revenue) for p in processes]
             )
             design_results.append(design_res)
@@ -182,17 +191,23 @@ def run_simulation(db_connection: PooledMySQLConnection, vcs_ids: List[int], flo
     return design_results
 
 
-def run_sim_monte_carlo(db_connection: PooledMySQLConnection, vcs_ids: List[int], flow_time: float, 
-        flow_rate: float, process: str, simulation_runtime: float, discount_rate: float,
-        non_tech_add: models.NonTechCost, design_ids: List[int], 
-        runs: int, normalized_npv: bool, 
-        user_id: int = None) -> List[models.SimulationMonteCarlo]:
+def run_sim_monte_carlo(db_connection: PooledMySQLConnection, project_id: int, vcs_ids: List[int], 
+    design_ids: List[int], normalized_npv: bool = False, user_id: int = None) -> List[models.SimulationMonteCarlo]:
 
+    """
+    flow_time: float, 
+        flow_rate: float, process: str, simulation_runtime: float, discount_rate: float,
+        non_tech_add: models.NonTechCost, 
+        runs: int, normalized_npv: bool, 
+    """
     design_results = []
     for vcs_id in vcs_ids:
         res = get_sim_data(db_connection, vcs_id)
         #print(res)
-        if not check_entity_rate(res, process):
+
+        settings = get_simulation_settings(db_connection, project_id)
+
+        if not check_entity_rate(res, settings['flow_process']):
             raise e.RateWrongOrderException
         
     
@@ -200,7 +215,17 @@ def run_sim_monte_carlo(db_connection: PooledMySQLConnection, vcs_ids: List[int]
             #for design in design_impl.get_all_designs(1):
             #    design_ids.append(design.id)
             raise e.DesignIdsNotFoundException
-    
+
+
+        interarrival = settings['interarrival_time']
+        flow_time = settings['flow_time']
+        runtime = settings['end_time']
+        non_tech_add = settings['non_tech_add']
+        discount_rate = settings['discount_rate']
+        process = settings['flow_process']
+        time_unit = TIME_FORMAT_DICT.get(settings['time_unit'])
+        runs = settings['runs']
+
         for design_id in design_ids:
             processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id)
             logger.debug('Fetched Processes and non-techproc')
@@ -210,7 +235,8 @@ def run_sim_monte_carlo(db_connection: PooledMySQLConnection, vcs_ids: List[int]
             sim = des.Des()
 
             try:
-                results = sim.run_parallell_simulations(flow_time, flow_rate, process, processes, non_tech_processes, non_tech_add, dsm, discount_rate, simulation_runtime, runs)
+                results = sim.run_parallell_simulations(flow_time, interarrival, process, processes, non_tech_processes, 
+                    non_tech_add, dsm, time_unit, discount_rate, runtime, runs)
         
             except Exception as exc:
                 logger.debug(f'{exc.__class__}, {exc}')
@@ -341,7 +367,7 @@ def  edit_simulation_settings(db_connection: PooledMySQLConnection, project_id: 
 
         values = [sim_settings.time_unit, sim_settings.flow_process, sim_settings.flow_start_time, sim_settings.flow_time,  
             sim_settings.interarrival_time, sim_settings.start_time, sim_settings.end_time, 
-            sim_settings.discount_rate, sim_settings.non_tech_add.value, sim_settings.monte_carlo]
+            sim_settings.discount_rate, sim_settings.non_tech_add.value, sim_settings.monte_carlo, sim_settings.runs]
         update_Statement = MySQLStatementBuilder(db_connection)
         _, rows = update_Statement \
             .update(table=SIM_SETTINGS_TABLE, set_statement=set_statement, values=values) \
@@ -358,7 +384,7 @@ def create_sim_settings(db_connection: PooledMySQLConnection, project_id: int, s
     
     values = [project_id] + [sim_settings.time_unit, sim_settings.flow_process, sim_settings.flow_start_time, sim_settings.flow_time,  
             sim_settings.interarrival_time, sim_settings.start_time, sim_settings.end_time, 
-            sim_settings.discount_rate, sim_settings.non_tech_add.value, sim_settings.monte_carlo]
+            sim_settings.discount_rate, sim_settings.non_tech_add.value, sim_settings.monte_carlo, sim_settings.runs]
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement.insert(SIM_SETTINGS_TABLE, SIM_SETTINGS_COLUMNS)\
@@ -395,13 +421,14 @@ def parse_formula(formula: str, vd_values, mi_values): #TODO fix how the formula
 
 
 # TODO change to work with flow_process as a string instead of int. 
-def check_entity_rate(db_results, flow_process_id: int):
+def check_entity_rate(db_results, flow_process_name: str):
     rate_check = True
-    flow_process_index = len(db_results)
+    flow_process_index = len(db_results) #Set the flow_process_index to be highest possible. 
 
     for i in range(len(db_results)- 1):
-        if db_results[i]['id'] == flow_process_id: 
+        if db_results[i]['sub_name'] == flow_process_name or db_results[i]['iso_name'] == flow_process_name: #This will never be true currently which is a problem..........
             flow_process_index = i
+
         if db_results[i]['rate'] == 'per_product' and db_results[i+1]['rate'] == 'per_project' and i >= flow_process_index: #TODO check for technical/non-technical processes
             
             if db_results[i]['category'] == 'Technical processes' and db_results[i+1]['category'] == 'Technical processes':
@@ -452,5 +479,6 @@ def populate_sim_settings(db_result) -> models.SimSettings:
         end_time=db_result['end_time'],
         discount_rate=db_result['discount_rate'],
         non_tech_add=db_result['non_tech_add'],
-        monte_carlo=db_result['monte_carlo']
+        monte_carlo=db_result['monte_carlo'],
+        runs=db_result['runs']
     )
