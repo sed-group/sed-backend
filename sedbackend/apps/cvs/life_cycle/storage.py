@@ -1,7 +1,6 @@
 from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
 
-from sedbackend.apps.cvs.vcs.storage import get_vcs
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.cvs.life_cycle import exceptions, models
 from sedbackend.apps.cvs.vcs import storage as vcs_storage, exceptions as vcs_exceptions
@@ -62,7 +61,7 @@ def get_node(db_connection: PooledMySQLConnection, project_id: int, node_id: int
         logger.debug(f'Error msg: {e.msg}')
         raise exceptions.NodeNotFoundException
 
-    get_vcs(db_connection, project_id, result['vcs'])  # Check if vcs exists and matches project id
+    vcs_storage.get_vcs(db_connection, result['vcs'], project_id)  # Check if vcs exists and matches project id
 
     return result
 
@@ -211,7 +210,7 @@ def update_node(db_connection: PooledMySQLConnection, project_id: int, node_id: 
 def get_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> models.BPMNGet:
     logger.debug(f'Get BPMN for vcs with id={vcs_id}.')
 
-    get_vcs(db_connection, project_id, vcs_id)  # Check if vcs exists and matches project id
+    vcs_storage.get_vcs(db_connection, vcs_id, project_id)  # Check if vcs exists and matches project id
 
     where_statement = f'vcs = %s'
     where_values = [vcs_id]
@@ -226,7 +225,6 @@ def get_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int)
             .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
         process_nodes = [populate_process_node(db_connection, result) for result in process_nodes_result]
 
-        """
         select_statement = MySQLStatementBuilder(db_connection)
         start_stop_nodes_result = select_statement \
             .select(CVS_START_STOP_NODES_TABLE, CVS_START_STOP_NODES_COLUMNS) \
@@ -235,7 +233,6 @@ def get_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int)
             .order_by(['cvs_nodes.id'], Sort.ASCENDING) \
             .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
         start_stop_nodes = [populate_start_stop_node(result) for result in start_stop_nodes_result]
-        """
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
         raise vcs_exceptions.VCSNotFoundException
