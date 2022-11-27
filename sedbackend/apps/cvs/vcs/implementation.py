@@ -26,22 +26,6 @@ def get_all_vcs(project_id: int) -> ListChunk[models.VCS]:
         )
 
 
-def get_segment_vcs(project_id: int, index: int, segment_length: int, user_id: int) -> ListChunk[models.VCS]:
-    try:
-        with get_connection() as con:
-            return storage.get_segment_vcs(con, project_id, segment_length, index, user_id)
-    except project_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Could not find project with id={project_id}.',
-        )
-    except auth_ex.UnauthorizedOperationException:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail='Unauthorized user.',
-        )
-
-
 def get_vcs(vcs_id: int, project_id: int) -> models.VCS:
     try:
         with get_connection() as con:

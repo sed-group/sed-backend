@@ -45,8 +45,7 @@ def get_market_input(db_connection: PooledMySQLConnection, project_id: int,
     return populate_market_input(db_result)
 
 
-def get_all_market_input(db_connection: PooledMySQLConnection, project_id: int) -> List[
-    models.MarketInputGet]:  # TODO join the values to the results
+def get_all_market_input(db_connection: PooledMySQLConnection, project_id: int) -> List[models.MarketInputGet]:
     logger.debug(f'Fetching all market inputs for project with id={project_id}.')
 
     select_statement = MySQLStatementBuilder(db_connection)
@@ -76,7 +75,7 @@ def update_market_input(db_connection: PooledMySQLConnection, project_id: int, m
                         market_input: models.MarketInputPost) -> bool:
     logger.debug(f'Update market input with vcs row id={market_input_id}')
 
-    get_market_input(db_connection, project_id, market_input_id) # check if market input exists and belongs to project
+    get_market_input(db_connection, project_id, market_input_id)  # check if market input exists and belongs to project
 
     update_statement = MySQLStatementBuilder(db_connection)
     update_statement.update(
@@ -107,8 +106,8 @@ def delete_market_input(db_connection: PooledMySQLConnection, project_id: int, m
     return True
 
 
-def get_all_formula_market_inputs(db_connection: PooledMySQLConnection, formulas_id: int) -> List[
-    models.MarketInputValue]:
+def get_all_formula_market_inputs(db_connection: PooledMySQLConnection,
+                                  formulas_id: int) -> List[models.MarketInputValue]:
     logger.debug(f'Fetching all market inputs for formulas with vcs_row id: {formulas_id}')
 
     select_statement = MySQLStatementBuilder(db_connection)
@@ -173,7 +172,7 @@ def update_market_input_values(db_connection: PooledMySQLConnection, project_id:
     # delete if no longer exists
     for value in curr_mi_values:
         if [value.vcs_id, value.market_input_id] not in [[v.vcs_id, v.market_input_id] for v in mi_values]:
-            delete_market_value(db_connection, value.vcs_id, value.market_input_id)
+            delete_market_value(db_connection, project_id, value.vcs_id, value.market_input_id)
 
     for mi_value in mi_values:
         update_market_input_value(db_connection, project_id, mi_value)

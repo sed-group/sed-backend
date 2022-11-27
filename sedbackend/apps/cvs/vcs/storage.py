@@ -73,34 +73,6 @@ def get_all_vcs(db_connection: PooledMySQLConnection, project_id: int) -> ListCh
     return chunk
 
 
-def get_segment_vcs(db_connection: PooledMySQLConnection, project_id: int, segment_length: int, index: int,
-                    user_id: int) -> ListChunk[models.VCS]:
-    logger.debug(f'Fetching VCS segment for project with id={project_id}.')
-
-    where_statement = f'project = %s'
-    where_values = [project_id]
-
-    select_statement = MySQLStatementBuilder(db_connection)
-    results = select_statement.select(CVS_VCS_TABLE, CVS_VCS_COLUMNS) \
-        .where(where_statement, where_values) \
-        .order_by(['id'], Sort.ASCENDING) \
-        .limit(segment_length) \
-        .offset(index * segment_length) \
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-
-    vcs_list = []
-    for result in results:
-        vcs_list.append(populate_vcs(db_connection, result))
-
-    count_statement = MySQLStatementBuilder(db_connection)
-    result = count_statement.count(CVS_VCS_TABLE) \
-        .where(where_statement, where_values) \
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-    chunk = ListChunk[models.VCS](chunk=vcs_list, length_total=result['count'])
-
-    return chunk
-
-
 def get_vcs(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int) -> models.VCS:
     logger.debug(f'Fetching VCS with id={vcs_id}.')
 
@@ -202,13 +174,13 @@ def get_value_dimension(db_connection: PooledMySQLConnection, value_dimension_id
         .select(CVS_VALUE_DIMENSION_TABLE, CVS_VALUE_DIMENSION_COLUMNS)\
         .where(f'id = %s', [value_dimension_id])\
         .execute(FetchType.FETCH_ONE, dictionary=True)
-    
+
     if res is None:
         raise exceptions.ValueDimensionNotFoundException
-    
+
     if res['vcs_row'] != vcs_row:
         raise exceptions.VCSRowNotCorrectException
-    
+
     return populate_value_dimension(res, res['vcs_row'])
 
 
@@ -224,27 +196,31 @@ def get_all_row_value_dimensions(db_connection: PooledMySQLConnection, vcs_row: 
     return [populate_value_dimension(result, vcs_row) for result in res]
 
 
-def create_value_dimension(db_connection: PooledMySQLConnection, value_dimension_post: models.ValueDimensionPost, vcs_row: int) -> models.ValueDimension:
+def create_value_dimension(db_connection: PooledMySQLConnection, value_dimension_post: models.ValueDimensionPost,
+                           vcs_row: int) -> models.ValueDimension:
     logger.debug(f'Inserting a new value dimension')
 
     insert_statement = MySQLStatementBuilder(db_connection)
-    res = insert_statement \
+    insert_statement \
         .insert(CVS_VALUE_DIMENSION_TABLE, ['name', 'priority', 'vcs_row'])\
         .set_values([value_dimension_post.name, value_dimension_post.priority, vcs_row]) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-    
+
     return get_value_dimension(db_connection, insert_statement.last_insert_id, vcs_row)
 
 
-def edit_value_dimension(db_connection: PooledMySQLConnection, dimension_id: int, updated_dimension: models.ValueDimensionPost, vcs_row: int) -> models.ValueDimension:
+def edit_value_dimension(db_connection: PooledMySQLConnection, dimension_id: int,
+                         updated_dimension: models.ValueDimensionPost, vcs_row: int) -> models.ValueDimension:
     logger.debug(f'Editing value dimension with id={dimension_id}')
 
     update_statement = MySQLStatementBuilder(db_connection)
-    res = update_statement \
-        .update(CVS_VALUE_DIMENSION_TABLE, 'name = %s, priority = %s, vcs_row = %s', [updated_dimension.name, updated_dimension.priority, vcs_row])\
+    update_statement \
+        .update(CVS_VALUE_DIMENSION_TABLE, 'name = %s, priority = %s, vcs_row = %s', [updated_dimension.name,
+                                                                                      updated_dimension.priority,
+                                                                                      vcs_row])\
         .where(f'id = %s', [dimension_id])\
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-    
+
     return get_value_dimension(db_connection, dimension_id, vcs_row)
 
 
@@ -258,20 +234,6 @@ def populate_value_dimension(db_result, vcs_row: int) -> models.ValueDimension:
 # ======================================================================================================================
 # VCS Value driver
 # ======================================================================================================================
-
-'''
-#Fetches only the value drivers that has a connection with a vcs row.
-    query = f'SELECT cvs_value_drivers.id, cvs_value_drivers.name, unit, value_dimension FROM cvs_value_drivers \
-            INNER JOIN cvs_rowDrivers ON cvs_value_drivers.id = value_driver \
-            INNER JOIN cvs_vcs_rows ON vcs_row = cvs_vcs_rows.id \
-            INNER JOIN cvs_vcss ON vcs = cvs_vcss.id \
-            WHERE project = %s'         
-    with db_connection.cursor(prepared=True) as cursor:
-        cursor.execute(query, [project_id])
-        res = cursor.fetchall()
-        
-        res = [dict(zip(cursor.column_names, row)) for row in res]
-'''
 
 
 def get_all_value_driver_vcs(db_connection: PooledMySQLConnection, project_id: int,
@@ -458,29 +420,29 @@ def get_all_iso_process(db_connection: PooledMySQLConnection) -> List[models.VCS
     results = select_statement \
         .select(CVS_ISO_PROCESS_TABLE, CVS_ISO_PROCESS_COLUMNS) \
         .execute(FetchType.FETCH_ALL, dictionary=True)
-    
+
     iso_processes = []
 
     for res in results:
         iso_processes.append(populate_iso_process(res))
-    
+
     return iso_processes
 
 
 def get_iso_process(iso_process_id: int, db_connection) -> models.VCSISOProcess:
     logger.debug(f'Fetching ISO process with id={iso_process_id}.')
-    
+
     select_statement = MySQLStatementBuilder(db_connection)
     result = select_statement \
         .select(CVS_ISO_PROCESS_TABLE, CVS_ISO_PROCESS_COLUMNS) \
         .where(f'id = %s', [iso_process_id]) \
         .execute(FetchType.FETCH_ONE, dictionary=True)
-    
-    if result == None:
+
+    if result is None:
         raise exceptions.ISOProcessNotFoundException
 
     return populate_iso_process(result)
-    
+
 
 def populate_iso_process(db_result):
     return models.VCSISOProcess(
@@ -493,25 +455,25 @@ def populate_iso_process(db_result):
 # VCS Subprocesses
 # ======================================================================================================================
 
+
 def get_all_subprocess(db_connection: PooledMySQLConnection, vcs_id: int) -> List[models.VCSSubprocess]:
     logger.debug(f'Fetching all subprocesses for vcs with id={vcs_id}.')
-    
+
     query = f'SELECT cvs_subprocesses.id, cvs_subprocesses.vcs, cvs_subprocesses.name, order_index, \
         cvs_subprocesses.iso_process, cvs_iso_processes.name as iso_process_name, category \
         FROM cvs_subprocesses INNER JOIN cvs_iso_processes ON cvs_subprocesses.iso_process = cvs_iso_processes.id \
         WHERE cvs_subprocesses.vcs = %s'
 
-        #INNER JOIN cvs_vcs_rows ON subprocess = cvs_subprocesses.id'
+    # INNER JOIN cvs_vcs_rows ON subprocess = cvs_subprocesses.id'
     with db_connection.cursor(prepared=True) as cursor:
         cursor.execute(query, [vcs_id])
-        last_insert_id = cursor.lastrowid
         res = cursor.fetchall()
-        
-        if res == None:
+
+        if res is None:
             raise exceptions.SubprocessNotFoundException
-        
+
         res = [dict(zip(cursor.column_names, row)) for row in res]
-        
+
     subprocess_list = [populate_subprocess(result) for result in res]
 
     return subprocess_list
@@ -526,7 +488,6 @@ def get_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int) -> 
         WHERE cvs_subprocesses.id = %s'
     with db_connection.cursor(prepared=True) as cursor:
         cursor.execute(query, [subprocess_id])
-        last_insert_id = cursor.lastrowid
         res = cursor.fetchone()
         if res is None:
             raise exceptions.SubprocessNotFoundException(subprocess_id)
@@ -535,7 +496,8 @@ def get_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int) -> 
     return populate_subprocess(res)
 
 
-def create_subprocess(db_connection: PooledMySQLConnection, vcs_id: int, subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
+def create_subprocess(db_connection: PooledMySQLConnection, vcs_id: int,
+                      subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
     logger.debug(f'Creating a subprocesses.')
 
     columns = ['vcs', 'name', 'order_index', 'iso_process']
@@ -551,10 +513,11 @@ def create_subprocess(db_connection: PooledMySQLConnection, vcs_id: int, subproc
         logger.debug(f'Error msg: {e.msg}')
 
         logger.debug(f'Entire error no: {str(e.errno)}')
-        if (DEBUG_ERROR_HANDLING):
+        if DEBUG_ERROR_HANDLING:
             raise exceptions.GenericDatabaseException(e.msg)
         else:
-            raise exceptions.ISOProcessNotFoundException #Could also fail if the order index is the same. This is not checked for though. 
+            # Could also fail if the order index is the same. This is not checked for though.
+            raise exceptions.ISOProcessNotFoundException
 
     subprocess_id = insert_statement.last_insert_id
 
@@ -590,7 +553,7 @@ def edit_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int,
 def delete_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int) -> bool:
     logger.debug(f'Deleting subprocesses with id={subprocess_id}.')
 
-   # get_cvs_project(db_connection, project_id, user_id)  # performing necessary checks
+    # get_cvs_project(db_connection, project_id, user_id)  # performing necessary checks
 
     subprocess = get_subprocess(db_connection, subprocess_id)
 
@@ -603,15 +566,12 @@ def delete_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int) 
     if result is None:
         raise exceptions.SubprocessNotFoundException(subprocess_id)
 
- #   if result['project_id'] != project_id:
- #       raise auth_exceptions.UnauthorizedOperationException
-
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement.delete(CVS_VCS_SUBPROCESS_TABLE) \
         .where('id = %s', [subprocess_id]) \
         .execute(return_affected_rows=True)
-    
-    #TODO after deleting subprocesses - make sure to update the order indices.
+
+    # TODO after deleting subprocesses - make sure to update the order indices.
     update_indices_q = f'UPDATE cvs_subprocesses \
             SET `order_index` = `order_index` - 1 \
             WHERE id = %s and `order_index` > %s'
@@ -626,7 +586,7 @@ def delete_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int) 
 
 def populate_subprocess(db_result) -> models.VCSSubprocess:
     logger.debug(f'Populating model for subprocess with id={db_result["id"]}.')
-  #  print("in populate: " + db_result['iso_process'])
+    # print("in populate: " + db_result['iso_process'])
     return models.VCSSubprocess(
         id=db_result['id'],
         vcs_id=db_result['vcs'],
@@ -638,6 +598,7 @@ def populate_subprocess(db_result) -> models.VCSSubprocess:
             category=db_result['category']
             )
     )
+
 
 def update_subprocess_indices(db_connection: PooledMySQLConnection, subprocess_ids: List[int], order_indices: List[int],
                               project_id: int, user_id: int) -> bool:
@@ -674,7 +635,6 @@ def populate_stakeholder_need(db_connection: PooledMySQLConnection, result) -> m
     logger.debug(f'Populating model for stakeholder need with id={result["id"]}.')
     return models.StakeholderNeed(
         id=result['id'],
-        #vcs_row_id=result['vcs_row'],
         need=result['need'],
         value_dimension=result['value_dimension'],
         value_drivers=get_vcs_need_drivers(db_connection, result['id']),
@@ -720,12 +680,11 @@ def create_stakeholder_need(db_connection: PooledMySQLConnection, vcs_row_id: in
                             need: models.StakeholderNeedPost) -> int:
     logger.debug(f'Creating stakeholder need for vcs row with id={vcs_row_id}')
 
-    need_id = None
-
     try:
         insert_statement = MySQLStatementBuilder(db_connection)
         insert_statement \
-            .insert(table=CVS_VCS_STAKEHOLDER_NEED_TABLE, columns=['vcs_row', 'need', 'value_dimension', 'rank_weight']) \
+            .insert(table=CVS_VCS_STAKEHOLDER_NEED_TABLE,
+                    columns=['vcs_row', 'need', 'value_dimension', 'rank_weight']) \
             .set_values([vcs_row_id, need.need, need.value_dimension, need.rank_weight]) \
             .execute(fetch_type=FetchType.FETCH_NONE)
         need_id = insert_statement.last_insert_id
@@ -813,7 +772,7 @@ def get_vcs_row(db_connection: PooledMySQLConnection, vcs_row_id: int) -> models
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     return populate_vcs_row(db_connection, result)
-    
+
 
 def populate_vcs_row(db_connection: PooledMySQLConnection, db_result) -> models.VcsRow:
     logger.debug(f'Populating model for table row with id={db_result["id"]}.')
@@ -854,14 +813,13 @@ def create_vcs_row(db_connection: PooledMySQLConnection, row: models.VcsRowPost,
         return vcs_row_id
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
-        
+
         if row.iso_process is not None:
             raise exceptions.ISOProcessNotFoundException
         elif row.subprocess is not None:
             raise exceptions.SubprocessNotFoundException
         else:
             raise exceptions.VCSTableRowFailedToUpdateException(e.msg)
-        
 
 
 def create_vcs_table(db_connection: PooledMySQLConnection, new_vcs_rows: List[models.VcsRowPost], vcs_id: int) -> bool:
@@ -876,14 +834,13 @@ def create_vcs_table(db_connection: PooledMySQLConnection, new_vcs_rows: List[mo
 
         vcs_row_id: int = create_vcs_row(db_connection, row, vcs_id)
 
-
         node = life_cycle_models.ProcessNodePost(
             pos_x=0,
             pos_y=0,
             vcs_row_id=vcs_row_id
         )
 
-        life_cycle_storage.create_process_node( db_connection, node, vcs_id)
+        life_cycle_storage.create_process_node(db_connection, node, vcs_id)
 
         if row.stakeholder_needs is not None:
             [create_stakeholder_need(db_connection, vcs_row_id, need) for need in row.stakeholder_needs]
@@ -938,7 +895,7 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, updated_vcs_rows: List[
             )
             update_statement.where(f'id = %s', [row.id])
             _, rows = update_statement.execute(return_affected_rows=True)
-        else: 
+        else:
             vcs_row_id: int = create_vcs_row(db_connection, row, vcs_id)
             node = life_cycle_models.ProcessNodePost(
                 pos_x=0,
@@ -982,12 +939,11 @@ def delete_vcs_row(db_connection: PooledMySQLConnection, vcs_row_id: int, vcs_id
 
     row = get_vcs_row(db_connection, vcs_row_id)
     delete_statement = MySQLStatementBuilder(db_connection)
-    res, rows = delete_statement.delete(CVS_VCS_ROWS_TABLE)\
-                    .where('id = %s and vcs = %s', [vcs_row_id, vcs_id])\
-                    .execute(return_affected_rows=True, fetch_type=FetchType.FETCH_ONE)
+    res, rows = delete_statement.delete(CVS_VCS_ROWS_TABLE).where('id = %s and vcs = %s', [vcs_row_id, vcs_id])\
+        .execute(return_affected_rows=True, fetch_type=FetchType.FETCH_ONE)
     if rows == 0:
         raise exceptions.VCSTableRowFailedDeletionException
-    
+
     update_indices_q = f'UPDATE cvs_vcs_rows \
         SET `index` = `index` - 1 \
         WHERE vcs = %s and `index` > %s'

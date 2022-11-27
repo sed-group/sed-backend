@@ -84,16 +84,6 @@ async def edit_design_group(native_project_id: int, design_group_id: int,
 # ======================================================================================================================
 # CVS Design 
 # ======================================================================================================================
-"""
-@router.get(
-    '/design/{design_id}',
-    summary='Get design',
-    response_model=models.Design
-)
-async def get_design(design_id: int) -> models.Design:
-    return implementation.get_design(design_id)
-"""
-
 
 @router.get(
     '/project/{native_project_id}/design-group/{design_group_id}/design/all',

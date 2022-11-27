@@ -226,13 +226,14 @@ def get_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int)
         process_nodes = [populate_process_node(db_connection, result) for result in process_nodes_result]
 
         select_statement = MySQLStatementBuilder(db_connection)
-        start_stop_nodes_result = select_statement \
+        # start_stop_nodes_result = \
+        select_statement \
             .select(CVS_START_STOP_NODES_TABLE, CVS_START_STOP_NODES_COLUMNS) \
             .inner_join(CVS_NODES_TABLE, 'cvs_nodes.id = cvs_start_stop_nodes.id') \
             .where(where_statement, where_values) \
             .order_by(['cvs_nodes.id'], Sort.ASCENDING) \
             .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-        start_stop_nodes = [populate_start_stop_node(result) for result in start_stop_nodes_result]
+        # start_stop_nodes = [populate_start_stop_node(result) for result in start_stop_nodes_result]
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
         raise vcs_exceptions.VCSNotFoundException
@@ -247,7 +248,7 @@ def update_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: i
                 bpmn: models.BPMNGet) -> bool:
     logger.debug(f'Updating bpmn with vcs id={vcs_id}.')
 
-    get_vcs(db_connection, project_id, vcs_id)  # Check if vcs exists and matches project id
+    vcs_storage.get_vcs(db_connection, project_id, vcs_id)  # Check if vcs exists and matches project id
 
     for node in bpmn.nodes:
         updated_node = models.NodePost(

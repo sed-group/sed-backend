@@ -1,8 +1,6 @@
 from typing import List
-
 from fastapi import HTTPException
 from starlette import status
-
 from sedbackend.apps.core.db import get_connection
 from sedbackend.apps.cvs.link_design_lifecycle import models, storage
 from sedbackend.apps.cvs.link_design_lifecycle.exceptions import FormulasFailedDeletionException, \

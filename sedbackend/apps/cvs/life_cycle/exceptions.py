@@ -17,5 +17,3 @@ class InvalidNodeType(Exception):
 
 class NodeFailedToUpdateException(Exception):
     pass
-
-

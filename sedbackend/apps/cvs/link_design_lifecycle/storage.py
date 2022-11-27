@@ -143,36 +143,24 @@ def delete_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_r
 
 
 def get_vcs_dg_pairs(db_connection: PooledMySQLConnection, project_id: int) -> List[models.VcsDgPairs]:
-    
-    """
-    select cvs_vcss.name as vcs, cvs_design_groups.name as design_group, \
-    (select count(*) from cvs_vcs_rows where vcs = cvs_vcss.id) \
-    = (select count(*) from cvs_design_mi_formulas where design_group = cvs_design_groups.id) \
-    as has_formulas from cvs_vcss, cvs_design_groups \
-    group by vcs_name, design_group_name;
-    
-    SELECT cvs_vcss.name AS vcs, cvs_design_groups.name AS design_group, 
-    (SELECT (count(*)) FROM cvs_design_mi_formulas inner join cvs_vcs_rows on cvs_vcs_rows.id = vcs_row WHERE cvs_design_mi_formulas.design_group=cvs_design_groups.id and vcs=cvs_vcss.id) 
-    = (select count(*) from cvs_vcs_rows where cvs_vcs_rows.vcs = cvs_vcss.id) as has_formulas
-    from cvs_vcss, cvs_design_groups, 
-    cvs_vcs_rows, cvs_design_mi_formulas where cvs_vcss.id = cvs_vcs_rows.vcs and cvs_design_groups.id = cvs_design_mi_formulas.design_group group by vcs,design_group
-    """
 
-    query = "SELECT cvs_vcss.name AS vcs_name, cvs_vcss.id AS vcs_id, cvs_design_groups.name AS design_group_name, cvs_design_groups.id AS design_group_id, \
+    query = "SELECT cvs_vcss.name AS vcs_name, cvs_vcss.id AS vcs_id, cvs_design_groups.name AS design_group_name, " \
+            "cvs_design_groups.id AS design_group_id, \
     (SELECT count(*) FROM cvs_vcs_rows WHERE cvs_vcs_rows.vcs = cvs_vcss.id) \
-    = ((SELECT (count(*)) FROM cvs_design_mi_formulas INNER JOIN cvs_vcs_rows ON cvs_vcs_rows.id = vcs_row WHERE cvs_design_mi_formulas.design_group=cvs_design_groups.id AND vcs=cvs_vcss.id)) \
+    = ((SELECT (count(*)) FROM cvs_design_mi_formulas INNER JOIN cvs_vcs_rows ON cvs_vcs_rows.id = vcs_row WHERE " \
+            "cvs_design_mi_formulas.design_group=cvs_design_groups.id AND vcs=cvs_vcss.id)) \
     AS has_formulas FROM cvs_vcss, cvs_design_groups WHERE cvs_vcss.project = %s AND cvs_design_groups.project = %s \
     GROUP BY vcs_name, design_group_name ORDER BY has_formulas DESC;"
 
     with db_connection.cursor(prepared=True) as cursor:
         
-        #Log for sanity check
+        # Log for sanity check
         logger.debug(f"get_vcs_dg_pairs: '{query}'")
 
-        #Execute query
+        # Execute query
         cursor.execute(query, [project_id, project_id])  
 
-        #Get result
+        # Get result
         res_dict = []
         rs = cursor.fetchall()
         for res in rs:

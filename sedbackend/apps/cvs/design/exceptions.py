@@ -3,7 +3,6 @@
 # Design
 # ======================================================================================================================
 
-
 class DesignNotFoundException(Exception):
     pass
 
@@ -11,8 +10,10 @@ class DesignNotFoundException(Exception):
 class DesignGroupNotFoundException(Exception):
     pass
 
+
 class DesignGroupInsertException(Exception):
     pass
+
 
 class DesignInsertException(Exception):
     pass
