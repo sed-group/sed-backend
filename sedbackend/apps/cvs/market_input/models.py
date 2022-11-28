@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-from sedbackend.apps.cvs.vcs import models as vcs_models
 
 
 class MarketInputGet(BaseModel):
@@ -15,6 +14,7 @@ class MarketInputPost(BaseModel):
 ######################################################################################################################
 # Market Values
 ######################################################################################################################
+
 
 class MarketInputValue(BaseModel):
     vcs_id: int

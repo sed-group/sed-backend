@@ -4,15 +4,15 @@ from sedbackend.apps.cvs.distributions import models
 
 
 # Simple 1-dimensional uniform distribution
-def uniform_distribution(center: float, range: float, n_samples: int) -> models.Distribution:
-    dist = UniformFunc(center=np.array([center]), interval=np.array([[range, ]]))
+def uniform_distribution(center: float, x_range: float, n_samples: int) -> models.Distribution:
+    dist = UniformFunc(center=np.array([center]), interval=np.array([[x_range, ]]))
     dist.random(n_samples)  # draw n samples from the distribution (they are stores inside)
 
     mean = dist.samples.mean()  # should be close to center
     std = dist.samples.std()
 
     # true standard deviation
-    exact_std = np.sqrt(((range * 2) ** 2) / 12)
+    exact_std = np.sqrt(((x_range * 2) ** 2) / 12)
 
     return models.Distribution(
         approx_mean=mean,
@@ -37,5 +37,3 @@ def gaussian_distribution(mu: float, sigma: float, n_samples: int) -> models.Dis
         approx_std=std,
         exact_std=sigma
     )
-
-

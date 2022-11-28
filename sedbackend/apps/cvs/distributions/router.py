@@ -9,8 +9,8 @@ router = APIRouter()
     summary='Creates a uniform distribution',
     response_model=models.Distribution,
 )
-def uniform_distribution(center: float, range: float, n_samples: int) -> models.Distribution:
-    return implementation.uniform_distribution(center, range, n_samples)
+def uniform_distribution(center: float, x_range: float, n_samples: int) -> models.Distribution:
+    return implementation.uniform_distribution(center, x_range, n_samples)
 
 
 @router.post(

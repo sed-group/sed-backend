@@ -50,10 +50,10 @@ def create_market_input(project_id: int, market_input: models.MarketInputPost) -
         )
 
 
-def update_market_input(market_input_id: int, market_input: models.MarketInputPost) -> bool:
+def update_market_input(project_id: int, market_input_id: int, market_input: models.MarketInputPost) -> bool:
     try:
         with get_connection() as con:
-            db_result = storage.update_market_input(con, market_input_id, market_input)
+            db_result = storage.update_market_input(con, project_id, market_input_id, market_input)
             con.commit()
             return db_result
     except auth_ex.UnauthorizedOperationException:
@@ -66,12 +66,22 @@ def update_market_input(market_input_id: int, market_input: models.MarketInputPo
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find market input with id={market_input_id}',
         )
+    except proj_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    except proj_exceptions.CVSProjectNoMatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Market input with id={market_input_id} is not a part from project with id={project_id}.',
+        )
 
 
-def delete_market_input(mi_id: int) -> bool:
+def delete_market_input(project_id: int, mi_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.delete_market_input(con, mi_id)
+            res = storage.delete_market_input(con, project_id, mi_id)
             con.commit()
             return res
     except exceptions.MarketInputFailedDeletionException:
@@ -79,6 +89,17 @@ def delete_market_input(mi_id: int) -> bool:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not delete market input with id: {mi_id}'
         )
+    except proj_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    except proj_exceptions.CVSProjectNoMatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Market input with id={mi_id} is not a part from project with id={project_id}.',
+        )
+
 
 def get_all_formula_market_inputs(formulas_id: int) -> List[models.MarketInputGet]:
     try:
@@ -98,10 +119,10 @@ def get_all_formula_market_inputs(formulas_id: int) -> List[models.MarketInputGe
 ########################################################################################################################
 
 
-def update_market_input_value(mi_value: models.MarketInputValue, user_id: int) -> bool:
+def update_market_input_value(project_id: int, mi_value: models.MarketInputValue) -> bool:
     try:
         with get_connection() as con:
-            res = storage.update_market_input_value(con, mi_value, user_id)
+            res = storage.update_market_input_value(con, project_id, mi_value)
             con.commit()
             return res
     except exceptions.MarketInputNotFoundException:
@@ -114,12 +135,22 @@ def update_market_input_value(mi_value: models.MarketInputValue, user_id: int) -
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs with id={mi_value.vcs_id}.',
         )
+    except proj_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    except proj_exceptions.CVSProjectNoMatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Market input with id={mi_value.market_input_id} is not a part from project with id={project_id}.',
+        )
 
 
-def update_market_input_values(mi_values: List[models.MarketInputValue], project_id: int, user_id: int) -> bool:
+def update_market_input_values(project_id: int, mi_values: List[models.MarketInputValue]) -> bool:
     try:
         with get_connection() as con:
-            res = storage.update_market_input_values(con, mi_values, project_id, user_id)
+            res = storage.update_market_input_values(con, project_id, mi_values)
             con.commit()
             return res
     except exceptions.MarketInputNotFoundException:
@@ -131,6 +162,11 @@ def update_market_input_values(mi_values: List[models.MarketInputValue], project
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs',
+        )
+    except proj_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
         )
 
 
@@ -146,14 +182,25 @@ def get_all_market_values(project_id: int) -> List[models.MarketInputValue]:
             detail=f'Could not find project with id={project_id}.',
         )
 
-def delete_market_value(vcs_id: int, mi_id: int) -> bool:
+
+def delete_market_value(project_id: int, vcs_id: int, mi_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.delete_market_value(con, vcs_id, mi_id)
+            res = storage.delete_market_value(con, project_id, vcs_id, mi_id)
             con.commit()
             return res
     except exceptions.MarketInputFailedDeletionException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not delete market input value with market input id: {mi_id} and vcs id: {vcs_id}'
+        )
+    except proj_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    except proj_exceptions.CVSProjectNoMatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Market input with id={mi_id} is not a part from project with id={project_id}.',
         )

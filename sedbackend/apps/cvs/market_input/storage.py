@@ -6,6 +6,7 @@ from mysql.connector.pooling import PooledMySQLConnection
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.cvs.market_input import models, exceptions
 from sedbackend.apps.cvs.vcs import storage as vcs_storage
+from sedbackend.apps.cvs.project import exceptions as project_exceptions
 
 CVS_MARKET_INPUT_TABLE = 'cvs_market_inputs'
 CVS_MARKET_INPUT_COLUMN = ['id', 'project', 'name', 'unit']
@@ -26,7 +27,8 @@ def populate_market_input(db_result) -> models.MarketInputGet:
     )
 
 
-def get_market_input(db_connection: PooledMySQLConnection, market_input_id: int) -> models.MarketInputGet:
+def get_market_input(db_connection: PooledMySQLConnection, project_id: int,
+                     market_input_id: int) -> models.MarketInputGet:
     logger.debug(f'Fetching market input with id={market_input_id}.')
 
     select_statement = MySQLStatementBuilder(db_connection)
@@ -37,12 +39,13 @@ def get_market_input(db_connection: PooledMySQLConnection, market_input_id: int)
 
     if db_result is None:
         raise exceptions.MarketInputNotFoundException
+    if db_result['project'] != project_id:
+        raise project_exceptions.CVSProjectNoMatchException
 
     return populate_market_input(db_result)
 
 
-def get_all_market_input(db_connection: PooledMySQLConnection, project_id: int) -> List[
-    models.MarketInputGet]:  # TODO join the values to the results
+def get_all_market_input(db_connection: PooledMySQLConnection, project_id: int) -> List[models.MarketInputGet]:
     logger.debug(f'Fetching all market inputs for project with id={project_id}.')
 
     select_statement = MySQLStatementBuilder(db_connection)
@@ -65,12 +68,14 @@ def create_market_input(db_connection: PooledMySQLConnection, project_id: int,
         .set_values([project_id, market_input.name, market_input.unit]) \
         .execute(fetch_type=FetchType.FETCH_NONE)
 
-    return get_market_input(db_connection, insert_statement.last_insert_id)
+    return get_market_input(db_connection, project_id, insert_statement.last_insert_id)
 
 
-def update_market_input(db_connection: PooledMySQLConnection, market_input_id: int,
+def update_market_input(db_connection: PooledMySQLConnection, project_id: int, market_input_id: int,
                         market_input: models.MarketInputPost) -> bool:
     logger.debug(f'Update market input with vcs row id={market_input_id}')
+
+    get_market_input(db_connection, project_id, market_input_id)  # check if market input exists and belongs to project
 
     update_statement = MySQLStatementBuilder(db_connection)
     update_statement.update(
@@ -84,8 +89,10 @@ def update_market_input(db_connection: PooledMySQLConnection, market_input_id: i
     return True
 
 
-def delete_market_input(db_connection: PooledMySQLConnection, mi_id: int) -> bool:
+def delete_market_input(db_connection: PooledMySQLConnection, project_id: int, mi_id: int) -> bool:
     logger.debug(f'Deleting market input with id: {mi_id}')
+
+    get_market_input(db_connection, project_id, mi_id)  # check if market input exists and belongs to project
 
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement \
@@ -99,8 +106,8 @@ def delete_market_input(db_connection: PooledMySQLConnection, mi_id: int) -> boo
     return True
 
 
-def get_all_formula_market_inputs(db_connection: PooledMySQLConnection, formulas_id: int) -> List[
-    models.MarketInputValue]:
+def get_all_formula_market_inputs(db_connection: PooledMySQLConnection,
+                                  formulas_id: int) -> List[models.MarketInputValue]:
     logger.debug(f'Fetching all market inputs for formulas with vcs_row id: {formulas_id}')
 
     select_statement = MySQLStatementBuilder(db_connection)
@@ -128,11 +135,11 @@ def populate_market_input_values(db_result) -> models.MarketInputValue:
     )
 
 
-def update_market_input_value(db_connection: PooledMySQLConnection,
-                              mi_value: models.MarketInputValue, user_id: int) -> bool:
+def update_market_input_value(db_connection: PooledMySQLConnection, project_id: int,
+                              mi_value: models.MarketInputValue) -> bool:
     logger.debug(f'Update market input value')
-    vcs_storage.get_vcs(db_connection, mi_value.vcs_id, user_id)  # check if vcs exists
-    get_market_input(db_connection, mi_value.market_input_id)  # check if market input exists
+    vcs_storage.get_vcs(db_connection, mi_value.vcs_id, project_id)  # check if vcs exists
+    get_market_input(db_connection, project_id, mi_value.market_input_id)  # check if market input exists
 
     count_statement = MySQLStatementBuilder(db_connection)
     count_result = count_statement \
@@ -157,18 +164,18 @@ def update_market_input_value(db_connection: PooledMySQLConnection,
     return True
 
 
-def update_market_input_values(db_connection: PooledMySQLConnection,
-                               mi_values: List[models.MarketInputValue], project_id: int, user_id: int) -> bool:
+def update_market_input_values(db_connection: PooledMySQLConnection, project_id: int,
+                               mi_values: List[models.MarketInputValue]) -> bool:
     logger.debug(f'Update market input values')
 
     curr_mi_values = get_all_market_input_values(db_connection, project_id)
     # delete if no longer exists
     for value in curr_mi_values:
         if [value.vcs_id, value.market_input_id] not in [[v.vcs_id, v.market_input_id] for v in mi_values]:
-            delete_market_value(db_connection, value.vcs_id, value.market_input_id)
+            delete_market_value(db_connection, project_id, value.vcs_id, value.market_input_id)
 
     for mi_value in mi_values:
-        update_market_input_value(db_connection, mi_value, user_id)
+        update_market_input_value(db_connection, project_id, mi_value)
 
     return True
 
@@ -188,8 +195,10 @@ def get_all_market_input_values(db_connection: PooledMySQLConnection, project_id
     return [populate_market_input_values(r) for r in res]
 
 
-def delete_market_value(db_connection: PooledMySQLConnection, vcs_id: int, mi_id: int) -> bool:
+def delete_market_value(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, mi_id: int) -> bool:
     logger.debug(f'Deleting market input value with vcs id: {vcs_id} and market input id: {mi_id}')
+
+    get_market_input(db_connection, project_id, mi_id)  # check if market input exists and belongs to project
 
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement \
