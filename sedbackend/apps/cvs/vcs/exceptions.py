@@ -14,6 +14,7 @@ class VCSFailedToUpdateException(Exception):
 class VCSFailedDeletionException(Exception):
     pass
 
+
 class GenericDatabaseException(Exception):
     def __init__(self, msg: str = None):
         self.msg = msg
@@ -21,8 +22,10 @@ class GenericDatabaseException(Exception):
 # VCS Value dimensions
 # ======================================================================================================================
 
+
 class ValueDimensionNotFoundException(Exception):
     pass
+
 
 class ValueDimensionFailedDeletionException(Exception):
     pass
@@ -115,10 +118,10 @@ class VCSStakeholderNeedNotFound(Exception):
 class VCSStakeholderNeedFailedDeletionException(Exception):
     pass
 
+
 class VCSStakeholderNeedFailedCreationException(Exception):
     pass
 
+
 class VCSStakeholderNeedFailedToUpdateException(Exception):
     pass
-
-

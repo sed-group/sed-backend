@@ -1,17 +1,11 @@
-from multiprocessing import Pool
 from typing import List
-from unicodedata import name
-
 from mysql.connector import Error
 from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
-from sedbackend.apps.cvs.project.exceptions import CVSProjectNotFoundException
-from sedbackend.apps.cvs.vcs.exceptions import ValueDriverNotFoundException
+from sedbackend.apps.cvs.project.exceptions import CVSProjectNotFoundException, CVSProjectNoMatchException
 from sedbackend.apps.cvs.vcs.models import ValueDriver
 from sedbackend.apps.cvs.vcs import storage as vcs_storage
-
-from sedbackend.apps.cvs.vcs.storage import CVS_VALUE_DRIVER_COLUMNS, CVS_VALUE_DRIVER_TABLE, get_value_driver, \
-    populate_value_driver
+from sedbackend.apps.cvs.vcs.storage import CVS_VALUE_DRIVER_COLUMNS, CVS_VALUE_DRIVER_TABLE, populate_value_driver
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.cvs.design import models, exceptions
 
@@ -43,10 +37,10 @@ def create_design_group(db_connection: PooledMySQLConnection, design_group: mode
         raise CVSProjectNotFoundException
 
     if design_group.vcs_id is not None:
-        value_drivers = vcs_storage.get_all_value_driver_vcs(db_connection, design_group.vcs_id)
+        value_drivers = vcs_storage.get_all_value_driver_vcs(db_connection, project_id, design_group.vcs_id)
         [add_vd_to_design_group(db_connection, design_group_id, vd.id) for vd in value_drivers]
 
-    return get_design_group(db_connection, design_group_id)
+    return get_design_group(db_connection, project_id, design_group_id)
 
 
 def add_vd_to_design_group(db_connection: PooledMySQLConnection, design_group_id: int, vd_id: int) -> bool:
@@ -63,7 +57,7 @@ def add_vd_to_design_group(db_connection: PooledMySQLConnection, design_group_id
     return True
 
 
-def get_design_group(db_connection: PooledMySQLConnection, design_group_id: int) -> models.DesignGroup:
+def get_design_group(db_connection: PooledMySQLConnection, project_id: int, design_group_id: int) -> models.DesignGroup:
     select_statement = MySQLStatementBuilder(db_connection)
 
     result = select_statement \
@@ -73,6 +67,8 @@ def get_design_group(db_connection: PooledMySQLConnection, design_group_id: int)
 
     if result is None:
         raise exceptions.DesignGroupNotFoundException
+    if result['project'] != project_id:
+        raise CVSProjectNoMatchException
 
     value_drivers = get_all_drivers_design_group(db_connection, result['id'])
     result.update({'vds': value_drivers})
@@ -99,8 +95,10 @@ def get_all_design_groups(db_connection: PooledMySQLConnection, project_id: int)
     return design_list
 
 
-def delete_design_group(db_connection: PooledMySQLConnection, design_group_id: int) -> bool:
+def delete_design_group(db_connection: PooledMySQLConnection, project_id: int, design_group_id: int) -> bool:
     logger.debug(f'Deleting design group with id={design_group_id}')
+
+    get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
 
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement.delete(DESIGN_GROUPS_TABLE) \
@@ -113,11 +111,12 @@ def delete_design_group(db_connection: PooledMySQLConnection, design_group_id: i
     return True
 
 
-def edit_design_group(db_connection: PooledMySQLConnection, design_group_id: int,
+def edit_design_group(db_connection: PooledMySQLConnection, project_id: int, design_group_id: int,
                       design_group: models.DesignGroupPut) -> models.DesignGroup:
     logger.debug(f'Editing Design with id = {design_group_id}')
 
-    curr_design_group = get_design_group(db_connection, design_group_id)  # Check if design group exists in DB
+    # Check if design group exists in DB and matches project
+    curr_design_group = get_design_group(db_connection, project_id, design_group_id)
 
     try:
         update_statement = MySQLStatementBuilder(db_connection)
@@ -147,7 +146,7 @@ def edit_design_group(db_connection: PooledMySQLConnection, design_group_id: int
                 .where('value_driver = %s', [vd_id]) \
                 .execute(fetch_type=FetchType.FETCH_NONE)
 
-    return get_design_group(db_connection, design_group_id)
+    return get_design_group(db_connection, project_id, design_group_id)
 
 
 def populate_design_group(db_result) -> models.DesignGroup:
@@ -183,8 +182,10 @@ def get_design(db_connection: PooledMySQLConnection, design_id: int):
     return populate_design(result)
 
 
-def get_all_designs(db_connection: PooledMySQLConnection, design_group_id: int) -> List[models.Design]:
+def get_all_designs(db_connection: PooledMySQLConnection, project_id: int, design_group_id: int) -> List[models.Design]:
     logger.debug(f'Get all designs in design group with id = {design_group_id}')
+
+    get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
 
     try:
         select_statement = MySQLStatementBuilder(db_connection)
@@ -270,10 +271,12 @@ def add_value_to_design_vd(db_connection: PooledMySQLConnection, design_id: int,
 
 
 # Edit design if exists, otherwise create a new one. Delete if not longer used
-def edit_designs(db_connection: PooledMySQLConnection, design_group_id: int, designs: List[models.DesignPut]) -> bool:
+def edit_designs(db_connection: PooledMySQLConnection, project_id: int, design_group_id: int,
+                 designs: List[models.DesignPut]) -> bool:
     logger.debug(f'Edit designs with design group id = {design_group_id}')
 
-    curr_designs = get_all_designs(db_connection, design_group_id)
+    # Check if design group exists and matches project
+    curr_designs = get_all_designs(db_connection, project_id, design_group_id)
     for design in curr_designs:
         if design.id not in [d.id for d in designs]:
             delete_design(db_connection, design.id)
@@ -335,8 +338,8 @@ def get_all_drivers_design_group(db_connection: PooledMySQLConnection, design_gr
 
 
 # TODO add error handling
-def get_all_vd_design_values(db_connection: PooledMySQLConnection, design_id: int) -> List[
-    models.ValueDriverDesignValue]:
+def get_all_vd_design_values(db_connection: PooledMySQLConnection,
+                             design_id: int) -> List[models.ValueDriverDesignValue]:
     logger.debug(f'Fetching all vd design values for design: {design_id}')
 
     select_statement = MySQLStatementBuilder(db_connection)

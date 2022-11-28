@@ -1,15 +1,14 @@
-from sqlite3 import Time
 from pydantic import BaseModel
 from enum import Enum
-from typing import List, Tuple, Optional
+from typing import List, Optional
 
 from sedbackend.apps.cvs.vcs import models as vcs_models
-from sedbackend.apps.cvs.design import models as design_models
 from sedbackend.apps.cvs.market_input import models as mi_models
+
 
 class TimeFormat(Enum):
     """
-    The timeformats that can be chosen for a process. The values are the defaults for the
+    The time formats that can be chosen for a process. The values are the defaults for the
     simulation (years)
     """
     MINUTES = 'minutes'
@@ -18,6 +17,7 @@ class TimeFormat(Enum):
     WEEK = 'week'
     MONTH = 'month'
     YEAR = 'year'
+
 
 class Rate(Enum):
     PRODUCT = 'per_product'
@@ -32,7 +32,7 @@ class FormulaGet(BaseModel):
     cost: str
     revenue: str
     rate: Rate
-    
+
 
 class FormulaPost(BaseModel):
     time: str
@@ -47,6 +47,7 @@ class FormulaPost(BaseModel):
 class FormulaRowGet(FormulaGet):
     value_drivers: List[vcs_models.ValueDriver]
     market_inputs: List[mi_models.MarketInputGet]
+
 
 class VcsDgPairs(BaseModel):
     vcs: str

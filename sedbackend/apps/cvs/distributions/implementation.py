@@ -2,8 +2,8 @@ from sedbackend.apps.cvs.distributions import models, algorithms
 
 
 # Simple 1-dimensional uniform distribution
-def uniform_distribution(center: float, range: float, n_samples: int) -> models.Distribution:
-    return algorithms.uniform_distribution(center, range, n_samples)
+def uniform_distribution(center: float, x_range: float, n_samples: int) -> models.Distribution:
+    return algorithms.uniform_distribution(center, x_range, n_samples)
 
 
 # Simple 1-dimensional Gaussian distribution

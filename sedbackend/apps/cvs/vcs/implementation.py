@@ -15,31 +15,21 @@ from sedbackend.libs.datastructures.pagination import ListChunk
 # VCS
 # ======================================================================================================================
 
-def get_all_vcs(project_id: int, user_id: int) -> ListChunk[models.VCS]:
-    with get_connection() as con:
-        return storage.get_all_vcs(con, project_id, user_id)
-
-
-def get_segment_vcs(project_id: int, index: int, segment_length: int, user_id: int) -> ListChunk[models.VCS]:
+def get_all_vcs(project_id: int) -> ListChunk[models.VCS]:
     try:
         with get_connection() as con:
-            return storage.get_segment_vcs(con, project_id, segment_length, index, user_id)
+            return storage.get_all_vcs(con, project_id)
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find project with id={project_id}.',
         )
-    except auth_ex.UnauthorizedOperationException:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail='Unauthorized user.',
-        )
 
 
-def get_vcs(vcs_id: int, user_id: int) -> models.VCS:
+def get_vcs(vcs_id: int, project_id: int) -> models.VCS:
     try:
         with get_connection() as con:
-            return storage.get_vcs(con, vcs_id, user_id)
+            return storage.get_vcs(con, vcs_id, project_id)
     except exceptions.VCSNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -50,12 +40,17 @@ def get_vcs(vcs_id: int, user_id: int) -> models.VCS:
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
+    except project_exceptions.CVSProjectNoMatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'VCS with id={vcs_id} does not belong to project with id={project_id}.',
+        )
 
 
-def create_vcs(vcs_post: models.VCSPost, project_id: int, user_id: int) -> models.VCS:
+def create_vcs(vcs_post: models.VCSPost, project_id: int) -> models.VCS:
     try:
         with get_connection() as con:
-            result = storage.create_vcs(con, vcs_post, project_id, user_id)
+            result = storage.create_vcs(con, vcs_post, project_id)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
@@ -70,10 +65,10 @@ def create_vcs(vcs_post: models.VCSPost, project_id: int, user_id: int) -> model
         )
 
 
-def edit_vcs(vcs_id: int, user_id: int, vcs_post: models.VCSPost) -> models.VCS:
+def edit_vcs(vcs_id: int, vcs_post: models.VCSPost, project_id) -> models.VCS:
     try:
         with get_connection() as con:
-            result = storage.edit_vcs(con, vcs_id, user_id, vcs_post)
+            result = storage.edit_vcs(con, vcs_id, vcs_post, project_id)
             con.commit()
             return result
     except exceptions.VCSNotFoundException:
@@ -91,12 +86,17 @@ def edit_vcs(vcs_id: int, user_id: int, vcs_post: models.VCSPost) -> models.VCS:
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
+    except project_exceptions.CVSProjectNoMatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'VCS with id={vcs_id} does not belong to project with id={project_id}.',
+        )
 
 
-def delete_vcs(vcs_id: int, user_id: int) -> bool:
+def delete_vcs(vcs_id: int, project_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.delete_vcs(con, vcs_id, user_id)
+            res = storage.delete_vcs(con, vcs_id, project_id)
             con.commit()
             return res
     except exceptions.VCSNotFoundException:
@@ -113,6 +113,11 @@ def delete_vcs(vcs_id: int, user_id: int) -> bool:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
+        )
+    except project_exceptions.CVSProjectNoMatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'VCS with id={vcs_id} does not belong to project with id={project_id}.',
         )
 
 
@@ -136,10 +141,11 @@ def get_all_value_driver(user_id: int) -> List[models.ValueDriver]:
             detail=f'Could not find value drivers for user with id={user_id}'
         )
 
-def get_all_value_driver_vcs(vcs_id: int) -> List[models.ValueDriver]:
+
+def get_all_value_driver_vcs(project_id: int, vcs_id: int) -> List[models.ValueDriver]:
     try:
         with get_connection() as con:
-            res = storage.get_all_value_driver_vcs(con, vcs_id)
+            res = storage.get_all_value_driver_vcs(con, project_id, vcs_id)
             con.commit()
             return res
     except exceptions.VCSNotFoundException:
@@ -151,6 +157,11 @@ def get_all_value_driver_vcs(vcs_id: int) -> List[models.ValueDriver]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Could not find value drivers'
+        )
+    except project_exceptions.CVSProjectNoMatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'VCS with id={vcs_id} does not belong to project with id={project_id}.',
         )
 
 
@@ -259,6 +270,7 @@ def get_iso_process(iso_process_id: int) -> models.VCSISOProcess:
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find ISO process with id={iso_process_id}.',
         )
+
 
 # ======================================================================================================================
 # VCS Subprocesses
@@ -415,21 +427,31 @@ def update_indices_subprocess(subprocess_ids: List[int], order_indices: List[int
 # ======================================================================================================================
 
 
-def get_vcs_table(vcs_id: int) -> List[models.VcsRow]:
+def get_vcs_table(vcs_id: int, project_id: int) -> List[models.VcsRow]:
     try:
         with get_connection() as con:
-            return storage.get_vcs_table(con, vcs_id)
+            return storage.get_vcs_table(con, vcs_id, project_id)
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
+    except exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Could not find VCS with id={vcs_id}.',
+        )
+    except project_exceptions.CVSProjectNoMatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Project with id={project_id} does not match VCS with id={vcs_id}.',
+        )
 
 
-def edit_vcs_table(updated_vcs_rows: List[models.VcsRowPost], vcs_id: int) -> bool:
-    try: 
+def edit_vcs_table(updated_vcs_rows: List[models.VcsRowPost], vcs_id: int, project_id: int) -> bool:
+    try:
         with get_connection() as con:
-            res = storage.edit_vcs_table(con, updated_vcs_rows, vcs_id)
+            res = storage.edit_vcs_table(con, updated_vcs_rows, vcs_id, project_id)
             con.commit()
             return res
     except exceptions.VCSTableRowFailedToUpdateException:
@@ -462,11 +484,17 @@ def edit_vcs_table(updated_vcs_rows: List[models.VcsRowPost], vcs_id: int) -> bo
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Stakeholder need failed to update'
         )
+    except project_exceptions.CVSProjectNoMatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Project with id={project_id} does not match VCS with id={vcs_id}.',
+        )
 
-def delete_vcs_row(vcs_row_id: int, vcs_id: int) -> bool:
+
+def delete_vcs_row(vcs_row_id: int, vcs_id: int, project_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.delete_vcs_row(con, vcs_row_id, vcs_id)
+            res = storage.delete_vcs_row(con, vcs_row_id, vcs_id, project_id)
             con.commit()
             return res
     except exceptions.VCSTableRowFailedDeletionException:
@@ -474,12 +502,22 @@ def delete_vcs_row(vcs_row_id: int, vcs_id: int) -> bool:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Could not delete vcs row'
         )
+    except exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Could not find VCS with id={vcs_id}.',
+        )
+    except project_exceptions.CVSProjectNoMatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Project with id={project_id} does not match VCS with id={vcs_id}.',
+        )
 
 
-def duplicate_vcs(vcs_id: int, n: int, user_id: int) -> List[models.VCS]:
+def duplicate_vcs(vcs_id: int, n: int, project_id: int) -> List[models.VCS]:
     try:
         with get_connection() as con:
-            res = storage.duplicate_whole_vcs(con, vcs_id, n, user_id)
+            res = storage.duplicate_whole_vcs(con, vcs_id, n, project_id)
             con.commit()
             return res
     except exceptions.VCSNotFoundException:
@@ -490,7 +528,7 @@ def duplicate_vcs(vcs_id: int, n: int, user_id: int) -> List[models.VCS]:
 
 
 def get_vcs_row(vcs_row: int) -> models.VcsRow:
-    try: 
+    try:
         with get_connection() as con:
             res = storage.get_vcs_row(con, vcs_row)
             con.commit()
