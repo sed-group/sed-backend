@@ -26,12 +26,12 @@ class NonTechnicalProcess(BaseModel):
     revenue: float
 
 
-class Simulation(BaseModel):
-    time: List[float]
-    cumulative_NPV: List[float]
-    processes: List[Process]
+#class Simulation(BaseModel):
+    #time: List[float]
+    #cumulative_NPV: List[float]
+    #processes: List[Process]
 
-class SimulationMonteCarlo(BaseModel):
+class Simulation(BaseModel):
     time: List[float]
     mean_NPV: List[float]
     max_NPVs: List[float]

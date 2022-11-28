@@ -15,11 +15,11 @@ from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.market_input import exceptions as market_input_exceptions
 
 
-def run_simulation(project_id: int, vcs_ids: List[int], design_ids: List[int], 
+def run_simulation(project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int], design_ids: List[int], 
                     normalized_npv: bool, user_id: int) -> List[models.Simulation]:
     try:
         with get_connection() as con:
-            result = storage.run_simulation(con, project_id, vcs_ids, design_ids, normalized_npv, user_id)
+            result = storage.run_simulation(con, project_id, sim_settings, vcs_ids, design_ids, normalized_npv, user_id)
             return result
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
@@ -68,14 +68,11 @@ def run_simulation(project_id: int, vcs_ids: List[int], design_ids: List[int],
         )
 
 
-def run_csv_simulation(vcs_id: int, flow_time: float, flow_rate: float, 
-                        flow_process_id: int, simulation_runtime: float, discount_rate: float, 
-                        non_tech_add: models.NonTechCost, dsm_csv: UploadFile, design_ids: List[int], 
+def run_csv_simulation(project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int], dsm_csv: UploadFile, design_ids: List[int], 
                         normalized_npv: bool, user_id: int) -> List[models.Simulation]:
     try: 
         with get_connection() as con:
-            res = storage.run_sim_with_csv_dsm(con, vcs_id, flow_time, flow_rate, flow_process_id, 
-                                simulation_runtime, discount_rate, non_tech_add, dsm_csv, design_ids, 
+            res = storage.run_sim_with_csv_dsm(con, project_id, sim_settings, vcs_ids, dsm_csv, design_ids, 
                                 normalized_npv, user_id)
             return res
     except auth_ex.UnauthorizedOperationException:
@@ -129,14 +126,11 @@ def run_csv_simulation(vcs_id: int, flow_time: float, flow_rate: float,
             detail=f'No design ids or empty array supplied'
         )
 
-def run_xlsx_simulation(vcs_id: int, flow_time: float, flow_rate: float, flow_process_id: int, 
-                        simulation_runtime: float, discount_rate: float, non_tech_add: models.NonTechCost, 
-                        dsm_xlsx: UploadFile, design_ids: List[int], normalized_npv: bool, 
+def run_xlsx_simulation(project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int],  design_ids: List[int], normalized_npv: bool, 
                         user_id: int) -> List[models.Simulation]:
     try: 
         with get_connection() as con:
-            res = storage.run_sim_with_xlsx_dsm(con, vcs_id, flow_time, flow_rate, flow_process_id, 
-                            simulation_runtime, discount_rate, non_tech_add, dsm_xlsx, design_ids, normalized_npv, user_id)
+            res = storage.run_sim_with_xlsx_dsm(con, project_id, sim_settings, vcs_ids, design_ids, normalized_npv, user_id)
             return res
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
@@ -189,12 +183,12 @@ def run_xlsx_simulation(vcs_id: int, flow_time: float, flow_rate: float, flow_pr
             detail=f'No design ids or empty array supplied'
         )
 
-def run_sim_monte_carlo(project_id: int, vcs_ids: List[int], design_ids: List[int], 
-        normalized_npv: bool, user_id: int = None) -> List[models.SimulationMonteCarlo]:
+def run_sim_monte_carlo(project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int], design_ids: List[int], 
+        normalized_npv: bool, user_id: int = None) -> List[models.Simulation]:
     try: 
         with get_connection() as con:
-            result = storage.run_sim_monte_carlo(con, project_id, vcs_ids,  design_ids,
-                                normalized_npv, user_id)
+            result = storage.run_sim_monte_carlo(con, project_id, sim_settings, vcs_ids,  
+                                        design_ids, normalized_npv, user_id)
             return result
     except vcs_exceptions.GenericDatabaseException:
         raise HTTPException(
