@@ -150,7 +150,7 @@ def get_vcs_dg_pairs(db_connection: PooledMySQLConnection, project_id: int) -> L
     = ((SELECT (count(*)) FROM cvs_design_mi_formulas INNER JOIN cvs_vcs_rows ON cvs_vcs_rows.id = vcs_row WHERE " \
             "cvs_design_mi_formulas.design_group=cvs_design_groups.id AND vcs=cvs_vcss.id)) \
     AS has_formulas FROM cvs_vcss, cvs_design_groups WHERE cvs_vcss.project = %s AND cvs_design_groups.project = %s \
-    GROUP BY vcs_name, design_group_name ORDER BY has_formulas DESC;"
+    GROUP BY vcs_id, design_group_id ORDER BY has_formulas DESC;"
 
     with db_connection.cursor(prepared=True) as cursor:
         
