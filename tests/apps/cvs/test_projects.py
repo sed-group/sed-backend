@@ -100,32 +100,3 @@ def test_get_all_cvs_projects(client, std_headers, std_user):
     tu.delete_project_by_id(proj2.id, current_user.id)
     tu.delete_project_by_id(proj3.id, current_user.id)
     
-def test_get_segment_cvs_projects(client, std_headers, std_user):
-        #Setup 
-    current_user = impl_users.impl_get_user_with_username(std_user.username)
-    proj1 = tu.seed_random_project(current_user.id)
-    proj2 = tu.seed_random_project(current_user.id)
-    proj3 = tu.seed_random_project(current_user.id)
-
-    largest_name = proj1
-    if proj2.name > largest_name.name:
-        largest_name = proj2
-    if proj3.name > largest_name.name:
-        largest_name = proj3
-
-    #Act
-    res = client.get(f'/api/cvs/project/segment?index=0&segment_length=2', 
-                        headers=std_headers)
-
-    #Assert
-    assert res.status_code == 200
-    print(res.json())
-    assert len(res.json()["chunk"]) == 2
-    assert res.json()["chunk"][0]["id"] != largest_name.id
-    assert res.json()["chunk"][1]["id"] != largest_name.id
-    
-
-    #Cleanup
-    tu.delete_project_by_id(proj1.id, current_user.id)
-    tu.delete_project_by_id(proj2.id, current_user.id)
-    tu.delete_project_by_id(proj3.id, current_user.id)

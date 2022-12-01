@@ -40,34 +40,6 @@ def get_all_cvs_project(db_connection: PooledMySQLConnection, user_id: int) -> L
     return chunk
 
 
-def get_segment_cvs_project(db_connection: PooledMySQLConnection, index: int, segment_length: int,
-                            user_id: int) -> ListChunk[models.CVSProject]:
-    logger.debug(f'Fetching segment of CVS projects for user with id={user_id}.')
-
-    where_statement = f'owner_id = %s'
-    where_values = [user_id]
-
-    select_statement = MySQLStatementBuilder(db_connection)
-    results = select_statement.select(CVS_PROJECT_TABLE, CVS_PROJECT_COLUMNS) \
-        .where(where_statement, where_values) \
-        .order_by(['name'], Sort.ASCENDING) \
-        .limit(segment_length) \
-        .offset(index * segment_length) \
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-
-    project_list = []
-    for result in results:
-        project_list.append(populate_cvs_project(db_connection, result))
-
-    count_statement = MySQLStatementBuilder(db_connection)
-    result = count_statement.count(CVS_PROJECT_TABLE) \
-        .where(where_statement, where_values) \
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-    chunk = ListChunk[models.CVSProject](chunk=project_list, length_total=result['count'])
-
-    return chunk
-
-
 def get_cvs_project(db_connection: PooledMySQLConnection, project_id: int) -> models.CVSProject:
     logger.debug(f'Fetching CVS project with id={project_id}.')
 

@@ -23,16 +23,6 @@ async def get_all_cvs_project(user: User = Depends(get_current_active_user)) \
 
 
 @router.get(
-    '/project/segment',
-    summary='Returns a segment of the user\'s CVS projects',
-    response_model=ListChunk[models.CVSProject],
-)
-async def get_segment_cvs_project(index: int, segment_length: int, user: User = Depends(get_current_active_user)) \
-        -> ListChunk[models.CVSProject]:
-    return implementation.get_segment_cvs_project(index, segment_length, user.id)
-
-
-@router.get(
     '/project/{native_project_id}',
     summary='Returns a CVS project based on id',
     description='Returns a CVS project based on id',

@@ -13,11 +13,6 @@ def get_all_cvs_project(user_id: int) -> ListChunk[models.CVSProject]:
         return storage.get_all_cvs_project(con, user_id)
 
 
-def get_segment_cvs_project(index: int, segment_length: int, user_id: int) -> ListChunk[models.CVSProject]:
-    with get_connection() as con:
-        return storage.get_segment_cvs_project(con, index, segment_length, user_id)
-
-
 def get_cvs_project(project_id: int) -> models.CVSProject:
     try:
         with get_connection() as con:
