@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_simulation_settings`
     `discount_rate`         DOUBLE(20, 5) NOT NULL,
     `non_tech_add`          TEXT NOT NULL,
     `monte_carlo`           BOOLEAN NOT NULL,
+    `runs`                  INT UNSIGNED DEFAULT 0,
     PRIMARY KEY (`project`),
     FOREIGN KEY (`project`)
         REFERENCES `seddb`.`cvs_projects`(`id`)
