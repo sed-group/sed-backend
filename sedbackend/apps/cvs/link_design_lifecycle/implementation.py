@@ -9,34 +9,6 @@ from sedbackend.apps.cvs.link_design_lifecycle.exceptions import FormulasFailedD
 from sedbackend.apps.cvs.project import exceptions as project_exceptions
 
 
-def create_formulas(project_id: int, vcs_row_id: int, dg_id: int, formulas: models.FormulaPost) -> bool:
-    with get_connection() as con:
-        try: 
-            res = storage.create_formulas(con, project_id, vcs_row_id, dg_id, formulas)
-            con.commit()
-            return res
-        except FormulasNotFoundException:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f'Could not find formula'
-            )
-        except WrongTimeUnitException as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f'Wrong time unit. Given unit: {e.time_unit}'
-            )
-        except project_exceptions.CVSProjectNotFoundException:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f'Could not find project with id {project_id}'
-            )
-        except project_exceptions.CVSProjectNoMatchException:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f'Project with id={project_id} does not match design group with id={dg_id}'
-            )
-
-
 def edit_formulas(project_id: int, vcs_row_id: int, design_group_id: int, new_formulas: models.FormulaPost) -> bool:
     with get_connection() as con:
         try:
