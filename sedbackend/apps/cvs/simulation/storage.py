@@ -6,7 +6,7 @@ import pandas as pd
 
 from fastapi.logger import logger
 
-import desim.interface as des
+from desim import interface as des
 from desim.data import NonTechCost, TimeFormat, SimResults
 from desim.simulation import Process
 
