@@ -99,8 +99,8 @@ def delete_vcs_table_row_by_id(table_row_id):
 
 def random_table_row(project_id,
                     user_id,
-                    node_id: int = None,
-                    row_index: int = None,
+                    vcs_id: int = None,
+                    index: int = None,
                     iso_process_id: int = None,
                     subprocess_id: int= None,
                     stakeholder: str=None,
@@ -136,7 +136,7 @@ def random_table_row(project_id,
     if stakeholder_needs is None:
         stakeholder_needs = seed_stakeholder_needs(user_id, project_id)
     
-    table_row = sedbackend.apps.cvs.vcs.models.TableRowPost(
+    table_row = sedbackend.apps.cvs.vcs.models.VcsRowPost(
         node_id=node_id,
         row_index=row_index,
         iso_process_id=iso_process_id,
