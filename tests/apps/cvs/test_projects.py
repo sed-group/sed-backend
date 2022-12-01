@@ -5,8 +5,7 @@ import random as r
 import pytest
 from fastapi import HTTPException
 
-import sedbackend.apps.cvs.implementation as impl
-import sedbackend.apps.cvs.models as models
+import sedbackend.apps.cvs.project.models as models
 import sedbackend.apps.cvs.project.implementation
 import tests.apps.cvs.testutils as tu
 import tests.testutils as testutils

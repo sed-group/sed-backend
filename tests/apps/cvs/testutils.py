@@ -4,10 +4,8 @@ import random
 
 import sedbackend.apps.cvs.design.implementation
 import sedbackend.apps.cvs.design.models
-import sedbackend.apps.cvs.implementation as impl
 import sedbackend.apps.cvs.life_cycle.implementation
 import sedbackend.apps.cvs.life_cycle.models
-import sedbackend.apps.cvs.models as models
 import sedbackend.apps.cvs.project.implementation
 import sedbackend.apps.cvs.project.models
 import sedbackend.apps.cvs.vcs.implementation
@@ -108,7 +106,7 @@ def random_table_row(project_id,
                     stakeholder: str=None,
                     stakeholder_expectations: str=None,
                     stakeholder_needs: List[sedbackend.apps.cvs.vcs.models.StakeholderNeedPost] = None
-                    ) -> sedbackend.apps.cvs.vcs.models.TableRowPost:
+                    ) -> sedbackend.apps.cvs.vcs.models.VcsRowPost:
     if node_id is None: #This will break everything since after the first iteration it will have a node id
         node_id = None
     
@@ -210,7 +208,7 @@ def seed_stakeholder_needs(user_id, project_id, amount=10) -> List[sedbackend.ap
     
     return stakeholder_needs
 
-def seed_vcs_table_rows(vcs_id, project_id, user_id, amount=15) -> sedbackend.apps.cvs.vcs.models.TablePost:
+def seed_vcs_table_rows(vcs_id, project_id, user_id, amount=15) -> sedbackend.apps.cvs.vcs.models.VCSPost:
     table_rows =  []
     while (amount > 0):
     
@@ -218,7 +216,7 @@ def seed_vcs_table_rows(vcs_id, project_id, user_id, amount=15) -> sedbackend.ap
         table_rows.append(tr)
         amount = amount - 1
     
-    table_model = sedbackend.apps.cvs.vcs.models.TablePost(
+    table_model = sedbackend.apps.cvs.vcs.models.VCSPost(
         table_rows=table_rows
     )
     vcs_table = sedbackend.apps.cvs.vcs.implementation.create_vcs_table(table_model, vcs_id, project_id, user_id)
