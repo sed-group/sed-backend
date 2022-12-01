@@ -8,7 +8,7 @@ import sedbackend.apps.cvs.life_cycle.implementation
 import sedbackend.apps.cvs.life_cycle.models
 import sedbackend.apps.cvs.project.implementation
 import sedbackend.apps.cvs.project.models
-import sedbackend.apps.cvs.vcs.implementation
+import sedbackend.apps.cvs.vcs.implementation as vcs_impl
 import sedbackend.apps.cvs.vcs.models
 import tests.testutils as tu
 
@@ -99,7 +99,7 @@ def delete_vcs_table_row_by_id(table_row_id):
 
 def random_table_row(project_id,
                     user_id,
-                    vcs_id: int = None,
+                    vcs_id: int,
                     index: int = None,
                     iso_process_id: int = None,
                     subprocess_id: int= None,
@@ -107,11 +107,9 @@ def random_table_row(project_id,
                     stakeholder_expectations: str=None,
                     stakeholder_needs: List[sedbackend.apps.cvs.vcs.models.StakeholderNeedPost] = None
                     ) -> sedbackend.apps.cvs.vcs.models.VcsRowPost:
-    if node_id is None: #This will break everything since after the first iteration it will have a node id
-        node_id = None
-    
-    if row_index is None:
-        row_index = random.randint(1,15)
+
+    if index is None:
+        index = random.randint(1,15)
     
    # if iso_process_id or subprocess_id is None:
    #     if iso_process_id and subprocess_id is None:
@@ -137,8 +135,7 @@ def random_table_row(project_id,
         stakeholder_needs = seed_stakeholder_needs(user_id, project_id)
     
     table_row = sedbackend.apps.cvs.vcs.models.VcsRowPost(
-        node_id=node_id,
-        row_index=row_index,
+        index=index,
         iso_process_id=iso_process_id,
         subprocess_id=subprocess_id,
         stakeholder=stakeholder,
@@ -211,16 +208,12 @@ def seed_stakeholder_needs(user_id, project_id, amount=10) -> List[sedbackend.ap
 def seed_vcs_table_rows(vcs_id, project_id, user_id, amount=15) -> sedbackend.apps.cvs.vcs.models.VCSPost:
     table_rows =  []
     while (amount > 0):
-    
         tr = random_table_row(project_id, user_id)
         table_rows.append(tr)
         amount = amount - 1
     
-    table_model = sedbackend.apps.cvs.vcs.models.VCSPost(
-        table_rows=table_rows
-    )
-    vcs_table = sedbackend.apps.cvs.vcs.implementation.create_vcs_table(table_model, vcs_id, project_id, user_id)
-    return table_model
+    vcs_table = vcs_impl.edit_vcs_table(table_rows, vcs_id, project_id)
+    return vcs_table
 
 def random_design(name: str = None, description: str = None):
     if name is None:
