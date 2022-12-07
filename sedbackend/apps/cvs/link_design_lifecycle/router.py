@@ -10,16 +10,6 @@ from sedbackend.apps.cvs.project.router import CVS_APP_SID
 router = APIRouter()
 
 
-@router.post(
-    '/project/{native_project_id}/vcs-row/{vcs_row_id}/design-group/{dg_id}/formulas',
-    summary='Create formulas for time, cost, and revenue',
-    response_model=bool,
-    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
-)
-async def create_formulas(native_project_id: int, vcs_row_id: int, dg_id: int, formula: models.FormulaPost) -> bool:
-    return implementation.create_formulas(native_project_id, vcs_row_id, dg_id, formula)
-
-
 @router.get(
     '/project/{native_project_id}/vcs/{vcs_id}/design-group/{dg_id}/formulas/all',
     summary=f'Get all formulas for a single vcs and design group',

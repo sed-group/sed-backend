@@ -131,12 +131,12 @@ def delete_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_r
     get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
 
     delete_statement = MySQLStatementBuilder(db_connection)
-    rows, _ = delete_statement \
+    _, rows = delete_statement \
         .delete(CVS_FORMULAS_TABLE) \
         .where('vcs_row = %s and design_group = %s', [vcs_row_id, design_group_id])\
         .execute(return_affected_rows=True)
     
-    if len(rows) != 1:
+    if rows != 1:
         raise exceptions.FormulasFailedDeletionException
     
     return True
