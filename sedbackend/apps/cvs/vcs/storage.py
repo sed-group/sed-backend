@@ -108,15 +108,7 @@ def create_vcs(db_connection: PooledMySQLConnection, vcs_post: models.VCSPost, p
 def edit_vcs(db_connection: PooledMySQLConnection, vcs_id: int, new_vcs: models.VCSPost, project_id: int) -> models.VCS:
     logger.debug(f'Editing VCS with id={vcs_id}.')
 
-    old_vcs = get_vcs(db_connection, vcs_id, project_id)  # Perform checks for existing project and correct user
-
-    if old_vcs.project != project_id:
-        raise project_exceptions.CVSProjectNoMatchException
-
-    o = (old_vcs.name, old_vcs.description, old_vcs.year_from, old_vcs.year_to)
-    n = (new_vcs.name, new_vcs.description, new_vcs.year_from, new_vcs.year_to)
-    if o == n:  # No change
-        return old_vcs
+    get_vcs(db_connection, vcs_id, project_id)  # Perform checks for existing project and correct user
 
     # Updating
     update_statement = MySQLStatementBuilder(db_connection)
@@ -127,9 +119,6 @@ def edit_vcs(db_connection: PooledMySQLConnection, vcs_id: int, new_vcs: models.
     )
     update_statement.where('id = %s', [vcs_id])
     _, rows = update_statement.execute(return_affected_rows=True)
-
-    if rows == 0:
-        raise exceptions.VCSFailedToUpdateException
 
     return get_vcs(db_connection, vcs_id, project_id)
 
