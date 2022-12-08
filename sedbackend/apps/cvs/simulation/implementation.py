@@ -26,10 +26,10 @@ def run_simulation(project_id: int, sim_settings: models.EditSimSettings, vcs_id
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
-    except vcs_exceptions.VCSNotFoundException:
+    except vcs_exceptions.VCSNotFoundException: #This exception will probably never fire
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs with id={vcs_id}.',
+            detail=f'Could not find vcs.',
         )
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
