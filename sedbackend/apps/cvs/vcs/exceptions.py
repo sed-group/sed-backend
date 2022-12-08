@@ -15,6 +15,10 @@ class VCSFailedDeletionException(Exception):
     pass
 
 
+class VCSYearFromGreaterThanYearToException(Exception):
+    pass
+
+
 class GenericDatabaseException(Exception):
     def __init__(self, msg: str = None):
         self.msg = msg

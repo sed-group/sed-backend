@@ -93,7 +93,10 @@ def get_vcs(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int) 
 def create_vcs(db_connection: PooledMySQLConnection, vcs_post: models.VCSPost, project_id: int) -> models.VCS:
     logger.debug(f'Creating a VCS in project with id={project_id}.')
 
-    get_cvs_project(db_connection, project_id)  # performs checks for existing project and correct user
+    get_cvs_project(db_connection, project_id)  # Perform checks for existing project and correct user
+
+    if vcs_post.year_to < vcs_post.year_from:
+        raise exceptions.VCSYearFromGreaterThanYearToException
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
@@ -109,6 +112,9 @@ def edit_vcs(db_connection: PooledMySQLConnection, vcs_id: int, new_vcs: models.
     logger.debug(f'Editing VCS with id={vcs_id}.')
 
     get_vcs(db_connection, vcs_id, project_id)  # Perform checks for existing project and correct user
+
+    if new_vcs.year_to < new_vcs.year_from:
+        raise exceptions.VCSYearFromGreaterThanYearToException
 
     # Updating
     update_statement = MySQLStatementBuilder(db_connection)

@@ -35,6 +35,11 @@ def get_vcs(vcs_id: int, project_id: int) -> models.VCS:
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find VCS with id={vcs_id}.',
         )
+    except project_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Could not find project with id={project_id}.',
+        )
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -63,6 +68,11 @@ def create_vcs(vcs_post: models.VCSPost, project_id: int) -> models.VCS:
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
+    except exceptions.VCSYearFromGreaterThanYearToException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Year from cannot be greater than year to.',
+        )
 
 
 def edit_vcs(vcs_id: int, vcs_post: models.VCSPost, project_id) -> models.VCS:
@@ -90,6 +100,11 @@ def edit_vcs(vcs_id: int, vcs_post: models.VCSPost, project_id) -> models.VCS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'VCS with id={vcs_id} does not belong to project with id={project_id}.',
+        )
+    except exceptions.VCSYearFromGreaterThanYearToException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Year from cannot be greater than year to.',
         )
 
 
