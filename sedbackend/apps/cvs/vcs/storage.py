@@ -73,7 +73,7 @@ def get_all_vcs(db_connection: PooledMySQLConnection, project_id: int) -> ListCh
     return chunk
 
 
-def get_vcs(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int) -> models.VCS:
+def get_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> models.VCS:
     logger.debug(f'Fetching VCS with id={vcs_id}.')
 
     select_statement = MySQLStatementBuilder(db_connection)
@@ -90,7 +90,7 @@ def get_vcs(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int) 
     return populate_vcs(db_connection, result)
 
 
-def create_vcs(db_connection: PooledMySQLConnection, vcs_post: models.VCSPost, project_id: int) -> models.VCS:
+def create_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_post: models.VCSPost) -> models.VCS:
     logger.debug(f'Creating a VCS in project with id={project_id}.')
 
     get_cvs_project(db_connection, project_id)  # Perform checks for existing project and correct user
@@ -105,13 +105,13 @@ def create_vcs(db_connection: PooledMySQLConnection, vcs_post: models.VCSPost, p
         .execute(fetch_type=FetchType.FETCH_NONE)
     vcs_id = insert_statement.last_insert_id
 
-    return get_vcs(db_connection, vcs_id, project_id)
+    return get_vcs(db_connection, project_id, vcs_id)
 
 
-def edit_vcs(db_connection: PooledMySQLConnection, vcs_id: int, new_vcs: models.VCSPost, project_id: int) -> models.VCS:
+def edit_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, new_vcs: models.VCSPost) -> models.VCS:
     logger.debug(f'Editing VCS with id={vcs_id}.')
 
-    get_vcs(db_connection, vcs_id, project_id)  # Perform checks for existing project and correct user
+    get_vcs(db_connection, project_id, vcs_id)  # Perform checks for existing project and correct user
 
     if new_vcs.year_to < new_vcs.year_from:
         raise exceptions.VCSYearFromGreaterThanYearToException
@@ -126,13 +126,13 @@ def edit_vcs(db_connection: PooledMySQLConnection, vcs_id: int, new_vcs: models.
     update_statement.where('id = %s', [vcs_id])
     _, rows = update_statement.execute(return_affected_rows=True)
 
-    return get_vcs(db_connection, vcs_id, project_id)
+    return get_vcs(db_connection, project_id, vcs_id)
 
 
-def delete_vcs(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int) -> bool:
+def delete_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> bool:
     logger.debug(f'Deleting VCS with id={vcs_id}.')
 
-    get_vcs(db_connection, vcs_id, project_id)  # Perform checks for existing VCS and matching project
+    get_vcs(db_connection, project_id, vcs_id)  # Perform checks for existing VCS and matching project
 
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement.delete(CVS_VCS_TABLE) \

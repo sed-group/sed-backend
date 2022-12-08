@@ -4,7 +4,7 @@ import sedbackend.apps.cvs.vcs.implementation as impl_vcs
 
 
 # ======================================================================================================================
-# get VCS
+# Get VCS
 # ======================================================================================================================
 
 def test_get_vcs(client, std_headers, std_user):
@@ -135,10 +135,10 @@ def test_edit_vcs(client, std_headers, std_user):
                            })
     # Assert
     assert res.status_code == 200  # 200 OK
-    assert impl_vcs.get_vcs(vcs.id, project.id).name == "new name"
-    assert impl_vcs.get_vcs(vcs.id, project.id).description == vcs.description
-    assert impl_vcs.get_vcs(vcs.id, project.id).year_from == vcs.year_from
-    assert impl_vcs.get_vcs(vcs.id, project.id).year_to == vcs.year_to
+    assert impl_vcs.get_vcs(project.id, vcs.id).name == "new name"
+    assert impl_vcs.get_vcs(project.id, vcs.id).description == vcs.description
+    assert impl_vcs.get_vcs(project.id, vcs.id).year_from == vcs.year_from
+    assert impl_vcs.get_vcs(project.id, vcs.id).year_to == vcs.year_to
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
 

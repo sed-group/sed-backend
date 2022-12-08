@@ -26,10 +26,10 @@ def get_all_vcs(project_id: int) -> ListChunk[models.VCS]:
         )
 
 
-def get_vcs(vcs_id: int, project_id: int) -> models.VCS:
+def get_vcs(project_id: int, vcs_id: int) -> models.VCS:
     try:
         with get_connection() as con:
-            return storage.get_vcs(con, vcs_id, project_id)
+            return storage.get_vcs(con, project_id, vcs_id)
     except exceptions.VCSNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -52,10 +52,10 @@ def get_vcs(vcs_id: int, project_id: int) -> models.VCS:
         )
 
 
-def create_vcs(vcs_post: models.VCSPost, project_id: int) -> models.VCS:
+def create_vcs(project_id: int, vcs_post: models.VCSPost) -> models.VCS:
     try:
         with get_connection() as con:
-            result = storage.create_vcs(con, vcs_post, project_id)
+            result = storage.create_vcs(con, project_id, vcs_post)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
@@ -75,10 +75,10 @@ def create_vcs(vcs_post: models.VCSPost, project_id: int) -> models.VCS:
         )
 
 
-def edit_vcs(vcs_id: int, vcs_post: models.VCSPost, project_id) -> models.VCS:
+def edit_vcs(project_id: int, vcs_id: int, vcs_post: models.VCSPost) -> models.VCS:
     try:
         with get_connection() as con:
-            result = storage.edit_vcs(con, vcs_id, vcs_post, project_id)
+            result = storage.edit_vcs(con, project_id, vcs_id, vcs_post)
             con.commit()
             return result
     except exceptions.VCSNotFoundException:
@@ -108,10 +108,10 @@ def edit_vcs(vcs_id: int, vcs_post: models.VCSPost, project_id) -> models.VCS:
         )
 
 
-def delete_vcs(vcs_id: int, project_id: int) -> bool:
+def delete_vcs(project_id: int, vcs_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.delete_vcs(con, vcs_id, project_id)
+            res = storage.delete_vcs(con, project_id, vcs_id)
             con.commit()
             return res
     except exceptions.VCSNotFoundException:

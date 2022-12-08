@@ -31,8 +31,8 @@ async def get_all_vcs(native_project_id: int) -> ListChunk[models.VCS]:
     response_model=models.VCS,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
-async def get_vcs(vcs_id: int, native_project_id: int) -> models.VCS:
-    return implementation.get_vcs(vcs_id, native_project_id)
+async def get_vcs(native_project_id: int, vcs_id: int) -> models.VCS:
+    return implementation.get_vcs(native_project_id, vcs_id)
 
 
 @router.post(
@@ -41,8 +41,8 @@ async def get_vcs(vcs_id: int, native_project_id: int) -> models.VCS:
     response_model=models.VCS,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def create_vcs(vcs_post: models.VCSPost, native_project_id: int) -> models.VCS:
-    return implementation.create_vcs(vcs_post, native_project_id)
+async def create_vcs(native_project_id: int, vcs_post: models.VCSPost) -> models.VCS:
+    return implementation.create_vcs(native_project_id, vcs_post)
 
 
 @router.put(
@@ -51,9 +51,8 @@ async def create_vcs(vcs_post: models.VCSPost, native_project_id: int) -> models
     response_model=models.VCS,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def edit_vcs(vcs_id: int, vcs_post: models.VCSPost,
-                   native_project_id: int) -> models.VCS:
-    return implementation.edit_vcs(vcs_id, vcs_post, native_project_id)
+async def edit_vcs(native_project_id: int, vcs_id: int, vcs_post: models.VCSPost) -> models.VCS:
+    return implementation.edit_vcs(native_project_id, vcs_id, vcs_post)
 
 
 @router.delete(
@@ -62,8 +61,8 @@ async def edit_vcs(vcs_id: int, vcs_post: models.VCSPost,
     response_model=bool,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def delete_vcs(vcs_id: int, native_project_id: int) -> bool:
-    return implementation.delete_vcs(vcs_id, native_project_id)
+async def delete_vcs(native_project_id: int, vcs_id: int) -> bool:
+    return implementation.delete_vcs(native_project_id, vcs_id)
 
 
 # ======================================================================================================================
