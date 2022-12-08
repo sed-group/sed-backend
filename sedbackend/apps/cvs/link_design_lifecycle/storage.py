@@ -5,6 +5,8 @@ from mysql.connector.pooling import PooledMySQLConnection
 
 from sedbackend.apps.cvs.design.storage import get_design_group
 from sedbackend.apps.cvs.vcs.implementation import get_vcs_row
+from sedbackend.apps.cvs.project.implementation import get_cvs_project
+from sedbackend.apps.cvs.vcs.implementation import get_vcs
 from sedbackend.apps.cvs.link_design_lifecycle import models, exceptions
 from sedbackend.libs.mysqlutils.builder import FetchType, MySQLStatementBuilder
 from sedbackend.apps.cvs.market_input import implementation as market_impl
@@ -99,6 +101,8 @@ def get_all_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_
     logger.debug(f'Fetching all formulas with vcs_id={vcs_id}')
 
     get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
+    get_cvs_project(project_id)
+    get_vcs(vcs_id, project_id)
 
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement.select(CVS_FORMULAS_TABLE, CVS_FORMULAS_COLUMNS) \
@@ -131,6 +135,9 @@ def delete_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_r
     logger.debug(f'Deleting formulas with vcs_row_id: {vcs_row_id}')
 
     get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
+    #get_cvs_project(project_id)
+    get_vcs_row(vcs_row_id)
+
 
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement \

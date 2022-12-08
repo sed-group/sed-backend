@@ -10,6 +10,7 @@ from sedbackend.apps.cvs.project import exceptions as project_exceptions
 from sedbackend.apps.cvs.design import exceptions as design_exceptions
 
 
+
 def edit_formulas(project_id: int, vcs_row_id: int, design_group_id: int, new_formulas: models.FormulaPost) -> bool:
     with get_connection() as con:
         try:
@@ -54,7 +55,7 @@ def get_all_formulas(project_id: int, vcs_id: int, design_group_id: int) -> List
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f'Could not find VCS with id {vcs_id}'
             )
-        except WrongTimeUnitException as e:
+        except WrongTimeUnitException as e: #Where exactly does this fire????
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, 
                 detail=f'Wrong time unit. Given unit: {e.time_unit}'
@@ -91,6 +92,11 @@ def delete_formulas(project_id: int, vcs_row_id: int, design_group_id: int) -> b
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f'Project with id={project_id} does not match design group with id={design_group_id}'
+            )
+        except design_exceptions.DesignGroupNotFoundException:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f'Could not find design with id={design_group_id}.',
             )
 
 
