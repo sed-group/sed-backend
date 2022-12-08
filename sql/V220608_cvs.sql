@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_projects`
     `id`               INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `name`             VARCHAR(255) NULL     DEFAULT 'Unnamed project',
     `description`      TEXT         NULL     DEFAULT NULL,
-    `currency`         VARCHAR(10)   NULL     DEFAULT '€',
+    `currency`         VARCHAR(10)   NULL    DEFAULT NULL,
     `owner_id`         INT UNSIGNED NOT NULL,
     `datetime_created` DATETIME(3)  NOT NULL DEFAULT NOW(3),
     PRIMARY KEY (`id`),
