@@ -7,6 +7,7 @@ from sedbackend.apps.cvs.link_design_lifecycle.exceptions import FormulasFailedD
     FormulasFailedUpdateException, FormulasNotFoundException, TooManyFormulasUpdatedException, \
     VCSNotFoundException, WrongTimeUnitException
 from sedbackend.apps.cvs.project import exceptions as project_exceptions
+from sedbackend.apps.cvs.design import exceptions as design_exceptions
 
 
 def edit_formulas(project_id: int, vcs_row_id: int, design_group_id: int, new_formulas: models.FormulaPost) -> bool:
@@ -15,7 +16,7 @@ def edit_formulas(project_id: int, vcs_row_id: int, design_group_id: int, new_fo
             res = storage.edit_formulas(con, project_id, vcs_row_id, design_group_id, new_formulas)
             con.commit()
             return res
-        except FormulasFailedUpdateException:
+        except FormulasFailedUpdateException: 
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f'No formulas updated. Are the formulas changed?'
@@ -24,6 +25,11 @@ def edit_formulas(project_id: int, vcs_row_id: int, design_group_id: int, new_fo
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f'Too many formulas tried to be updated.'
+            )
+        except design_exceptions.DesignGroupNotFoundException:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f'Could not find designgroup with id {design_group_id}'
             )
         except project_exceptions.CVSProjectNotFoundException:
             raise HTTPException(

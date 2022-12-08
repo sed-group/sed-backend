@@ -51,6 +51,47 @@ def test_create_formulas(client, std_headers, std_user):
   tu.delete_project_by_id(project.id, current_user.id)
 
 
+def test_create_formulas_no_optional(client, std_headers, std_user):
+  #Setup
+  current_user = impl_users.impl_get_user_with_username(std_user.username)
+  project = tu.seed_random_project(current_user.id)
+
+  vcs = tu.seed_random_vcs(current_user.id, project.id)
+  vcs_rows = tu.seed_vcs_table_rows(vcs.id, project.id, current_user.id, 1)
+  if vcs_rows == None:
+    raise Exception
+  row_id = vcs_rows[0].id
+  design_group = tu.seed_random_design_group(project.id)
+
+  #Act
+  time = testutils.random_str(10,200)
+  time_unit = tu.random_time_unit()
+  cost = testutils.random_str(10, 200)
+  revenue = testutils.random_str(10, 200)
+  rate = tu.random_rate_choice()
+
+
+  res = client.put(f'/api/cvs/project/{project.id}/vcs-row/{row_id}/design-group/{design_group.id}/formulas',
+                  headers=std_headers,
+                  json = {
+                    "time": time,
+                    "time_unit": time_unit,
+                    "cost": cost,
+                    "revenue": revenue,
+                    "rate": rate
+                  })
+
+  #Assert
+  assert res.status_code == 200
+  assert res.json() == True
+  
+
+  #Cleanup
+  tu.delete_design_group(project.id, design_group.id)
+  tu.delete_VCS_with_ids([vcs.id], project.id)
+  tu.delete_project_by_id(project.id, current_user.id)
+
+
 def test_get_all_formulas(client, std_headers, std_user):
   #Setup
   current_user = impl_users.impl_get_user_with_username(std_user.username)
@@ -120,6 +161,121 @@ def test_edit_formulas(client, std_headers, std_user):
   tu.delete_project_by_id(project.id, current_user.id)
 
 
+def test_edit_formulas_no_optional(client, std_headers, std_user):
+#Setup
+  current_user = impl_users.impl_get_user_with_username(std_user.username)
+  project = tu.seed_random_project(current_user.id)
+
+  vcs = tu.seed_random_vcs(current_user.id, project.id)  
+  design_group = tu.seed_random_design_group(project.id)
+
+  #Act
+  formulas = tu.seed_random_formulas(project.id, vcs.id, design_group.id, current_user.id, 1)
+
+  time = testutils.random_str(10,200)
+  time_unit = tu.random_time_unit()
+  cost = testutils.random_str(10, 200)
+  revenue = testutils.random_str(10, 200)
+  rate = tu.random_rate_choice()
+
+  res = client.put(f'/api/cvs/project/{project.id}/vcs-row/{formulas[0].vcs_row_id}/design-group/{formulas[0].design_group_id}/formulas',
+                  headers=std_headers,
+                  json = {
+                    "time": time,
+                    "time_unit": time_unit,
+                    "cost": cost,
+                    "revenue": revenue,
+                    "rate": rate
+                  })
+  
+  #Assert
+  assert res.status_code == 200
+  assert res.json() == True
+
+  #Cleanup
+  tu.delete_formulas(project.id, [(formula.vcs_row_id, formula.design_group_id) for formula in formulas])
+  tu.delete_design_group(project.id, design_group.id)
+  tu.delete_VCS_with_ids([vcs.id], project.id)
+  tu.delete_project_by_id(project.id, current_user.id)
+
+
+def test_edit_formulas_invalid_dg(client, std_headers, std_user):
+  #Setup
+  current_user = impl_users.impl_get_user_with_username(std_user.username)
+  project = tu.seed_random_project(current_user.id)
+
+  vcs = tu.seed_random_vcs(current_user.id, project.id)
+  vcs_rows = tu.seed_vcs_table_rows(vcs.id, project.id, current_user.id, 1)
+  if vcs_rows == None:
+    raise Exception
+  row_id = vcs_rows[0].id
+  design_group = tu.seed_random_design_group(project.id)
+  dg_invalid_id = design_group.id + 1
+
+  #Act
+  time = testutils.random_str(10,200)
+  time_unit = tu.random_time_unit()
+  cost = testutils.random_str(10, 200)
+  revenue = testutils.random_str(10, 200)
+  rate = tu.random_rate_choice()
+
+  res = client.put(f'/api/cvs/project/{project.id}/vcs-row/{row_id}/design-group/{dg_invalid_id}/formulas',
+                  headers=std_headers,
+                  json = {
+                    "time": time,
+                    "time_unit": time_unit,
+                    "cost": cost,
+                    "revenue": revenue,
+                    "rate": rate
+                  })
+
+  #Assert
+  assert res.status_code == 404
+  
+
+  #Cleanup
+  tu.delete_design_group(project.id, design_group.id)
+  tu.delete_VCS_with_ids([vcs.id], project.id)
+  tu.delete_project_by_id(project.id, current_user.id)
+
+
+def test_edit_formulas_invalid_vcs_row(client, std_headers, std_user):
+    #Setup
+  current_user = impl_users.impl_get_user_with_username(std_user.username)
+  project = tu.seed_random_project(current_user.id)
+
+  vcs = tu.seed_random_vcs(current_user.id, project.id)
+  vcs_rows = tu.seed_vcs_table_rows(vcs.id, project.id, current_user.id, 1)
+  if vcs_rows == None:
+    raise Exception
+  row_id = vcs_rows[0].id + 1
+  design_group = tu.seed_random_design_group(project.id)
+
+  #Act
+  time = testutils.random_str(10,200)
+  time_unit = tu.random_time_unit()
+  cost = testutils.random_str(10, 200)
+  revenue = testutils.random_str(10, 200)
+  rate = tu.random_rate_choice()
+
+  res = client.put(f'/api/cvs/project/{project.id}/vcs-row/{row_id}/design-group/{design_group.id}/formulas',
+                  headers=std_headers,
+                  json = {
+                    "time": time,
+                    "time_unit": time_unit,
+                    "cost": cost,
+                    "revenue": revenue,
+                    "rate": rate
+                  })
+
+  #Assert
+  assert res.status_code == 404
+  
+
+  #Cleanup
+  tu.delete_design_group(project.id, design_group.id)
+  tu.delete_VCS_with_ids([vcs.id], project.id)
+  tu.delete_project_by_id(project.id, current_user.id)
 
 
 
@@ -144,6 +300,7 @@ def test_delete_formulas(client, std_headers, std_user):
   tu.delete_design_group(project.id, design_group.id)
   tu.delete_VCS_with_ids([vcs.id], project.id)
   tu.delete_project_by_id(project.id, current_user.id)
+
 
 def test_get_vcs_dg_pairs(client, std_headers, std_user):
   #Setup
