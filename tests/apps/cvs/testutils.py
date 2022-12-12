@@ -2,6 +2,9 @@ from turtle import end_fill
 from typing import List, Tuple
 import random
 
+import sedbackend.apps.cvs.simulation.implementation as sim_impl
+import sedbackend.apps.cvs.simulation.models as sim_model
+from sedbackend.apps.cvs.simulation.models import NonTechCost
 import sedbackend.apps.cvs.design.implementation as design_impl
 import sedbackend.apps.cvs.design.models as design_model
 import sedbackend.apps.cvs.link_design_lifecycle.implementation as connect_impl
@@ -399,6 +402,48 @@ def delete_formulas(project_id: int, vcsRow_Dg_ids: List[Tuple[int, int]]):
     for (vcs_row, dg) in vcsRow_Dg_ids:
         connect_impl.delete_formulas(project_id, vcs_row, dg)
 
+
+# ======================================================================================================================
+# Simulation
+# ======================================================================================================================
+
+def seed_random_sim_settings(project_id: int) -> sim_model.SimSettings:
+    time_unit = random_time_unit()
+    interarrival_time = tu.random.uniform(1, 255)
+    start_time = tu.random.uniform(1, 300)
+    end_time = tu.random.uniform(300, 1000)
+    if tu.random.getrandbits(1):
+        flow_process = tu.random_str(10, 100) #Should probably ensure that this belongs to an actual process
+        flow_start_time = None #Get valid start time
+        flow_time = tu.random.uniform(start_time, end_time)
+    else:
+        flow_process = None
+        flow_start_time = tu.random.uniform(start_time, end_time)
+        flow_time = tu.random.uniform(flow_start_time, end_time)
+    
+    discount_rate = tu.random.random()
+    non_tech_add = random_non_technical_cost()
+    monte_carlo = bool(tu.random.getrandbits(1))
+    runs = 0 if not monte_carlo else tu.random.randint(1, 200)
+
+    sim_settings = sim_model.EditSimSettings(
+        time_unit = time_unit,
+        flow_process = flow_process,
+        flow_start_time = flow_start_time,
+        flow_time=flow_time,
+        interarrival_time=interarrival_time,
+        start_time=start_time,
+        end_time=end_time,
+        discount_rate=discount_rate,
+        non_tech_add=non_tech_add,
+        monte_carlo=monte_carlo,
+        runs=runs
+    )
+
+    sim_impl.edit_sim_settings(project_id, sim_settings)
+    return sim_impl.get_sim_settings(project_id)
+
+
 # ======================================================================================================================
 # Utility
 # ======================================================================================================================
@@ -409,3 +454,7 @@ def random_time_unit():
 
 def random_rate_choice():
     return random.choice(list(Rate)).value
+
+
+def random_non_technical_cost():
+    return random.choice(list(NonTechCost)).value

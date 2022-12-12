@@ -10,7 +10,7 @@ from sedbackend.apps.cvs.simulation import models, storage
 from sedbackend.apps.core.authentication import exceptions as auth_ex
 from sedbackend.apps.core.db import get_connection
 from sedbackend.apps.cvs.project import exceptions as project_exceptions
-from sedbackend.apps.cvs.simulation.exceptions import DSMFileNotFoundException, DesignIdsNotFoundException, FormulaEvalException, NegativeTimeException, ProcessNotFoundException, RateWrongOrderException
+from sedbackend.apps.cvs.simulation.exceptions import DSMFileNotFoundException, DesignIdsNotFoundException, FormulaEvalException, NegativeTimeException, ProcessNotFoundException, RateWrongOrderException, InvalidFlowSettingsException
 from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.market_input import exceptions as market_input_exceptions
 
@@ -130,7 +130,7 @@ def run_xlsx_simulation(project_id: int, sim_settings: models.EditSimSettings, v
                         user_id: int) -> List[models.Simulation]:
     try: 
         with get_connection() as con:
-            res = storage.run_sim_with_xlsx_dsm(con, project_id, sim_settings, vcs_ids, design_ids, normalized_npv, user_id)
+            res = storage.run_sim_with_xlsx_dsm(con, project_id, sim_settings, vcs_ids, design_ids, normalized_npv, user_id) #Wtf saknar xlsx file
             return res
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
@@ -235,6 +235,12 @@ def edit_sim_settings(project_id: int, sim_settings: models.EditSimSettings) -> 
             res = storage.edit_simulation_settings(con, project_id, sim_settings)
             con.commit()
             return res
+    except InvalidFlowSettingsException:
+        logger.debug("Invalid flow settings")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Both flow process and flow start time supplied or neither supplied'
+        )
     except Exception as e:
         logger.debug(e)
         raise HTTPException(

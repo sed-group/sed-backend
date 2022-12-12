@@ -26,3 +26,6 @@ class SimulationFailedException(Exception):
 
 class DesignIdsNotFoundException(Exception):
     pass
+
+class InvalidFlowSettingsException(Exception):
+    pass

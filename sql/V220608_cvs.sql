@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_simulation_settings`
         ON DELETE CASCADE
         ON UPDATE NO ACTION,
     CONSTRAINT `check_non_tech` CHECK (`non_tech_add` IN ('to_process', 'lump_sum', 'continously', 'no_cost')),
-    CONSTRAINT `check_time_unit` CHECK (`time_unit` IN ('year', 'month', 'week', 'day', 'hour'))
+    CONSTRAINT `check_time_unit` CHECK (`time_unit` IN ('year', 'month', 'week', 'day', 'hour', 'minutes'))
 );
 
 #Value Creation Strategies

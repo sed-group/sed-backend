@@ -378,6 +378,10 @@ def get_simulation_settings(db_connection: PooledMySQLConnection, project_id: in
 def  edit_simulation_settings(db_connection: PooledMySQLConnection, project_id: int, sim_settings: models.EditSimSettings):
     logger.debug(f'Editing simulation settings for project {project_id}')
 
+    if (sim_settings.flow_process is None and sim_settings.flow_start_time is None) \
+        or (sim_settings.flow_process is not None and sim_settings.flow_start_time is not None):
+        raise e.InvalidFlowSettingsException
+        
     count_sim = MySQLStatementBuilder(db_connection)
     count = count_sim.count(SIM_SETTINGS_TABLE)\
         .where('project = %s', [project_id])\
