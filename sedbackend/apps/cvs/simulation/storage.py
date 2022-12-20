@@ -177,9 +177,11 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, simSet
     process = simSettings.flow_process
     time_unit = TIME_FORMAT_DICT.get(simSettings.time_unit)
 
+    print(vcs_ids)
     for vcs_id in vcs_ids:
         res = get_sim_data(db_connection, vcs_id)
-
+        print(vcs_id)
+        print(res)
         if not check_entity_rate(res, process):
             raise e.RateWrongOrderException
         
@@ -188,10 +190,11 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, simSet
             #    design_ids.append(design.id)
             raise e.DesignIdsNotFoundException
 
-        
+        print(design_ids)
         for design_id in design_ids:
+            print(design_id)
             processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id)
-        
+            print(processes, non_tech_processes)
         
             dsm = create_simple_dsm(processes) #TODO Change to using BPMN
 

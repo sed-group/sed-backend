@@ -126,6 +126,7 @@ def run_csv_simulation(project_id: int, sim_settings: models.EditSimSettings, vc
             detail=f'No design ids or empty array supplied'
         )
 
+
 def run_xlsx_simulation(project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int],  design_ids: List[int], normalized_npv: bool, 
                         user_id: int) -> List[models.Simulation]:
     try: 
@@ -183,6 +184,7 @@ def run_xlsx_simulation(project_id: int, sim_settings: models.EditSimSettings, v
             detail=f'No design ids or empty array supplied'
         )
 
+
 def run_sim_monte_carlo(project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int], design_ids: List[int], 
         normalized_npv: bool, user_id: int = None) -> List[models.Simulation]:
     try: 
@@ -216,18 +218,25 @@ def run_sim_monte_carlo(project_id: int, sim_settings: models.EditSimSettings, v
             detail=f'No design ids or empty array supplied'
         )
 
+
 def get_sim_settings(project_id: int) -> models.SimSettings:
     try:
         with get_connection() as con: 
             result = storage.get_simulation_settings(con, project_id)
             con.commit()
             return result
+    except project_exceptions.CVSProjectNotFoundException:
+      raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f'Could not find project'
+      )
     except Exception as e:
         logger.debug(e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Could not send simulation settings'
         )
+
 
 def edit_sim_settings(project_id: int, sim_settings: models.EditSimSettings) -> bool:
     try: 
@@ -247,3 +256,4 @@ def edit_sim_settings(project_id: int, sim_settings: models.EditSimSettings) -> 
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Could not update simulation settings'
         )
+

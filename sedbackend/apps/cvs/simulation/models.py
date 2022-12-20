@@ -2,16 +2,17 @@ from typing import List
 from enum import Enum
 from pydantic import BaseModel
 from typing import  Optional
+import json
 
 
-class NonTechCost(Enum):
+class NonTechCost(str, Enum):
     """
     The ways of choosing how to apply the non-technical process costs
     """
-    TO_TECHNICAL_PROCESS = 'to_process'
-    LUMP_SUM = 'lump_sum'
-    CONTINOUSLY = 'continously'
-    NO_ADDED_COST = 'no_cost'
+    TO_TECHNICAL_PROCESS: str = 'to_process'
+    LUMP_SUM: str = 'lump_sum'
+    CONTINOUSLY: str = 'continously'
+    NO_ADDED_COST: str = 'no_cost'
 
 
 class Process(BaseModel):
@@ -51,6 +52,7 @@ class EditSimSettings(BaseModel):
     non_tech_add: NonTechCost
     monte_carlo: bool
     runs: int
+    
 
 class SimSettings(EditSimSettings):
     project: int
