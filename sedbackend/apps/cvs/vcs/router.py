@@ -76,8 +76,8 @@ async def delete_vcs(native_project_id: int, vcs_id: int) -> bool:
     response_model=List[models.VcsRow],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
-async def get_vcs_table(vcs_id: int, native_project_id: int) -> List[models.VcsRow]:
-    return implementation.get_vcs_table(vcs_id, native_project_id)
+async def get_vcs_table(native_project_id: int, vcs_id: int) -> List[models.VcsRow]:
+    return implementation.get_vcs_table(native_project_id, vcs_id)
 
 
 @router.put(
@@ -86,8 +86,8 @@ async def get_vcs_table(vcs_id: int, native_project_id: int) -> List[models.VcsR
     response_model=bool,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def edit_vcs_table(updated_table: List[models.VcsRowPost], vcs_id: int, native_project_id: int) -> bool:
-    return implementation.edit_vcs_table(updated_table, vcs_id, native_project_id)
+async def edit_vcs_table(native_project_id: int, vcs_id: int, updated_table: List[models.VcsRowPost]) -> bool:
+    return implementation.edit_vcs_table(native_project_id, vcs_id, updated_table)
 
 
 @router.delete(

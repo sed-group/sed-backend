@@ -395,6 +395,20 @@ def delete_value_driver(db_connection: PooledMySQLConnection, value_driver_id: i
     return True
 
 
+def delete_all_value_drivers(db_connection: PooledMySQLConnection, user_id: int) -> bool:
+    logger.debug(f'Deleting all value drivers for user with id={user_id}.')
+
+    delete_statement = MySQLStatementBuilder(db_connection)
+    _, rows = delete_statement.delete(CVS_VALUE_DRIVER_TABLE) \
+        .where('user = %s', [user_id]) \
+        .execute(return_affected_rows=True)
+
+    if rows == 0:
+        raise exceptions.ValueDriverNotFoundException
+
+    return True
+
+
 def populate_value_driver(db_result) -> models.ValueDriver:
     return models.ValueDriver(
         id=db_result['id'],
@@ -675,17 +689,17 @@ def create_stakeholder_need(db_connection: PooledMySQLConnection, vcs_row_id: in
                             need: models.StakeholderNeedPost) -> int:
     logger.debug(f'Creating stakeholder need for vcs row with id={vcs_row_id}')
 
-    try:
-        insert_statement = MySQLStatementBuilder(db_connection)
-        insert_statement \
-            .insert(table=CVS_VCS_STAKEHOLDER_NEED_TABLE,
-                    columns=['vcs_row', 'need', 'value_dimension', 'rank_weight']) \
-            .set_values([vcs_row_id, need.need, need.value_dimension, need.rank_weight]) \
-            .execute(fetch_type=FetchType.FETCH_NONE)
-        need_id = insert_statement.last_insert_id
-    except Error as e:
-        logger.debug(f'Error msg: {e.msg}')
-        raise exceptions.VCSStakeholderNeedFailedCreationException
+    #try:
+    insert_statement = MySQLStatementBuilder(db_connection)
+    insert_statement \
+        .insert(table=CVS_VCS_STAKEHOLDER_NEED_TABLE,
+                columns=['vcs_row', 'need', 'value_dimension', 'rank_weight']) \
+        .set_values([vcs_row_id, need.need, need.value_dimension, need.rank_weight]) \
+        .execute(fetch_type=FetchType.FETCH_NONE)
+    need_id = insert_statement.last_insert_id
+    #except Error as e:
+    #    logger.debug(f'Error msg: {e.msg}')
+    #    raise exceptions.VCSStakeholderNeedFailedCreationException
 
     return need_id
 
@@ -742,10 +756,10 @@ def delete_stakeholder_need(db_connection: PooledMySQLConnection, need_id: int) 
 # VCS Rows
 # ======================================================================================================================
 
-def get_vcs_table(db_connection: PooledMySQLConnection, vcs_id: int, project_id: int) -> List[models.VcsRow]:
+def get_vcs_table(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> List[models.VcsRow]:
     logger.debug(f'Fetching all table for VCS with id={vcs_id}.')
 
-    get_vcs(db_connection, vcs_id, project_id)  # Check if VCS exists and belongs to project
+    get_vcs(db_connection, project_id, vcs_id)  # Check if VCS exists and belongs to project
 
     select_statement = MySQLStatementBuilder(db_connection)
     results = select_statement \
@@ -765,6 +779,9 @@ def get_vcs_row(db_connection: PooledMySQLConnection, vcs_row_id: int) -> models
         .select(CVS_VCS_ROWS_TABLE, CVS_VCS_ROWS_COLUMNS)\
         .where(f'id = %s', [vcs_row_id])\
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if result is None:
+        raise exceptions.VCSTableRowNotFoundException
 
     return populate_vcs_row(db_connection, result)
 
@@ -844,11 +861,11 @@ def create_vcs_table(db_connection: PooledMySQLConnection, new_vcs_rows: List[mo
 
 
 # TODO: Too big, split into smaller methods
-def edit_vcs_table(db_connection: PooledMySQLConnection, updated_vcs_rows: List[models.VcsRowPost],
-                   vcs_id: int, project_id: int) -> bool:
+def edit_vcs_table(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
+                   updated_vcs_rows: List[models.VcsRowPost]) -> bool:
     logger.debug(f'Editing vcs table')
 
-    get_vcs(db_connection, vcs_id, project_id)  # Check if VCS exists and belongs to project
+    get_vcs(db_connection, project_id, vcs_id)  # Check if VCS exists and belongs to project
 
     new_table_ids = []
 
@@ -913,7 +930,7 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, updated_vcs_rows: List[
             if need.id not in new_need_ids:
                 delete_stakeholder_need(db_connection, need.id)
 
-    curr_table = get_vcs_table(db_connection, vcs_id, project_id)
+    curr_table = get_vcs_table(db_connection, project_id, vcs_id)
 
     for row in curr_table:
         if row.id not in new_table_ids:
