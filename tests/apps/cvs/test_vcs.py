@@ -96,7 +96,7 @@ def test_create_vcs_table(client, std_headers, std_user):
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
     vcs = tu.seed_random_vcs(current_user.id, project.id)
-    value_driver = tu.seed_random_value_driver(current_user.id, project.id)
+    value_driver = tu.seed_random_value_driver(current_user.id)
 
     #Act
     res = client.post(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/create/table',

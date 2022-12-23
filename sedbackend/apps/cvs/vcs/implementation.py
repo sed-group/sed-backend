@@ -256,6 +256,29 @@ def delete_value_driver(value_driver_id: int) -> bool:
         )
 
 
+def delete_all_value_drivers(user_id: int) -> bool:
+    try:
+        with get_connection() as con:
+            res = storage.delete_all_value_drivers(con, user_id)
+            con.commit()
+            return res
+    except exceptions.ValueDriverNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find value driver with id={user_id}.',
+        )
+    except exceptions.ValueDriverFailedDeletionException:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Failed to remove value driver with id={user_id}.',
+        )
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
+
+
 # ======================================================================================================================
 # VCS ISO Processes
 # ======================================================================================================================
@@ -442,10 +465,10 @@ def update_indices_subprocess(subprocess_ids: List[int], order_indices: List[int
 # ======================================================================================================================
 
 
-def get_vcs_table(vcs_id: int, project_id: int) -> List[models.VcsRow]:
+def get_vcs_table(project_id: int, vcs_id: int) -> List[models.VcsRow]:
     try:
         with get_connection() as con:
-            return storage.get_vcs_table(con, vcs_id, project_id)
+            return storage.get_vcs_table(con, project_id, vcs_id)
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -463,10 +486,10 @@ def get_vcs_table(vcs_id: int, project_id: int) -> List[models.VcsRow]:
         )
 
 
-def edit_vcs_table(updated_vcs_rows: List[models.VcsRowPost], vcs_id: int, project_id: int) -> bool:
+def edit_vcs_table(project_id: int, vcs_id: int, updated_vcs_rows: List[models.VcsRowPost]) -> bool:
     try:
         with get_connection() as con:
-            res = storage.edit_vcs_table(con, updated_vcs_rows, vcs_id, project_id)
+            res = storage.edit_vcs_table(con, project_id, vcs_id, updated_vcs_rows)
             con.commit()
             return res
     except exceptions.VCSTableRowFailedToUpdateException:
