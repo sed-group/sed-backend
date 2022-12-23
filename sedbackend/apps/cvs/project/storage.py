@@ -103,18 +103,6 @@ def edit_cvs_project(db_connection: PooledMySQLConnection, project_id: int,
 def delete_cvs_project(db_connection: PooledMySQLConnection, project_id: int, user_id: int) -> bool:
     logger.debug(f'Deleting CVS project with id={project_id}.')
 
-    select_statement = MySQLStatementBuilder(db_connection)
-    result = select_statement \
-        .select(CVS_PROJECT_TABLE, ['owner_id']) \
-        .where('id = %s', [project_id]) \
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-
-    if result is None:
-        raise exceptions.CVSProjectNotFoundException
-
-    if result['owner_id'] != user_id:
-        raise auth_exceptions.UnauthorizedOperationException
-
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement.delete(CVS_PROJECT_TABLE) \
         .where('id = %s', [project_id]) \
