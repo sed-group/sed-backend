@@ -141,7 +141,7 @@ def run_xlsx_simulation(project_id: int, sim_settings: models.EditSimSettings, v
     except vcs_exceptions.VCSNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs with id={vcs_id}.',
+            detail=f'Could not find vcs with id=.',
         )
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(

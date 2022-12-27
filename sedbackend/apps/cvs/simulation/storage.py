@@ -1,4 +1,4 @@
-
+import sys
 import tempfile
 from fastapi import UploadFile
 from mysql.connector.pooling import PooledMySQLConnection
@@ -30,7 +30,7 @@ TIME_FORMAT_DICT = dict({
     'week': TimeFormat.WEEK, 
     'day': TimeFormat.DAY, 
     'hour': TimeFormat.HOUR,
-    #'minutes': TimeFormat.MINUTES
+    'minutes': TimeFormat.MINUTES
 })
 
 
@@ -194,7 +194,7 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, simSet
         for design_id in design_ids:
             print(design_id)
             processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id)
-            print(processes, non_tech_processes)
+            print([p.name for p in processes], non_tech_processes)
         
             dsm = create_simple_dsm(processes) #TODO Change to using BPMN
 
@@ -205,7 +205,9 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, simSet
                 discount_rate, runtime)
         
             except Exception as exc:
-                logger.debug(f'{exc.__class__}, {exc}')
+                tb = sys.exc_info()[2]
+                logger.debug(f'{exc.__class__}, {exc}, {exc.with_traceback(tb)}')
+                print(f'{exc.__class__}, {exc}')
                 raise e.SimulationFailedException
 
             
@@ -397,7 +399,7 @@ def  edit_simulation_settings(db_connection: PooledMySQLConnection, project_id: 
         columns = SIM_SETTINGS_COLUMNS[1:]
         set_statement = ','.join([col + ' = %s' for col in columns])
 
-        values = [sim_settings.time_unit, sim_settings.flow_process, sim_settings.flow_start_time, sim_settings.flow_time,  
+        values = [sim_settings.time_unit.value, sim_settings.flow_process, sim_settings.flow_start_time, sim_settings.flow_time,  
             sim_settings.interarrival_time, sim_settings.start_time, sim_settings.end_time, 
             sim_settings.discount_rate, sim_settings.non_tech_add.value, sim_settings.monte_carlo, sim_settings.runs]
         update_Statement = MySQLStatementBuilder(db_connection)
@@ -414,7 +416,7 @@ def  edit_simulation_settings(db_connection: PooledMySQLConnection, project_id: 
 
 def create_sim_settings(db_connection: PooledMySQLConnection, project_id: int, sim_settings: models.EditSimSettings) -> models.SimSettings:
     
-    values = [project_id] + [sim_settings.time_unit, sim_settings.flow_process, sim_settings.flow_start_time, sim_settings.flow_time,  
+    values = [project_id] + [sim_settings.time_unit.value, sim_settings.flow_process, sim_settings.flow_start_time, sim_settings.flow_time,  
             sim_settings.interarrival_time, sim_settings.start_time, sim_settings.end_time, 
             sim_settings.discount_rate, sim_settings.non_tech_add.value, sim_settings.monte_carlo, sim_settings.runs]
 

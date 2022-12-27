@@ -1,4 +1,3 @@
-from turtle import end_fill
 from typing import List, Tuple
 import random
 
@@ -399,6 +398,7 @@ def random_design(value_driver_ids: int = None):
 
 def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, user_id: int, amount:int = 10) -> List[connect_model.FormulaRowGet]:
     vcs_rows = seed_vcs_table_rows(vcs_id, project_id, user_id, amount)
+    rate_per_prod = False
     for vcs_row in vcs_rows:
 
         time = str(tu.random.randint(1, 200))
@@ -406,6 +406,10 @@ def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, use
         cost = str(tu.random.randint(1, 2000))
         revenue = str(tu.random.randint(1, 10000))
         rate = random_rate_choice()
+        if rate == Rate.PRODUCT.value:
+          rate_per_prod = True
+        if rate_per_prod and rate == Rate.PROJECT.value:
+          rate = Rate.PRODUCT.value
 
         # TODO when value drivers and market inputs are connected to the
         # formulas, add them here.
@@ -432,6 +436,46 @@ def delete_formulas(project_id: int, vcsRow_Dg_ids: List[Tuple[int, int]]):
         connect_impl.delete_formulas(project_id, vcs_row, dg)
 
 
+def seed_formulas_for_multiple_vcs(project_id: int, vcss: List[int], dgs: List[int], user_id: int):
+  tr = random_table_row(project_id, user_id, vcss[0])
+  while tr.subprocess != None:
+    tr = random_table_row(project_id, user_id, vcss[0])
+  
+  for vcs_id in vcss:
+    table = vcs_impl.get_vcs_table(vcs_id, project_id) # TODO convert the table from VcsRow into VcsRowPost items in order to edit it. 
+    table.append(tr)
+    vcs_impl.edit_vcs_table(table, vcs_id, project_id)
+  
+  time = str(tu.random.randint(1, 200))
+  time_unit = random_time_unit()
+  cost = str(tu.random.randint(1, 2000))
+  revenue = str(tu.random.randint(1, 10000))
+  rate = random_rate_choice()
+  if rate == Rate.PRODUCT.value:
+    rate_per_prod = True
+  if rate_per_prod and rate == Rate.PROJECT.value:
+    rate = Rate.PRODUCT.value
+
+  # TODO when value drivers and market inputs are connected to the
+  # formulas, add them here.
+  value_driver_ids = []
+  market_input_ids = []
+
+  formulaPost = connect_model.FormulaPost(
+      time=time,
+      time_unit=time_unit,
+      cost=cost,
+      revenue=revenue,
+      rate=rate,
+      value_driver_ids=value_driver_ids,
+      market_input_ids=market_input_ids
+  )
+
+  for vcs_id in vcss:
+    for dg_id in dgs:
+      connect_impl.edit_formulas(project_id, vcs_id, dg_id, formulaPost)
+  
+
 # ======================================================================================================================
 # Simulation
 # ======================================================================================================================
@@ -446,6 +490,7 @@ def seed_simulation_settings(project_id: int, vcs_ids: List[int], design_ids: Li
   interarrival_time = round(tu.random.uniform(1, 255), ndigits=5)
   start_time = round(tu.random.uniform(1, 300), ndigits=5)
   end_time = round(tu.random.uniform(300, 1000), ndigits=5)
+  print("Row len", len(rows))
   flow_process = tu.random.choice(rows)
   flow_start_time = None #Get valid start time
   flow_time = round(tu.random.uniform(start_time, end_time), ndigits=5)

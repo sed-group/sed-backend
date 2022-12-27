@@ -3,6 +3,7 @@ from enum import Enum
 from pydantic import BaseModel
 from typing import  Optional
 import json
+from sedbackend.apps.cvs.link_design_lifecycle import models as link_model
 
 
 class NonTechCost(str, Enum):
@@ -27,11 +28,6 @@ class NonTechnicalProcess(BaseModel):
     revenue: float
 
 
-#class Simulation(BaseModel):
-    #time: List[float]
-    #cumulative_NPV: List[float]
-    #processes: List[Process]
-
 class Simulation(BaseModel):
     time: List[float]
     mean_NPV: List[float]
@@ -41,7 +37,7 @@ class Simulation(BaseModel):
 
 
 class EditSimSettings(BaseModel):
-    time_unit: str
+    time_unit: link_model.TimeFormat
     flow_process: Optional[str] = None
     flow_start_time: Optional[float] = None
     flow_time: float
