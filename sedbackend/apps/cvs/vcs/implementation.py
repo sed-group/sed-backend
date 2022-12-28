@@ -552,15 +552,15 @@ def delete_vcs_row(vcs_row_id: int, vcs_id: int, project_id: int) -> bool:
         )
 
 
-def duplicate_vcs(vcs_id: int, n: int, project_id: int) -> List[models.VCS]:
+def duplicate_vcs(project_id: int, vcs_id: int, n: int) -> List[models.VCS]:
     try:
         with get_connection() as con:
-            res = storage.duplicate_whole_vcs(con, vcs_id, n, project_id)
+            res = storage.duplicate_whole_vcs(con, project_id, vcs_id, n)
             con.commit()
             return res
     except exceptions.VCSNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find VCS'
         )
 
