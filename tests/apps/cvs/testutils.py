@@ -1,4 +1,5 @@
 from asyncio import subprocess
+from sqlite3 import connect
 from typing import List, Tuple, Optional
 import random
 
@@ -15,7 +16,7 @@ import sedbackend.apps.cvs.project.implementation
 import sedbackend.apps.cvs.project.models
 import sedbackend.apps.cvs.vcs.implementation as vcs_impl
 import sedbackend.apps.cvs.vcs.models as vcs_model
-from sedbackend.apps.cvs.link_design_lifecycle.models import TimeFormat, Rate
+from sedbackend.apps.cvs.link_design_lifecycle.models import FormulaGet, TimeFormat, Rate
 import tests.testutils as tu
 
 
@@ -244,7 +245,7 @@ def seed_vcs_table_rows(vcs_id, project_id, user_id, amount=15) -> List[vcs_mode
         amount = amount - 1
 
     if (vcs_impl.edit_vcs_table(table_rows, vcs_id, project_id)):
-        return vcs_impl.get_vcs_table(vcs_id, project_id)
+        return list(sorted(vcs_impl.get_vcs_table(vcs_id, project_id), key=lambda row: row.id))
 
     return None
 
@@ -494,6 +495,24 @@ def seed_formulas_for_multiple_vcs(project_id: int, vcss: List[int], dgs: List[i
       connect_impl.edit_formulas(project_id, row_id, dg_id, formulaPost)
   
 
+def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int) -> bool:
+  formulas = connect_impl.get_all_formulas(project_id, vcs_id, design_group_id)
+
+  last = formulas[len(formulas)-1]
+  
+  new = connect_model.FormulaPost(
+    time=last.time,
+    time_unit = last.time_unit,
+    cost = last.cost,
+    revenue = last.revenue,
+    rate = Rate.PROJECT.value,
+    value_driver_ids = [vd.id for vd in last.value_drivers],
+    market_input_ids = [mi.id for mi in last.market_inputs]
+  )
+
+  return connect_impl.edit_formulas(project_id, last.vcs_row_id, design_group_id, new)
+
+
 # ======================================================================================================================
 # Simulation
 # ======================================================================================================================
@@ -511,7 +530,7 @@ def seed_simulation_settings(project_id: int, vcs_ids: List[int], design_ids: Li
   print("Row len", len(rows))
   flow_process = tu.random.choice(rows)
   flow_start_time = None #Get valid start time
-  flow_time = round(tu.random.uniform(start_time, end_time), ndigits=5)
+  flow_time = round(tu.random.uniform(0, end_time - start_time), ndigits=5)
 
   discount_rate = round(tu.random.random(), ndigits=5)
   non_tech_add = random_non_technical_cost()

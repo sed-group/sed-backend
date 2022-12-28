@@ -10,7 +10,8 @@ from sedbackend.apps.cvs.simulation import models, storage
 from sedbackend.apps.core.authentication import exceptions as auth_ex
 from sedbackend.apps.core.db import get_connection
 from sedbackend.apps.cvs.project import exceptions as project_exceptions
-from sedbackend.apps.cvs.simulation.exceptions import DSMFileNotFoundException, DesignIdsNotFoundException, FormulaEvalException, NegativeTimeException, ProcessNotFoundException, RateWrongOrderException, InvalidFlowSettingsException
+from sedbackend.apps.cvs.design import exceptions as design_exc
+from sedbackend.apps.cvs.simulation.exceptions import BadlyFormattedSettingsException, DSMFileNotFoundException, DesignIdsNotFoundException, FormulaEvalException, NegativeTimeException, ProcessNotFoundException, RateWrongOrderException, InvalidFlowSettingsException, VcsFailedException
 from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.market_input import exceptions as market_input_exceptions
 
@@ -65,6 +66,16 @@ def run_simulation(project_id: int, sim_settings: models.EditSimSettings, vcs_id
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'No design ids or empty array supplied'
+        )
+    except VcsFailedException:
+      raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Invalid vcs ids'
+        )
+    except BadlyFormattedSettingsException:
+      raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Settings are not correct'
         )
 
 

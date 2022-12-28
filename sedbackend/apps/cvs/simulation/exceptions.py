@@ -29,3 +29,11 @@ class DesignIdsNotFoundException(Exception):
 
 class InvalidFlowSettingsException(Exception):
     pass
+
+
+class VcsFailedException(Exception):
+  pass
+
+
+class BadlyFormattedSettingsException(Exception):
+  pass

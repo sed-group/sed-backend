@@ -11,6 +11,7 @@ from desim.data import NonTechCost, TimeFormat, SimResults
 from desim.simulation import Process
 
 from typing import List
+from sedbackend.apps.cvs.design.implementation import get_design
 
 from sedbackend.libs.mysqlutils.builder import FetchType, MySQLStatementBuilder
 
@@ -169,19 +170,24 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, simSet
 
     design_results = []
 
+    if not check_sim_settings(simSettings):
+      raise e.BadlyFormattedSettingsException
     interarrival = simSettings.interarrival_time
     flow_time = simSettings.flow_time
-    runtime = simSettings.end_time
+    runtime = simSettings.end_time - simSettings.start_time
     non_tech_add = simSettings.non_tech_add
     discount_rate = simSettings.discount_rate
     process = simSettings.flow_process
     time_unit = TIME_FORMAT_DICT.get(simSettings.time_unit)
 
+
+
     print(vcs_ids)
     for vcs_id in vcs_ids:
         res = get_sim_data(db_connection, vcs_id)
-        print(vcs_id)
-        print(res)
+        if res is None or res == []:
+          raise e.VcsFailedException
+
         if not check_entity_rate(res, process):
             raise e.RateWrongOrderException
         
@@ -192,7 +198,7 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, simSet
 
         print(design_ids)
         for design_id in design_ids:
-            print(design_id)
+            get_design(design_id)
             processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id)
             print([p.name for p in processes], non_tech_processes)
         
@@ -470,6 +476,24 @@ def check_entity_rate(db_results, flow_process_name: str):
                 break
     
     return rate_check
+
+
+def check_sim_settings(settings: models.SimSettings) -> bool:
+  settings_check = True
+
+  if settings.end_time - settings.start_time <= 0:
+    settings_check = False
+  
+  if settings.flow_time > settings.end_time-settings.start_time:
+    settings_check = False
+  
+  if settings.flow_start_time is not None and settings.flow_process is not None:
+    settings_check = False
+  
+  if settings.flow_start_time is None and settings.flow_process is None:
+    settings_check = False
+
+  return settings_check
 
 #TODO Change dsm creation to follow BPMN and the nodes in the BPMN. 
 #Currently the DSM only goes from one process to the other following the order of the index in the VCS
