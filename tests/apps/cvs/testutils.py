@@ -99,12 +99,15 @@ def delete_VCS_with_ids(project_id: int, vcs_id_list: List[int]):
         vcs_impl.delete_vcs(project_id, vcsid)
 
 
-def random_value_driver(name: str = None):
+def random_value_driver(name: str = None, unit: str = None):
     if name is None:
         name = tu.random_str(5, 50)
+    if unit is None:
+        unit = tu.random_str(0, 10)
 
     return sedbackend.apps.cvs.vcs.models.ValueDriverPost(
-        name=name
+        name=name,
+        unit=unit
     )
 
 

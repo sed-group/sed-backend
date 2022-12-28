@@ -179,3 +179,21 @@ def test_delete_vcs(client, std_headers, std_user):
     assert len(impl_vcs.get_all_vcs(project.id).chunk) == 0
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+
+
+# ======================================================================================================================
+# Duplicate VCS
+# ======================================================================================================================
+
+def test_duplicate_vcs(client, std_headers, std_user):
+    # Setup
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    project = tu.seed_random_project(current_user.id)
+    vcs = tu.seed_random_vcs(project.id)
+    # Act
+    res = client.post(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/duplicate/{2}', headers=std_headers)
+    # Assert
+    assert res.status_code == 200  # 200 OK
+    assert len(impl_vcs.get_all_vcs(project.id).chunk) == 3
+    # Cleanup
+    tu.delete_project_by_id(project.id, current_user.id)

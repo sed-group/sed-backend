@@ -137,3 +137,6 @@ def test_delete_vcs_table(client, std_headers, std_user):
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
+
+
+# TODO write more tests

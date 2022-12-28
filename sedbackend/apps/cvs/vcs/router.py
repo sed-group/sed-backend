@@ -236,5 +236,5 @@ async def update_indices_subprocess(subprocess_ids: List[int], order_indices: Li
     response_model=List[models.VCS],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def duplicate_vcs(vcs_id: int, n: int, native_project_id: int) -> List[models.VCS]:
-    return implementation.duplicate_vcs(vcs_id, n, native_project_id)
+async def duplicate_vcs(native_project_id: int, vcs_id: int, n: int) -> List[models.VCS]:
+    return implementation.duplicate_vcs(native_project_id, vcs_id, n)

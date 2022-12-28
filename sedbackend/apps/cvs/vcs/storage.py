@@ -403,9 +403,6 @@ def delete_all_value_drivers(db_connection: PooledMySQLConnection, user_id: int)
         .where('user = %s', [user_id]) \
         .execute(return_affected_rows=True)
 
-    if rows == 0:
-        raise exceptions.ValueDriverNotFoundException
-
     return True
 
 
@@ -966,8 +963,8 @@ def delete_vcs_row(db_connection: PooledMySQLConnection, vcs_row_id: int, vcs_id
 
 
 # Duplicate a vcs n times
-def duplicate_vcs(db_connection: PooledMySQLConnection, vcs_id: int, n: int, project_id: int) -> List[models.VCS]:
-    vcs = get_vcs(db_connection, vcs_id, project_id)
+def duplicate_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, n: int) -> List[models.VCS]:
+    vcs = get_vcs(db_connection, project_id, vcs_id)
     vcs_list = []
     for i in range(n):
         vcs_post = models.VCSPost(
@@ -976,7 +973,7 @@ def duplicate_vcs(db_connection: PooledMySQLConnection, vcs_id: int, n: int, pro
             year_from=vcs.year_from,
             year_to=vcs.year_to
         )
-        new_vcs = create_vcs(db_connection, vcs_post, vcs.project.id)
+        new_vcs = create_vcs(db_connection, vcs.project.id, vcs_post)
         vcs_list.append(new_vcs)
     return vcs_list
 
@@ -1031,12 +1028,12 @@ def duplicate_vcs_table(db_connection: PooledMySQLConnection, vcs_id: int,
     return True
 
 
-def duplicate_whole_vcs(db_connection: PooledMySQLConnection, vcs_id: int, n: int, project_id: int) -> List[models.VCS]:
+def duplicate_whole_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, n: int) -> List[models.VCS]:
     logger.debug(f'Duplicate vcs with id = {vcs_id}, {n} times')
 
-    table = get_vcs_table(db_connection, vcs_id, project_id)
+    table = get_vcs_table(db_connection, project_id, vcs_id)
 
-    vcs_list = duplicate_vcs(db_connection, vcs_id, n, project_id)
+    vcs_list = duplicate_vcs(db_connection, project_id, vcs_id, n)
 
     [duplicate_vcs_table(db_connection, vcs.id, table) for vcs in vcs_list]
 
