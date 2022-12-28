@@ -1,4 +1,5 @@
-from typing import List, Tuple
+from asyncio import subprocess
+from typing import List, Tuple, Optional
 import random
 
 import sedbackend.apps.cvs.simulation.implementation as sim_impl
@@ -441,20 +442,37 @@ def seed_formulas_for_multiple_vcs(project_id: int, vcss: List[int], dgs: List[i
   while tr.subprocess != None:
     tr = random_table_row(project_id, user_id, vcss[0])
   
+  row_ids = []
   for vcs_id in vcss:
-    table = vcs_impl.get_vcs_table(vcs_id, project_id) # TODO convert the table from VcsRow into VcsRowPost items in order to edit it. 
+    orig_table = vcs_impl.get_vcs_table(vcs_id, project_id) # TODO convert the table from VcsRow into VcsRowPost items in order to edit it. 
+    table = [
+      vcs_model.VcsRowPost(
+        id=tr.id, 
+        index=tr.index, 
+        stakeholder=tr.stakeholder, 
+        stakeholder_needs = [
+          vcs_model.StakeholderNeedPost(
+            id=need.id, 
+            need=need.need, 
+            value_dimension=need.value_dimension, 
+            rank_weight=need.rank_weight, 
+            value_drivers=[vd.id for vd in need.value_drivers]) 
+          for need in tr.stakeholder_needs], 
+        stakeholder_expectations=tr.stakeholder_expectations, 
+        iso_process= None if tr.iso_process is None else tr.iso_process.id, 
+        subprocess= None if tr.subprocess is None else tr.subprocess.id) 
+      for tr in orig_table]
     table.append(tr)
     vcs_impl.edit_vcs_table(table, vcs_id, project_id)
+    row = list(filter(lambda row: row not in orig_table, vcs_impl.get_vcs_table(vcs_id, project_id)))[0]
+    row_ids.append(row.id)
+  
   
   time = str(tu.random.randint(1, 200))
   time_unit = random_time_unit()
   cost = str(tu.random.randint(1, 2000))
   revenue = str(tu.random.randint(1, 10000))
-  rate = random_rate_choice()
-  if rate == Rate.PRODUCT.value:
-    rate_per_prod = True
-  if rate_per_prod and rate == Rate.PROJECT.value:
-    rate = Rate.PRODUCT.value
+  rate =  Rate.PRODUCT.value
 
   # TODO when value drivers and market inputs are connected to the
   # formulas, add them here.
@@ -471,9 +489,9 @@ def seed_formulas_for_multiple_vcs(project_id: int, vcss: List[int], dgs: List[i
       market_input_ids=market_input_ids
   )
 
-  for vcs_id in vcss:
+  for row_id in row_ids:
     for dg_id in dgs:
-      connect_impl.edit_formulas(project_id, vcs_id, dg_id, formulaPost)
+      connect_impl.edit_formulas(project_id, row_id, dg_id, formulaPost)
   
 
 # ======================================================================================================================
