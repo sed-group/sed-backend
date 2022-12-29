@@ -4,6 +4,9 @@ from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
 
 from sedbackend.apps.cvs.design.storage import get_design_group
+from sedbackend.apps.cvs.vcs.implementation import get_vcs_row
+from sedbackend.apps.cvs.project.implementation import get_cvs_project
+from sedbackend.apps.cvs.vcs.implementation import get_vcs
 from sedbackend.apps.cvs.link_design_lifecycle import models, exceptions
 from sedbackend.libs.mysqlutils.builder import FetchType, MySQLStatementBuilder
 from sedbackend.apps.cvs.market_input import implementation as market_impl
@@ -20,11 +23,9 @@ CVS_FORMULAS_MARKET_INPUTS_TABLE = 'cvs_formulas_market_inputs'
 CVS_FORMULAS_MARKET_INPUTS_COLUMNS = ['formulas', 'market_input']
 
 
-def create_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_row_id: int, design_group_id: int,
+def create_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_group_id: int,
                     formulas: models.FormulaPost) -> bool:
     logger.debug(f'Creating formulas')
-
-    get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
 
     values = [vcs_row_id, design_group_id, formulas.time, formulas.time_unit.value, formulas.cost, formulas.revenue,
               formulas.rate.value]
@@ -35,19 +36,21 @@ def create_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_r
         .set_values(values=values) \
         .execute(fetch_type=FetchType.FETCH_ONE)
 
-    for vd in formulas.value_driver_ids:
-        insert_statement = MySQLStatementBuilder(db_connection)
-        insert_statement \
-            .insert(table=CVS_FORMULAS_VALUE_DRIVERS_TABLE, columns=CVS_FORMULAS_VALUE_DRIVERS_COLUMNS) \
-            .set_values([vcs_row_id, vd]) \
-            .execute(fetch_type=FetchType.FETCH_NONE)
+    if formulas.value_driver_ids is not None:
+        for vd in formulas.value_driver_ids:
+            insert_statement = MySQLStatementBuilder(db_connection)
+            insert_statement \
+                .insert(table=CVS_FORMULAS_VALUE_DRIVERS_TABLE, columns=CVS_FORMULAS_VALUE_DRIVERS_COLUMNS) \
+                .set_values([vcs_row_id, vd]) \
+                .execute(fetch_type=FetchType.FETCH_NONE)
 
-    for mi_id in formulas.market_input_ids:
-        insert_statement = MySQLStatementBuilder(db_connection)
-        insert_statement \
-            .insert(table=CVS_FORMULAS_MARKET_INPUTS_TABLE, columns=CVS_FORMULAS_MARKET_INPUTS_COLUMNS) \
-            .set_values([vcs_row_id, mi_id]) \
-            .execute(fetch_type=FetchType.FETCH_NONE)
+    if formulas.market_input_ids is not None:
+        for mi_id in formulas.market_input_ids:
+            insert_statement = MySQLStatementBuilder(db_connection)
+            insert_statement \
+                .insert(table=CVS_FORMULAS_MARKET_INPUTS_TABLE, columns=CVS_FORMULAS_MARKET_INPUTS_COLUMNS) \
+                .set_values([vcs_row_id, mi_id]) \
+                .execute(fetch_type=FetchType.FETCH_NONE)
 
     if insert_statement is not None:  # TODO actually check for potential problems
         return True
@@ -59,6 +62,7 @@ def edit_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_row
                   formulas: models.FormulaPost) -> bool:
 
     get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
+    get_vcs_row(vcs_row_id)
 
     count_statement = MySQLStatementBuilder(db_connection)
     count = count_statement.count(CVS_FORMULAS_TABLE)\
@@ -69,7 +73,7 @@ def edit_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_row
     logger.debug(f'count: {count}')
 
     if count == 0:
-        create_formulas(db_connection, project_id, vcs_row_id, design_group_id, formulas)
+        create_formulas(db_connection,  vcs_row_id, design_group_id, formulas)
     elif count == 1:
         logger.debug(f'Editing formulas')
         columns = CVS_FORMULAS_COLUMNS[2:]
@@ -97,6 +101,8 @@ def get_all_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_
     logger.debug(f'Fetching all formulas with vcs_id={vcs_id}')
 
     get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
+    get_cvs_project(project_id)
+    get_vcs(vcs_id, project_id)
 
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement.select(CVS_FORMULAS_TABLE, CVS_FORMULAS_COLUMNS) \
@@ -129,6 +135,9 @@ def delete_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_r
     logger.debug(f'Deleting formulas with vcs_row_id: {vcs_row_id}')
 
     get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
+    #get_cvs_project(project_id)
+    get_vcs_row(vcs_row_id)
+
 
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement \

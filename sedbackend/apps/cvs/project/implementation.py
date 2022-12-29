@@ -65,11 +65,6 @@ def delete_cvs_project(project_id: int, user_id: int) -> bool:
             res = storage.delete_cvs_project(con, project_id, user_id)
             con.commit()
             return res
-    except exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project with id={project_id}.',
-        )
     except exceptions.CVSProjectFailedDeletionException:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
