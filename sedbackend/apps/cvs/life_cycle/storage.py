@@ -66,7 +66,7 @@ def get_node(db_connection: PooledMySQLConnection, project_id: int, node_id: int
     return result
 
 
-def get_process_node(db_connection: PooledMySQLConnection, node_id: int) -> models.ProcessNodeGet:
+def get_process_node(db_connection: PooledMySQLConnection, project_id: int, node_id: int) -> models.ProcessNodeGet:
     logger.debug(f'Fetching a process node with id={node_id}.')
 
     select_statement = MySQLStatementBuilder(db_connection)
@@ -81,7 +81,7 @@ def get_process_node(db_connection: PooledMySQLConnection, node_id: int) -> mode
         logger.debug(f'Error msg: {e.msg}')
         raise exceptions.NodeNotFoundException
 
-    return populate_process_node(db_connection, result)
+    return populate_process_node(db_connection, project_id, result)
 
 
 def get_start_stop_node(db_connection: PooledMySQLConnection, node_id: int) -> models.StartStopNodeGet:
@@ -103,7 +103,7 @@ def get_start_stop_node(db_connection: PooledMySQLConnection, node_id: int) -> m
 
 
 # Create parent node and return id
-def create_node(db_connection: PooledMySQLConnection, node: models.NodePost, vcs_id: int) -> int:
+def create_node(db_connection: PooledMySQLConnection, vcs_id: int, node: models.NodePost) -> int:
     columns = ['vcs', 'pos_x', 'pos_y']
     values = [vcs_id, node.pos_x, node.pos_y]
 
@@ -124,11 +124,11 @@ def create_node(db_connection: PooledMySQLConnection, node: models.NodePost, vcs
     return node_id
 
 
-def create_process_node(db_connection: PooledMySQLConnection, node: models.ProcessNodePost,
-                        vcs_id: int) -> models.ProcessNodeGet:
+def create_process_node(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
+                        node: models.ProcessNodePost) -> models.ProcessNodeGet:
     logger.debug(f'Create a process node for vcs with id={vcs_id}.')
 
-    node_id = create_node(db_connection, node, vcs_id)
+    node_id = create_node(db_connection, vcs_id, node)
     
     try:
         insert_statement = MySQLStatementBuilder(db_connection)
@@ -143,7 +143,7 @@ def create_process_node(db_connection: PooledMySQLConnection, node: models.Proce
         raise vcs_exceptions.VCSNotFoundException
 
     logger.debug('Before getting process node')
-    return get_process_node(db_connection, node_id)
+    return get_process_node(db_connection, project_id, node_id)
 
 
 def create_start_stop_node(db_connection: PooledMySQLConnection, node: models.StartStopNodePost,
@@ -210,7 +210,7 @@ def update_node(db_connection: PooledMySQLConnection, project_id: int, node_id: 
 def get_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> models.BPMNGet:
     logger.debug(f'Get BPMN for vcs with id={vcs_id}.')
 
-    vcs_storage.get_vcs(db_connection, vcs_id, project_id)  # Check if vcs exists and matches project id
+    vcs_storage.get_vcs(db_connection, project_id, vcs_id)  # Check if vcs exists and matches project id
 
     where_statement = f'vcs = %s'
     where_values = [vcs_id]
@@ -223,7 +223,7 @@ def get_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int)
             .where(where_statement, where_values) \
             .order_by(['cvs_nodes.id'], Sort.ASCENDING) \
             .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-        process_nodes = [populate_process_node(db_connection, result) for result in process_nodes_result]
+        process_nodes = [populate_process_node(db_connection, project_id, result) for result in process_nodes_result]
 
         select_statement = MySQLStatementBuilder(db_connection)
         # start_stop_nodes_result = \

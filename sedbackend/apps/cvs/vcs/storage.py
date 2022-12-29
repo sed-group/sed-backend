@@ -830,32 +830,6 @@ def create_vcs_row(db_connection: PooledMySQLConnection, row: models.VcsRowPost,
             raise exceptions.VCSTableRowFailedToUpdateException(e.msg)
 
 
-def create_vcs_table(db_connection: PooledMySQLConnection, new_vcs_rows: List[models.VcsRowPost], vcs_id: int) -> bool:
-    logger.debug(f'Creating table for VCS with id={vcs_id}.')
-
-    for row in new_vcs_rows:
-
-        if row.iso_process is None and row.subprocess is None:
-            raise exceptions.VCSTableProcessAmbiguity
-        elif row.iso_process is not None and row.subprocess is not None:
-            raise exceptions.VCSTableProcessAmbiguity
-
-        vcs_row_id: int = create_vcs_row(db_connection, row, vcs_id)
-
-        node = life_cycle_models.ProcessNodePost(
-            pos_x=0,
-            pos_y=0,
-            vcs_row_id=vcs_row_id
-        )
-
-        life_cycle_storage.create_process_node(db_connection, node, vcs_id)
-
-        if row.stakeholder_needs is not None:
-            [create_stakeholder_need(db_connection, vcs_row_id, need) for need in row.stakeholder_needs]
-
-    return True
-
-
 # TODO: Too big, split into smaller methods
 def edit_vcs_table(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
                    updated_vcs_rows: List[models.VcsRowPost]) -> bool:
@@ -910,7 +884,7 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, project_id: int, vcs_id
                 pos_y=0,
                 vcs_row_id=vcs_row_id
             )
-            life_cycle_storage.create_process_node(db_connection, node, vcs_id)
+            life_cycle_storage.create_process_node(db_connection, project_id, vcs_id, node)
 
         new_table_ids.append(vcs_row_id)
 
@@ -978,7 +952,7 @@ def duplicate_stakeholder_need(db_connection: PooledMySQLConnection, vcs_row_id:
 
 
 # Duplicate vcs table
-def duplicate_vcs_table(db_connection: PooledMySQLConnection, vcs_id: int,
+def duplicate_vcs_table(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
                         table: List[models.VcsRow]) -> bool:
     for row in table:
         try:
@@ -998,7 +972,7 @@ def duplicate_vcs_table(db_connection: PooledMySQLConnection, vcs_id: int,
                 pos_y=0,
                 vcs_row_id=row_id
             )
-            life_cycle_storage.create_process_node(db_connection, node, vcs_id)
+            life_cycle_storage.create_process_node(db_connection, project_id, vcs_id, node)
         except Error as e:
             logger.debug(f'Error msg: {e.msg}')
             raise exceptions.VCSNotFoundException
@@ -1013,6 +987,6 @@ def duplicate_whole_vcs(db_connection: PooledMySQLConnection, project_id: int, v
 
     vcs_list = duplicate_vcs(db_connection, project_id, vcs_id, n)
 
-    [duplicate_vcs_table(db_connection, vcs.id, table) for vcs in vcs_list]
+    [duplicate_vcs_table(db_connection, project_id, vcs.id, table) for vcs in vcs_list]
 
     return vcs_list

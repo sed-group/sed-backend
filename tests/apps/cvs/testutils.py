@@ -134,6 +134,7 @@ def delete_vcs_table_row_by_id(table_row_id):
 
 def random_table_row(
         user_id: int,
+        project_id: int,
         vcs_id: int,
         index: int = None,
         iso_process_id: int = None,
@@ -148,7 +149,7 @@ def random_table_row(
     if random.randint(1, 2) == 2:
         iso_process_id = random.randint(1, 25)
     else:
-        subprocess = random_subprocess(vcs_id, user_id)
+        subprocess = random_subprocess(project_id, vcs_id)
         subprocess_id = subprocess.id
 
     if stakeholder is None:
@@ -241,7 +242,7 @@ def seed_stakeholder_needs(user_id, amount=10) -> List[sedbackend.apps.cvs.vcs.m
 def seed_vcs_table_rows(user_id, project_id, vcs_id, amount=15) -> List[vcs_model.VcsRow]:
     table_rows = []
     for _ in range(amount):
-        tr = random_table_row(user_id, vcs_id)
+        tr = random_table_row(user_id, project_id, vcs_id)
         table_rows.append(tr)
 
     vcs_impl.edit_vcs_table(project_id, vcs_id, table_rows)
@@ -372,7 +373,7 @@ def delete_design_group(project_id: int, dg_id: int):
 def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, user_id: int, amount: int = 10) -> List[
     connect_model.FormulaRowGet]:
     for _ in range(amount):
-        vcs_row = seed_vcs_table_rows(vcs_id, project_id, user_id, 1)
+        vcs_row = seed_vcs_table_rows(user_id, project_id, vcs_id, 1)
 
         time = tu.random_str(10, 200)
         time_unit = random_time_unit()

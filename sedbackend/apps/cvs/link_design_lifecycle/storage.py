@@ -4,7 +4,7 @@ from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
 
 from sedbackend.apps.cvs.design.storage import get_design_group
-from sedbackend.apps.cvs.vcs.implementation import get_vcs_row
+from sedbackend.apps.cvs.vcs.storage import get_vcs_row
 from sedbackend.apps.cvs.project.implementation import get_cvs_project
 from sedbackend.apps.cvs.vcs.implementation import get_vcs
 from sedbackend.apps.cvs.link_design_lifecycle import models, exceptions
@@ -62,7 +62,7 @@ def edit_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_row
                   formulas: models.FormulaPost) -> bool:
 
     get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
-    get_vcs_row(vcs_row_id)
+    get_vcs_row(db_connection, project_id, vcs_row_id)
 
     count_statement = MySQLStatementBuilder(db_connection)
     count = count_statement.count(CVS_FORMULAS_TABLE)\
@@ -102,7 +102,7 @@ def get_all_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_
 
     get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
     get_cvs_project(project_id)
-    get_vcs(vcs_id, project_id)
+    get_vcs(project_id, vcs_id)
 
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement.select(CVS_FORMULAS_TABLE, CVS_FORMULAS_COLUMNS) \
@@ -136,7 +136,7 @@ def delete_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_r
 
     get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
     #get_cvs_project(project_id)
-    get_vcs_row(vcs_row_id)
+    get_vcs_row(db_connection, project_id, vcs_row_id)
 
 
     delete_statement = MySQLStatementBuilder(db_connection)
