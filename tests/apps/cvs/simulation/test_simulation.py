@@ -314,10 +314,11 @@ def test_run_sim_rate_invalid_order(client, std_headers, std_user):
   tu.seed_random_formulas(project.id, vcs.id, design_group.id, current_user.id, 10) #Also creates the vcs rows
   design = tu.seed_random_designs(project.id, design_group.id, 1)
 
-  tu.edit_rate_order_formulas(project.id, vcs.id, design_group.id)
-
+  flow_proc = tu.edit_rate_order_formulas(project.id, vcs.id, design_group.id)
+  
   settings = tu.seed_simulation_settings(project.id, [vcs.id], [design[0].id])
   settings.monte_carlo = False
+  settings.flow_process = flow_proc.iso_process.name if flow_proc.iso_process is not None else flow_proc.subprocess.name
 
   #Act
   res = client.post(f'/api/cvs/project/{project.id}/simulation/run', 

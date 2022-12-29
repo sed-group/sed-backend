@@ -472,7 +472,8 @@ def parse_formula(formula: str, vd_values, mi_values): #TODO fix how the formula
 def check_entity_rate(db_results, flow_process_name: str):
     rate_check = True
     flow_process_index = len(db_results) #Set the flow_process_index to be highest possible. 
-
+    print(flow_process_name)
+    print("Rate Check results \n", db_results)
     for i in range(len(db_results)- 1):
         if db_results[i]['sub_name'] == flow_process_name or db_results[i]['iso_name'] == flow_process_name: #This will never be true currently which is a problem..........
             flow_process_index = i
@@ -483,6 +484,7 @@ def check_entity_rate(db_results, flow_process_name: str):
                 rate_check = False
                 break
     
+    print("rate_check", rate_check)
     return rate_check
 
 

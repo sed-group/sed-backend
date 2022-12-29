@@ -16,7 +16,7 @@ import sedbackend.apps.cvs.project.implementation
 import sedbackend.apps.cvs.project.models
 import sedbackend.apps.cvs.vcs.implementation as vcs_impl
 import sedbackend.apps.cvs.vcs.models as vcs_model
-from sedbackend.apps.cvs.link_design_lifecycle.models import FormulaGet, TimeFormat, Rate
+from sedbackend.apps.cvs.link_design_lifecycle.models import FormulaGet, FormulaRowGet, TimeFormat, Rate
 import tests.testutils as tu
 
 
@@ -495,12 +495,24 @@ def seed_formulas_for_multiple_vcs(project_id: int, vcss: List[int], dgs: List[i
       connect_impl.edit_formulas(project_id, row_id, dg_id, formulaPost)
   
 
-def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int) -> bool:
+def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int) -> vcs_model.VcsRow:
+  rows = list(sorted(vcs_impl.get_vcs_table(vcs_id, project_id), key=lambda row: row.index))
   formulas = connect_impl.get_all_formulas(project_id, vcs_id, design_group_id)
 
-  last = formulas[len(formulas)-1]
+  rows.reverse() #Reverse to find last technical process
+  for row in rows:
+    if row.iso_process is not None:
+      if row.iso_process.category == 'Technical processes':
+        last_id = row.id
+        break
+    else:
+      if row.subprocess.parent_process.category == 'Technical processes':
+        last_id = row.id
+        break
   
-  new = connect_model.FormulaPost(
+  last = next(filter(lambda x: x.vcs_row_id == last_id, formulas))
+
+  new_last = connect_model.FormulaPost(
     time=last.time,
     time_unit = last.time_unit,
     cost = last.cost,
@@ -510,7 +522,16 @@ def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int)
     market_input_ids = [mi.id for mi in last.market_inputs]
   )
 
-  return connect_impl.edit_formulas(project_id, last.vcs_row_id, design_group_id, new)
+  connect_impl.edit_formulas(project_id, last_id, design_group_id, new_last)
+  
+  rows.reverse() # reverse back to find first technical process
+  for row in rows:
+    if row.iso_process is not None:
+      if row.iso_process.category == 'Technical processes':
+        return row
+    else:
+      if row.subprocess.parent_process.category == 'Technical processes':
+        return row
 
 
 # ======================================================================================================================
@@ -561,11 +582,11 @@ def seed_random_sim_settings(project_id: int) -> sim_model.SimSettings:
     if tu.random.getrandbits(1):
         flow_process = tu.random_str(10, 100) #Should probably ensure that this belongs to an actual process
         flow_start_time = None #Get valid start time
-        flow_time = round(tu.random.uniform(start_time, end_time), ndigits=5)
+        flow_time = round(tu.random.uniform(0, end_time - start_time), ndigits=5)
     else:
         flow_process = None
         flow_start_time = round(tu.random.uniform(start_time, end_time), ndigits=5)
-        flow_time = round(tu.random.uniform(flow_start_time, end_time), ndigits=5)
+        flow_time = round(tu.random.uniform(0, end_time - flow_start_time), ndigits=5)
     
     discount_rate = round(tu.random.random(), ndigits=5)
     non_tech_add = random_non_technical_cost()
