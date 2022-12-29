@@ -172,7 +172,8 @@ def random_table_row(
     return table_row
 
 
-def random_subprocess(vcs_id, user_id, name: str = None, parent_process_id: int = None, order_index: int = None):
+def random_subprocess(project_id: int, vcs_id: int, name: str = None, parent_process_id: int = None,
+                      order_index: int = None):
     if name is None:
         name = tu.random_str(5, 50)
     if parent_process_id is None:
@@ -184,28 +185,26 @@ def random_subprocess(vcs_id, user_id, name: str = None, parent_process_id: int 
         parent_process_id=parent_process_id,
         order_index=random.randint(1, 10)
     )
-    subp = sedbackend.apps.cvs.vcs.implementation.create_subprocess(
-        vcs_id, subprocess)
+    subp = sedbackend.apps.cvs.vcs.implementation.create_subprocess(project_id, vcs_id, subprocess)
     return subp
 
 
-def seed_random_subprocesses(project_id, user_id, amount=15):
+def seed_random_subprocesses(project_id: int, vcs_id: int, amount=15):
     subprocess_list = []
-    while amount > 0:
-        subprocess_list.append(random_subprocess(project_id, user_id))
-        amount = amount - 1
+    for _ in range(amount):
+        subprocess_list.append(random_subprocess(project_id, vcs_id))
 
     return subprocess_list
 
 
-def delete_subprocess_by_id(subprocess_id, project_id, user_id):
+def delete_subprocess_by_id(subprocess_id, project_id):
     sedbackend.apps.cvs.vcs.implementation.delete_subprocess(
-        subprocess_id, project_id, user_id)
+        subprocess_id, project_id)
 
 
-def delete_subprocesses(subprocesses, project_id, user_id):
+def delete_subprocesses(subprocesses, project_id):
     for subp in subprocesses:
-        delete_subprocess_by_id(subp.id, project_id, user_id)
+        delete_subprocess_by_id(subp.id, project_id)
 
 
 def random_stakeholder_need(user_id,
