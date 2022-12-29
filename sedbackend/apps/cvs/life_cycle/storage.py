@@ -18,7 +18,7 @@ CVS_START_STOP_NODES_COLUMNS = CVS_NODES_COLUMNS + ['type']
 
 # TODO error handling
 
-def populate_process_node(db_connection, result) -> models.ProcessNodeGet:
+def populate_process_node(db_connection, project_id, result) -> models.ProcessNodeGet:
     logger.debug(f'Populating model for process node with id={result["id"]} ')
 
     return models.ProcessNodeGet(
@@ -28,7 +28,7 @@ def populate_process_node(db_connection, result) -> models.ProcessNodeGet:
         to_node=result['to'],
         pos_x=result['pos_x'],
         pos_y=result['pos_y'],
-        vcs_row=vcs_storage.get_vcs_row(db_connection, result['vcs_row'])
+        vcs_row=vcs_storage.get_vcs_row(db_connection, project_id, result['vcs_row'])
     )
 
 

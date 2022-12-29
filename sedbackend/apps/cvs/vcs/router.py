@@ -90,15 +90,6 @@ async def edit_vcs_table(native_project_id: int, vcs_id: int, updated_table: Lis
     return implementation.edit_vcs_table(native_project_id, vcs_id, updated_table)
 
 
-@router.delete(
-    '/project/{native_project_id}/vcs/{vcs_id}/row/{row_id}',
-    summary='Deletes the specified row',
-    response_model=bool,
-    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
-)
-async def delete_vcs_row(row_id: int, vcs_id: int, native_project_id: int) -> bool:
-    return implementation.delete_vcs_row(row_id, vcs_id, native_project_id)
-
 # ======================================================================================================================
 # VCS Value driver
 # ======================================================================================================================
@@ -175,8 +166,8 @@ async def get_all_iso_process() -> List[models.VCSISOProcess]:
     response_model=List[models.VCSSubprocess],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
-async def get_all_subprocess(vcs_id: int) -> List[models.VCSSubprocess]:
-    return implementation.get_all_subprocess(vcs_id)
+async def get_all_subprocess(native_project_id: int, vcs_id: int) -> List[models.VCSSubprocess]:
+    return implementation.get_all_subprocess(native_project_id, vcs_id)
 
 
 @router.get(
@@ -185,28 +176,30 @@ async def get_all_subprocess(vcs_id: int) -> List[models.VCSSubprocess]:
     response_model=models.VCSSubprocess,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
-async def get_subprocess(subprocess_id: int) -> models.VCSSubprocess:
-    return implementation.get_subprocess(subprocess_id)
+async def get_subprocess(native_project_id: int, subprocess_id: int) -> models.VCSSubprocess:
+    return implementation.get_subprocess(native_project_id, subprocess_id)
 
 
 @router.post(
-    '/project/{project_native_id}/vcs/{vcs_id}/subprocess',
+    '/project/{native_project_id}/vcs/{vcs_id}/subprocess',
     summary='Creates a new subprocess',
     response_model=models.VCSSubprocess,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def create_subprocess(vcs_id: int, subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
-    return implementation.create_subprocess(vcs_id, subprocess_post)
+async def create_subprocess(native_project_id: int, vcs_id: int,
+                            subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
+    return implementation.create_subprocess(native_project_id, vcs_id, subprocess_post)
 
 
 @router.put(
     '/project/{native_project_id}/subprocess/{subprocess_id}',
     summary='Edits a subprocess',
-    response_model=models.VCSSubprocess,
+    response_model=bool,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def edit_subprocess(subprocess_id: int, vcs_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
-    return implementation.edit_subprocess(subprocess_id, vcs_post)
+async def edit_subprocess(native_project_id: int, subprocess_id: int,
+                          subprocess: models.VCSSubprocessPut) -> bool:
+    return implementation.edit_subprocess(native_project_id, subprocess_id, subprocess)
 
 
 @router.delete(
@@ -215,20 +208,24 @@ async def edit_subprocess(subprocess_id: int, vcs_post: models.VCSSubprocessPost
     response_model=bool,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def delete_subprocess(subprocess_id: int) -> bool:
-    return implementation.delete_subprocess(subprocess_id)
+async def delete_subprocess(native_project_id: int, subprocess_id: int) -> bool:
+    return implementation.delete_subprocess(native_project_id, subprocess_id)
 
 
 @router.put(
-    '/project/{native_project_id}/subprocess/{subprocess_id}',
+    '/project/{native_project_id}/subprocess/{subprocess_id}/indices',
     summary='Updates the indices of multiple subprocesses',
     response_model=bool,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def update_indices_subprocess(subprocess_ids: List[int], order_indices: List[int], project_id: int,
-                                    user: User = Depends(get_current_active_user)) -> bool:
-    return implementation.update_indices_subprocess(subprocess_ids, order_indices, project_id, user.id)
+async def update_indices_subprocess(native_project_id: int, subprocess_ids: List[int], order_indices: List[int]
+                                    ) -> bool:
+    return implementation.update_indices_subprocess(native_project_id, subprocess_ids, order_indices)
 
+
+# ======================================================================================================================
+# VCS Duplicate
+# ======================================================================================================================
 
 @router.post(
     '/project/{native_project_id}/vcs/{vcs_id}/duplicate/{n}',
