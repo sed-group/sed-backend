@@ -199,7 +199,7 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, simSet
         print(design_ids)
         for design_id in design_ids:
             get_design(design_id)
-            processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id)
+            processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id) #BUG probably. Populate processes changes the order of the processes. 
             print([p.name for p in processes], non_tech_processes)
         
             dsm = create_simple_dsm(processes) #TODO Change to using BPMN
@@ -296,9 +296,11 @@ def run_sim_monte_carlo(db_connection: PooledMySQLConnection, project_id: int, s
     return design_results
 
 
-def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: PooledMySQLConnection, vcs: int, design: int, technical_processes: List = [], non_tech_processes: List = []):
+def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: PooledMySQLConnection, vcs: int, design: int):
     nsp = NumericStringParser()
 
+    technical_processes = []
+    non_tech_processes = []
     for row in db_results:
         vd_values = get_vd_design_values(db_connection, row['id'], design)
         mi_values = get_market_values(db_connection, row['id'], vcs)
@@ -469,7 +471,7 @@ def parse_formula(formula: str, vd_values, mi_values): #TODO fix how the formula
     return new_formula
 
 
-def check_entity_rate(db_results, flow_process_name: str):
+def check_entity_rate(db_results, flow_process_name: str): #BUG Does not work properly
     rate_check = True
     flow_process_index = len(db_results) #Set the flow_process_index to be highest possible. 
     print(flow_process_name)
@@ -477,7 +479,8 @@ def check_entity_rate(db_results, flow_process_name: str):
     for i in range(len(db_results)- 1):
         if db_results[i]['sub_name'] == flow_process_name or db_results[i]['iso_name'] == flow_process_name: #This will never be true currently which is a problem..........
             flow_process_index = i
-
+        #Can't just check for i and i+1 since i+1 might not be a technical process and as such it is foolish to assume that this will work. Either change this method to only
+        #use technical processes, or rewrite it so that it can handle non-technical processes as well. 
         if db_results[i]['rate'] == 'per_product' and db_results[i+1]['rate'] == 'per_project' and i >= flow_process_index: #TODO check for technical/non-technical processes
             
             if db_results[i]['category'] == 'Technical processes' and db_results[i+1]['category'] == 'Technical processes':
