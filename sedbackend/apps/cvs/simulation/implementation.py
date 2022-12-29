@@ -228,6 +228,17 @@ def run_sim_monte_carlo(project_id: int, sim_settings: models.EditSimSettings, v
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'No design ids or empty array supplied'
         )
+    except VcsFailedException:
+      raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Invalid vcs ids'
+        )
+    except BadlyFormattedSettingsException:
+      raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Settings are not correct'
+        )
+
 
 
 def get_sim_settings(project_id: int) -> models.SimSettings:

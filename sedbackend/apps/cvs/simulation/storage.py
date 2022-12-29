@@ -234,6 +234,10 @@ def run_sim_monte_carlo(db_connection: PooledMySQLConnection, project_id: int, s
     design_ids: List[int], normalized_npv: bool = False, user_id: int = None) -> List[models.Simulation]:
 
     design_results = []
+
+    if not check_sim_settings(simSettings):
+        raise e.BadlyFormattedSettingsException
+
     interarrival = simSettings.interarrival_time
     flow_time = simSettings.flow_time
     runtime = simSettings.end_time
@@ -245,9 +249,10 @@ def run_sim_monte_carlo(db_connection: PooledMySQLConnection, project_id: int, s
 
     for vcs_id in vcs_ids:
         res = get_sim_data(db_connection, vcs_id)
-        #print(res)
+        if res is None or res == []:
+          raise e.VcsFailedException
 
-        if not check_entity_rate(res, simSettings.flow_process):
+        if not check_entity_rate(res, process):
             raise e.RateWrongOrderException
         
     
@@ -258,6 +263,7 @@ def run_sim_monte_carlo(db_connection: PooledMySQLConnection, project_id: int, s
 
 
         for design_id in design_ids:
+            get_design(design_id)
             processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id)
             logger.debug('Fetched Processes and non-techproc')
             dsm = create_simple_dsm(processes) #TODO Change to using BPMN AND move out of the for loop
@@ -420,7 +426,7 @@ def  edit_simulation_settings(db_connection: PooledMySQLConnection, project_id: 
     return True
     
 
-def create_sim_settings(db_connection: PooledMySQLConnection, project_id: int, sim_settings: models.EditSimSettings) -> models.SimSettings:
+def create_sim_settings(db_connection: PooledMySQLConnection, project_id: int, sim_settings: models.EditSimSettings) -> bool:
     
     values = [project_id] + [sim_settings.time_unit.value, sim_settings.flow_process, sim_settings.flow_start_time, sim_settings.flow_time,  
             sim_settings.interarrival_time, sim_settings.start_time, sim_settings.end_time, 
@@ -430,6 +436,8 @@ def create_sim_settings(db_connection: PooledMySQLConnection, project_id: int, s
     insert_statement.insert(SIM_SETTINGS_TABLE, SIM_SETTINGS_COLUMNS)\
         .set_values(values)\
         .execute(fetch_type=FetchType.FETCH_NONE)
+
+    return True
     
 
 def get_market_values(db_connection: PooledMySQLConnection, vcs_row_id: int, vcs: int):
@@ -478,7 +486,7 @@ def check_entity_rate(db_results, flow_process_name: str):
     return rate_check
 
 
-def check_sim_settings(settings: models.SimSettings) -> bool:
+def check_sim_settings(settings: models.EditSimSettings) -> bool:
   settings_check = True
 
   if settings.end_time - settings.start_time <= 0:
