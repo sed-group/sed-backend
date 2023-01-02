@@ -357,7 +357,7 @@ def seed_random_design_group(project_id: int, name: str = None, vcs_id: int = No
         vcs_id=vcs_id
     )
 
-    dg = design_impl.create_cvs_design_group(design_group_post, project_id)
+    dg = design_impl.create_cvs_design_group(project_id, design_group_post)
 
     return dg
 

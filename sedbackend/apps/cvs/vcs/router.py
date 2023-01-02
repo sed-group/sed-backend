@@ -4,9 +4,11 @@ from sedbackend.apps.core.authentication.utils import get_current_active_user
 from sedbackend.apps.core.projects.dependencies import SubProjectAccessChecker
 from sedbackend.apps.core.projects.models import AccessLevel
 from sedbackend.apps.core.users.models import User
+from sedbackend.apps.cvs.design.router import router
 from sedbackend.apps.cvs.project.router import CVS_APP_SID
+from sedbackend.apps.cvs.vcs.models import ValueDriver
 from sedbackend.libs.datastructures.pagination import ListChunk
-from sedbackend.apps.cvs.vcs import models, implementation
+from sedbackend.apps.cvs.vcs import models, implementation, implementation as vcs_impl
 
 router = APIRouter()
 
@@ -102,6 +104,16 @@ async def edit_vcs_table(native_project_id: int, vcs_id: int, updated_table: Lis
 )
 async def get_all_value_driver(user: User = Depends(get_current_active_user)) -> List[models.ValueDriver]:
     return implementation.get_all_value_driver(user.id)
+
+
+@router.get(
+    '/project/{native_project_id}/vcs/{vcs_id}/value-driver/all',
+    summary='Fetch all value drivers in a vcs',
+    response_model=List[ValueDriver],
+    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
+)
+async def get_all_value_driver_vcs(native_project_id: int, vcs_id: int) -> List[ValueDriver]:
+    return vcs_impl.get_all_value_driver_vcs(native_project_id, vcs_id)
 
 
 @router.get(

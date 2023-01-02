@@ -237,7 +237,7 @@ def get_all_value_driver_vcs(db_connection: PooledMySQLConnection, project_id: i
                              vcs_id: int) -> List[models.ValueDriver]:
     logger.debug(f'Fetching all value drivers for vcs with id={vcs_id}')
 
-    get_vcs(db_connection, vcs_id, project_id)  # Perform checks for existing VCS and matching project
+    get_vcs(db_connection, project_id, vcs_id)  # Perform checks for existing VCS and matching project
 
     try:
         select_statement = MySQLStatementBuilder(db_connection)
@@ -359,7 +359,7 @@ def create_value_driver(db_connection: PooledMySQLConnection, user_id: int,
         value_driver_id = insert_statement.last_insert_id
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
-        raise user_exceptions.UserNotFoundException
+        raise exceptions.ValueDriverFailedToCreateException
 
     return get_value_driver(db_connection, value_driver_id)
 

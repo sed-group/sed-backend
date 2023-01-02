@@ -51,6 +51,10 @@ class ValueDriverFailedDeletionException(Exception):
     pass
 
 
+class ValueDriverFailedToCreateException(Exception):
+    pass
+
+
 # ======================================================================================================================
 # VCS ISO Processes
 # ======================================================================================================================
