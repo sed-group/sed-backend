@@ -111,7 +111,7 @@ def random_value_driver(name: str = None, unit: str = None):
     )
 
 
-def seed_random_value_driver(user_id):
+def seed_random_value_driver(user_id) -> sedbackend.apps.cvs.vcs.models.ValueDriver:
     value_driver = random_value_driver()
 
     new_value_driver = sedbackend.apps.cvs.vcs.implementation.create_value_driver(
@@ -220,12 +220,12 @@ def random_stakeholder_need(user_id,
 
     if value_driver_ids is None:
         vd = seed_random_value_driver(user_id)
-        value_driver_ids = [vd.id]  # Should work....
+        value_driver_ids = [vd.id]
 
     stakeholder_need = sedbackend.apps.cvs.vcs.models.StakeholderNeedPost(
         need=need,
         rank_weight=rank_weight,
-        value_driver_ids=value_driver_ids
+        value_drivers=value_driver_ids
     )
     return stakeholder_need
 

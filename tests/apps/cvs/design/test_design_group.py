@@ -36,7 +36,6 @@ def test_create_design_group_no_name(client, std_headers, std_user):
     tu.delete_project_by_id(project.id, current_user.id)
 
 
-# TODO not working
 def test_create_design_group_from_vcs(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
@@ -46,7 +45,7 @@ def test_create_design_group_from_vcs(client, std_headers, std_user):
     # Act
     res = client.post(f'/api/cvs/project/{project.id}/design-group', headers=std_headers, json={
         'name': "new design group",
-        'vcs': vcs.id,
+        'vcs_id': vcs.id,
     })
     # Assert
     design_groups = impl_design.get_all_design_groups(project.id)

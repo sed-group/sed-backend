@@ -128,3 +128,20 @@ def test_delete_value_driver(client, std_headers, std_user):
     assert len(impl_vcs.get_all_value_driver(current_user.id)) == 0
     # Cleanup
     tu.delete_vd_from_user(current_user.id)
+
+
+def test_get_all_value_drivers_from_vcs(client, std_headers, std_user):
+    # Setup
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    project = tu.seed_random_project(current_user.id)
+    vcs = tu.seed_random_vcs(project.id)
+    tu.seed_vcs_table_rows(current_user.id, project.id, vcs.id)
+    # Act
+    res = client.get(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/value-driver/all', headers=std_headers)
+    # Assert
+    assert res.status_code == 200  # 200 OK
+    all_vds = impl_vcs.get_all_value_driver(current_user.id)
+    assert len(res.json()) == len(all_vds)
+    # Cleanup
+    tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)

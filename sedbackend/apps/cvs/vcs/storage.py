@@ -685,17 +685,17 @@ def create_stakeholder_need(db_connection: PooledMySQLConnection, vcs_row_id: in
                             need: models.StakeholderNeedPost) -> int:
     logger.debug(f'Creating stakeholder need for vcs row with id={vcs_row_id}')
 
-    # try:
-    insert_statement = MySQLStatementBuilder(db_connection)
-    insert_statement \
-        .insert(table=CVS_VCS_STAKEHOLDER_NEED_TABLE,
-                columns=['vcs_row', 'need', 'value_dimension', 'rank_weight']) \
-        .set_values([vcs_row_id, need.need, need.value_dimension, need.rank_weight]) \
-        .execute(fetch_type=FetchType.FETCH_NONE)
-    need_id = insert_statement.last_insert_id
-    # except Error as e:
-    #    logger.debug(f'Error msg: {e.msg}')
-    #    raise exceptions.VCSStakeholderNeedFailedCreationException
+    try:
+        insert_statement = MySQLStatementBuilder(db_connection)
+        insert_statement \
+            .insert(table=CVS_VCS_STAKEHOLDER_NEED_TABLE,
+                    columns=['vcs_row', 'need', 'value_dimension', 'rank_weight']) \
+            .set_values([vcs_row_id, need.need, need.value_dimension, need.rank_weight]) \
+            .execute(fetch_type=FetchType.FETCH_NONE)
+        need_id = insert_statement.last_insert_id
+    except Error as e:
+        logger.debug(f'Error msg: {e.msg}')
+        raise exceptions.VCSStakeholderNeedFailedCreationException
 
     return need_id
 
