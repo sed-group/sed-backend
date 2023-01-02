@@ -24,7 +24,7 @@ def create_cvs_design_group(project_id: int, design_group_post: models.DesignGro
             return result
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find project.',
         )
     except exceptions.DesignGroupInsertException:

@@ -60,7 +60,7 @@ def create_vcs(project_id: int, vcs_post: models.VCSPost) -> models.VCS:
             return result
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find project with id={project_id}.',
         )
     except auth_ex.UnauthorizedOperationException:
