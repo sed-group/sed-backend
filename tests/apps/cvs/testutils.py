@@ -14,6 +14,7 @@ import sedbackend.apps.cvs.project.models
 import sedbackend.apps.cvs.vcs.implementation as vcs_impl
 import sedbackend.apps.cvs.vcs.models as vcs_model
 from sedbackend.apps.cvs.link_design_lifecycle.models import TimeFormat, Rate
+from sedbackend.apps.cvs.market_input import models as market_input_model, implementation as market_input_impl
 import tests.testutils as tu
 
 
@@ -412,6 +413,21 @@ def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, use
 def delete_formulas(project_id: int, vcsRow_Dg_ids: List[Tuple[int, int]]):
     for (vcs_row, dg) in vcsRow_Dg_ids:
         connect_impl.delete_formulas(project_id, vcs_row, dg)
+
+
+# ======================================================================================================================
+# Market Input
+# ======================================================================================================================
+
+def seed_random_market_input(project_id: int):
+    name = tu.random_str(5, 50)
+    unit = tu.random_str(5, 50)
+    market_input_post = market_input_model.MarketInputPost(
+        name=name,
+        unit=unit
+    )
+    return market_input_impl.create_market_input(project_id, market_input_post)
+
 
 
 # ======================================================================================================================

@@ -37,6 +37,29 @@ def get_all_market_inputs(project_id: int) -> List[models.MarketInputGet]:
         )
 
 
+def get_market_input(project_id: int, market_input_id: int) -> models.MarketInputGet:
+    try:
+        with get_connection() as con:
+            db_result = storage.get_market_input(con, project_id, market_input_id)
+            con.commit()
+            return db_result
+    except auth_ex.UnauthorizedOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Unauthorized user.',
+        )
+    except proj_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project with id={project_id}.',
+        )
+    except exceptions.MarketInputNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find market input',
+        )
+
+
 def create_market_input(project_id: int, market_input: models.MarketInputPost) -> models.MarketInputGet:
     try:
         with get_connection() as con:
