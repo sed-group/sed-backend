@@ -15,7 +15,7 @@ class DesignGroup(BaseModel):
 
 class DesignGroupPut(BaseModel):
     name: str
-    vd_ids: List[int]
+    vd_ids: Optional[List[int]] = None
 
 
 class DesignGroupPost(BaseModel):

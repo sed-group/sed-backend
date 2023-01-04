@@ -8,7 +8,7 @@ from sedbackend.apps.cvs.link_design_lifecycle.exceptions import FormulasFailedD
     VCSNotFoundException, WrongTimeUnitException
 from sedbackend.apps.cvs.project import exceptions as project_exceptions
 from sedbackend.apps.cvs.design import exceptions as design_exceptions
-
+from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 
 
 def edit_formulas(project_id: int, vcs_row_id: int, design_group_id: int, new_formulas: models.FormulaPost) -> bool:
@@ -41,6 +41,11 @@ def edit_formulas(project_id: int, vcs_row_id: int, design_group_id: int, new_fo
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f'Project with id={project_id} does not match design group with id={design_group_id}'
+            )
+        except vcs_exceptions.VCSTableRowNotFoundException:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f'Could not find vcs row with id={vcs_row_id}.',
             )
 
 
@@ -97,6 +102,11 @@ def delete_formulas(project_id: int, vcs_row_id: int, design_group_id: int) -> b
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f'Could not find design with id={design_group_id}.',
+            )
+        except vcs_exceptions.VCSTableRowNotFoundException:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f'Could not find vcs row with id={vcs_row_id}.',
             )
 
 

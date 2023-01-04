@@ -15,16 +15,16 @@ from sedbackend.apps.cvs.design import models, storage, exceptions
 # ======================================================================================================================
 
 
-def create_cvs_design_group(design_group_post: models.DesignGroupPost, project_id: int) \
+def create_cvs_design_group(project_id: int, design_group_post: models.DesignGroupPost) \
         -> models.DesignGroup:
     try:
         with get_connection() as con:
-            result = storage.create_design_group(con, design_group_post, project_id)
+            result = storage.create_design_group(con, project_id, design_group_post)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find project.',
         )
     except exceptions.DesignGroupInsertException:
@@ -65,7 +65,7 @@ def get_design_group(project_id: int, design_group_id: int) -> models.DesignGrou
             return result
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find project.',
         )
     except auth_ex.UnauthorizedOperationException:
@@ -75,7 +75,7 @@ def get_design_group(project_id: int, design_group_id: int) -> models.DesignGrou
         )
     except exceptions.DesignGroupNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find design with id={design_group_id}.',
         )
     except project_exceptions.CVSProjectNoMatchException:
@@ -93,17 +93,17 @@ def delete_design_group(project_id: int, design_group_id: int) -> bool:
             return res
     except project_exceptions.CVSProjectFailedDeletionException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find project.',
         )
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find project.'
         )
     except exceptions.DesignGroupNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find design with id={design_group_id}.',
         )
     except project_exceptions.CVSProjectNoMatchException:
@@ -121,17 +121,17 @@ def edit_design_group(project_id: int, design_group_id: int, design_group: model
             return result
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find project.'
         )
     except exceptions.DesignGroupNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find design group with id={design_group_id}.',
         )
     except vcs_exceptions.VCSNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find vcs.',
         )
     except project_exceptions.CVSProjectNoMatchException:

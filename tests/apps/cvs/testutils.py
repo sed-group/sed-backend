@@ -1,3 +1,4 @@
+from decimal import Decimal
 from turtle import end_fill
 from typing import List, Tuple
 import random
@@ -48,6 +49,7 @@ def delete_project_by_id(project_id, user_id):
     sedbackend.apps.cvs.project.implementation.delete_cvs_project(
         project_id, user_id)
 
+
 # ======================================================================================================================
 # VCS
 # ======================================================================================================================
@@ -76,37 +78,40 @@ def random_VCS(name: str = None, description: str = None, year_from: int = None,
     return vcs
 
 
-def seed_random_vcs(user_id, project_id):
+def seed_random_vcs(project_id):
     vcs = random_VCS()
 
-    new_vcs = vcs_impl.create_vcs(vcs, project_id)
+    new_vcs = vcs_impl.create_vcs(project_id, vcs)
 
     return new_vcs
 
 
-def delete_VCSs(vcs_list: List[sedbackend.apps.cvs.vcs.models.VCS], project_id):
+def delete_VCSs(project_id: int, vcs_list: List[sedbackend.apps.cvs.vcs.models.VCS]):
     id_list = []
     for vcs in vcs_list:
         id_list.append(vcs.id)
 
-    delete_VCS_with_ids(id_list, project_id)
+    delete_VCS_with_ids(project_id, id_list)
 
 
-def delete_VCS_with_ids(vcs_id_list: List[int], project_id: int):
+def delete_VCS_with_ids(project_id: int, vcs_id_list: List[int]):
     for vcsid in vcs_id_list:
-        vcs_impl.delete_vcs(vcsid, project_id)
+        vcs_impl.delete_vcs(project_id, vcsid)
 
 
 def random_value_driver(name: str = None, unit: str = None):
     if name is None:
         name = tu.random_str(5, 50)
+    if unit is None:
+        unit = tu.random_str(0, 10)
 
     return sedbackend.apps.cvs.vcs.models.ValueDriverPost(
-        name=name
+        name=name,
+        unit=unit
     )
 
 
-def seed_random_value_driver(user_id, project_id):
+def seed_random_value_driver(user_id) -> sedbackend.apps.cvs.vcs.models.ValueDriver:
     value_driver = random_value_driver()
 
     new_value_driver = sedbackend.apps.cvs.vcs.implementation.create_value_driver(
@@ -115,33 +120,36 @@ def seed_random_value_driver(user_id, project_id):
     return new_value_driver
 
 
-def delete_vd_by_id(vd_id, project_id, user_id):
-    sedbackend.apps.cvs.vcs.implementation.delete_value_driver(
-        vd_id, project_id, user_id)
+def delete_vd_by_id(vd_id):
+    sedbackend.apps.cvs.vcs.implementation.delete_value_driver(vd_id)
+
+
+def delete_vd_from_user(user_id):
+    sedbackend.apps.cvs.vcs.implementation.delete_all_value_drivers(user_id)
 
 
 def delete_vcs_table_row_by_id(table_row_id):
     print('Delete all vcs table row')
 
 
-def random_table_row(project_id,
-                    user_id,
-                    vcs_id: int,
-                    index: int = None,
-                    iso_process_id: int = None,
-                    subprocess_id: int = None,
-                    stakeholder: str = None,
-                    stakeholder_expectations: str = None,
-                    stakeholder_needs: List[sedbackend.apps.cvs.vcs.models.StakeholderNeedPost] = None
-                    ) -> sedbackend.apps.cvs.vcs.models.VcsRowPost:
-
+def random_table_row(
+        user_id: int,
+        project_id: int,
+        vcs_id: int,
+        index: int = None,
+        iso_process_id: int = None,
+        subprocess_id: int = None,
+        stakeholder: str = None,
+        stakeholder_expectations: str = None,
+        stakeholder_needs: List[sedbackend.apps.cvs.vcs.models.StakeholderNeedPost] = None
+) -> sedbackend.apps.cvs.vcs.models.VcsRowPost:
     if index is None:
         index = random.randint(1, 15)
 
     if random.randint(1, 2) == 2:
         iso_process_id = random.randint(1, 25)
     else:
-        subprocess = random_subprocess(vcs_id, user_id)
+        subprocess = random_subprocess(project_id, vcs_id)
         subprocess_id = subprocess.id
 
     if stakeholder is None:
@@ -151,7 +159,7 @@ def random_table_row(project_id,
         stakeholder_expectations = tu.random_str(5, 50)
 
     if stakeholder_needs is None:
-        stakeholder_needs = seed_stakeholder_needs(user_id, project_id)
+        stakeholder_needs = seed_stakeholder_needs(user_id)
 
     table_row = sedbackend.apps.cvs.vcs.models.VcsRowPost(
         index=index,
@@ -165,46 +173,45 @@ def random_table_row(project_id,
     return table_row
 
 
-def random_subprocess(vcs_id, user_id, name: str = None, parent_process_id: int = None, order_index: int = None):
+def random_subprocess(project_id: int, vcs_id: int, name: str = None, parent_process_id: int = None,
+                      order_index: int = None):
     if name is None:
         name = tu.random_str(5, 50)
     if parent_process_id is None:
         parent_process_id = random.randint(1, 25)
 
-    subprocess = sedbackend.apps.cvs.vcs.models.VCSSubprocessPost(  # TODO fix bug here. Cannot create subprocess without order_index
+    subprocess = sedbackend.apps.cvs.vcs.models.VCSSubprocessPost(
+        # TODO fix bug here. Cannot create subprocess without order_index
         name=name,
         parent_process_id=parent_process_id,
         order_index=random.randint(1, 10)
     )
-    subp = sedbackend.apps.cvs.vcs.implementation.create_subprocess(
-        vcs_id, subprocess)
+    subp = sedbackend.apps.cvs.vcs.implementation.create_subprocess(project_id, vcs_id, subprocess)
     return subp
 
 
-def seed_random_subprocesses(project_id, user_id, amount=15):
+def seed_random_subprocesses(project_id: int, vcs_id: int, amount=15):
     subprocess_list = []
-    while amount > 0:
-        subprocess_list.append(random_subprocess(project_id, user_id))
-        amount = amount - 1
+    for _ in range(amount):
+        subprocess_list.append(random_subprocess(project_id, vcs_id))
 
     return subprocess_list
 
 
-def delete_subprocess_by_id(subprocess_id, project_id, user_id):
+def delete_subprocess_by_id(subprocess_id, project_id):
     sedbackend.apps.cvs.vcs.implementation.delete_subprocess(
-        subprocess_id, project_id, user_id)
+        subprocess_id, project_id)
 
 
-def delete_subprocesses(subprocesses, project_id, user_id):
+def delete_subprocesses(subprocesses, project_id):
     for subp in subprocesses:
-        delete_subprocess_by_id(subp.id, project_id, user_id)
+        delete_subprocess_by_id(subp.id, project_id)
 
 
 def random_stakeholder_need(user_id,
-                        project_id,
-                        need: str = None,
-                        rank_weight: int = None,
-                        value_driver_ids: List[int] = None) -> sedbackend.apps.cvs.vcs.models.StakeholderNeedPost:
+                            need: str = None,
+                            rank_weight: float = None,
+                            value_driver_ids: List[int] = None) -> sedbackend.apps.cvs.vcs.models.StakeholderNeedPost:
     if need is None:
         need = tu.random_str(5, 50)
 
@@ -212,38 +219,36 @@ def random_stakeholder_need(user_id,
         rank_weight = random.random()
 
     if value_driver_ids is None:
-        vd = seed_random_value_driver(user_id, project_id)
-        value_driver_ids = [vd.id]  # Should work....
+        vd = seed_random_value_driver(user_id)
+        value_driver_ids = [vd.id]
 
     stakeholder_need = sedbackend.apps.cvs.vcs.models.StakeholderNeedPost(
         need=need,
         rank_weight=rank_weight,
-        value_driver_ids=value_driver_ids
+        value_drivers=value_driver_ids
     )
     return stakeholder_need
 
 
-def seed_stakeholder_needs(user_id, project_id, amount=10) -> List[sedbackend.apps.cvs.vcs.models.StakeholderNeedPost]:
+def seed_stakeholder_needs(user_id, amount=10) -> List[sedbackend.apps.cvs.vcs.models.StakeholderNeedPost]:
     stakeholder_needs = []
-    while amount > 0:
-        stakeholder_need = random_stakeholder_need(user_id, project_id)
+    for _ in range(amount):
+        stakeholder_need = random_stakeholder_need(user_id)
         stakeholder_needs.append(stakeholder_need)
-        amount = amount - 1
 
     return stakeholder_needs
 
 
-def seed_vcs_table_rows(vcs_id, project_id, user_id, amount=15) -> List[vcs_model.VcsRow]:
+def seed_vcs_table_rows(user_id, project_id, vcs_id, amount=15) -> List[vcs_model.VcsRow]:
     table_rows = []
-    while (amount > 0):
-        tr = random_table_row(project_id, user_id, vcs_id)
+    for _ in range(amount):
+        tr = random_table_row(user_id, project_id, vcs_id)
         table_rows.append(tr)
-        amount = amount - 1
 
-    if (vcs_impl.edit_vcs_table(table_rows, vcs_id, project_id)):
-        return vcs_impl.get_vcs_table(vcs_id, project_id)
+    vcs_impl.edit_vcs_table(project_id, vcs_id, table_rows)
+    table = vcs_impl.get_vcs_table(project_id, vcs_id)
 
-    return None
+    return table
 
 
 # ======================================================================================================================
@@ -333,6 +338,7 @@ def delete_multiple_bpmn_nodes(nodes, project_id, vcs_id, user_id):
     for node in nodes:
         delete_bpmn_node(node.id, project_id, vcs_id, user_id)
 
+
 # ======================================================================================================================
 # Designs
 # ======================================================================================================================
@@ -351,7 +357,7 @@ def seed_random_design_group(project_id: int, name: str = None, vcs_id: int = No
         vcs_id=vcs_id
     )
 
-    dg = design_impl.create_cvs_design_group(design_group_post, project_id)
+    dg = design_impl.create_cvs_design_group(project_id, design_group_post)
 
     return dg
 
@@ -360,15 +366,23 @@ def delete_design_group(project_id: int, dg_id: int):
     design_impl.delete_design_group(project_id, dg_id)
 
 
+def seed_random_designs(project_id: int, dg_id: int, amount: int = 10):
+
+    design_impl.edit_designs(project_id, dg_id, [design_model.DesignPut(name=tu.random_str(5, 50))
+                                                 for _ in range(amount)])
+
+    return design_impl.get_all_designs(project_id, dg_id)
+
+
 # ======================================================================================================================
 # Connect design to lifecycle (Formulas)
 # ======================================================================================================================
 
-def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, user_id: int, amount:int = 10) -> List[connect_model.FormulaRowGet]:
-
+def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, user_id: int, amount: int = 10) -> List[
+    connect_model.FormulaRowGet]:
     for _ in range(amount):
-        vcs_row = seed_vcs_table_rows(vcs_id, project_id, user_id, 1)
-    
+        vcs_row = seed_vcs_table_rows(user_id, project_id, vcs_id, 1)
+
         time = tu.random_str(10, 200)
         time_unit = random_time_unit()
         cost = tu.random_str(10, 200)
@@ -394,10 +408,11 @@ def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, use
 
     return connect_impl.get_all_formulas(project_id, vcs_id, design_group_id)
 
-def delete_formulas(project_id: int, vcsRow_Dg_ids: List[Tuple[int, int]]):
 
+def delete_formulas(project_id: int, vcsRow_Dg_ids: List[Tuple[int, int]]):
     for (vcs_row, dg) in vcsRow_Dg_ids:
         connect_impl.delete_formulas(project_id, vcs_row, dg)
+
 
 # ======================================================================================================================
 # Utility
@@ -405,7 +420,7 @@ def delete_formulas(project_id: int, vcsRow_Dg_ids: List[Tuple[int, int]]):
 
 def random_time_unit():
     return random.choice(list(TimeFormat)).value
-    
+
 
 def random_rate_choice():
     return random.choice(list(Rate)).value
