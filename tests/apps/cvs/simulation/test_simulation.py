@@ -376,7 +376,38 @@ def test_run_sim_invalid_proj(client, std_headers, std_user):
 
 
 def test_run_single_xlsx_sim(client, std_headers, std_user):
-  pass
+    #Setup 
+  current_user = impl_users.impl_get_user_with_username(std_user.username)
+  project = tu.seed_random_project(current_user.id)
+  vcs = tu.seed_random_vcs(current_user.id, project.id)
+  design_group = tu.seed_random_design_group(project.id)
+  tu.seed_random_formulas(project.id, vcs.id, design_group.id, current_user.id, 10) #Also creates the vcs rows
+  design = tu.seed_random_designs(project.id, design_group.id, 1)
+
+  settings = tu.seed_simulation_settings(project.id, [vcs.id], [design[0].id])
+  settings.monte_carlo = False
+
+  
+
+  #Act
+  res = client.post(f'/api/cvs/project/{project.id}/simulation/excel', 
+                    headers=std_headers,
+                    json = {
+                      "sim_settings": settings.dict(),
+                      "vcs_ids": [vcs.id],
+                      "design_ids": [design[0].id]
+                    })
+  
+  #Assert
+  assert res.status_code == 200
+  
+  #Should probably assert some other stuff about the output to ensure that it is correct. 
+  
+
+  #Cleanup
+  tu.delete_design_group(project.id, design_group.id)
+  tu.delete_VCS_with_ids([vcs.id], project.id)
+  tu.delete_project_by_id(project.id, current_user.id)
 
 
 def test_run_xlsx_sim(client, std_headers, std_user):
