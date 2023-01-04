@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_projects`
     `id`               INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `name`             VARCHAR(255) NULL     DEFAULT 'Unnamed project',
     `description`      TEXT         NULL     DEFAULT NULL,
-    `currency`         VARCHAR(10)   NULL     DEFAULT '€',
+    `currency`         VARCHAR(10)   NULL    DEFAULT NULL,
     `owner_id`         INT UNSIGNED NOT NULL,
     `datetime_created` DATETIME(3)  NOT NULL DEFAULT NOW(3),
     PRIMARY KEY (`id`),
@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_stakeholder_needs`
     `vcs_row`           INT UNSIGNED NOT NULL,
     `need`              TEXT NOT NULL,
     `value_dimension`   TEXT NULL,
-    `rank_weight`       DOUBLE(10,5) NULL,
+    `rank_weight`       DOUBLE NULL,
     FOREIGN KEY(`vcs_row`)
         REFERENCES  `seddb`.`cvs_vcs_rows`(`id`)
         ON DELETE CASCADE,
@@ -250,7 +250,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vd_design_values`
 (
     `value_driver`      INT UNSIGNED NOT NULL,
     `design`            INT UNSIGNED NOT NULL,
-    `value`             DOUBLE(32,5) NOT NULL,
+    `value`             DOUBLE NOT NULL,
     PRIMARY KEY(`value_driver`, `design`),
     FOREIGN KEY(`value_driver`)
         REFERENCES `seddb`.`cvs_value_drivers`(`id`)
@@ -297,7 +297,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_input_values`
 (
     `vcs`           INT UNSIGNED NOT NULL,
     `market_input`  INT UNSIGNED NOT NULL,
-    `value`         DOUBLE(32,5) NOT NULL,
+    `value`         DOUBLE NOT NULL,
     PRIMARY KEY(`vcs`,`market_input`),
     FOREIGN KEY(`vcs`)
         REFERENCES `seddb`.`cvs_vcss`(`id`)

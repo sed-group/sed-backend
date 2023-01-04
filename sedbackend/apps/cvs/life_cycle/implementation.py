@@ -8,10 +8,10 @@ from sedbackend.apps.cvs.life_cycle import exceptions, storage, models
 from sedbackend.apps.cvs.project import exceptions as project_exceptions
 
 
-def create_process_node(node: models.ProcessNodePost, vcs_id: int) -> models.ProcessNodeGet:
+def create_process_node(project_id: int, vcs_id: int, node: models.ProcessNodePost) -> models.ProcessNodeGet:
     try:
         with get_connection() as con:
-            result = storage.create_process_node(con, node, vcs_id)
+            result = storage.create_process_node(con, project_id, vcs_id, node)
             con.commit()
             return result
     except auth_ex.UnauthorizedOperationException:

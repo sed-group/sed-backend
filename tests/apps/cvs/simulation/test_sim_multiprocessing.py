@@ -6,7 +6,7 @@ def test_run_single_monte_carlo_sim(client, std_headers, std_user):
   #Setup 
   current_user = impl_users.impl_get_user_with_username(std_user.username)
   project = tu.seed_random_project(current_user.id)
-  vcs = tu.seed_random_vcs(current_user.id, project.id)
+  vcs = tu.seed_random_vcs(project.id)
   design_group = tu.seed_random_design_group(project.id)
   tu.seed_random_formulas(project.id, vcs.id, design_group.id, current_user.id, 10) #Also creates the vcs rows
   design = tu.seed_random_designs(project.id, design_group.id, 1)
@@ -31,7 +31,7 @@ def test_run_single_monte_carlo_sim(client, std_headers, std_user):
   
   #Cleanup
   tu.delete_design_group(project.id, design_group.id)
-  tu.delete_VCS_with_ids([vcs.id], project.id)
+  tu.delete_VCS_with_ids(project.id, [vcs.id])
   tu.delete_project_by_id(project.id, current_user.id)
 
 
@@ -46,7 +46,7 @@ def test_run_multiple_monte_carlo_sim(client, std_headers, std_user):
 
   design_ids = []
   for _ in range(amount):
-    vcs = tu.seed_random_vcs(current_user.id, project.id)
+    vcs = tu.seed_random_vcs(project.id)
     design_group = tu.seed_random_design_group(project.id)
     vcss.append(vcs)
     dgs.append(design_group)
@@ -78,7 +78,7 @@ def test_run_multiple_monte_carlo_sim(client, std_headers, std_user):
   for dg in dgs:
     tu.delete_design_group(project.id, dg.id)
 
-  tu.delete_VCS_with_ids([vcs.id for vcs in vcss], project.id)
+  tu.delete_VCS_with_ids(project.id, [vcs.id for vcs in vcss])
   tu.delete_project_by_id(project.id, current_user.id)
 
 
@@ -95,7 +95,7 @@ def test_run_mc_sim_invalid_designs(client, std_headers, std_user):
 
   #TODO Find a way to get a row that is the same across all vcs's - so that there is an interarrival process
   for _ in range(amount):
-    vcs = tu.seed_random_vcs(current_user.id, project.id)
+    vcs = tu.seed_random_vcs(project.id)
     design_group = tu.seed_random_design_group(project.id)
     vcss.append(vcs)
     dgs.append(design_group)
@@ -122,7 +122,7 @@ def test_run_mc_sim_invalid_designs(client, std_headers, std_user):
   assert res.json() == {'detail': 'Could not find design'} #The error from get_design() in design.implementation
 
   #Cleanup
-  tu.delete_VCS_with_ids([vcs.id for vcs in vcss], project.id)
+  tu.delete_VCS_with_ids(project.id, [vcs.id for vcs in vcss])
   tu.delete_project_by_id(project.id, current_user.id)
 
 
@@ -139,7 +139,7 @@ def test_run_mc_sim_invalid_vcss(client, std_headers, std_user):
 
   #TODO Find a way to get a row that is the same across all vcs's - so that there is an interarrival process
   for _ in range(amount):
-    vcs = tu.seed_random_vcs(current_user.id, project.id)
+    vcs = tu.seed_random_vcs(project.id)
     design_group = tu.seed_random_design_group(project.id)
     vcss.append(vcs)
     dgs.append(design_group)
@@ -171,7 +171,7 @@ def test_run_mc_sim_invalid_vcss(client, std_headers, std_user):
   for dg in dgs:
     tu.delete_design_group(project.id, dg.id)
 
-  tu.delete_VCS_with_ids([vcs.id for vcs in vcss], project.id)
+  tu.delete_VCS_with_ids(project.id, [vcs.id for vcs in vcss])
   tu.delete_project_by_id(project.id, current_user.id)
 
 
@@ -179,7 +179,7 @@ def test_run_mc_sim_end_time_before_start_time(client, std_headers, std_user):
   #Setup 
   current_user = impl_users.impl_get_user_with_username(std_user.username)
   project = tu.seed_random_project(current_user.id)
-  vcs = tu.seed_random_vcs(current_user.id, project.id)
+  vcs = tu.seed_random_vcs(project.id)
   design_group = tu.seed_random_design_group(project.id)
   tu.seed_random_formulas(project.id, vcs.id, design_group.id, current_user.id, 10) #Also creates the vcs rows
   design = tu.seed_random_designs(project.id, design_group.id, 1)
@@ -203,7 +203,7 @@ def test_run_mc_sim_end_time_before_start_time(client, std_headers, std_user):
   
   #Cleanup
   tu.delete_design_group(project.id, design_group.id)
-  tu.delete_VCS_with_ids([vcs.id], project.id)
+  tu.delete_VCS_with_ids(project.id, [vcs.id])
   tu.delete_project_by_id(project.id, current_user.id)
 
 
@@ -211,7 +211,7 @@ def test_run_mc_sim_no_flows(client, std_headers, std_user):
    #Setup 
   current_user = impl_users.impl_get_user_with_username(std_user.username)
   project = tu.seed_random_project(current_user.id)
-  vcs = tu.seed_random_vcs(current_user.id, project.id)
+  vcs = tu.seed_random_vcs(project.id)
   design_group = tu.seed_random_design_group(project.id)
   tu.seed_random_formulas(project.id, vcs.id, design_group.id, current_user.id, 10) #Also creates the vcs rows
   design = tu.seed_random_designs(project.id, design_group.id, 1)
@@ -236,7 +236,7 @@ def test_run_mc_sim_no_flows(client, std_headers, std_user):
   
   #Cleanup
   tu.delete_design_group(project.id, design_group.id)
-  tu.delete_VCS_with_ids([vcs.id], project.id)
+  tu.delete_VCS_with_ids(project.id, [vcs.id])
   tu.delete_project_by_id(project.id, current_user.id)
 
 
@@ -244,7 +244,7 @@ def test_run_mc_sim_both_flows(client, std_headers, std_user):
       #Setup 
   current_user = impl_users.impl_get_user_with_username(std_user.username)
   project = tu.seed_random_project(current_user.id)
-  vcs = tu.seed_random_vcs(current_user.id, project.id)
+  vcs = tu.seed_random_vcs(project.id)
   design_group = tu.seed_random_design_group(project.id)
   tu.seed_random_formulas(project.id, vcs.id, design_group.id, current_user.id, 10) #Also creates the vcs rows
   design = tu.seed_random_designs(project.id, design_group.id, 1)
@@ -269,7 +269,7 @@ def test_run_mc_sim_both_flows(client, std_headers, std_user):
   
   #Cleanup
   tu.delete_design_group(project.id, design_group.id)
-  tu.delete_VCS_with_ids([vcs.id], project.id)
+  tu.delete_VCS_with_ids(project.id, [vcs.id])
   tu.delete_project_by_id(project.id, current_user.id)
 
 
@@ -277,7 +277,7 @@ def test_run_mc_sim_rate_invalid_order(client, std_headers, std_user):
     #Setup 
   current_user = impl_users.impl_get_user_with_username(std_user.username)
   project = tu.seed_random_project(current_user.id)
-  vcs = tu.seed_random_vcs(current_user.id, project.id)
+  vcs = tu.seed_random_vcs(project.id)
   design_group = tu.seed_random_design_group(project.id)
   tu.seed_random_formulas(project.id, vcs.id, design_group.id, current_user.id, 10) #Also creates the vcs rows
   design = tu.seed_random_designs(project.id, design_group.id, 1)
@@ -303,5 +303,5 @@ def test_run_mc_sim_rate_invalid_order(client, std_headers, std_user):
 
   #Cleanup
   tu.delete_design_group(project.id, design_group.id)
-  tu.delete_VCS_with_ids([vcs.id], project.id)
+  tu.delete_VCS_with_ids(project.id, [vcs.id])
   tu.delete_project_by_id(project.id, current_user.id)

@@ -6,9 +6,6 @@ from sedbackend.apps.core.projects.dependencies import SubProjectAccessChecker
 from sedbackend.apps.core.projects.models import AccessLevel
 from sedbackend.apps.cvs.design import models, implementation
 from sedbackend.apps.cvs.project.router import CVS_APP_SID
-from sedbackend.apps.cvs.vcs.models import ValueDriver
-from sedbackend.apps.cvs.vcs import implementation as vcs_impl
-
 
 router = APIRouter()
 
@@ -23,9 +20,9 @@ router = APIRouter()
     response_model=models.DesignGroup,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def create_design_group(design_group_post: models.DesignGroupPost, native_project_id: int) \
+async def create_design_group(native_project_id: int, design_group_post: models.DesignGroupPost) \
         -> models.DesignGroup:
-    return implementation.create_cvs_design_group(design_group_post, native_project_id)
+    return implementation.create_cvs_design_group(native_project_id, design_group_post)
 
 
 @router.get(
@@ -37,16 +34,6 @@ async def create_design_group(design_group_post: models.DesignGroupPost, native_
 async def get_all_design_groups(native_project_id: int) \
         -> List[models.DesignGroup]:
     return implementation.get_all_design_groups(native_project_id)
-
-
-@router.get(
-    '/project/{native_project_id}/vcs/{vcs_id}/value-driver/all',
-    summary='Fetch all value drivers in a vcs',
-    response_model=List[ValueDriver],
-    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
-)
-async def get_all_value_driver_vcs(native_project_id: int, vcs_id: int) -> List[ValueDriver]:
-    return vcs_impl.get_all_value_driver_vcs(native_project_id, vcs_id)
 
 
 @router.get(

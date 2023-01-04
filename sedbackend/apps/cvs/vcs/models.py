@@ -53,6 +53,11 @@ class VCSSubprocessPost(BaseModel):
     order_index: int
     parent_process_id: int
 
+
+class VCSSubprocessPut(BaseModel):
+    name: str
+    parent_process_id: int
+
 # ======================================================================================================================
 # VCS Value dimension
 # ======================================================================================================================

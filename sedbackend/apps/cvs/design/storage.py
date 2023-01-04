@@ -22,8 +22,8 @@ VD_DESIGN_VALUES_TABLE = 'cvs_vd_design_values'
 VD_DESIGN_VALUES_COLUMNS = ['value_driver', 'design', 'value']
 
 
-def create_design_group(db_connection: PooledMySQLConnection, design_group: models.DesignGroupPost,
-                        project_id: int) -> models.DesignGroup:
+def create_design_group(db_connection: PooledMySQLConnection, project_id: int,
+                        design_group: models.DesignGroupPost) -> models.DesignGroup:
     logger.debug(f'creating design group in project={project_id}')
 
     insert_statement = MySQLStatementBuilder(db_connection)
@@ -135,9 +135,10 @@ def edit_design_group(db_connection: PooledMySQLConnection, project_id: int, des
 
     to_delete = list(filter(lambda x: x not in design_group.vd_ids, vds))
 
-    to_add = list(filter(lambda x: x not in vds, design_group.vd_ids))
-    for vd_id in to_add:
-        add_vd_to_design_group(db_connection, design_group_id, vd_id)
+    if design_group.vd_ids:
+        to_add = list(filter(lambda x: x not in vds, design_group.vd_ids))
+        for vd_id in to_add:
+            add_vd_to_design_group(db_connection, design_group_id, vd_id)
 
     if to_delete is not None:
         for vd_id in to_delete:
