@@ -429,6 +429,14 @@ def seed_random_market_input(project_id: int):
     return market_input_impl.create_market_input(project_id, market_input_post)
 
 
+def seed_random_market_input_values(project_id: int, vcs_id: int, market_input_id: int):
+    market_input_impl.update_market_input_values(project_id, [market_input_model.MarketInputValue(
+        vcs_id=vcs_id,
+        market_input_id=market_input_id,
+        value=random.random() * 100)])
+
+    return market_input_impl.get_all_market_values(project_id)
+
 
 # ======================================================================================================================
 # Utility

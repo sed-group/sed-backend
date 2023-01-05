@@ -178,17 +178,17 @@ def update_market_input_values(project_id: int, mi_values: List[models.MarketInp
             return res
     except exceptions.MarketInputNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find market input',
         )
     except vcs_exceptions.VCSNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find vcs',
         )
     except proj_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find project with id={project_id}.',
         )
 
@@ -201,7 +201,7 @@ def get_all_market_values(project_id: int) -> List[models.MarketInputValue]:
             return res
     except proj_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find project with id={project_id}.',
         )
 
@@ -214,12 +214,12 @@ def delete_market_value(project_id: int, vcs_id: int, mi_id: int) -> bool:
             return res
     except exceptions.MarketInputFailedDeletionException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not delete market input value with market input id: {mi_id} and vcs id: {vcs_id}'
         )
     except proj_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find project with id={project_id}.',
         )
     except proj_exceptions.CVSProjectNoMatchException:
