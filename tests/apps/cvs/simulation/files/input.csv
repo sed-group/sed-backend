@@ -1,15 +1,5 @@
-processes,"Architectural design","Verification","Testing","Manufacturing","Integration","Transition","Operation","Use","Charge","Maintenance","Repair","Substitute","Disposal","Resale"
-"Architectural design",0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-"Verification",0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-"Testing",0.2, 0, 0, 0.8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-"Manufacturing",0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0
-"Integration",0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0
-"Transition",0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0
-"Operation",0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0
-"Use",0, 0, 0, 0, 0, 0, 0, 0, 0, 0.2, 0, 0, 0.8, 0
-"Charge",0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-"Maintenance",0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.4, 0.6, 0, 0
-"Repair",0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0
-"Substitute",0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0
-"Disposal",0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.2
-"Resale",0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+processes,"Architectural design","Verification","Validation","Maintenance"
+"Architectural design",0, 1, 0, 0
+"Verification",0, 0, 1, 0
+"Validation",0, 0.2, 0, 0.8
+"Maintenance",0, 0, 0, 0

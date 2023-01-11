@@ -9,6 +9,7 @@ from fastapi.logger import logger
 from desim import interface as des
 from desim.data import NonTechCost, TimeFormat, SimResults
 from desim.simulation import Process
+import os
 
 from typing import List
 from sedbackend.apps.cvs.design.implementation import get_design
@@ -99,44 +100,61 @@ def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, project_id: int, 
     return design_results
 
 
-def run_sim_with_xlsx_dsm(db_connection: PooledMySQLConnection, project_id: int, simSettings: models.EditSimSettings, 
-                vcs_ids: List[int], dsm_xlsx: UploadFile, design_ids: List[int], 
-                normalized_npv: bool, user_id: int) -> List[models.Simulation]:
+def run_sim_with_dsm_file(db_connection: PooledMySQLConnection, user_id: int, project_id: int, sim_params: models.FileParams, 
+                    dsm_file: UploadFile) -> List[models.Simulation]:
 
-    if dsm_xlsx is None:
-            raise e.DSMFileNotFoundException
+    _, file_extension = os.path.splitext(dsm_file.filename)
 
-    try:
-        tmp_xlsx = tempfile.TemporaryFile()  #Workaround because current python version doesn't support 
-        tmp_xlsx.write(dsm_xlsx.file.read()) #readable() attribute on SpooledTemporaryFile which UploadFile 
-        tmp_xlsx.seek(0)                     #is an alias for. PR is accepted for python v3.12, see https://github.com/python/cpython/pull/29560
-        
-        dsm = get_dsm_from_excel(tmp_xlsx)
-        if dsm is None:
-            raise e.DSMFileNotFoundException
-    except Exception as exc:
-        logger.debug(exc)
-    finally:
-        tmp_xlsx.close()
+    if file_extension == '.xlsx':
+        try:
+            tmp_xlsx = tempfile.TemporaryFile()  #Workaround because current python version doesn't support 
+            tmp_xlsx.write(dsm_file.file.read()) #readable() attribute on SpooledTemporaryFile which UploadFile 
+            tmp_xlsx.seek(0)                     #is an alias for. PR is accepted for python v3.12, see https://github.com/python/cpython/pull/29560
+            
+            dsm = get_dsm_from_excel(tmp_xlsx)
+            if dsm is None:
+                raise e.DSMFileNotFoundException
+        except Exception as exc:
+            logger.debug(exc)
+        finally:
+            tmp_xlsx.close()
+    elif file_extension == '.csv':
+        print("ended up in .csv")
+        try:
+            tmp_csv = tempfile.TemporaryFile()  #Workaround because current python version doesn't support 
+            tmp_csv.write(dsm_file.file.read())      #readable() attribute on SpooledTemporaryFile which UploadFile 
+            tmp_csv.seek(0)                     #is an alias for. PR is accepted for python v3.12, see https://github.com/python/cpython/pull/29560
+    
+            dsm = get_dsm_from_csv(tmp_csv) #This should hopefully open up the file for the processor. 
+            if dsm is None:
+                raise e.DSMFileNotFoundException
+        except Exception as exc:
+            logger.debug(exc)
+        finally:
+            tmp_csv.close()    
+    else:
+        raise e.DSMFileNotFoundException
 
+    vcs_ids = [int(id) for id in sim_params.vcs_ids.split(",")]
+    design_ids = [int(id) for id in sim_params.design_ids.split(",")]
 
-    interarrival = simSettings.interarrival_time
-    flow_time = simSettings.flow_time
-    runtime = simSettings.end_time
-    non_tech_add = simSettings.non_tech_add
-    discount_rate = simSettings.discount_rate
-    process = simSettings.flow_process
-    time_unit = TIME_FORMAT_DICT.get(simSettings.time_unit)
+    interarrival = sim_params.interarrival_time
+    flow_time = sim_params.flow_time
+    runtime = sim_params.end_time
+    non_tech_add = sim_params.non_tech_add
+    discount_rate = sim_params.discount_rate
+    process = sim_params.flow_process
+    time_unit = TIME_FORMAT_DICT.get(sim_params.time_unit)
+    process = sim_params.flow_process
 
     for vcs_id in vcs_ids:
-    
         res = get_sim_data(db_connection, vcs_id)
         
         if not check_entity_rate(res, process):
             raise e.RateWrongOrderException
 
 
-        if design_ids is None or []:
+        if sim_params.design_ids is None or []:
             raise e.DesignIdsNotFoundException
 
         design_results = []
@@ -522,15 +540,20 @@ def create_simple_dsm(processes: List[Process]) -> dict:
 
 
 def get_dsm_from_csv(path):
-    pf = pd.read_csv(path)
+    try:
+        pf = pd.read_csv(path)
+    except Exception as e:
+        logger.debug(f'{e.__class__}, {e}')
 
     dsm = dict()
     for v in pf.values:
         dsm.update({v[0]: v[1::].tolist()})
+    
     return dsm
 
 
 def get_dsm_from_excel(path):
+    
     pf = pd.read_excel(path)
 
     dsm = dict()

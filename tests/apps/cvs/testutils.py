@@ -138,13 +138,13 @@ def random_table_row(
         user_id: int,
         project_id: int,
         vcs_id: int,
-        index: int = None,
-        iso_process_id: int = None,
-        subprocess_id: int = None,
-        stakeholder: str = None,
-        stakeholder_expectations: str = None,
-        stakeholder_needs: List[sedbackend.apps.cvs.vcs.models.StakeholderNeedPost] = None
-) -> sedbackend.apps.cvs.vcs.models.VcsRowPost:
+        index: Optional[int] = None,
+        iso_process_id: Optional[int] = None,
+        subprocess_id: Optional[int] = None,
+        stakeholder: Optional[str] = None,
+        stakeholder_expectations: Optional[str] = None,
+        stakeholder_needs: List[vcs_model.StakeholderNeedPost] = None
+) -> vcs_model.VcsRowPost:
     if index is None:
         index = random.randint(1, 15)
 
@@ -252,6 +252,9 @@ def seed_vcs_table_rows(user_id, project_id, vcs_id, amount=15) -> List[vcs_mode
 
     return table
 
+def create_vcs_table(project_id, vcs_id, rows: List[vcs_model.VcsRowPost]) -> List[vcs_model.VcsRow]:
+    vcs_impl.edit_vcs_table(project_id, vcs_id, rows)
+    return vcs_impl.get_vcs_table(project_id, vcs_id)
 
 # ======================================================================================================================
 # BPMN Table
@@ -430,6 +433,28 @@ def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, use
         connect_impl.edit_formulas(project_id, vcs_row.id, design_group_id, formulaPost)
 
     return connect_impl.get_all_formulas(project_id, vcs_id, design_group_id)
+
+
+def create_formulas(project_id: int, vcs_rows: List[vcs_model.VcsRow], dg_id: int) -> List[FormulaRowGet]:
+    for row in vcs_rows:
+        time = str(tu.random.randint(1, 200))
+        time_unit = random_time_unit()
+        cost = str(tu.random.randint(1, 2000))
+        revenue = str(tu.random.randint(1, 10000))
+        rate = Rate.PRODUCT.value
+
+        formulaPost = connect_model.FormulaPost(
+            time=time,
+            time_unit=time_unit,
+            cost=cost,
+            revenue=revenue,
+            rate=rate,
+            value_driver_ids=[],
+            market_input_ids=[]
+        )
+        connect_impl.edit_formulas(project_id, row.id, dg_id, formulaPost)
+    
+    return connect_impl.get_all_formulas(project_id, vcs_rows[0].vcs_id, dg_id)
 
 
 def delete_formulas(project_id: int, vcsRow_Dg_ids: List[Tuple[int, int]]):

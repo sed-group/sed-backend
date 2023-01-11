@@ -1,4 +1,4 @@
-from fastapi import HTTPException, UploadFile
+from fastapi import HTTPException, UploadFile, Depends, Form
 from starlette import status
 import tempfile
 
@@ -138,11 +138,12 @@ def run_csv_simulation(project_id: int, sim_settings: models.EditSimSettings, vc
         )
 
 
-def run_xlsx_simulation(project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int],  design_ids: List[int], normalized_npv: bool, 
-                        user_id: int) -> List[models.Simulation]:
+def run_dsm_file_simulation(user_id: int, project_id: int, sim_params: models.FileParams, 
+                         dsm_file: UploadFile) -> List[models.Simulation]:
+    
     try: 
         with get_connection() as con:
-            res = storage.run_sim_with_xlsx_dsm(con, project_id, sim_settings, vcs_ids, design_ids, normalized_npv, user_id) #Wtf saknar xlsx file
+            res = storage.run_sim_with_dsm_file(con, user_id, project_id, sim_params, dsm_file) #Wtf saknar xlsx file
             return res
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(

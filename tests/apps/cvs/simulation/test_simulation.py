@@ -2,6 +2,8 @@ import pytest
 import tests.apps.cvs.testutils as tu
 import testutils as sim_tu
 import sedbackend.apps.core.users.implementation as impl_users
+from pathlib import Path
+import os
 
 def test_run_single_simulation(client, std_headers, std_user):
   #Setup 
@@ -344,28 +346,80 @@ def test_run_sim_invalid_proj(client, std_headers, std_user):
 
 
 def test_run_single_xlsx_sim(client, std_headers, std_user):
-    #Setup 
-  
+  #Setup 
   current_user = impl_users.impl_get_user_with_username(std_user.username)
- 
-  project, vcs, design_group, design, settings = sim_tu.setup_single_simulation(current_user.id)
-  settings.monte_carlo = False
+  project = tu.seed_random_project(current_user.id)
+  vcs = tu.seed_random_vcs(project.id)
 
-
-
-  #Act
-  res = client.post(f'/api/cvs/project/{project.id}/simulation/excel', 
-                    headers=std_headers,
-                    json = {
-                      "sim_settings": settings.dict(),
-                      "vcs_ids": [vcs.id],
-                      "design_ids": [design[0].id]
-                    })
+  row1 = tu.vcs_model.VcsRowPost(
+    index=0,
+    stakeholder=tu.tu.random_str(5,50),
+    stakeholder_needs=None,
+    stakeholder_expectations=tu.tu.random_str(5,50),
+    iso_process=17,
+    subprocess=None
+  )
+  row2 = tu.vcs_model.VcsRowPost(
+    index=1,
+    stakeholder=tu.tu.random_str(5,50),
+    stakeholder_needs=None,
+    stakeholder_expectations=tu.tu.random_str(5,50),
+    iso_process=20,
+    subprocess=None
+  )
+  row3 = tu.vcs_model.VcsRowPost(
+    index=2,
+    stakeholder=tu.tu.random_str(5,50),
+    stakeholder_needs=None,
+    stakeholder_expectations=tu.tu.random_str(5,50),
+    iso_process=22,
+    subprocess=None
+  )
+  row4 = tu.vcs_model.VcsRowPost(
+    index=3,
+    stakeholder=tu.tu.random_str(5,50),
+    stakeholder_needs=None,
+    stakeholder_expectations=tu.tu.random_str(5,50),
+    iso_process=24,
+    subprocess=None
+  )
   
+  rows = [row1, row2, row3, row4]
+
+  table = tu.create_vcs_table(project.id, vcs.id, rows)
+  design_group = tu.seed_random_design_group(project.id)
+  design = tu.seed_random_designs(project.id, design_group.id, 1)[0]
+  formulas = tu.create_formulas(project.id, table, design_group.id)
+
+  cwd = os.getcwd()
+  _test_upload_file = Path(cwd + '/tests/apps/cvs/simulation/files/input-example.xlsx')
+  _file = {'dsm_file': ('input-example.xlsx', _test_upload_file.open('rb'), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')}
+
+  sim_data = {
+    "time_unit": tu.TimeFormat.YEAR.value,
+    "flow_process": "Verification",
+    "flow_start_time": None,
+    "flow_time": 5,
+    "interarrival_time": 10,
+    "start_time": 1,
+    "end_time": 30,
+    "discount_rate": 0.08,
+    "non_tech_add": tu.NonTechCost.CONTINOUSLY.value,
+    "monte_carlo": False,
+    "runs": None,
+    "vcs_ids": str(vcs.id),
+    "design_ids": str(design.id),
+    "normalized_npv": False
+  }
+  
+  #Act
+  res = client.post(f'/api/cvs/project/{project.id}/sim/upload-dsm', 
+                    headers=std_headers,
+                    files=_file,
+                    data = sim_data)
+
   #Assert
   assert res.status_code == 200
-  
-  #Should probably assert some other stuff about the output to ensure that it is correct. 
   
 
   #Cleanup
@@ -375,12 +429,262 @@ def test_run_single_xlsx_sim(client, std_headers, std_user):
 
 
 def test_run_xlsx_sim(client, std_headers, std_user):
-  pass
+  #Setup 
+  amount = 3
+
+  current_user = impl_users.impl_get_user_with_username(std_user.username)
+  project = tu.seed_random_project(current_user.id)
+  
+  row1 = tu.vcs_model.VcsRowPost(
+    index=0,
+    stakeholder=tu.tu.random_str(5,50),
+    stakeholder_needs=None,
+    stakeholder_expectations=tu.tu.random_str(5,50),
+    iso_process=17,
+    subprocess=None
+  )
+  row2 = tu.vcs_model.VcsRowPost(
+    index=1,
+    stakeholder=tu.tu.random_str(5,50),
+    stakeholder_needs=None,
+    stakeholder_expectations=tu.tu.random_str(5,50),
+    iso_process=20,
+    subprocess=None
+  )
+  row3 = tu.vcs_model.VcsRowPost(
+    index=2,
+    stakeholder=tu.tu.random_str(5,50),
+    stakeholder_needs=None,
+    stakeholder_expectations=tu.tu.random_str(5,50),
+    iso_process=22,
+    subprocess=None
+  )
+  row4 = tu.vcs_model.VcsRowPost(
+    index=3,
+    stakeholder=tu.tu.random_str(5,50),
+    stakeholder_needs=None,
+    stakeholder_expectations=tu.tu.random_str(5,50),
+    iso_process=24,
+    subprocess=None
+  )
+
+  rows = [row1, row2, row3, row4]
+  design_group = tu.seed_random_design_group(project.id)
+  designs = tu.seed_random_designs(project.id, design_group.id, 3)
+  vcss = []
+  for _ in range(amount):
+    vcs = tu.seed_random_vcs(project.id)
+    vcss.append(vcs.id)
+    table = tu.create_vcs_table(project.id, vcs.id, rows)
+    formulas = tu.create_formulas(project.id, table, design_group.id)
+
+  cwd = os.getcwd()
+  _test_upload_file = Path(cwd + '/tests/apps/cvs/simulation/files/input-example.xlsx')
+  _file = {'dsm_file': ('input-example.xlsx', _test_upload_file.open('rb'), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')}
+
+  sim_data = {
+    "time_unit": tu.TimeFormat.YEAR.value,
+    "flow_process": "Verification",
+    "flow_start_time": None,
+    "flow_time": 5,
+    "interarrival_time": 10,
+    "start_time": 1,
+    "end_time": 30,
+    "discount_rate": 0.08,
+    "non_tech_add": tu.NonTechCost.CONTINOUSLY.value,
+    "monte_carlo": False,
+    "runs": None,
+    "vcs_ids": ','.join([str(vcs) for vcs in vcss]),
+    "design_ids": ','.join([str(design) for design in designs]),
+    "normalized_npv": False
+  }
+  
+  #Act
+  res = client.post(f'/api/cvs/project/{project.id}/sim/upload-dsm', 
+                    headers=std_headers,
+                    files=_file,
+                    data = sim_data)
+  
+
+  #Assert
+  assert res.status_code == 200
+  
+
+  #Cleanup
+  tu.delete_design_group(project.id, design_group.id)
+  tu.delete_VCS_with_ids(project.id, vcss)
+  tu.delete_project_by_id(project.id, current_user.id)    
 
 
 def test_run_single_csv_sim(client, std_headers, std_user):
-  pass
+  #Setup 
+  current_user = impl_users.impl_get_user_with_username(std_user.username)
+  project = tu.seed_random_project(current_user.id)
+  vcs = tu.seed_random_vcs(project.id)
+
+  row1 = tu.vcs_model.VcsRowPost(
+    index=0,
+    stakeholder=tu.tu.random_str(5,50),
+    stakeholder_needs=None,
+    stakeholder_expectations=tu.tu.random_str(5,50),
+    iso_process=17,
+    subprocess=None
+  )
+  row2 = tu.vcs_model.VcsRowPost(
+    index=1,
+    stakeholder=tu.tu.random_str(5,50),
+    stakeholder_needs=None,
+    stakeholder_expectations=tu.tu.random_str(5,50),
+    iso_process=20,
+    subprocess=None
+  )
+  row3 = tu.vcs_model.VcsRowPost(
+    index=2,
+    stakeholder=tu.tu.random_str(5,50),
+    stakeholder_needs=None,
+    stakeholder_expectations=tu.tu.random_str(5,50),
+    iso_process=22,
+    subprocess=None
+  )
+  row4 = tu.vcs_model.VcsRowPost(
+    index=3,
+    stakeholder=tu.tu.random_str(5,50),
+    stakeholder_needs=None,
+    stakeholder_expectations=tu.tu.random_str(5,50),
+    iso_process=24,
+    subprocess=None
+  )
+  
+  rows = [row1, row2, row3, row4]
+
+  table = tu.create_vcs_table(project.id, vcs.id, rows)
+  design_group = tu.seed_random_design_group(project.id)
+  design = tu.seed_random_designs(project.id, design_group.id, 1)[0]
+  formulas = tu.create_formulas(project.id, table, design_group.id)
+
+  cwd = os.getcwd()
+  _test_upload_file = Path(cwd + '/tests/apps/cvs/simulation/files/input.csv')
+  _file = {'dsm_file': ('input.csv', _test_upload_file.open('rb'), 'text/csv')}
+
+  sim_data = {
+    "time_unit": tu.TimeFormat.YEAR.value,
+    "flow_process": "Verification",
+    "flow_start_time": None,
+    "flow_time": 5,
+    "interarrival_time": 10,
+    "start_time": 1,
+    "end_time": 30,
+    "discount_rate": 0.08,
+    "non_tech_add": tu.NonTechCost.CONTINOUSLY.value,
+    "monte_carlo": False,
+    "runs": None,
+    "vcs_ids": str(vcs.id),
+    "design_ids": str(design.id),
+    "normalized_npv": False
+  }
+  
+  #Act
+  res = client.post(f'/api/cvs/project/{project.id}/sim/upload-dsm', 
+                    headers=std_headers,
+                    files=_file,
+                    data = sim_data)
+  
+
+  #Assert
+  assert res.status_code == 200
+  
+
+  #Cleanup
+  tu.delete_design_group(project.id, design_group.id)
+  tu.delete_VCS_with_ids(project.id, [vcs.id])
+  tu.delete_project_by_id(project.id, current_user.id)  
 
 
 def test_run_csv_sim(client, std_headers, std_user):
-  pass
+  #Setup 
+  amount = 3
+
+  current_user = impl_users.impl_get_user_with_username(std_user.username)
+  project = tu.seed_random_project(current_user.id)
+  
+  row1 = tu.vcs_model.VcsRowPost(
+    index=0,
+    stakeholder=tu.tu.random_str(5,50),
+    stakeholder_needs=None,
+    stakeholder_expectations=tu.tu.random_str(5,50),
+    iso_process=17,
+    subprocess=None
+  )
+  row2 = tu.vcs_model.VcsRowPost(
+    index=1,
+    stakeholder=tu.tu.random_str(5,50),
+    stakeholder_needs=None,
+    stakeholder_expectations=tu.tu.random_str(5,50),
+    iso_process=20,
+    subprocess=None
+  )
+  row3 = tu.vcs_model.VcsRowPost(
+    index=2,
+    stakeholder=tu.tu.random_str(5,50),
+    stakeholder_needs=None,
+    stakeholder_expectations=tu.tu.random_str(5,50),
+    iso_process=22,
+    subprocess=None
+  )
+  row4 = tu.vcs_model.VcsRowPost(
+    index=3,
+    stakeholder=tu.tu.random_str(5,50),
+    stakeholder_needs=None,
+    stakeholder_expectations=tu.tu.random_str(5,50),
+    iso_process=24,
+    subprocess=None
+  )
+
+  rows = [row1, row2, row3, row4]
+  design_group = tu.seed_random_design_group(project.id)
+  designs = tu.seed_random_designs(project.id, design_group.id, 3)
+  vcss = []
+  for _ in range(amount):
+    vcs = tu.seed_random_vcs(project.id)
+    vcss.append(vcs.id)
+    table = tu.create_vcs_table(project.id, vcs.id, rows)
+    formulas = tu.create_formulas(project.id, table, design_group.id)
+
+  cwd = os.getcwd()
+  _test_upload_file = Path(cwd + '/tests/apps/cvs/simulation/files/input.csv')
+  _file = {'dsm_file': ('input.csv', _test_upload_file.open('rb'), 'text/csv')}
+
+  sim_data = {
+    "time_unit": tu.TimeFormat.YEAR.value,
+    "flow_process": "Verification",
+    "flow_start_time": None,
+    "flow_time": 5,
+    "interarrival_time": 10,
+    "start_time": 1,
+    "end_time": 30,
+    "discount_rate": 0.08,
+    "non_tech_add": tu.NonTechCost.CONTINOUSLY.value,
+    "monte_carlo": False,
+    "runs": None,
+    "vcs_ids": ','.join([str(vcs) for vcs in vcss]),
+    "design_ids": ','.join([str(design) for design in designs]),
+    "normalized_npv": False
+  }
+  
+  #Act
+  res = client.post(f'/api/cvs/project/{project.id}/sim/upload-dsm', 
+                    headers=std_headers,
+                    files=_file,
+                    data = sim_data)
+  
+
+  print(res)
+  print(res.json())
+  #Assert
+  assert res.status_code == 200
+  
+
+  #Cleanup
+  tu.delete_design_group(project.id, design_group.id)
+  tu.delete_VCS_with_ids(project.id, vcss)
+  tu.delete_project_by_id(project.id, current_user.id)   
