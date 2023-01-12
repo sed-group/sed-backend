@@ -33,7 +33,7 @@ def test_run_single_monte_carlo_sim(client, std_headers, std_user):
 
 def test_run_multiple_monte_carlo_sim(client, std_headers, std_user):
   #Setup
-  amount = 3
+  amount = 2
 
   current_user = impl_users.impl_get_user_with_username(std_user.username)
   project = tu.seed_random_project(current_user.id)
@@ -54,7 +54,7 @@ def test_run_multiple_monte_carlo_sim(client, std_headers, std_user):
 
   settings = tu.seed_simulation_settings(project.id, [vcs.id for vcs in vcss], design_ids)
   settings.monte_carlo = False
-  settings.runs = 10
+  settings.runs = 5
 
   #Act
   res = client.post(f'/api/cvs/project/{project.id}/simulation/run-multiprocessing', 

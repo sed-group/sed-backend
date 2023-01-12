@@ -133,6 +133,9 @@ def test_get_all_formulas_invalid_project(client, std_headers, std_user):
     # Assert
     assert res.status_code == 404
 
+    #Cleanup
+    tu.delete_project_by_id(project.id, current_user.id)
+
 
 def test_get_all_formulas_invalid_vcs(client, std_headers, std_user):
     # Setup
@@ -152,6 +155,10 @@ def test_get_all_formulas_invalid_vcs(client, std_headers, std_user):
 
     # Assert
     assert res.status_code == 404
+
+    #Cleanup
+    tu.delete_project_by_id(project.id, current_user.id)
+
 
 
 def get_all_formulas_invalid_design_group(client, std_headers, std_user):
@@ -173,6 +180,8 @@ def get_all_formulas_invalid_design_group(client, std_headers, std_user):
     # Assert
     assert res.status_code == 404
 
+    #Cleanup
+    tu.delete_project_by_id(project.id, current_user.id)
 
 def test_edit_formulas(client, std_headers, std_user):
     # Setup
@@ -418,6 +427,8 @@ def test_delete_formulas_invalid_project(client, std_headers, std_user):
     # Assert
     assert res.status_code == 404
 
+    #Cleanup
+    tu.delete_project_by_id(project.id, current_user.id)
 
 def test_delete_formulas_invalid_vcs_row(client, std_headers, std_user):
     # Setup
@@ -438,6 +449,9 @@ def test_delete_formulas_invalid_vcs_row(client, std_headers, std_user):
     # Assert
     assert res.status_code == 404
 
+    #Cleanup
+    tu.delete_project_by_id(project.id, current_user.id)
+
 
 def test_delete_formulas_invalid_design_group(client, std_headers, std_user):
     # Setup
@@ -457,6 +471,9 @@ def test_delete_formulas_invalid_design_group(client, std_headers, std_user):
 
     # Assert
     assert res.status_code == 400
+
+    #Cleanup
+    tu.delete_project_by_id(project.id, current_user.id)
 
 
 def test_get_vcs_dg_pairs(client, std_headers, std_user):
@@ -505,3 +522,6 @@ def test_get_vcs_dg_pairs_invalid_project(client, std_headers, std_user):
 
     # Assert
     assert res.status_code == 404
+
+    #Cleanup
+    tu.delete_project_by_id(project.id, current_user.id)
