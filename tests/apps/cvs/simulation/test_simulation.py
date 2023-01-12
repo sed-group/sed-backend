@@ -469,13 +469,17 @@ def test_run_xlsx_sim(client, std_headers, std_user):
   )
 
   rows = [row1, row2, row3, row4]
-  design_group = tu.seed_random_design_group(project.id)
-  designs = tu.seed_random_designs(project.id, design_group.id, 3)
+  
+  
   vcss = []
+  designs = []
   for _ in range(amount):
     vcs = tu.seed_random_vcs(project.id)
     vcss.append(vcs.id)
     table = tu.create_vcs_table(project.id, vcs.id, rows)
+    design_group = tu.seed_random_design_group(project.id)
+    design = tu.seed_random_designs(project.id, design_group.id, 1)
+    designs.append(design[0])
     formulas = tu.create_formulas(project.id, table, design_group.id)
 
   cwd = os.getcwd()
@@ -495,7 +499,7 @@ def test_run_xlsx_sim(client, std_headers, std_user):
     "monte_carlo": False,
     "runs": None,
     "vcs_ids": ','.join([str(vcs) for vcs in vcss]),
-    "design_ids": ','.join([str(design) for design in designs]),
+    "design_ids": ','.join([str(design.id) for design in designs]),
     "normalized_npv": False
   }
   
@@ -667,7 +671,7 @@ def test_run_csv_sim(client, std_headers, std_user):
     "monte_carlo": False,
     "runs": None,
     "vcs_ids": ','.join([str(vcs) for vcs in vcss]),
-    "design_ids": ','.join([str(design) for design in designs]),
+    "design_ids": ','.join([str(design.id) for design in designs]),
     "normalized_npv": False
   }
   
@@ -678,8 +682,6 @@ def test_run_csv_sim(client, std_headers, std_user):
                     data = sim_data)
   
 
-  print(res)
-  print(res.json())
   #Assert
   assert res.status_code == 200
   

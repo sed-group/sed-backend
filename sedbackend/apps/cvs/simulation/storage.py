@@ -135,8 +135,9 @@ def run_sim_with_dsm_file(db_connection: PooledMySQLConnection, user_id: int, pr
     else:
         raise e.DSMFileNotFoundException
 
-    vcs_ids = [int(id) for id in sim_params.vcs_ids.split(",")]
-    design_ids = [int(id) for id in sim_params.design_ids.split(",")]
+    vcs_ids = [int(id) for id in sim_params.vcs_ids.split(',')]
+    design_ids = [int(id) for id in sim_params.design_ids.split(',')]
+
 
     interarrival = sim_params.interarrival_time
     flow_time = sim_params.flow_time
@@ -147,9 +148,10 @@ def run_sim_with_dsm_file(db_connection: PooledMySQLConnection, user_id: int, pr
     time_unit = TIME_FORMAT_DICT.get(sim_params.time_unit)
     process = sim_params.flow_process
 
+
+    design_results = []
     for vcs_id in vcs_ids:
         res = get_sim_data(db_connection, vcs_id)
-        
         if not check_entity_rate(res, process):
             raise e.RateWrongOrderException
 
@@ -157,24 +159,26 @@ def run_sim_with_dsm_file(db_connection: PooledMySQLConnection, user_id: int, pr
         if sim_params.design_ids is None or []:
             raise e.DesignIdsNotFoundException
 
-        design_results = []
+        
         for design_id in design_ids:
             processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id)
             sim = des.Des()
         
             try:
-                res = sim.run_simulation(flow_time, interarrival, process, processes, non_tech_processes, non_tech_add, dsm, time_unit, 
+                results = sim.run_simulation(flow_time, interarrival, process, processes, non_tech_processes, non_tech_add, dsm, time_unit, 
                     discount_rate, runtime)
+
             except Exception as exc:
                 logger.debug(f'{exc.__class__}, {exc}')
+                print(f'Sim failed {exc.__class__}, {exc}')
                 raise e.SimulationFailedException
 
             design_res = models.Simulation(
-                    time=res.timesteps[-1],
-                    mean_NPV=res.mean_npv(),
-                    max_NPVs=res.all_max_npv(),
-                    mean_payback_time=res.mean_npv_payback_time(),
-                    all_npvs=res.npvs
+                    time=results.timesteps[-1],
+                    mean_NPV=results.mean_npv(),
+                    max_NPVs=results.all_max_npv(),
+                    mean_payback_time=results.mean_npv_payback_time(),
+                    all_npvs=results.npvs
                 )
 
 
@@ -199,8 +203,6 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, simSet
     time_unit = TIME_FORMAT_DICT.get(simSettings.time_unit)
 
 
-
-    print(vcs_ids)
     for vcs_id in vcs_ids:
         res = get_sim_data(db_connection, vcs_id)
         if res is None or res == []:
@@ -214,7 +216,6 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, simSet
             #    design_ids.append(design.id)
             raise e.DesignIdsNotFoundException
 
-        print(design_ids)
         for design_id in design_ids:
             get_design(design_id)
             processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id) #BUG probably. Populate processes changes the order of the processes. 
@@ -225,7 +226,7 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, simSet
             sim = des.Des()
 
             try:
-                res = sim.run_simulation(flow_time, interarrival, process, processes, non_tech_processes, non_tech_add, dsm, time_unit, 
+                results = sim.run_simulation(flow_time, interarrival, process, processes, non_tech_processes, non_tech_add, dsm, time_unit, 
                 discount_rate, runtime)
         
             except Exception as exc:
@@ -236,11 +237,11 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, simSet
 
             
             design_res = models.Simulation(
-                time=res.timesteps[-1],
-                mean_NPV=res.mean_npv(),
-                max_NPVs=res.all_max_npv(),
-                mean_payback_time=res.mean_npv_payback_time(),
-                all_npvs=res.npvs
+                time=results.timesteps[-1],
+                mean_NPV=results.mean_npv(),
+                max_NPVs=results.all_max_npv(),
+                mean_payback_time=results.mean_npv_payback_time(),
+                all_npvs=results.npvs
             )
 
             design_results.append(design_res)
