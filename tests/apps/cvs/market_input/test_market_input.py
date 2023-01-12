@@ -20,6 +20,7 @@ def test_create_market_input(client, std_headers, std_user):
     assert len(market_inputs) == 1
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_create_market_input_no_name(client, std_headers, std_user):
@@ -35,6 +36,7 @@ def test_create_market_input_no_name(client, std_headers, std_user):
     assert res.status_code == 422  # 422 unprocessable entity
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_get_all_market_inputs(client, std_headers, std_user):
@@ -50,6 +52,7 @@ def test_get_all_market_inputs(client, std_headers, std_user):
     assert len(res.json()) == 1
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_get_all_market_inputs_no_market_inputs(client, std_headers, std_user):
@@ -63,6 +66,7 @@ def test_get_all_market_inputs_no_market_inputs(client, std_headers, std_user):
     assert len(res.json()) == 0
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_edit_market_input(client, std_headers, std_user):
@@ -82,6 +86,7 @@ def test_edit_market_input(client, std_headers, std_user):
     assert market_input_updated.unit == "new unit"
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_edit_market_input_no_changes(client, std_headers, std_user):
@@ -101,6 +106,7 @@ def test_edit_market_input_no_changes(client, std_headers, std_user):
     assert market_input_updated.unit == market_input.unit
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_edit_market_input_no_name(client, std_headers, std_user):
@@ -117,6 +123,7 @@ def test_edit_market_input_no_name(client, std_headers, std_user):
     assert res.status_code == 422  # 422 unprocessable entity
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_delete_market_input(client, std_headers, std_user):
@@ -132,3 +139,4 @@ def test_delete_market_input(client, std_headers, std_user):
     assert len(market_inputs) == 0
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)

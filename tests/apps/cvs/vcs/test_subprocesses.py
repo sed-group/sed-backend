@@ -16,6 +16,7 @@ def test_get_all_subprocesses(client, std_headers, std_user):
     assert len(res.json()) == 5
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_get_all_subprocesses_no_subprocesses(client, std_headers, std_user):
@@ -30,6 +31,7 @@ def test_get_all_subprocesses_no_subprocesses(client, std_headers, std_user):
     assert len(res.json()) == 0
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_get_subprocess(client, std_headers, std_user):
@@ -47,6 +49,7 @@ def test_get_subprocess(client, std_headers, std_user):
     assert res.json()['parent_process']['id'] == subprocess.parent_process.id
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_get_subprocess_not_found(client, std_headers, std_user):
@@ -61,6 +64,7 @@ def test_get_subprocess_not_found(client, std_headers, std_user):
     assert res.status_code == 404  # 404 Not Found
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_create_subprocess(client, std_headers, std_user):
@@ -82,6 +86,7 @@ def test_create_subprocess(client, std_headers, std_user):
     assert res.json()['parent_process']['id'] == subprocess.parent_process.id
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_edit_subprocess(client, std_headers, std_user):
@@ -103,6 +108,7 @@ def test_edit_subprocess(client, std_headers, std_user):
     assert subprocess_edit.parent_process.id == subprocess.parent_process.id
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_delete_subprocess(client, std_headers, std_user):
@@ -118,3 +124,4 @@ def test_delete_subprocess(client, std_headers, std_user):
     assert len(impl_vcs.get_all_subprocess(project.id, vcs.id)) == 0
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
