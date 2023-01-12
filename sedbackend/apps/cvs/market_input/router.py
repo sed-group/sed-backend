@@ -58,21 +58,6 @@ async def delete_market_input(native_project_id: int, market_input_id: int) -> b
 ########################################################################################################################
 # Market Values
 ########################################################################################################################
-
-@router.put(
-    '/project/{native_project_id}/vcs/{vcs_id}/market-input/{market_input_id}/value',
-    summary='Create or update value for a market input',
-    response_model=bool,
-    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
-)
-async def update_market_value(native_project_id: int, vcs_id: int, market_input_id: int, value: float) -> bool:
-    return implementation.update_market_input_value(native_project_id, models.MarketInputValue(
-        vcs_id=vcs_id,
-        market_input_id=market_input_id,
-        value=value)
-    )
-
-
 @router.put(
     '/project/{native_project_id}/market-input-values',
     summary='Create or update values for market inputs',
@@ -89,13 +74,3 @@ async def update_market_values(native_project_id: int, mi_values: List[models.Ma
 )
 async def get_all_market_values(native_project_id: int) -> List[models.MarketInputValue]:
     return implementation.get_all_market_values(native_project_id)
-
-
-@router.delete(
-    '/project/{native_project_id}/vcs/{vcs_id}/market-input/{market_input_id}',
-    summary='Delete a market input value',
-    response_model=bool,
-    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
-)
-async def delete_market_value(native_project_id: int, vcs_id: int, market_input_id: int) -> bool:
-    return implementation.delete_market_value(native_project_id, vcs_id, market_input_id)

@@ -16,6 +16,7 @@ import sedbackend.apps.cvs.project.models
 import sedbackend.apps.cvs.vcs.implementation as vcs_impl
 import sedbackend.apps.cvs.vcs.models as vcs_model
 from sedbackend.apps.cvs.link_design_lifecycle.models import FormulaGet, FormulaRowGet, TimeFormat, Rate
+from sedbackend.apps.cvs.market_input import models as market_input_model, implementation as market_input_impl
 import tests.testutils as tu
 
 
@@ -634,6 +635,29 @@ def seed_random_sim_settings(project_id: int) -> sim_model.SimSettings:
 
     sim_impl.edit_sim_settings(project_id, sim_settings)
     return sim_impl.get_sim_settings(project_id)
+
+
+# ======================================================================================================================
+# Market Input
+# ======================================================================================================================
+
+def seed_random_market_input(project_id: int):
+    name = tu.random_str(5, 50)
+    unit = tu.random_str(5, 50)
+    market_input_post = market_input_model.MarketInputPost(
+        name=name,
+        unit=unit
+    )
+    return market_input_impl.create_market_input(project_id, market_input_post)
+
+
+def seed_random_market_input_values(project_id: int, vcs_id: int, market_input_id: int):
+    market_input_impl.update_market_input_values(project_id, [market_input_model.MarketInputValue(
+        vcs_id=vcs_id,
+        market_input_id=market_input_id,
+        value=random.random() * 100)])
+
+    return market_input_impl.get_all_market_values(project_id)
 
 
 # ======================================================================================================================
