@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import List
 from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
@@ -691,7 +692,8 @@ def create_stakeholder_need(db_connection: PooledMySQLConnection, vcs_row_id: in
         insert_statement \
             .insert(table=CVS_VCS_STAKEHOLDER_NEED_TABLE,
                     columns=['vcs_row', 'need', 'value_dimension', 'rank_weight']) \
-            .set_values([vcs_row_id, need.need, need.value_dimension, need.rank_weight]) \
+            .set_values([vcs_row_id, need.need, need.value_dimension,
+                         Decimal(need.rank_weight).quantize(Decimal("0.000001"))]) \
             .execute(fetch_type=FetchType.FETCH_NONE)
         need_id = insert_statement.last_insert_id
     except Error as e:
@@ -719,7 +721,7 @@ def update_stakeholder_need(db_connection: PooledMySQLConnection, vcs_row_id: in
             update_statement.update(
                 table=CVS_VCS_STAKEHOLDER_NEED_TABLE,
                 set_statement='need = %s, value_dimension = %s, rank_weight = %s',
-                values=[need.need, need.value_dimension, need.rank_weight]
+                values=[need.need, need.value_dimension, Decimal(need.rank_weight).quantize(Decimal("0.000001"))]
             )
             update_statement.where('id = %s', [need_id])
             _, rows = update_statement.execute(return_affected_rows=True)
