@@ -1,8 +1,10 @@
-from decimal import Decimal
-from turtle import end_fill
+from typing import List, Tuple, Optional
 from typing import List, Tuple
 import random
 
+import sedbackend.apps.cvs.simulation.implementation as sim_impl
+import sedbackend.apps.cvs.simulation.models as sim_model
+from sedbackend.apps.cvs.simulation.models import NonTechCost
 import sedbackend.apps.cvs.design.implementation as design_impl
 import sedbackend.apps.cvs.design.models as design_model
 import sedbackend.apps.cvs.link_design_lifecycle.implementation as connect_impl
@@ -13,7 +15,7 @@ import sedbackend.apps.cvs.project.implementation
 import sedbackend.apps.cvs.project.models
 import sedbackend.apps.cvs.vcs.implementation as vcs_impl
 import sedbackend.apps.cvs.vcs.models as vcs_model
-from sedbackend.apps.cvs.link_design_lifecycle.models import TimeFormat, Rate
+from sedbackend.apps.cvs.link_design_lifecycle.models import FormulaGet, FormulaRowGet, TimeFormat, Rate
 from sedbackend.apps.cvs.market_input import models as market_input_model, implementation as market_input_impl
 import tests.testutils as tu
 
@@ -137,13 +139,13 @@ def random_table_row(
         user_id: int,
         project_id: int,
         vcs_id: int,
-        index: int = None,
-        iso_process_id: int = None,
-        subprocess_id: int = None,
-        stakeholder: str = None,
-        stakeholder_expectations: str = None,
-        stakeholder_needs: List[sedbackend.apps.cvs.vcs.models.StakeholderNeedPost] = None
-) -> sedbackend.apps.cvs.vcs.models.VcsRowPost:
+        index: Optional[int] = None,
+        iso_process_id: Optional[int] = None,
+        subprocess_id: Optional[int] = None,
+        stakeholder: Optional[str] = None,
+        stakeholder_expectations: Optional[str] = None,
+        stakeholder_needs: List[vcs_model.StakeholderNeedPost] = None
+) -> vcs_model.VcsRowPost:
     if index is None:
         index = random.randint(1, 15)
 
@@ -251,6 +253,9 @@ def seed_vcs_table_rows(user_id, project_id, vcs_id, amount=15) -> List[vcs_mode
 
     return table
 
+def create_vcs_table(project_id, vcs_id, rows: List[vcs_model.VcsRowPost]) -> List[vcs_model.VcsRow]:
+    vcs_impl.edit_vcs_table(project_id, vcs_id, rows)
+    return vcs_impl.get_vcs_table(project_id, vcs_id)
 
 # ======================================================================================================================
 # BPMN Table
@@ -367,6 +372,23 @@ def delete_design_group(project_id: int, dg_id: int):
     design_impl.delete_design_group(project_id, dg_id)
 
 
+def random_design(value_driver_ids: int = None):
+  name = tu.random_str(5, 50)
+  vd_design_values = []
+  if value_driver_ids is None:
+    vd_design_values = []
+  else: 
+    for vd_id in value_driver_ids:
+      designValue = design_model.ValueDriverDesignValue(
+        vd_id = vd_id,
+        value = round(tu.random.uniform(1, 400), ndigits=5)
+      )
+      vd_design_values.append(designValue)
+
+  return design_model.DesignPut(
+              name=name, 
+              vd_design_values=vd_design_values
+              )
 def seed_random_designs(project_id: int, dg_id: int, amount: int = 10):
 
     design_impl.edit_designs(project_id, dg_id, [design_model.DesignPut(name=tu.random_str(5, 50))
@@ -379,16 +401,20 @@ def seed_random_designs(project_id: int, dg_id: int, amount: int = 10):
 # Connect design to lifecycle (Formulas)
 # ======================================================================================================================
 
-def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, user_id: int, amount: int = 10) -> List[
-    connect_model.FormulaRowGet]:
-    for _ in range(amount):
-        vcs_row = seed_vcs_table_rows(user_id, project_id, vcs_id, 1)
+def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, user_id: int, amount:int = 10) -> List[connect_model.FormulaRowGet]:
+    vcs_rows = seed_vcs_table_rows(user_id,  project_id, vcs_id, amount)
+    rate_per_prod = False
+    for vcs_row in vcs_rows:
 
-        time = tu.random_str(10, 200)
+        time = str(tu.random.randint(1, 200))
         time_unit = random_time_unit()
-        cost = tu.random_str(10, 200)
-        revenue = tu.random_str(10, 200)
+        cost = str(tu.random.randint(1, 2000))
+        revenue = str(tu.random.randint(1, 10000))
         rate = random_rate_choice()
+        if rate == Rate.PRODUCT.value:
+          rate_per_prod = True
+        if rate_per_prod and rate == Rate.PROJECT.value:
+          rate = Rate.PRODUCT.value
 
         # TODO when value drivers and market inputs are connected to the
         # formulas, add them here.
@@ -405,14 +431,210 @@ def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, use
             market_input_ids=market_input_ids
         )
 
-        connect_impl.edit_formulas(project_id, vcs_row[0].id, design_group_id, formulaPost)
+        connect_impl.edit_formulas(project_id, vcs_row.id, design_group_id, formulaPost)
 
     return connect_impl.get_all_formulas(project_id, vcs_id, design_group_id)
+
+
+def create_formulas(project_id: int, vcs_rows: List[vcs_model.VcsRow], dg_id: int) -> List[FormulaRowGet]:
+    for row in vcs_rows:
+        time = str(tu.random.randint(1, 200))
+        time_unit = random_time_unit()
+        cost = str(tu.random.randint(1, 2000))
+        revenue = str(tu.random.randint(1, 10000))
+        rate = Rate.PRODUCT.value
+
+        formulaPost = connect_model.FormulaPost(
+            time=time,
+            time_unit=time_unit,
+            cost=cost,
+            revenue=revenue,
+            rate=rate,
+            value_driver_ids=[],
+            market_input_ids=[]
+        )
+        connect_impl.edit_formulas(project_id, row.id, dg_id, formulaPost)
+    
+    return connect_impl.get_all_formulas(project_id, vcs_rows[0].vcs_id, dg_id)
 
 
 def delete_formulas(project_id: int, vcsRow_Dg_ids: List[Tuple[int, int]]):
     for (vcs_row, dg) in vcsRow_Dg_ids:
         connect_impl.delete_formulas(project_id, vcs_row, dg)
+
+
+def seed_formulas_for_multiple_vcs(project_id: int, vcss: List[int], dgs: List[int], user_id: int):
+  tr = random_table_row(user_id, project_id, vcss[0])
+  while tr.subprocess != None:
+    tr = random_table_row(user_id, project_id,  vcss[0])
+  
+  row_ids = []
+  for vcs_id in vcss:
+    orig_table = vcs_impl.get_vcs_table(project_id, vcs_id) 
+    table = [
+      vcs_model.VcsRowPost(
+        id=tr.id, 
+        index=tr.index, 
+        stakeholder=tr.stakeholder, 
+        stakeholder_needs = [
+          vcs_model.StakeholderNeedPost(
+            id=need.id, 
+            need=need.need, 
+            value_dimension=need.value_dimension, 
+            rank_weight=need.rank_weight, 
+            value_drivers=[vd.id for vd in need.value_drivers]) 
+          for need in tr.stakeholder_needs], 
+        stakeholder_expectations=tr.stakeholder_expectations, 
+        iso_process= None if tr.iso_process is None else tr.iso_process.id, 
+        subprocess= None if tr.subprocess is None else tr.subprocess.id) 
+      for tr in orig_table]
+    table.append(tr)
+    vcs_impl.edit_vcs_table(project_id, vcs_id, table)
+    row = list(filter(lambda row: row not in orig_table, vcs_impl.get_vcs_table(project_id, vcs_id)))[0]
+    row_ids.append(row.id)
+  
+  
+  time = str(tu.random.randint(1, 200))
+  time_unit = random_time_unit()
+  cost = str(tu.random.randint(1, 2000))
+  revenue = str(tu.random.randint(1, 10000))
+  rate =  Rate.PRODUCT.value
+
+  # TODO when value drivers and market inputs are connected to the
+  # formulas, add them here.
+  value_driver_ids = []
+  market_input_ids = []
+
+  formulaPost = connect_model.FormulaPost(
+      time=time,
+      time_unit=time_unit,
+      cost=cost,
+      revenue=revenue,
+      rate=rate,
+      value_driver_ids=value_driver_ids,
+      market_input_ids=market_input_ids
+  )
+
+  for row_id in row_ids:
+    for dg_id in dgs:
+      connect_impl.edit_formulas(project_id, row_id, dg_id, formulaPost)
+  
+
+def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int) -> vcs_model.VcsRow:
+  rows = list(sorted(vcs_impl.get_vcs_table(project_id, vcs_id), key=lambda row: row.index))
+  formulas = connect_impl.get_all_formulas(project_id, vcs_id, design_group_id)
+
+  rows.reverse() #Reverse to find last technical process
+  for row in rows:
+    if row.iso_process is not None:
+      if row.iso_process.category == 'Technical processes':
+        last_id = row.id
+        break
+    else:
+      if row.subprocess.parent_process.category == 'Technical processes':
+        last_id = row.id
+        break
+  
+  print(last_id)
+  last = next(filter(lambda x: x.vcs_row_id == last_id, formulas))
+
+  new_last = connect_model.FormulaPost(
+    time=last.time,
+    time_unit = last.time_unit,
+    cost = last.cost,
+    revenue = last.revenue,
+    rate = Rate.PROJECT.value,
+    value_driver_ids = [vd.id for vd in last.value_drivers],
+    market_input_ids = [mi.id for mi in last.market_inputs]
+  )
+
+  connect_impl.edit_formulas(project_id, last_id, design_group_id, new_last)
+  
+  rows.reverse() # reverse back to find first technical process
+  for row in rows:
+    if row.iso_process is not None:
+      if row.iso_process.category == 'Technical processes':
+        return row
+    else:
+      if row.subprocess.parent_process.category == 'Technical processes':
+        return row
+
+
+# ======================================================================================================================
+# Simulation
+# ======================================================================================================================
+
+def seed_simulation_settings(project_id: int, vcs_ids: List[int], design_ids: List[int]) -> sim_model.SimSettings:
+  rows = [row.iso_process.name if row.iso_process is not None else row.subprocess.name for row in vcs_impl.get_vcs_table(project_id, vcs_ids[0])]
+  for vcs_id in vcs_ids:
+    new_rows = [row.iso_process.name if row.iso_process is not None else row.subprocess.name for row in vcs_impl.get_vcs_table(project_id, vcs_id)]
+    rows = list(filter(lambda x: x in rows, new_rows))
+    
+  time_unit = random_time_unit()
+  interarrival_time = round(tu.random.uniform(1, 255), ndigits=5)
+  start_time = round(tu.random.uniform(1, 300), ndigits=5)
+  end_time = round(tu.random.uniform(300, 1000), ndigits=5)
+  print("Row len", len(rows))
+  flow_process = tu.random.choice(rows)
+  flow_start_time = None #Get valid start time
+  flow_time = round(tu.random.uniform(0, end_time - start_time), ndigits=5)
+
+  discount_rate = round(tu.random.random(), ndigits=5)
+  non_tech_add = random_non_technical_cost()
+  monte_carlo = bool(tu.random.getrandbits(1))
+  runs = 0 if not monte_carlo else tu.random.randint(1, 200)
+
+  sim_settings = sim_model.EditSimSettings(
+      time_unit = time_unit,
+      flow_process = flow_process,
+      flow_start_time = flow_start_time,
+      flow_time=flow_time,
+      interarrival_time=interarrival_time,
+      start_time=start_time,
+      end_time=end_time,
+      discount_rate=discount_rate,
+      non_tech_add=non_tech_add,
+      monte_carlo=monte_carlo,
+      runs=runs
+  )
+
+  return sim_settings
+
+def seed_random_sim_settings(project_id: int) -> sim_model.SimSettings:
+    time_unit = random_time_unit()
+    interarrival_time = round(tu.random.uniform(1, 255), ndigits=5)
+    start_time = round(tu.random.uniform(1, 300), ndigits=5)
+    end_time = round(tu.random.uniform(300, 1000), ndigits=5)
+    if tu.random.getrandbits(1):
+        flow_process = tu.random_str(10, 100) #Should probably ensure that this belongs to an actual process
+        flow_start_time = None #Get valid start time
+        flow_time = round(tu.random.uniform(0, end_time - start_time), ndigits=5)
+    else:
+        flow_process = None
+        flow_start_time = round(tu.random.uniform(start_time, end_time), ndigits=5)
+        flow_time = round(tu.random.uniform(0, end_time - flow_start_time), ndigits=5)
+    
+    discount_rate = round(tu.random.random(), ndigits=5)
+    non_tech_add = random_non_technical_cost()
+    monte_carlo = bool(tu.random.getrandbits(1))
+    runs = 0 if not monte_carlo else tu.random.randint(1, 200)
+
+    sim_settings = sim_model.EditSimSettings(
+        time_unit = time_unit,
+        flow_process = flow_process,
+        flow_start_time = flow_start_time,
+        flow_time=flow_time,
+        interarrival_time=interarrival_time,
+        start_time=start_time,
+        end_time=end_time,
+        discount_rate=discount_rate,
+        non_tech_add=non_tech_add,
+        monte_carlo=monte_carlo,
+        runs=runs
+    )
+
+    sim_impl.edit_sim_settings(project_id, sim_settings)
+    return sim_impl.get_sim_settings(project_id)
 
 
 # ======================================================================================================================
@@ -448,3 +670,7 @@ def random_time_unit():
 
 def random_rate_choice():
     return random.choice(list(Rate)).value
+
+
+def random_non_technical_cost():
+    return random.choice(list(NonTechCost)).value

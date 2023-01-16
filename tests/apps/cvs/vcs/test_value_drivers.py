@@ -15,6 +15,7 @@ def test_get_all_value_drivers(client, std_headers, std_user):
     assert len(res.json()) == 5
     # Cleanup
     tu.delete_vd_from_user(current_user.id)
+    
 
 
 def test_get_all_value_drivers_no_vds(client, std_headers, std_user):

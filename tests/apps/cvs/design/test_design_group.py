@@ -56,6 +56,7 @@ def test_create_design_group_from_vcs(client, std_headers, std_user):
     assert value_drivers[0].id == design_groups[0].vds[0].id
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_get_all_design_groups(client, std_headers, std_user):
@@ -144,6 +145,7 @@ def test_add_value_driver_to_design_group(client, std_headers, std_user):
     assert res.json()['vds'][0]['id'] == vd.id
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_remove_value_driver_from_design_group(client, std_headers, std_user):
@@ -163,6 +165,7 @@ def test_remove_value_driver_from_design_group(client, std_headers, std_user):
     assert len(res.json()['vds']) == 0
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_delete_design_group(client, std_headers, std_user):

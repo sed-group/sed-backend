@@ -35,6 +35,7 @@ def test_get_vcs_table_not_found(client, std_headers, std_user):
     assert res.status_code == 404  # 404 Not Found
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_create_vcs_table(client, std_headers, std_user):

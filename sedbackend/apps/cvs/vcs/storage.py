@@ -105,7 +105,8 @@ def create_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_post: 
         .execute(fetch_type=FetchType.FETCH_NONE)
     vcs_id = insert_statement.last_insert_id
 
-    return get_vcs(db_connection, project_id, vcs_id)
+    vcs = get_vcs(db_connection, project_id, vcs_id)
+    return vcs
 
 
 def edit_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, new_vcs: models.VCSPost) -> models.VCS:

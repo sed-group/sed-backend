@@ -31,8 +31,10 @@ def test_create_design(client, std_headers, std_user):
     assert len(designs[0].vd_design_values) == len(design_group.vds)
 
     # Cleanup
+    tu.delete_vd_from_user(current_user.id)
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
+    
 
 
 def test_create_design_no_values(client, std_headers, std_user):
@@ -56,8 +58,10 @@ def test_create_design_no_values(client, std_headers, std_user):
     assert len(designs) == 1
 
     # Cleanup
+    tu.delete_vd_from_user(current_user.id)
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
+    
 
 
 def test_edit_designs(client, std_headers, std_user):
@@ -88,8 +92,10 @@ def test_edit_designs(client, std_headers, std_user):
     assert len(designs[0].vd_design_values) == len(design_group.vds)
 
     # Cleanup
+    tu.delete_vd_from_user(current_user.id)
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
+    
 
 
 def test_delete_designs(client, std_headers, std_user):
@@ -110,6 +116,7 @@ def test_delete_designs(client, std_headers, std_user):
 
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_get_all_designs(client, std_headers, std_user):
@@ -129,3 +136,4 @@ def test_get_all_designs(client, std_headers, std_user):
 
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)

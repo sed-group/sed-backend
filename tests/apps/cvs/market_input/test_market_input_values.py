@@ -30,6 +30,7 @@ def test_create_market_input(client, std_headers, std_user):
 
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_create_market_input_invalid_vcs_id(client, std_headers, std_user):
@@ -52,6 +53,7 @@ def test_create_market_input_invalid_vcs_id(client, std_headers, std_user):
 
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_edit_market_input_value(client, std_headers, std_user):
@@ -80,6 +82,7 @@ def test_edit_market_input_value(client, std_headers, std_user):
 
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_delete_market_input_value(client, std_headers, std_user):
@@ -98,6 +101,7 @@ def test_delete_market_input_value(client, std_headers, std_user):
 
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_get_market_input_values(client, std_headers, std_user):
@@ -118,3 +122,4 @@ def test_get_market_input_values(client, std_headers, std_user):
 
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)

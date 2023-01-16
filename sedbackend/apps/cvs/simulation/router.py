@@ -1,5 +1,5 @@
 from operator import mod
-from fastapi import Depends, APIRouter, UploadFile, File
+from fastapi import Depends, APIRouter, UploadFile, File, HTTPException
 
 from typing import List, Optional
 from sedbackend.apps.core.authentication.utils import get_current_active_user
@@ -23,6 +23,7 @@ async def run_simulation(native_project_id: int, sim_settings: models.EditSimSet
                         user: User = Depends(get_current_active_user)) -> List[models.Simulation]:
     return implementation.run_simulation(native_project_id, sim_settings, vcs_ids, design_ids, normalized_npv, user.id)
 
+"""
 @router.post(
     '/project/{native_project_id}/sim/csv',
     summary='Run simulation with DSM predefined in CSV file',
@@ -34,19 +35,23 @@ async def run_csv_simulation(native_project_id: int, sim_settings: models.EditSi
                         normalized_npv: Optional[bool] = False, dsm_csv: UploadFile = File(default=None),
                         user: User = Depends(get_current_active_user)) -> List[models.Simulation]:
     return implementation.run_csv_simulation(native_project_id, sim_settings, vcs_ids, dsm_csv, design_ids, normalized_npv, user.id)
-
+"""
 
 @router.post(
-    '/project/{native_project_id}/sim/excel',
-    summary='Run simulation with DSM predefined in Excel file',
+    '/project/{native_project_id}/sim/upload-dsm',
+    summary='Run simulation with DSM predefined in Excel or CSV file',
     response_model=List[models.Simulation],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read, CVS_APP_SID))]
 )
-async def run_xlsx_simulation(native_project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int],
-                            dsm_xlsx: UploadFile = File(default=None), design_ids: Optional[List[int]] = None, 
-                            normalized_npv: Optional[bool] = False,  
+async def run_dsm_file_simulation(native_project_id: int, sim_params: models.FileParams = Depends(), 
+                            dsm_file: UploadFile = File(default=None), 
                             user: User = Depends(get_current_active_user)) -> List[models.Simulation]:
-    return implementation.run_xlsx_simulation(native_project_id, sim_settings, vcs_ids, dsm_xlsx, design_ids, normalized_npv, user.id)
+    if dsm_file.content_type != 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' and \
+        dsm_file.content_type != 'text/csv':
+        print("Content-type: ", dsm_file.content_type)
+        raise HTTPException(400, detail="Invalid file type")
+    return implementation.run_dsm_file_simulation(user.id, native_project_id, sim_params, dsm_file)
+
 
 @router.post(
     '/project/{native_project_id}/simulation/run-multiprocessing',
@@ -56,7 +61,7 @@ async def run_xlsx_simulation(native_project_id: int, sim_settings: models.EditS
 )
 async def run_sim_monte_carlo(native_project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int], design_ids: Optional[List[int]] = None, 
                         normalized_npv: Optional[bool] = False,
-                        user: User = Depends(get_current_active_user)) -> models.Simulation:
+                        user: User = Depends(get_current_active_user)) -> List[models.Simulation]:
     return implementation.run_sim_monte_carlo(native_project_id, sim_settings, vcs_ids,
                                             design_ids, normalized_npv, user.id)
 

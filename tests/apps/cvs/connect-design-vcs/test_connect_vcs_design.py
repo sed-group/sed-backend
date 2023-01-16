@@ -49,6 +49,7 @@ def test_create_formulas(client, std_headers, std_user):
     tu.delete_design_group(project.id, design_group.id)
     tu.delete_VCS_with_ids(project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_create_formulas_no_optional(client, std_headers, std_user):
@@ -88,7 +89,7 @@ def test_create_formulas_no_optional(client, std_headers, std_user):
     tu.delete_design_group(project.id, design_group.id)
     tu.delete_VCS_with_ids(project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
-
+    tu.delete_vd_from_user(current_user.id)
 
 def test_get_all_formulas(client, std_headers, std_user):
     # Setup
@@ -113,6 +114,7 @@ def test_get_all_formulas(client, std_headers, std_user):
     tu.delete_design_group(project.id, design_group.id)
     tu.delete_VCS_with_ids(project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_get_all_formulas_invalid_project(client, std_headers, std_user):
@@ -132,6 +134,10 @@ def test_get_all_formulas_invalid_project(client, std_headers, std_user):
 
     # Assert
     assert res.status_code == 404
+
+    #Cleanup
+    tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_get_all_formulas_invalid_vcs(client, std_headers, std_user):
@@ -153,6 +159,11 @@ def test_get_all_formulas_invalid_vcs(client, std_headers, std_user):
     # Assert
     assert res.status_code == 404
 
+    #Cleanup
+    tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
+
+
 
 def get_all_formulas_invalid_design_group(client, std_headers, std_user):
     # Setup
@@ -173,6 +184,9 @@ def get_all_formulas_invalid_design_group(client, std_headers, std_user):
     # Assert
     assert res.status_code == 404
 
+    #Cleanup
+    tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 def test_edit_formulas(client, std_headers, std_user):
     # Setup
@@ -217,6 +231,7 @@ def test_edit_formulas(client, std_headers, std_user):
     tu.delete_design_group(project.id, design_group.id)
     tu.delete_VCS_with_ids(project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_edit_formulas_no_optional(client, std_headers, std_user):
@@ -256,6 +271,7 @@ def test_edit_formulas_no_optional(client, std_headers, std_user):
     tu.delete_design_group(project.id, design_group.id)
     tu.delete_VCS_with_ids(project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_edit_formulas_invalid_dg(client, std_headers, std_user):
@@ -295,6 +311,7 @@ def test_edit_formulas_invalid_dg(client, std_headers, std_user):
     tu.delete_design_group(project.id, design_group.id)
     tu.delete_VCS_with_ids(project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_edit_formulas_invalid_vcs_row(client, std_headers, std_user):
@@ -333,6 +350,7 @@ def test_edit_formulas_invalid_vcs_row(client, std_headers, std_user):
     tu.delete_design_group(project.id, design_group.id)
     tu.delete_VCS_with_ids(project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_edit_formulas_invalid_project(client, std_headers, std_user):
@@ -372,6 +390,7 @@ def test_edit_formulas_invalid_project(client, std_headers, std_user):
     tu.delete_design_group(project.id, design_group.id)
     tu.delete_VCS_with_ids(project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_delete_formulas(client, std_headers, std_user):
@@ -396,6 +415,7 @@ def test_delete_formulas(client, std_headers, std_user):
     tu.delete_design_group(project.id, design_group.id)
     tu.delete_VCS_with_ids(project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_delete_formulas_invalid_project(client, std_headers, std_user):
@@ -418,6 +438,9 @@ def test_delete_formulas_invalid_project(client, std_headers, std_user):
     # Assert
     assert res.status_code == 404
 
+    #Cleanup
+    tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 def test_delete_formulas_invalid_vcs_row(client, std_headers, std_user):
     # Setup
@@ -438,6 +461,10 @@ def test_delete_formulas_invalid_vcs_row(client, std_headers, std_user):
     # Assert
     assert res.status_code == 404
 
+    #Cleanup
+    tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
+
 
 def test_delete_formulas_invalid_design_group(client, std_headers, std_user):
     # Setup
@@ -457,6 +484,10 @@ def test_delete_formulas_invalid_design_group(client, std_headers, std_user):
 
     # Assert
     assert res.status_code == 400
+
+    #Cleanup
+    tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_get_vcs_dg_pairs(client, std_headers, std_user):
@@ -484,6 +515,7 @@ def test_get_vcs_dg_pairs(client, std_headers, std_user):
     [tu.delete_design_group(project.id, design_group.id) for design_group in dgs]
     tu.delete_VCS_with_ids(project.id, [vcs.id for vcs in vcss])
     tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
 
 
 def test_get_vcs_dg_pairs_invalid_project(client, std_headers, std_user):
@@ -505,3 +537,7 @@ def test_get_vcs_dg_pairs_invalid_project(client, std_headers, std_user):
 
     # Assert
     assert res.status_code == 404
+
+    #Cleanup
+    tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)

@@ -6,17 +6,17 @@ from sedbackend.apps.cvs.vcs import models as vcs_models
 from sedbackend.apps.cvs.market_input import models as mi_models
 
 
-class TimeFormat(Enum):
+class TimeFormat(str, Enum):
     """
     The time formats that can be chosen for a process. The values are the defaults for the
     simulation (years)
     """
-    MINUTES = 'minutes'
-    HOUR = 'hour'
-    DAY = 'day'
-    WEEK = 'week'
-    MONTH = 'month'
-    YEAR = 'year'
+    MINUTES:str = 'minutes'
+    HOUR:str = 'hour'
+    DAY:str = 'day'
+    WEEK:str = 'week'
+    MONTH:str = 'month'
+    YEAR:str = 'year'
 
 
 class Rate(Enum):
