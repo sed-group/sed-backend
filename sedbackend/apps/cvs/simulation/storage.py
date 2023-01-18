@@ -490,22 +490,23 @@ def parse_formula(formula: str, vd_values, mi_values): #TODO fix how the formula
     return new_formula
 
 
-def check_entity_rate(db_results, flow_process_name: str): #BUG Does not work properly
+def check_entity_rate(db_results, flow_process_name: str):
     rate_check = True
     flow_process_index = len(db_results) #Set the flow_process_index to be highest possible. 
     print(flow_process_name)
     print("Rate Check results \n", db_results)
-    for i in range(len(db_results)- 1):
-        if db_results[i]['sub_name'] == flow_process_name or db_results[i]['iso_name'] == flow_process_name: #This will never be true currently which is a problem..........
+    for i in range(len(db_results)):
+        if db_results[i]['sub_name'] == flow_process_name or db_results[i]['iso_name'] == flow_process_name:
             flow_process_index = i
-        #Can't just check for i and i+1 since i+1 might not be a technical process and as such it is foolish to assume that this will work. Either change this method to only
-        #use technical processes, or rewrite it so that it can handle non-technical processes as well. 
-        if db_results[i]['rate'] == 'per_product' and db_results[i+1]['rate'] == 'per_project' and i >= flow_process_index: #TODO check for technical/non-technical processes
-            
-            if db_results[i]['category'] == 'Technical processes' and db_results[i+1]['category'] == 'Technical processes':
-                rate_check = False
-                break
-    
+
+        if i >= flow_process_index:
+          for j in range(i, len(db_results)):
+            if db_results[j]['rate'] == 'per_project' and db_results[j]['category'] == 'Technical processes':
+              print("Rate check false")
+              rate_check = False
+              break    
+          break
+        
     print("rate_check", rate_check)
     return rate_check
 
