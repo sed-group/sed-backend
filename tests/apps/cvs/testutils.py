@@ -176,20 +176,17 @@ def random_table_row(
     return table_row
 
 
-def random_subprocess(project_id: int, vcs_id: int, name: str = None, parent_process_id: int = None,
-                      order_index: int = None):
+def random_subprocess(project_id: int, vcs_id: int, name: str = None, parent_process_id: int = None):
     if name is None:
         name = tu.random_str(5, 50)
     if parent_process_id is None:
         parent_process_id = random.randint(1, 25)
 
-    subprocess = sedbackend.apps.cvs.vcs.models.VCSSubprocessPost(
-        # TODO fix bug here. Cannot create subprocess without order_index
+    subprocess = vcs_model.VCSSubprocessPost(
         name=name,
-        parent_process_id=parent_process_id,
-        order_index=random.randint(1, 10)
+        parent_process_id=parent_process_id
     )
-    subp = sedbackend.apps.cvs.vcs.implementation.create_subprocess(project_id, vcs_id, subprocess)
+    subp = vcs_impl.create_subprocess(project_id, vcs_id, subprocess)
     return subp
 
 
@@ -202,7 +199,7 @@ def seed_random_subprocesses(project_id: int, vcs_id: int, amount=15):
 
 
 def delete_subprocess_by_id(subprocess_id, project_id):
-    sedbackend.apps.cvs.vcs.implementation.delete_subprocess(
+    vcs_impl.delete_subprocess(
         subprocess_id, project_id)
 
 

@@ -44,13 +44,11 @@ class VCSSubprocess(BaseModel):
     id: int
     vcs_id: int
     name: str
-    order_index: int
     parent_process: VCSISOProcess
 
 
 class VCSSubprocessPost(BaseModel):
     name: str
-    order_index: int
     parent_process_id: int
 
 
