@@ -1,7 +1,6 @@
 from fastapi import HTTPException
 from starlette import status
 
-
 from sedbackend.apps.core.authentication import exceptions as auth_ex
 from sedbackend.apps.core.db import get_connection
 from sedbackend.apps.cvs.project import models, exceptions, storage

@@ -17,7 +17,7 @@ def edit_formulas(project_id: int, vcs_row_id: int, design_group_id: int, new_fo
             res = storage.edit_formulas(con, project_id, vcs_row_id, design_group_id, new_formulas)
             con.commit()
             return res
-        except FormulasFailedUpdateException: 
+        except FormulasFailedUpdateException:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f'No formulas updated. Are the formulas changed?'
@@ -60,9 +60,9 @@ def get_all_formulas(project_id: int, vcs_id: int, design_group_id: int) -> List
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f'Could not find VCS with id {vcs_id}'
             )
-        except WrongTimeUnitException as e: #Where exactly does this fire????
+        except WrongTimeUnitException as e:  # Where exactly does this fire????
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, 
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f'Wrong time unit. Given unit: {e.time_unit}'
             )
         except project_exceptions.CVSProjectNotFoundException:
@@ -112,7 +112,7 @@ def delete_formulas(project_id: int, vcs_row_id: int, design_group_id: int) -> b
 
 def get_vcs_dg_pairs(project_id: int) -> List[models.VcsDgPairs]:
     with get_connection() as con:
-        try: 
+        try:
             res = storage.get_vcs_dg_pairs(con, project_id)
             con.commit()
             return res
