@@ -47,7 +47,7 @@ def test_run_multiple_monte_carlo_sim(client, std_headers, std_user):
     design_group = tu.seed_random_design_group(project.id)
     vcss.append(vcs)
     dgs.append(design_group)
-    tu.seed_random_formulas(project.id, vcs.id, design_group.id, current_user.id, 10) #Also creates the vcs rows
+    tu.seed_random_formulas(project.id, vcs.id, design_group.id, current_user.id, 15) #Also creates the vcs rows
     design = tu.seed_random_designs(project.id, design_group.id, 1)
     design_ids.append(design[0].id)
   
@@ -82,7 +82,7 @@ def test_run_multiple_monte_carlo_sim(client, std_headers, std_user):
 
 def test_run_mc_sim_invalid_designs(client, std_headers, std_user):
       #Setup
-  amount = 3
+  amount = 2
 
   current_user = impl_users.impl_get_user_with_username(std_user.username)
   project = tu.seed_random_project(current_user.id)
@@ -127,7 +127,7 @@ def test_run_mc_sim_invalid_designs(client, std_headers, std_user):
 
 def test_run_mc_sim_invalid_vcss(client, std_headers, std_user):
   #Setup
-  amount = 3
+  amount = 2
 
   current_user = impl_users.impl_get_user_with_username(std_user.username)
   project = tu.seed_random_project(current_user.id)
@@ -142,7 +142,7 @@ def test_run_mc_sim_invalid_vcss(client, std_headers, std_user):
     design_group = tu.seed_random_design_group(project.id)
     vcss.append(vcs)
     dgs.append(design_group)
-    tu.seed_random_formulas(project.id, vcs.id, design_group.id, current_user.id, 10) #Also creates the vcs rows
+    tu.seed_random_formulas(project.id, vcs.id, design_group.id, current_user.id, 15) #Also creates the vcs rows
     design = tu.seed_random_designs(project.id, design_group.id, 1)
     design_ids.append(design[0].id)
   
