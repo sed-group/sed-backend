@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_projects`
     `id`               INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `name`             VARCHAR(255) NULL     DEFAULT 'Unnamed project',
     `description`      TEXT         NULL     DEFAULT NULL,
-    `currency`         VARCHAR(10)   NULL     DEFAULT '€',
+    `currency`         VARCHAR(10)   NULL    DEFAULT NULL,
     `owner_id`         INT UNSIGNED NOT NULL,
     `datetime_created` DATETIME(3)  NOT NULL DEFAULT NOW(3),
     PRIMARY KEY (`id`),
@@ -16,6 +16,30 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_projects`
             REFERENCES `seddb`.`users` (`id`)
             ON DELETE CASCADE
             ON UPDATE NO ACTION
+);
+
+#Simulation settings
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_simulation_settings`
+(
+    `project`               INT UNSIGNED NOT NULL,
+    `time_unit`             VARCHAR(10),
+    `flow_process`          TEXT NULL,
+    `flow_start_time`       FLOAT NULL,
+    `flow_time`             FLOAT NOT NULL,
+    `interarrival_time`     FLOAT NOT NULL,
+    `start_time`            FLOAT NOT NULL,
+    `end_time`              FLOAT NOT NULL,
+    `discount_rate`         FLOAT NOT NULL,
+    `non_tech_add`          TEXT NOT NULL,
+    `monte_carlo`           BOOLEAN NOT NULL,
+    `runs`                  INT UNSIGNED DEFAULT 0,
+    PRIMARY KEY (`project`),
+    FOREIGN KEY (`project`)
+        REFERENCES `seddb`.`cvs_projects`(`id`)
+        ON DELETE CASCADE
+        ON UPDATE NO ACTION,
+    CONSTRAINT `check_non_tech` CHECK (`non_tech_add` IN ('to_process', 'lump_sum', 'continously', 'no_cost')),
+    CONSTRAINT `check_time_unit` CHECK (`time_unit` IN ('year', 'month', 'week', 'day', 'hour', 'minutes'))
 );
 
 #Value Creation Strategies
@@ -49,7 +73,6 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_subprocesses`
     `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `vcs`           INT UNSIGNED NOT NULL,
     `name`          TEXT NOT NULL,
-    `order_index`   INT, #TODO ask if it is neccessary to rearrange subprocesses in modal window
     `iso_process`   INT UNSIGNED NOT NULL,
     FOREIGN KEY (`iso_process`)
         REFERENCES `seddb`.`cvs_iso_processes`(`id`)
@@ -95,7 +118,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_stakeholder_needs`
     `vcs_row`           INT UNSIGNED NOT NULL,
     `need`              TEXT NOT NULL,
     `value_dimension`   TEXT NULL,
-    `rank_weight`       DOUBLE(10,5) NULL,
+    `rank_weight`       DECIMAL(7,6) NULL,
     FOREIGN KEY(`vcs_row`)
         REFERENCES  `seddb`.`cvs_vcs_rows`(`id`)
         ON DELETE CASCADE,
@@ -198,7 +221,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_design_groups`
         ON DELETE CASCADE
 );
 
-CREATE TABLE `seddb`.`cvs_design_group_drivers`
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_design_group_drivers`
 (
     `design_group`      INT UNSIGNED NOT NULL, 
     `value_driver`      INT UNSIGNED NOT NULL,
@@ -236,54 +259,24 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vd_design_values`
         ON DELETE CASCADE
 );
 
-/*
-CREATE TABLE IF NOT EXISTS `seddb`.`cvs_quantified_objectives`
-(
-    `value_driver`      INT UNSIGNED NOT NULL,
-    `design_group`      INT UNSIGNED NOT NULL,
-    `name`              VARCHAR(63) NOT NULL,
-    `unit`              VARCHAR(63) NOT NULL,
-    PRIMARY KEY(`value_driver`, `design_group`),
-    FOREIGN KEY(`design_group`)
-        REFERENCES `seddb`.`cvs_design_groups`(`id`)
-        ON DELETE CASCADE,
-    FOREIGN KEY(`value_driver`)
-        REFERENCES `seddb`.`cvs_value_drivers`(`id`)
-        ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS `seddb`.`cvs_quantified_objective_values`
-(
-    `design`            INT UNSIGNED NOT NULL,
-    `value_driver`      INT UNSIGNED NOT NULL,
-    `design_group`      INT UNSIGNED NOT NULL,
-    `value`             FLOAT,
-    PRIMARY KEY(`design`, `value_driver`, `design_group`),
-    FOREIGN KEY(`design`)
-        REFERENCES `seddb`.`cvs_designs`(`id`)
-        ON DELETE CASCADE,
-    FOREIGN KEY(`design_group`)
-        REFERENCES `seddb`.`cvs_design_groups`(`id`)
-        ON DELETE CASCADE,
-    FOREIGN KEY(`value_driver`)
-        REFERENCES `seddb`.`cvs_value_drivers`(`id`)
-        ON DELETE CASCADE
-);
-*/
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_design_mi_formulas`
 (
     `vcs_row`           INT UNSIGNED NOT NULL,
+    `design_group`      INT UNSIGNED NOT NULL,
     `time`              TEXT,
-    `time_unit`         VARCHAR(5),
+    `time_unit`         VARCHAR(10),
     `cost`              TEXT,
     `revenue`           TEXT,
     `rate`              TEXT,
-    PRIMARY KEY (`vcs_row`),
+    PRIMARY KEY (`vcs_row`, `design_group`),
     FOREIGN KEY(`vcs_row`)
         REFERENCES `seddb`.`cvs_vcs_rows`(`id`)
         ON DELETE CASCADE,
-    CONSTRAINT `check_unit` CHECK (`time_unit` IN ('HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR')),
+    FOREIGN KEY (`design_group`)
+        REFERENCES `seddb`.`cvs_design_groups`(`id`)
+        ON DELETE CASCADE,
+    CONSTRAINT `check_unit` CHECK (`time_unit` IN ('MINUTES', 'HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR')),
     CONSTRAINT `check_rate` CHECK (`rate` IN ('per_product', 'per_project'))
 );
 
@@ -299,7 +292,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_inputs`
         ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_values`
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_input_values`
 (
     `vcs`           INT UNSIGNED NOT NULL,
     `market_input`  INT UNSIGNED NOT NULL,

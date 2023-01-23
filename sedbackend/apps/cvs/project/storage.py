@@ -10,7 +10,7 @@ from sedbackend.libs.mysqlutils import MySQLStatementBuilder, Sort, FetchType
 import sedbackend.apps.core.projects.models as proj_models
 import sedbackend.apps.core.projects.storage as proj_storage
 
-DIFAM_APPLICATION_SID = "MOD.CVS"
+CVS_APPLICATION_SID = "MOD.CVS"
 CVS_PROJECT_TABLE = 'cvs_projects'
 CVS_PROJECT_COLUMNS = ['id', 'name', 'description', 'currency', 'owner_id', 'datetime_created']
 
@@ -40,36 +40,7 @@ def get_all_cvs_project(db_connection: PooledMySQLConnection, user_id: int) -> L
     return chunk
 
 
-def get_segment_cvs_project(db_connection: PooledMySQLConnection, index: int, segment_length: int,
-                            user_id: int) -> ListChunk[models.CVSProject]:
-    logger.debug(f'Fetching segment of CVS projects for user with id={user_id}.')
-
-    where_statement = f'owner_id = %s'
-    where_values = [user_id]
-
-    select_statement = MySQLStatementBuilder(db_connection)
-    results = select_statement.select(CVS_PROJECT_TABLE, CVS_PROJECT_COLUMNS) \
-        .where(where_statement, where_values) \
-        .order_by(['name'], Sort.ASCENDING) \
-        .limit(segment_length) \
-        .offset(index * segment_length) \
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-
-    project_list = []
-    for result in results:
-        project_list.append(populate_cvs_project(db_connection, result))
-
-    count_statement = MySQLStatementBuilder(db_connection)
-    result = count_statement.count(CVS_PROJECT_TABLE) \
-        .where(where_statement, where_values) \
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-    chunk = ListChunk[models.CVSProject](chunk=project_list, length_total=result['count'])
-
-    return chunk
-
-
-def get_cvs_project(db_connection: PooledMySQLConnection, project_id: int,
-                    user_id: int) -> models.CVSProject:
+def get_cvs_project(db_connection: PooledMySQLConnection, project_id: int) -> models.CVSProject:
     logger.debug(f'Fetching CVS project with id={project_id}.')
 
     select_statement = MySQLStatementBuilder(db_connection)
@@ -80,9 +51,6 @@ def get_cvs_project(db_connection: PooledMySQLConnection, project_id: int,
 
     if result is None:
         raise exceptions.CVSProjectNotFoundException
-
-    if result['owner_id'] != user_id:
-        raise auth_exceptions.UnauthorizedOperationException
 
     return populate_cvs_project(db_connection, result)
 
@@ -100,17 +68,17 @@ def create_cvs_project(db_connection: PooledMySQLConnection, project: models.CVS
     cvs_project_id = insert_statement.last_insert_id
 
     # Insert corresponding subproject row
-    subproject = proj_models.SubProjectPost(application_sid=DIFAM_APPLICATION_SID, native_project_id=cvs_project_id)
+    subproject = proj_models.SubProjectPost(application_sid=CVS_APPLICATION_SID, native_project_id=cvs_project_id)
     proj_storage.db_post_subproject(db_connection, subproject, user_id)
 
-    return get_cvs_project(db_connection, cvs_project_id, user_id)
+    return get_cvs_project(db_connection, cvs_project_id)
 
 
-def edit_cvs_project(db_connection: PooledMySQLConnection, project_id: int, user_id: int,
+def edit_cvs_project(db_connection: PooledMySQLConnection, project_id: int,
                      new_project: models.CVSProjectPost) -> models.CVSProject:
     logger.debug(f'Editing CVS project with id={project_id}.')
 
-    old_project = get_cvs_project(db_connection, project_id, user_id)
+    old_project = get_cvs_project(db_connection, project_id)
 
     if (old_project.name, old_project.description) == (new_project.name, new_project.description):
         # No change
@@ -129,23 +97,11 @@ def edit_cvs_project(db_connection: PooledMySQLConnection, project_id: int, user
     if rows == 0:
         raise exceptions.CVSProjectFailedToUpdateException
 
-    return get_cvs_project(db_connection, project_id, user_id)
+    return get_cvs_project(db_connection, project_id)
 
 
 def delete_cvs_project(db_connection: PooledMySQLConnection, project_id: int, user_id: int) -> bool:
     logger.debug(f'Deleting CVS project with id={project_id}.')
-
-    select_statement = MySQLStatementBuilder(db_connection)
-    result = select_statement \
-        .select(CVS_PROJECT_TABLE, ['owner_id']) \
-        .where('id = %s', [project_id]) \
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-
-    if result is None:
-        raise exceptions.CVSProjectNotFoundException
-
-    if result['owner_id'] != user_id:
-        raise auth_exceptions.UnauthorizedOperationException
 
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement.delete(CVS_PROJECT_TABLE) \

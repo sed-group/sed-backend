@@ -1,9 +1,6 @@
-import enum
 from datetime import datetime
 from typing import Optional, List
-
 from pydantic import BaseModel, confloat
-
 from sedbackend.apps.cvs.project.models import CVSProject
 
 # ======================================================================================================================
@@ -47,13 +44,16 @@ class VCSSubprocess(BaseModel):
     id: int
     vcs_id: int
     name: str
-    order_index: int
     parent_process: VCSISOProcess
 
 
 class VCSSubprocessPost(BaseModel):
     name: str
-    order_index: int
+    parent_process_id: int
+
+
+class VCSSubprocessPut(BaseModel):
+    name: str
     parent_process_id: int
 
 # ======================================================================================================================
@@ -96,27 +96,14 @@ class ValueDriverPost(BaseModel):
 
 class StakeholderNeed(BaseModel):
     id: int
-    #vcs_row_id: int
     need: str
     rank_weight: Optional[confloat(ge=0, le=1)] = None
     value_dimension: Optional[str] = None
     value_drivers: Optional[List[ValueDriver]] = None
 
 
-"""
-Not used anywhere - Remove?
-class StakeholderNeedPut(BaseModel):
-    id: int
-    vcs_row_id: int
-    need: str
-    value_dimension: Optional[str] = None
-    value_drivers: Optional[List[int]] = None
-    rank_weight: Optional[float] = None
-"""
-
 class StakeholderNeedPost(BaseModel):
     id: Optional[int] = None
-    #vcs_row_id: Optional[int] = None
     need: str
     value_dimension: Optional[str] = None
     value_drivers: Optional[List[int]] = None
@@ -137,27 +124,12 @@ class VcsRow(BaseModel):
     iso_process: Optional[VCSISOProcess] = None
     subprocess: Optional[VCSSubprocess] = None
 
-"""
-Not used anywhere - Remove?
-class VcsRowPut(BaseModel):
-    id: int
-    vcs_id: int
-    index: int
-    stakeholder: str
-    stakeholder_needs: Optional[List[StakeholderNeedPut]] = None
-    stakeholder_expectations: str
-    iso_process: Optional[int] = None
-    subprocess: Optional[int] = None
-"""
 
 class VcsRowPost(BaseModel):
     id: Optional[int] = None
-    #vcs_id: Optional[int] = None
     index: int
     stakeholder: str
     stakeholder_needs: Optional[List[StakeholderNeedPost]] = None
     stakeholder_expectations: str
     iso_process: Optional[int] = None
     subprocess: Optional[int] = None
-
-

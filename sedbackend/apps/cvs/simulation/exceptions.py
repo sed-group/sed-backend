@@ -1,3 +1,6 @@
+from tkinter import E
+
+
 class ProcessNotFoundException(Exception):
     pass
 
@@ -20,3 +23,17 @@ class NegativeTimeException(Exception):
 
 class SimulationFailedException(Exception):
     pass
+
+class DesignIdsNotFoundException(Exception):
+    pass
+
+class InvalidFlowSettingsException(Exception):
+    pass
+
+
+class VcsFailedException(Exception):
+  pass
+
+
+class BadlyFormattedSettingsException(Exception):
+  pass
