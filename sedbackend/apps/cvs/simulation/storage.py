@@ -36,70 +36,6 @@ TIME_FORMAT_DICT = dict({
 })
 
 
-def run_sim_with_csv_dsm(db_connection: PooledMySQLConnection, project_id: int, simSettings: models.EditSimSettings, vcs_ids: List[int], 
-        dsm_csv: UploadFile, design_ids: List[int], normalized_npv: bool, user_id: int) -> List[models.Simulation]:
-
-    if dsm_csv is None:
-        raise e.DSMFileNotFoundException
-    
-    try:
-        tmp_csv = tempfile.TemporaryFile()  #Workaround because current python version doesn't support 
-        tmp_csv.write(dsm_csv.file.read())      #readable() attribute on SpooledTemporaryFile which UploadFile 
-        tmp_csv.seek(0)                     #is an alias for. PR is accepted for python v3.12, see https://github.com/python/cpython/pull/29560
-
-        dsm = get_dsm_from_csv(tmp_csv) #This should hopefully open up the file for the processor. 
-        if dsm is None:
-            raise e.DSMFileNotFoundException
-    except Exception as exc:
-        logger.debug(exc)
-    finally:
-        tmp_csv.close()
-
-
-    interarrival = simSettings.interarrival_time
-    flow_time = simSettings.flow_time
-    runtime = simSettings.end_time
-    non_tech_add = simSettings.non_tech_add
-    discount_rate = simSettings.discount_rate
-    process = simSettings.flow_process
-    time_unit = TIME_FORMAT_DICT.get(simSettings.time_unit)
-    
-    for vcs_id in vcs_ids:
-        res = get_sim_data(db_connection, vcs_id)
-
-        if not check_entity_rate(res, process):
-            raise e.RateWrongOrderException
-
-
-        if design_ids is None or []:
-            raise e.DesignIdsNotFoundException
-
-        design_results = []
-        for design_id in design_ids:
-            processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id)
-
-            sim = des.Des()
-            try: 
-                res = sim.run_simulation(flow_time, interarrival, process, processes, non_tech_processes, non_tech_add, dsm, time_unit, 
-                    discount_rate, runtime)
-
-            except Exception as exc:
-                logger.debug(f'{exc.__class__}, {exc}')
-                raise e.SimulationFailedException
-
-            design_res = models.Simulation(
-                    time=res.timesteps[-1],
-                    mean_NPV=res.mean_npv(),
-                    max_NPVs=res.all_max_npv(),
-                    mean_payback_time=res.mean_npv_payback_time(),
-                    all_npvs=res.npvs
-                )
-
-            design_results.append(design_res)
-
-    return design_results
-
-
 def run_sim_with_dsm_file(db_connection: PooledMySQLConnection, user_id: int, project_id: int, sim_params: models.FileParams, 
                     dsm_file: UploadFile) -> List[models.Simulation]:
 
@@ -119,7 +55,6 @@ def run_sim_with_dsm_file(db_connection: PooledMySQLConnection, user_id: int, pr
         finally:
             tmp_xlsx.close()
     elif file_extension == '.csv':
-        print("ended up in .csv")
         try:
             tmp_csv = tempfile.TemporaryFile()  #Workaround because current python version doesn't support 
             tmp_csv.write(dsm_file.file.read())      #readable() attribute on SpooledTemporaryFile which UploadFile 
@@ -212,14 +147,11 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, simSet
             raise e.RateWrongOrderException
         
         if design_ids is None or []:
-            #for design in design_impl.get_all_designs(1):
-            #    design_ids.append(design.id)
             raise e.DesignIdsNotFoundException
 
         for design_id in design_ids:
             get_design(design_id)
             processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id) #BUG probably. Populate processes changes the order of the processes. 
-            print([p.name for p in processes], non_tech_processes)
         
             dsm = create_simple_dsm(processes) #TODO Change to using BPMN
 
@@ -276,8 +208,6 @@ def run_sim_monte_carlo(db_connection: PooledMySQLConnection, project_id: int, s
         
     
         if design_ids is None or []:
-            #for design in design_impl.get_all_designs(1):
-            #    design_ids.append(design.id)
             raise e.DesignIdsNotFoundException
 
 
@@ -493,8 +423,6 @@ def parse_formula(formula: str, vd_values, mi_values): #TODO fix how the formula
 def check_entity_rate(db_results, flow_process_name: str):
     rate_check = True
     flow_process_index = len(db_results) #Set the flow_process_index to be highest possible. 
-    print(flow_process_name)
-    print("Rate Check results \n", db_results)
     for i in range(len(db_results)):
         if db_results[i]['sub_name'] == flow_process_name or db_results[i]['iso_name'] == flow_process_name:
             flow_process_index = i
@@ -507,7 +435,6 @@ def check_entity_rate(db_results, flow_process_name: str):
               break    
           break
         
-    print("rate_check", rate_check)
     return rate_check
 
 

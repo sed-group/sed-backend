@@ -216,7 +216,7 @@ def random_stakeholder_need(user_id,
         need = tu.random_str(5, 50)
 
     if rank_weight is None:
-        rank_weight = random.random()
+        rank_weight = round(random.random(), ndigits=4)
 
     if value_driver_ids is None:
         vd = seed_random_value_driver(user_id)
