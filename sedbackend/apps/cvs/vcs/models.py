@@ -3,6 +3,7 @@ from typing import Optional, List
 from pydantic import BaseModel, confloat
 from sedbackend.apps.cvs.project.models import CVSProject
 
+
 # ======================================================================================================================
 # VCS (Value Creation Strategy)
 # ======================================================================================================================
@@ -55,6 +56,7 @@ class VCSSubprocessPost(BaseModel):
 class VCSSubprocessPut(BaseModel):
     name: str
     parent_process_id: int
+
 
 # ======================================================================================================================
 # VCS Value dimension

@@ -7,7 +7,6 @@ from sedbackend.apps.core.users.models import User
 from sedbackend.libs.datastructures.pagination import ListChunk
 from sedbackend.apps.cvs.project import models, implementation
 
-
 router = APIRouter()
 CVS_APP_SID = 'MOD.CVS'
 

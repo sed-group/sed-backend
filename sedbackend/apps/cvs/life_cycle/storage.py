@@ -47,7 +47,6 @@ def populate_start_stop_node(result) -> models.StartStopNodeGet:
 
 def get_node(db_connection: PooledMySQLConnection, project_id: int, node_id: int, table=CVS_NODES_TABLE,
              columns=None) -> dict:
-
     if columns is None:
         columns = CVS_NODES_COLUMNS
     select_statement = MySQLStatementBuilder(db_connection)
@@ -76,7 +75,7 @@ def get_process_node(db_connection: PooledMySQLConnection, project_id: int, node
             .inner_join(CVS_NODES_TABLE, 'cvs_nodes.id = cvs_process_nodes.id') \
             .where('cvs_nodes.id = %s', [node_id]) \
             .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-       
+
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
         raise exceptions.NodeNotFoundException
@@ -129,7 +128,7 @@ def create_process_node(db_connection: PooledMySQLConnection, project_id: int, v
     logger.debug(f'Create a process node for vcs with id={vcs_id}.')
 
     node_id = create_node(db_connection, vcs_id, node)
-    
+
     try:
         insert_statement = MySQLStatementBuilder(db_connection)
         insert_statement \

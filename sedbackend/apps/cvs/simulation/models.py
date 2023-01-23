@@ -1,7 +1,7 @@
 from typing import List
 from enum import Enum
 from pydantic import BaseModel
-from typing import  Optional
+from typing import Optional
 import json
 from fastapi import Form
 from sedbackend.apps.cvs.link_design_lifecycle import models as link_model
@@ -23,6 +23,7 @@ class Process(BaseModel):
     time: float
     cost: float
     revenue: float
+
 
 class NonTechnicalProcess(BaseModel):
     name: str
@@ -50,11 +51,11 @@ class EditSimSettings(BaseModel):
     non_tech_add: NonTechCost
     monte_carlo: bool
     runs: int
-    
+
 
 class SimSettings(EditSimSettings):
     project: int
-    
+
 
 @dataclass
 class FileParams:
@@ -72,4 +73,3 @@ class FileParams:
     vcs_ids: str = Form(...)
     design_ids: str = Form(...)
     normalized_npv: Optional[bool] = Form(None)
-    

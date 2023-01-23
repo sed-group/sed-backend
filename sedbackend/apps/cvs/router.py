@@ -21,5 +21,3 @@ router.include_router(router_link_design_lifecycle, tags=['cvs'], dependencies=[
 router.include_router(router_market_input, tags=['cvs'], dependencies=[Security(verify_token)])
 router.include_router(router_simulation, tags=['cvs'], dependencies=[Security(verify_token)])
 router.include_router(router_distributions, tags=['cvs'], dependencies=[Security(verify_token)])
-
-

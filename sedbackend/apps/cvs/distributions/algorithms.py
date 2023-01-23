@@ -24,7 +24,6 @@ def uniform_distribution(center: float, x_range: float, n_samples: int) -> model
 
 # Simple 1-dimensional Gaussian distribution
 def gaussian_distribution(mu: float, sigma: float, n_samples: int) -> models.Distribution:
-
     dist = GaussianFunc(mu=np.array([mu]), sigma=np.array([[sigma ** 2, ]]))
     dist.random(n_samples)  # draw n samples from the distribution (they are stores inside)
 

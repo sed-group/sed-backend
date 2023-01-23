@@ -22,6 +22,8 @@ class VCSYearFromGreaterThanYearToException(Exception):
 class GenericDatabaseException(Exception):
     def __init__(self, msg: str = None):
         self.msg = msg
+
+
 # ======================================================================================================================
 # VCS Value dimensions
 # ======================================================================================================================
@@ -33,6 +35,8 @@ class ValueDimensionNotFoundException(Exception):
 
 class ValueDimensionFailedDeletionException(Exception):
     pass
+
+
 # ======================================================================================================================
 # VCS Value driver
 # ======================================================================================================================

@@ -1,7 +1,6 @@
 from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
 
-
 from sedbackend.apps.core.authentication import exceptions as auth_exceptions
 from sedbackend.apps.core.users.storage import db_get_user_safe_with_id
 from sedbackend.apps.cvs.project import models as models, exceptions as exceptions

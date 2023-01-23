@@ -11,13 +11,15 @@ from sedbackend.apps.core.authentication import exceptions as auth_ex
 from sedbackend.apps.core.db import get_connection
 from sedbackend.apps.cvs.project import exceptions as project_exceptions
 from sedbackend.apps.cvs.design import exceptions as design_exc
-from sedbackend.apps.cvs.simulation.exceptions import BadlyFormattedSettingsException, DSMFileNotFoundException, DesignIdsNotFoundException, FormulaEvalException, NegativeTimeException, ProcessNotFoundException, RateWrongOrderException, InvalidFlowSettingsException, VcsFailedException
+from sedbackend.apps.cvs.simulation.exceptions import BadlyFormattedSettingsException, DSMFileNotFoundException, \
+    DesignIdsNotFoundException, FormulaEvalException, NegativeTimeException, ProcessNotFoundException, \
+    RateWrongOrderException, InvalidFlowSettingsException, VcsFailedException
 from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.market_input import exceptions as market_input_exceptions
 
 
-def run_simulation(project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int], design_ids: List[int], 
-                    normalized_npv: bool, user_id: int) -> List[models.Simulation]:
+def run_simulation(project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int], design_ids: List[int],
+                   normalized_npv: bool, user_id: int) -> List[models.Simulation]:
     try:
         with get_connection() as con:
             result = storage.run_simulation(con, project_id, sim_settings, vcs_ids, design_ids, normalized_npv, user_id)
@@ -27,7 +29,7 @@ def run_simulation(project_id: int, sim_settings: models.EditSimSettings, vcs_id
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
-    except vcs_exceptions.VCSNotFoundException: #This exception will probably never fire
+    except vcs_exceptions.VCSNotFoundException:  # This exception will probably never fire
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find vcs.',
@@ -68,23 +70,22 @@ def run_simulation(project_id: int, sim_settings: models.EditSimSettings, vcs_id
             detail=f'No design ids or empty array supplied'
         )
     except VcsFailedException:
-      raise HTTPException(
+        raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Invalid vcs ids'
         )
     except BadlyFormattedSettingsException:
-      raise HTTPException(
+        raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Settings are not correct'
         )
 
 
-def run_dsm_file_simulation(user_id: int, project_id: int, sim_params: models.FileParams, 
-                         dsm_file: UploadFile) -> List[models.Simulation]:
-    
-    try: 
+def run_dsm_file_simulation(user_id: int, project_id: int, sim_params: models.FileParams,
+                            dsm_file: UploadFile) -> List[models.Simulation]:
+    try:
         with get_connection() as con:
-            res = storage.run_sim_with_dsm_file(con, user_id, project_id, sim_params, dsm_file) #Wtf saknar xlsx file
+            res = storage.run_sim_with_dsm_file(con, user_id, project_id, sim_params, dsm_file)  # Wtf saknar xlsx file
             return res
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
@@ -138,12 +139,13 @@ def run_dsm_file_simulation(user_id: int, project_id: int, sim_params: models.Fi
         )
 
 
-def run_sim_monte_carlo(project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int], design_ids: List[int], 
-        normalized_npv: bool, user_id: int = None) -> List[models.Simulation]:
-    try: 
+def run_sim_monte_carlo(project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int],
+                        design_ids: List[int],
+                        normalized_npv: bool, user_id: int = None) -> List[models.Simulation]:
+    try:
         with get_connection() as con:
-            result = storage.run_sim_monte_carlo(con, project_id, sim_settings, vcs_ids,  
-                                        design_ids, normalized_npv, user_id)
+            result = storage.run_sim_monte_carlo(con, project_id, sim_settings, vcs_ids,
+                                                 design_ids, normalized_npv, user_id)
             return result
     except vcs_exceptions.GenericDatabaseException:
         raise HTTPException(
@@ -171,29 +173,28 @@ def run_sim_monte_carlo(project_id: int, sim_settings: models.EditSimSettings, v
             detail=f'No design ids or empty array supplied'
         )
     except VcsFailedException:
-      raise HTTPException(
+        raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Invalid vcs ids'
         )
     except BadlyFormattedSettingsException:
-      raise HTTPException(
+        raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Settings are not correct'
         )
 
 
-
 def get_sim_settings(project_id: int) -> models.SimSettings:
     try:
-        with get_connection() as con: 
+        with get_connection() as con:
             result = storage.get_simulation_settings(con, project_id)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
-      raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f'Could not find project'
-      )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Could not find project'
+        )
     except Exception as e:
         logger.debug(e)
         raise HTTPException(
@@ -203,7 +204,7 @@ def get_sim_settings(project_id: int) -> models.SimSettings:
 
 
 def edit_sim_settings(project_id: int, sim_settings: models.EditSimSettings) -> bool:
-    try: 
+    try:
         with get_connection() as con:
             res = storage.edit_simulation_settings(con, project_id, sim_settings)
             con.commit()
@@ -220,4 +221,3 @@ def edit_sim_settings(project_id: int, sim_settings: models.EditSimSettings) -> 
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Could not update simulation settings'
         )
-
