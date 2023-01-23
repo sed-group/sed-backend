@@ -45,7 +45,6 @@ def test_get_subprocess(client, std_headers, std_user):
     # Assert
     assert res.status_code == 200  # 200 OK
     assert res.json()['name'] == subprocess.name
-    assert res.json()['order_index'] == subprocess.order_index
     assert res.json()['parent_process']['id'] == subprocess.parent_process.id
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
@@ -76,13 +75,11 @@ def test_create_subprocess(client, std_headers, std_user):
     # Act
     res = client.post(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/subprocess', headers=std_headers, json={
         'name': 'New subprocess',
-        'order_index': 1,
         'parent_process_id': subprocess.parent_process.id
     })
     # Assert
     assert res.status_code == 200  # 200 OK
     assert res.json()['name'] == 'New subprocess'
-    assert res.json()['order_index'] == 1
     assert res.json()['parent_process']['id'] == subprocess.parent_process.id
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)

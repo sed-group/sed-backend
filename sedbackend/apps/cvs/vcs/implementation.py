@@ -447,35 +447,6 @@ def delete_subprocess(project_int: int, subprocess_id: int) -> bool:
         )
 
 
-def update_indices_subprocess(project_id: int, subprocess_ids: List[int], order_indices: List[int]
-                              ) -> bool:
-    try:
-        with get_connection() as con:
-            result = storage.update_subprocess_indices(con, project_id, subprocess_ids, order_indices)
-            con.commit()
-            return result
-    except project_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Could not find project with id={project_id}.',
-        )
-    except exceptions.SubprocessNotFoundException as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Could not find subprocess with id={e.subprocess_id}.',
-        )
-    except exceptions.SubprocessFailedToUpdateException as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'Failed to edit subprocess with id={e.subprocess_id}.',
-        )
-    except auth_ex.UnauthorizedOperationException:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail='Unauthorized user.',
-        )
-
-
 # ======================================================================================================================
 # VCS Table
 # ======================================================================================================================

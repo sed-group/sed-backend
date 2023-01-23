@@ -73,7 +73,6 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_subprocesses`
     `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `vcs`           INT UNSIGNED NOT NULL,
     `name`          TEXT NOT NULL,
-    `order_index`   INT, #TODO ask if it is neccessary to rearrange subprocesses in modal window
     `iso_process`   INT UNSIGNED NOT NULL,
     FOREIGN KEY (`iso_process`)
         REFERENCES `seddb`.`cvs_iso_processes`(`id`)

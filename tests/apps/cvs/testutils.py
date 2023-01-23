@@ -149,12 +149,12 @@ def random_table_row(
     if index is None:
         index = random.randint(1, 15)
 
-    if random.randint(1, 2) == 2:
-        iso_process_id = random.randint(1, 25)
-    else:
+    if random.randint(1, 8) == 2:
         subprocess = random_subprocess(project_id, vcs_id)
         subprocess_id = subprocess.id
-
+    else:
+        iso_process_id = random.randint(1, 25)
+        
     if stakeholder is None:
         stakeholder = tu.random_str(5, 50)
 
@@ -176,20 +176,17 @@ def random_table_row(
     return table_row
 
 
-def random_subprocess(project_id: int, vcs_id: int, name: str = None, parent_process_id: int = None,
-                      order_index: int = None):
+def random_subprocess(project_id: int, vcs_id: int, name: str = None, parent_process_id: int = None):
     if name is None:
         name = tu.random_str(5, 50)
     if parent_process_id is None:
         parent_process_id = random.randint(1, 25)
 
-    subprocess = sedbackend.apps.cvs.vcs.models.VCSSubprocessPost(
-        # TODO fix bug here. Cannot create subprocess without order_index
+    subprocess = vcs_model.VCSSubprocessPost(
         name=name,
-        parent_process_id=parent_process_id,
-        order_index=random.randint(1, 10)
+        parent_process_id=parent_process_id
     )
-    subp = sedbackend.apps.cvs.vcs.implementation.create_subprocess(project_id, vcs_id, subprocess)
+    subp = vcs_impl.create_subprocess(project_id, vcs_id, subprocess)
     return subp
 
 
@@ -202,7 +199,7 @@ def seed_random_subprocesses(project_id: int, vcs_id: int, amount=15):
 
 
 def delete_subprocess_by_id(subprocess_id, project_id):
-    sedbackend.apps.cvs.vcs.implementation.delete_subprocess(
+    vcs_impl.delete_subprocess(
         subprocess_id, project_id)
 
 
@@ -566,9 +563,12 @@ def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int)
 
 def seed_simulation_settings(project_id: int, vcs_ids: List[int], design_ids: List[int]) -> sim_model.SimSettings:
   rows = [row.iso_process.name if row.iso_process is not None else row.subprocess.name for row in vcs_impl.get_vcs_table(project_id, vcs_ids[0])]
+  print("Seed settings vcs rows", rows)
   for vcs_id in vcs_ids:
     new_rows = [row.iso_process.name if row.iso_process is not None else row.subprocess.name for row in vcs_impl.get_vcs_table(project_id, vcs_id)]
+    print("New rows", new_rows)
     rows = list(filter(lambda x: x in rows, new_rows))
+    print("Common elements", rows)
     
   time_unit = random_time_unit()
   interarrival_time = round(tu.random.uniform(1, 255), ndigits=5)

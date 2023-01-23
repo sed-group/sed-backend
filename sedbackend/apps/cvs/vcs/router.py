@@ -224,17 +224,6 @@ async def delete_subprocess(native_project_id: int, subprocess_id: int) -> bool:
     return implementation.delete_subprocess(native_project_id, subprocess_id)
 
 
-@router.put(
-    '/project/{native_project_id}/subprocess/{subprocess_id}/indices',
-    summary='Updates the indices of multiple subprocesses',
-    response_model=bool,
-    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
-)
-async def update_indices_subprocess(native_project_id: int, subprocess_ids: List[int], order_indices: List[int]
-                                    ) -> bool:
-    return implementation.update_indices_subprocess(native_project_id, subprocess_ids, order_indices)
-
-
 # ======================================================================================================================
 # VCS Duplicate
 # ======================================================================================================================
