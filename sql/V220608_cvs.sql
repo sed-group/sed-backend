@@ -24,12 +24,12 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_simulation_settings`
     `project`               INT UNSIGNED NOT NULL,
     `time_unit`             VARCHAR(10),
     `flow_process`          TEXT NULL,
-    `flow_start_time`       DOUBLE(20, 5) NULL,
-    `flow_time`             DOUBLE(20, 5) NOT NULL,
-    `interarrival_time`     DOUBLE(20, 5) NOT NULL,
-    `start_time`            DOUBLE(20, 5) NOT NULL,
-    `end_time`              DOUBLE(20, 5) NOT NULL,
-    `discount_rate`         DOUBLE(20, 5) NOT NULL,
+    `flow_start_time`       FLOAT NULL,
+    `flow_time`             FLOAT NOT NULL,
+    `interarrival_time`     FLOAT NOT NULL,
+    `start_time`            FLOAT NOT NULL,
+    `end_time`              FLOAT NOT NULL,
+    `discount_rate`         FLOAT NOT NULL,
     `non_tech_add`          TEXT NOT NULL,
     `monte_carlo`           BOOLEAN NOT NULL,
     `runs`                  INT UNSIGNED DEFAULT 0,
@@ -249,7 +249,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_vd_design_values`
 (
     `value_driver`      INT UNSIGNED NOT NULL,
     `design`            INT UNSIGNED NOT NULL,
-    `value`             DOUBLE NOT NULL,
+    `value`             FLOAT NOT NULL,
     PRIMARY KEY(`value_driver`, `design`),
     FOREIGN KEY(`value_driver`)
         REFERENCES `seddb`.`cvs_value_drivers`(`id`)
@@ -296,7 +296,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_market_input_values`
 (
     `vcs`           INT UNSIGNED NOT NULL,
     `market_input`  INT UNSIGNED NOT NULL,
-    `value`         DOUBLE NOT NULL,
+    `value`         FLOAT NOT NULL,
     PRIMARY KEY(`vcs`,`market_input`),
     FOREIGN KEY(`vcs`)
         REFERENCES `seddb`.`cvs_vcss`(`id`)

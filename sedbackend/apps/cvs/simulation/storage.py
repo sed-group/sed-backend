@@ -465,9 +465,9 @@ def get_market_values(db_connection: PooledMySQLConnection, vcs_row_id: int, vcs
 
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement \
-        .select('cvs_market_values', ['id', 'name', 'value'])\
-        .inner_join('cvs_market_inputs', 'cvs_market_values.market_input = cvs_market_inputs.id')\
-        .inner_join('cvs_formulas_market_inputs', 'cvs_formulas_market_inputs.market_input = cvs_market_values.market_input')\
+        .select('cvs_market_input_values', ['id', 'name', 'value'])\
+        .inner_join('cvs_market_inputs', 'cvs_market_input_values.market_input = cvs_market_inputs.id')\
+        .inner_join('cvs_formulas_market_inputs', 'cvs_formulas_market_inputs.market_input = cvs_market_input_values.market_input')\
         .where('formulas = %s and vcs = %s', [vcs_row_id, vcs])\
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
     
