@@ -23,19 +23,6 @@ async def run_simulation(native_project_id: int, sim_settings: models.EditSimSet
                         user: User = Depends(get_current_active_user)) -> List[models.Simulation]:
     return implementation.run_simulation(native_project_id, sim_settings, vcs_ids, design_ids, normalized_npv, user.id)
 
-"""
-@router.post(
-    '/project/{native_project_id}/sim/csv',
-    summary='Run simulation with DSM predefined in CSV file',
-    response_model=List[models.Simulation],
-    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read, CVS_APP_SID))]
-)
-async def run_csv_simulation(native_project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int], 
-                         design_ids: Optional[List[int]] = None, 
-                        normalized_npv: Optional[bool] = False, dsm_csv: UploadFile = File(default=None),
-                        user: User = Depends(get_current_active_user)) -> List[models.Simulation]:
-    return implementation.run_csv_simulation(native_project_id, sim_settings, vcs_ids, dsm_csv, design_ids, normalized_npv, user.id)
-"""
 
 @router.post(
     '/project/{native_project_id}/sim/upload-dsm',

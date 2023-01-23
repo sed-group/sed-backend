@@ -79,65 +79,6 @@ def run_simulation(project_id: int, sim_settings: models.EditSimSettings, vcs_id
         )
 
 
-def run_csv_simulation(project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int], dsm_csv: UploadFile, design_ids: List[int], 
-                        normalized_npv: bool, user_id: int) -> List[models.Simulation]:
-    try: 
-        with get_connection() as con:
-            res = storage.run_sim_with_csv_dsm(con, project_id, sim_settings, vcs_ids, dsm_csv, design_ids, 
-                                normalized_npv, user_id)
-            return res
-    except auth_ex.UnauthorizedOperationException:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail='Unauthorized user.',
-        )
-    except vcs_exceptions.VCSNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs with id={vcs_id}.',
-        )
-    except project_exceptions.CVSProjectNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find project.',
-        )
-    except market_input_exceptions.MarketInputNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find market input',
-        )
-    except ProcessNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find process',
-        )
-    except DSMFileNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not read uploaded file'
-        )
-    except FormulaEvalException as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'Could not evaluate formulas of process with id: {e.process_id}'
-        )
-    except RateWrongOrderException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Wrong order of rate of entities. Per project assigned after per product'
-        )
-    except NegativeTimeException as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Formula at process with id: {e.process_id} evaluated to negative time'
-        )
-    except DesignIdsNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'No design ids or empty array supplied'
-        )
-
-
 def run_dsm_file_simulation(user_id: int, project_id: int, sim_params: models.FileParams, 
                          dsm_file: UploadFile) -> List[models.Simulation]:
     

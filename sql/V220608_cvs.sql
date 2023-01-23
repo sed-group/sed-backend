@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_stakeholder_needs`
     `vcs_row`           INT UNSIGNED NOT NULL,
     `need`              TEXT NOT NULL,
     `value_dimension`   TEXT NULL,
-    `rank_weight`       DECIMAL(7,6) NULL,
+    `rank_weight`       FLOAT NULL,
     FOREIGN KEY(`vcs_row`)
         REFERENCES  `seddb`.`cvs_vcs_rows`(`id`)
         ON DELETE CASCADE,

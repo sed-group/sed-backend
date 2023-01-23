@@ -587,7 +587,6 @@ def delete_subprocess(db_connection: PooledMySQLConnection, project_id: int, sub
 
 def populate_subprocess(db_result) -> models.VCSSubprocess:
     logger.debug(f'Populating model for subprocess with id={db_result["id"]}.')
-    # print("in populate: " + db_result['iso_process'])
     return models.VCSSubprocess(
         id=db_result['id'],
         vcs_id=db_result['vcs'],

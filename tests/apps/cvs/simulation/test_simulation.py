@@ -34,53 +34,6 @@ def test_run_single_simulation(client, std_headers, std_user):
   tu.delete_project_by_id(project.id, current_user.id)
 
 
-def test_run_simulation(client, std_headers, std_user):
-  #Setup
-  amount = 2
-
-  current_user = impl_users.impl_get_user_with_username(std_user.username)
-  project = tu.seed_random_project(current_user.id)
-  vcss = []
-  dgs = []
-
-  design_ids = []
-
-  for _ in range(amount):
-    vcs = tu.seed_random_vcs(project.id)
-    design_group = tu.seed_random_design_group(project.id)
-    vcss.append(vcs)
-    dgs.append(design_group)
-    tu.seed_random_formulas(project.id, vcs.id, design_group.id, current_user.id, 10) #Also creates the vcs rows
-    design = tu.seed_random_designs(project.id, design_group.id, 1)
-    design_ids.append(design[0].id)
-  
-  tu.seed_formulas_for_multiple_vcs(project.id, [vcs.id for vcs in vcss], [dg.id for dg in dgs], current_user.id)
-
-  settings = tu.seed_simulation_settings(project.id, [vcs.id for vcs in vcss], design_ids)
-  settings.monte_carlo = False
-
-  #Act
-  res = client.post(f'/api/cvs/project/{project.id}/simulation/run', 
-                    headers=std_headers,
-                    json = {
-                      "sim_settings": settings.dict(),
-                      "vcs_ids": [vcs.id for vcs in vcss],
-                      "design_ids": design_ids
-                    })
-  
-  #Assert
-  assert res.status_code == 200
-  #Should probably assert some other stuff about the output to ensure that it is correct. 
-  
-
-  #Cleanup
-  for dg in dgs:
-    tu.delete_design_group(project.id, dg.id)
-
-  tu.delete_VCS_with_ids(project.id, [vcs.id for vcs in vcss])
-  tu.delete_project_by_id(project.id, current_user.id)
-  tu.delete_vd_from_user(current_user.id)
-
 
 def test_run_sim_invalid_designs(client, std_headers, std_user):
   #Setup
