@@ -532,7 +532,7 @@ def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int)
         last_id = row.id
         break
   
-  print(last_id)
+  
   last = next(filter(lambda x: x.vcs_row_id == last_id, formulas))
 
   new_last = connect_model.FormulaPost(
