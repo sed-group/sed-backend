@@ -15,7 +15,7 @@ from sedbackend.env import Environment
 # Key can be created using `openssl rand -hex 32`.
 SECRET_KEY  = Environment.get_variable('JWT_KEY')
 ALGORITHM   = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 #Changed to 60 for development purposes. Reset to 30 for production.
+ACCESS_TOKEN_EXPIRE_MINUTES = 30 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
