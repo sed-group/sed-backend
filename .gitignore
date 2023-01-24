@@ -5,6 +5,7 @@
 venv/
 .idea/
 .vscode/
+.devcontainer/
 
 # Cache files
 *.pyc

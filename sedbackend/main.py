@@ -21,7 +21,7 @@ app = FastAPI(
 app.include_router(api.router, prefix="/api")
 
 # CORS
-origins = ["http://localhost:8080"]
+origins = ["http://localhost:8080", "http://localhost:3000", "https://clubdesign.netlify.app"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,

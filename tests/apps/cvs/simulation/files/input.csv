@@ -1,0 +1,5 @@
+processes,"Architectural design","Verification","Validation","Maintenance"
+"Architectural design",0, 1, 0, 0
+"Verification",0, 0, 1, 0
+"Validation",0, 0.2, 0, 0.8
+"Maintenance",0, 0, 0, 0
