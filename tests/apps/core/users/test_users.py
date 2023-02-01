@@ -46,7 +46,6 @@ def test_create_users_bulk_as_admin(client, admin_headers):
 def test_create_users_bulk(client, std_headers):
     # Setup
     test_file = 'tests/test_assets/core/users/bulk_user_sheet.xlsx'
-    df_users = pd.read_excel(test_file)
 
     # Act
     files = {'file': ('bulk_user_sheet.xlsx', open(test_file, 'rb'))}
@@ -54,8 +53,8 @@ def test_create_users_bulk(client, std_headers):
     res_2 = client.post("/api/core/users/bulk", files=files)
 
     # Assert
-    assert res_1.status_code == 401
-    assert res_2.status_code == 403
+    assert res_1.status_code == 403
+    assert res_2.status_code == 401
 
 
 def test_delete_user_as_admin(client, admin_headers):
