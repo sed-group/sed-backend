@@ -1,12 +1,15 @@
 from typing import List
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, File
+from fastapi.logger import logger
 
 from sedbackend.apps.core.authentication.exceptions import UnauthorizedOperationException
 import sedbackend.apps.core.users.exceptions as exc
 import sedbackend.apps.core.users.models as models
 from sedbackend.apps.core.db import get_connection
 import sedbackend.apps.core.users.storage as storage
+
+import pandas as pd
 
 
 def impl_get_users_me(current_user: models.User) -> models.User:
@@ -72,6 +75,34 @@ def impl_post_user(user: models.UserPost) -> models.User:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Username is not unique",
+        )
+
+
+def impl_post_users_bulk(file: File):
+    logger.info("Bulk user creation requested.")
+    try:
+        with get_connection() as con:
+            df = pd.read_excel(file)
+            cols = list(df.columns)
+
+            if "username" not in cols or "password" not in cols:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Sheet needs to include columns \"username\" and \"password\" in lower-case."
+                )
+
+            for index, row in df.iterrows():
+                user = models.UserPost(username=row["username"], password=row["password"])
+                storage.db_insert_user(con, user)
+
+            logger.info(f'Added {index} new users through bulk insertion.')
+
+            con.commit()
+
+    except exc.UserNotUniqueException:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Encountered non-unique username in bulk insertion."
         )
 
 
