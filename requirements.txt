@@ -48,7 +48,7 @@ jose~=1.0.0
 pandas~=1.2.4
 scikit-learn~=1.0.2
 numpy~=1.22.3
-openpyxl~=3.0.7
+openpyxl~=3.1.0
 pytest==6.2.5
 requests==2.25.1
 simpy~=4.0.1
