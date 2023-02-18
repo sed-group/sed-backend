@@ -44,8 +44,10 @@ def run_sim_with_dsm_file(db_connection: PooledMySQLConnection, user_id: int, pr
 
     if file_extension == '.xlsx':
         try:
-            tmp_xlsx = tempfile.TemporaryFile()  # Workaround because current python version doesn't support
-            tmp_xlsx.write(dsm_file.file.read())  # readable() attribute on SpooledTemporaryFile which UploadFile
+            # Workaround because current python version doesn't support
+            tmp_xlsx = tempfile.TemporaryFile()
+            # readable() attribute on SpooledTemporaryFile which UploadFile
+            tmp_xlsx.write(dsm_file.file.read())
             tmp_xlsx.seek(
                 0)  # is an alias for. PR is accepted for python v3.12, see https://github.com/python/cpython/pull/29560
 
@@ -58,12 +60,15 @@ def run_sim_with_dsm_file(db_connection: PooledMySQLConnection, user_id: int, pr
             tmp_xlsx.close()
     elif file_extension == '.csv':
         try:
-            tmp_csv = tempfile.TemporaryFile()  # Workaround because current python version doesn't support
-            tmp_csv.write(dsm_file.file.read())  # readable() attribute on SpooledTemporaryFile which UploadFile
+            # Workaround because current python version doesn't support
+            tmp_csv = tempfile.TemporaryFile()
+            # readable() attribute on SpooledTemporaryFile which UploadFile
+            tmp_csv.write(dsm_file.file.read())
             tmp_csv.seek(
                 0)  # is an alias for. PR is accepted for python v3.12, see https://github.com/python/cpython/pull/29560
 
-            dsm = get_dsm_from_csv(tmp_csv)  # This should hopefully open up the file for the processor.
+            # This should hopefully open up the file for the processor.
+            dsm = get_dsm_from_csv(tmp_csv)
             if dsm is None:
                 raise e.DSMFileNotFoundException
         except Exception as exc:
@@ -95,7 +100,8 @@ def run_sim_with_dsm_file(db_connection: PooledMySQLConnection, user_id: int, pr
             raise e.DesignIdsNotFoundException
 
         for design_id in design_ids:
-            processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id)
+            processes, non_tech_processes = populate_processes(
+                non_tech_add, res, db_connection, vcs_id, design_id)
             sim = des.Des()
 
             try:
@@ -163,7 +169,8 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, simSet
 
             except Exception as exc:
                 tb = sys.exc_info()[2]
-                logger.debug(f'{exc.__class__}, {exc}, {exc.with_traceback(tb)}')
+                logger.debug(
+                    f'{exc.__class__}, {exc}, {exc.with_traceback(tb)}')
                 print(f'{exc.__class__}, {exc}')
                 raise e.SimulationFailedException
 
@@ -183,7 +190,7 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, simSet
 def run_sim_monte_carlo(db_connection: PooledMySQLConnection, project_id: int, simSettings: models.EditSimSettings,
                         vcs_ids: List[int],
                         design_ids: List[int], normalized_npv: bool = False, user_id: int = None) -> List[
-    models.Simulation]:
+        models.Simulation]:
     design_results = []
 
     if not check_sim_settings(simSettings):
@@ -211,9 +218,11 @@ def run_sim_monte_carlo(db_connection: PooledMySQLConnection, project_id: int, s
 
         for design_id in design_ids:
             get_design(design_id)
-            processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id)
+            processes, non_tech_processes = populate_processes(
+                non_tech_add, res, db_connection, vcs_id, design_id)
             logger.debug('Fetched Processes and non-techproc')
-            dsm = create_simple_dsm(processes)  # TODO Change to using BPMN AND move out of the for loop
+            # TODO Change to using BPMN AND move out of the for loop
+            dsm = create_simple_dsm(processes)
 
             sim = des.Des()
 
@@ -264,14 +273,19 @@ def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: Poo
 
         elif row['iso_name'] is not None and row['sub_name'] is None:
             try:
-                time = nsp.eval(parse_formula(row['time'], vd_values, mi_values))
+                time = nsp.eval(parse_formula(
+                    row['time'], vd_values, mi_values))
                 cost_formula = parse_formula(row['cost'], vd_values, mi_values)
-                revenue_formula = parse_formula(row['revenue'], vd_values, mi_values)
+                revenue_formula = parse_formula(
+                    row['revenue'], vd_values, mi_values)
                 p = Process(row['id'],
                             time,
-                            nsp.eval(expr.replace_all('time', time, cost_formula)),
-                            nsp.eval(expr.replace_all('time', time, revenue_formula)),
-                            row['iso_name'], non_tech_add, TIME_FORMAT_DICT.get(row['time_unit'].lower())
+                            nsp.eval(expr.replace_all(
+                                'time', time, cost_formula)),
+                            nsp.eval(expr.replace_all(
+                                'time', time, revenue_formula)),
+                            row['iso_name'], non_tech_add, TIME_FORMAT_DICT.get(
+                                row['time_unit'].lower())
                             )
                 if p.time < 0:
                     raise e.NegativeTimeException(row['id'])
@@ -281,14 +295,19 @@ def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: Poo
             technical_processes.append(p)
         elif row['sub_name'] is not None:
             try:
-                time = nsp.eval(parse_formula(row['time'], vd_values, mi_values))
+                time = nsp.eval(parse_formula(
+                    row['time'], vd_values, mi_values))
                 cost_formula = parse_formula(row['cost'], vd_values, mi_values)
-                revenue_formula = parse_formula(row['revenue'], vd_values, mi_values)
+                revenue_formula = parse_formula(
+                    row['revenue'], vd_values, mi_values)
                 p = Process(row['id'],
                             time,
-                            nsp.eval(expr.replace_all('time', time, cost_formula)),
-                            nsp.eval(expr.replace_all('time', time, revenue_formula)),
-                            row['sub_name'], non_tech_add, TIME_FORMAT_DICT.get(row['time_unit'].lower())
+                            nsp.eval(expr.replace_all(
+                                'time', time, cost_formula)),
+                            nsp.eval(expr.replace_all(
+                                'time', time, revenue_formula)),
+                            row['sub_name'], non_tech_add, TIME_FORMAT_DICT.get(
+                                row['time_unit'].lower())
                             )
 
                 if p.time < 0:
@@ -360,18 +379,19 @@ def edit_simulation_settings(db_connection: PooledMySQLConnection, project_id: i
     count = count['count']
     logger.debug(count)
 
-    flow_process_exists = False
-    vcss = vcs_impl.get_all_vcs(project_id).chunk
-    for vcs in vcss:
-        rows = vcs_impl.get_vcs_table(project_id, vcs.id)
-        for row in rows:
-            if (row.iso_process is not None and row.iso_process.name == sim_settings.flow_process) or \
-                (row.subprocess is not None and row.subprocess.name == sim_settings.flow_process):
-                flow_process_exists = True
-                break
+    if sim_settings.flow_process is not None:
+        flow_process_exists = False
+        vcss = vcs_impl.get_all_vcs(project_id).chunk
+        for vcs in vcss:
+            rows = vcs_impl.get_vcs_table(project_id, vcs.id)
+            for row in rows:
+                if (row.iso_process is not None and row.iso_process.name == sim_settings.flow_process) or \
+                        (row.subprocess is not None and row.subprocess.name == sim_settings.flow_process):
+                    flow_process_exists = True
+                    break
 
-    if not flow_process_exists:
-        raise e.FlowProcessNotFoundException
+        if not flow_process_exists:
+            raise e.FlowProcessNotFoundException
 
     if (count == 1):
         columns = SIM_SETTINGS_COLUMNS[1:]
@@ -423,25 +443,29 @@ def get_market_values(db_connection: PooledMySQLConnection, vcs_row_id: int, vcs
     return res
 
 
-def parse_formula(formula: str, vd_values, mi_values):  # TODO fix how the formulas are parsed
+# TODO fix how the formulas are parsed
+def parse_formula(formula: str, vd_values, mi_values):
     new_formula = formula
     vd_ids = expr.get_prefix_ids('vd', new_formula)
     mi_ids = expr.get_prefix_ids('mi', new_formula)
     for vd in vd_values:
         for id in vd_ids:
             if int(id) == vd['id']:
-                new_formula = expr.replace_all('vd' + id, vd['value'], new_formula)
+                new_formula = expr.replace_all(
+                    'vd' + id, vd['value'], new_formula)
     for mi in mi_values:
         for id in mi_ids:
             if int(id) == mi['id']:
-                new_formula = expr.replace_all('mi' + id, mi['value'], new_formula)
+                new_formula = expr.replace_all(
+                    'mi' + id, mi['value'], new_formula)
 
     return new_formula
 
 
 def check_entity_rate(db_results, flow_process_name: str):
     rate_check = True
-    flow_process_index = len(db_results)  # Set the flow_process_index to be highest possible.
+    # Set the flow_process_index to be highest possible.
+    flow_process_index = len(db_results)
     for i in range(len(db_results)):
         if db_results[i]['sub_name'] == flow_process_name or db_results[i]['iso_name'] == flow_process_name:
             flow_process_index = i

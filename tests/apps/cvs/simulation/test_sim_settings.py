@@ -6,7 +6,7 @@ def test_get_sim_settings(client, std_headers, std_user):
   #Setup
   current_user = impl_users.impl_get_user_with_username(std_user.username)
   project = tu.seed_random_project(current_user.id)
-  sim_settings = tu.seed_random_sim_settings(project.id)
+  sim_settings = tu.seed_random_sim_settings(current_user.id, project.id)
 
   #Act
   res = client.get(f'/api/cvs/project/{project.id}/simulation/settings', headers=std_headers)
@@ -24,7 +24,7 @@ def test_get_sim_settings_invalid_proj(client, std_user, std_headers):
   #Setup
   current_user = impl_users.impl_get_user_with_username(std_user.username)
   project = tu.seed_random_project(current_user.id)
-  sim_settings = tu.seed_random_sim_settings(project.id)
+  sim_settings = tu.seed_random_sim_settings(current_user.id, project.id)
 
   invalid_proj = project.id + 1
 
@@ -42,7 +42,7 @@ def test_edit_sim_settings(client, std_headers, std_user):
   #Setup
   current_user = impl_users.impl_get_user_with_username(std_user.username)
   project = tu.seed_random_project(current_user.id)
-  sim_settings = tu.seed_random_sim_settings(project.id)
+  sim_settings = tu.seed_random_sim_settings(current_user.id, project.id)
 
   #Act
   flow_time = round(tu.random.uniform(1, 300), ndigits=5) #Should probs check that this is correct with the other settings
@@ -78,7 +78,7 @@ def test_edit_sim_settings_both_flows(client, std_headers, std_user):
     #Setup
   current_user = impl_users.impl_get_user_with_username(std_user.username)
   project = tu.seed_random_project(current_user.id)
-  sim_settings = tu.seed_random_sim_settings(project.id)
+  sim_settings = tu.seed_random_sim_settings(current_user.id, project.id)
 
   #Act
   flow_start_time = round(tu.random.uniform(1, 50), ndigits=5)
@@ -115,7 +115,7 @@ def test_edit_sim_settings_no_flows(client, std_headers, std_user):
       #Setup
   current_user = impl_users.impl_get_user_with_username(std_user.username)
   project = tu.seed_random_project(current_user.id)
-  sim_settings = tu.seed_random_sim_settings(project.id)
+  sim_settings = tu.seed_random_sim_settings(current_user.id, project.id)
 
   #Act
   flow_start_time = None
@@ -152,7 +152,7 @@ def test_edit_sim_settings_invalid_proj(client, std_headers, std_user):
   #Setup
   current_user = impl_users.impl_get_user_with_username(std_user.username)
   project = tu.seed_random_project(current_user.id)
-  sim_settings = tu.seed_random_sim_settings(project.id)
+  sim_settings = tu.seed_random_sim_settings(current_user.id, project.id)
   invalid_proj = project.id + 1
 
 
