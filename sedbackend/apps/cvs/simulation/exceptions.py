@@ -45,3 +45,6 @@ class VcsFailedException(Exception):
 
 class BadlyFormattedSettingsException(Exception):
     pass
+
+class FlowProcessNotFoundException(Exception):
+    pass
