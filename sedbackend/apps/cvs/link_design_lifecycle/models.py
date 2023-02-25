@@ -11,12 +11,12 @@ class TimeFormat(str, Enum):
     The time formats that can be chosen for a process. The values are the defaults for the
     simulation (years)
     """
-    MINUTES:str = 'minutes'
-    HOUR:str = 'hour'
-    DAY:str = 'day'
-    WEEK:str = 'week'
-    MONTH:str = 'month'
-    YEAR:str = 'year'
+    MINUTES: str = 'minutes'
+    HOUR: str = 'hour'
+    DAY: str = 'day'
+    WEEK: str = 'week'
+    MONTH: str = 'month'
+    YEAR: str = 'year'
 
 
 class Rate(Enum):

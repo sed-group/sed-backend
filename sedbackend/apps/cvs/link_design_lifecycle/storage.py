@@ -12,7 +12,6 @@ from sedbackend.libs.mysqlutils.builder import FetchType, MySQLStatementBuilder
 from sedbackend.apps.cvs.market_input import implementation as market_impl
 from sedbackend.apps.cvs.design import implementation as design_impl
 
-
 CVS_FORMULAS_TABLE = 'cvs_design_mi_formulas'
 CVS_FORMULAS_COLUMNS = ['vcs_row', 'design_group', 'time', 'time_unit', 'cost', 'revenue', 'rate']
 
@@ -54,26 +53,25 @@ def create_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, desig
 
     if insert_statement is not None:  # TODO actually check for potential problems
         return True
-    
+
     return False
 
 
 def edit_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_row_id: int, design_group_id: int,
                   formulas: models.FormulaPost) -> bool:
-
     get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
     get_vcs_row(db_connection, project_id, vcs_row_id)
 
     count_statement = MySQLStatementBuilder(db_connection)
-    count = count_statement.count(CVS_FORMULAS_TABLE)\
-        .where('vcs_row = %s and design_group = %s', [vcs_row_id, design_group_id])\
+    count = count_statement.count(CVS_FORMULAS_TABLE) \
+        .where('vcs_row = %s and design_group = %s', [vcs_row_id, design_group_id]) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
     count = count['count']
 
     logger.debug(f'count: {count}')
 
     if count == 0:
-        create_formulas(db_connection,  vcs_row_id, design_group_id, formulas)
+        create_formulas(db_connection, vcs_row_id, design_group_id, formulas)
     elif count == 1:
         logger.debug(f'Editing formulas')
         columns = CVS_FORMULAS_COLUMNS[2:]
@@ -85,14 +83,14 @@ def edit_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_row
         update_statement = MySQLStatementBuilder(db_connection)
         _, rows = update_statement \
             .update(table=CVS_FORMULAS_TABLE, set_statement=set_statement, values=values) \
-            .where('vcs_row = %s and design_group = %s', [vcs_row_id, design_group_id])\
+            .where('vcs_row = %s and design_group = %s', [vcs_row_id, design_group_id]) \
             .execute(return_affected_rows=True)
-    
+
         if rows > 1:
             raise exceptions.TooManyFormulasUpdatedException
     else:
         raise exceptions.FormulasFailedUpdateException
-    
+
     return True
 
 
@@ -109,10 +107,10 @@ def get_all_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_
         .inner_join('cvs_vcs_rows', 'vcs_row = cvs_vcs_rows.id') \
         .where('vcs = %s and design_group = %s', [vcs_id, design_group_id]) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-    
+
     if res is None:
         raise exceptions.VCSNotFoundException
-    
+
     return [populate_formula(r) for r in res]
 
 
@@ -135,24 +133,22 @@ def delete_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_r
     logger.debug(f'Deleting formulas with vcs_row_id: {vcs_row_id}')
 
     get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
-    #get_cvs_project(project_id)
+    # get_cvs_project(project_id)
     get_vcs_row(db_connection, project_id, vcs_row_id)
-
 
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement \
         .delete(CVS_FORMULAS_TABLE) \
-        .where('vcs_row = %s and design_group = %s', [vcs_row_id, design_group_id])\
+        .where('vcs_row = %s and design_group = %s', [vcs_row_id, design_group_id]) \
         .execute(return_affected_rows=True)
-    
+
     if rows != 1:
         raise exceptions.FormulasFailedDeletionException
-    
+
     return True
 
 
 def get_vcs_dg_pairs(db_connection: PooledMySQLConnection, project_id: int) -> List[models.VcsDgPairs]:
-
     query = "SELECT cvs_vcss.name AS vcs_name, cvs_vcss.id AS vcs_id, cvs_design_groups.name AS design_group_name, " \
             "cvs_design_groups.id AS design_group_id, \
     (SELECT count(*) FROM cvs_vcs_rows WHERE cvs_vcs_rows.vcs = cvs_vcss.id) \
@@ -162,12 +158,11 @@ def get_vcs_dg_pairs(db_connection: PooledMySQLConnection, project_id: int) -> L
     GROUP BY vcs_id, design_group_id ORDER BY has_formulas DESC;"
 
     with db_connection.cursor(prepared=True) as cursor:
-        
         # Log for sanity check
         logger.debug(f"get_vcs_dg_pairs: '{query}'")
 
         # Execute query
-        cursor.execute(query, [project_id, project_id])  
+        cursor.execute(query, [project_id, project_id])
 
         # Get result
         res_dict = []
@@ -180,6 +175,6 @@ def get_vcs_dg_pairs(db_connection: PooledMySQLConnection, project_id: int) -> L
                 design_group=res[2],
                 design_group_id=res[3],
                 has_formulas=res[4]
-                ))
+            ))
 
     return res_dict

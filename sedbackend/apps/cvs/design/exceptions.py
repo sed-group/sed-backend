@@ -1,4 +1,3 @@
-
 # ======================================================================================================================
 # Design
 # ======================================================================================================================
@@ -17,6 +16,7 @@ class DesignGroupInsertException(Exception):
 
 class DesignInsertException(Exception):
     pass
+
 
 # ======================================================================================================================
 # Quantified Objectives
@@ -37,6 +37,7 @@ class QuantifiedObjectiveValueNotFoundException(Exception):
 
 class QuantifiedObjectiveValueNotDeleted(Exception):
     pass
+
 
 class QuantifiedObjectiveNotInFormulas(Exception):
     pass

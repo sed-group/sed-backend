@@ -1,6 +1,6 @@
 from fastapi import HTTPException
+from fastapi.logger import logger
 from starlette import status
-
 
 from sedbackend.apps.core.authentication import exceptions as auth_ex
 from sedbackend.apps.core.db import get_connection
@@ -31,6 +31,7 @@ def get_cvs_project(project_id: int) -> models.CVSProject:
 
 def create_cvs_project(project_post: models.CVSProjectPost, user_id: int) -> models.CVSProject:
     with get_connection() as con:
+        logger.debug(f'In create_cvs_proj: {user_id}, {project_post}')
         result = storage.create_cvs_project(con, project_post, user_id)
         con.commit()
         return result

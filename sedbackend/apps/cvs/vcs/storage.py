@@ -11,7 +11,6 @@ from sedbackend.libs.datastructures.pagination import ListChunk
 from sedbackend.apps.core.users import exceptions as user_exceptions
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, Sort, FetchType
 
-
 DEBUG_ERROR_HANDLING = True  # Set to false in production
 
 CVS_VCS_TABLE = 'cvs_vcss'
@@ -587,7 +586,6 @@ def delete_subprocess(db_connection: PooledMySQLConnection, project_id: int, sub
 
 def populate_subprocess(db_result) -> models.VCSSubprocess:
     logger.debug(f'Populating model for subprocess with id={db_result["id"]}.')
-    # print("in populate: " + db_result['iso_process'])
     return models.VCSSubprocess(
         id=db_result['id'],
         vcs_id=db_result['vcs'],
@@ -893,28 +891,27 @@ def remove_duplicate_names(project_id: int, vcs_id: int, rows: List[models.VcsRo
                 break
             dups: List[Tuple[int, models.VCSSubprocessPost]] = []
             if rows[i].iso_process == rows[j].iso_process:
-                
                 process = vcs_impl.get_iso_process(rows[i].iso_process)
                 sub = models.VCSSubprocessPost(name=process.name + str(len(dups) + 2), parent_process_id=process.id)
                 dups.append((j, sub))
-            
+
             if len(dups) > 0:
                 subfst = models.VCSSubprocessPost(name=process.name + "1", parent_process_id=process.id)
                 dups.append((i, subfst))
-                
+
                 for index, dup in dups:
                     subp = vcs_impl.create_subprocess(project_id, vcs_id, dup)
                     rowPost = models.VcsRowPost(
-                        id=rows[index].id, 
-                        index=rows[index].index, 
+                        id=rows[index].id,
+                        index=rows[index].index,
                         stakeholder=rows[index].stakeholder,
                         stakeholder_needs=rows[index].stakeholder_needs,
                         stakeholder_expectations=rows[index].stakeholder_expectations,
-                        iso_process = None,
-                        subprocess = subp.id)
-                    
+                        iso_process=None,
+                        subprocess=subp.id)
+
                     rows[index] = rowPost
-                
+
     return rows
 
 

@@ -18,24 +18,12 @@ router = APIRouter()
     response_model=List[models.Simulation],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read, CVS_APP_SID))]
 )
-async def run_simulation(native_project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int], design_ids: Optional[List[int]] = None, 
-                        normalized_npv: Optional[bool] = False, 
-                        user: User = Depends(get_current_active_user)) -> List[models.Simulation]:
+async def run_simulation(native_project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int],
+                         design_ids: Optional[List[int]] = None,
+                         normalized_npv: Optional[bool] = False,
+                         user: User = Depends(get_current_active_user)) -> List[models.Simulation]:
     return implementation.run_simulation(native_project_id, sim_settings, vcs_ids, design_ids, normalized_npv, user.id)
 
-"""
-@router.post(
-    '/project/{native_project_id}/sim/csv',
-    summary='Run simulation with DSM predefined in CSV file',
-    response_model=List[models.Simulation],
-    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read, CVS_APP_SID))]
-)
-async def run_csv_simulation(native_project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int], 
-                         design_ids: Optional[List[int]] = None, 
-                        normalized_npv: Optional[bool] = False, dsm_csv: UploadFile = File(default=None),
-                        user: User = Depends(get_current_active_user)) -> List[models.Simulation]:
-    return implementation.run_csv_simulation(native_project_id, sim_settings, vcs_ids, dsm_csv, design_ids, normalized_npv, user.id)
-"""
 
 @router.post(
     '/project/{native_project_id}/sim/upload-dsm',
@@ -43,11 +31,11 @@ async def run_csv_simulation(native_project_id: int, sim_settings: models.EditSi
     response_model=List[models.Simulation],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read, CVS_APP_SID))]
 )
-async def run_dsm_file_simulation(native_project_id: int, sim_params: models.FileParams = Depends(), 
-                            dsm_file: UploadFile = File(default=None), 
-                            user: User = Depends(get_current_active_user)) -> List[models.Simulation]:
+async def run_dsm_file_simulation(native_project_id: int, sim_params: models.FileParams = Depends(),
+                                  dsm_file: UploadFile = File(default=None),
+                                  user: User = Depends(get_current_active_user)) -> List[models.Simulation]:
     if dsm_file.content_type != 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' and \
-        dsm_file.content_type != 'text/csv':
+            dsm_file.content_type != 'text/csv':
         print("Content-type: ", dsm_file.content_type)
         raise HTTPException(400, detail="Invalid file type")
     return implementation.run_dsm_file_simulation(user.id, native_project_id, sim_params, dsm_file)
@@ -59,11 +47,13 @@ async def run_dsm_file_simulation(native_project_id: int, sim_params: models.Fil
     response_model=List[models.Simulation],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read, CVS_APP_SID))]
 )
-async def run_sim_monte_carlo(native_project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int], design_ids: Optional[List[int]] = None, 
-                        normalized_npv: Optional[bool] = False,
-                        user: User = Depends(get_current_active_user)) -> List[models.Simulation]:
+async def run_sim_monte_carlo(native_project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int],
+                              design_ids: Optional[List[int]] = None,
+                              normalized_npv: Optional[bool] = False,
+                              user: User = Depends(get_current_active_user)) -> List[models.Simulation]:
     return implementation.run_sim_monte_carlo(native_project_id, sim_settings, vcs_ids,
-                                            design_ids, normalized_npv, user.id)
+                                              design_ids, normalized_npv, user.id)
+
 
 @router.get(
     '/project/{native_project_id}/simulation/settings',
@@ -73,6 +63,7 @@ async def run_sim_monte_carlo(native_project_id: int, sim_settings: models.EditS
 )
 async def get_sim_settings(native_project_id: int) -> models.SimSettings:
     return implementation.get_sim_settings(native_project_id)
+
 
 @router.put(
     '/project/{native_project_id}/simulation/settings',

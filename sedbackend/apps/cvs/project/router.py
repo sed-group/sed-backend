@@ -1,12 +1,11 @@
 from fastapi import Depends, APIRouter
-
+from fastapi.logger import logger
 from sedbackend.apps.core.authentication.utils import get_current_active_user
 from sedbackend.apps.core.projects.dependencies import SubProjectAccessChecker
 from sedbackend.apps.core.projects.models import AccessLevel
 from sedbackend.apps.core.users.models import User
 from sedbackend.libs.datastructures.pagination import ListChunk
 from sedbackend.apps.cvs.project import models, implementation
-
 
 router = APIRouter()
 CVS_APP_SID = 'MOD.CVS'
@@ -40,6 +39,7 @@ async def get_csv_project(native_project_id: int) -> models.CVSProject:
 )
 async def create_csv_project(project_post: models.CVSProjectPost,
                              user: User = Depends(get_current_active_user)) -> models.CVSProject:
+    logger.debug("Entered router")
     return implementation.create_cvs_project(project_post, user.id)
 
 

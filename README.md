@@ -201,10 +201,15 @@ while clients connecting to the API can communicate safely with HTTPS.
 
 TLS is achieved using a certbot certificate, which is mounted into the container in `docker-compose.prod.yml`. The `nginx/` directory contains the rest of the necessary files to make this work. Note that the setup requires knowledge of what the domain name is. At the time of writing, it was `sedlab.ppd.chalmers.se`. Attempting to deploy using the production composition on any other domain will not work without minor tweaks to the build code.
 
-# Known issues
+# Known issues (and how to solve them)
 
 ## Docker fails
 The docker deployment can fail for many reasons. This section lists some of the more regular problems. If a container fails, click on that container in the docker desktop application and check what error has occuted.
+
+### TLS-termination-proxy does not start in production
+If this is the case, the tls-termination-proxy container typically reports back something like this:
+`error:02001001:system library:fopen:Operation not permitted:fopen('PATH TO CERT')`
+If the container reports that it does not have permission to access certificates, then try shutting down Docker, and starting it as an admin (or using sudo if in Linux).
 
 ### Incorrect line breaks
 If the output of any container says:

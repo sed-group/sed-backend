@@ -216,7 +216,7 @@ def random_stakeholder_need(user_id,
         need = tu.random_str(5, 50)
 
     if rank_weight is None:
-        rank_weight = random.random()
+        rank_weight = round(random.random(), ndigits=4)
 
     if value_driver_ids is None:
         vd = seed_random_value_driver(user_id)
@@ -532,7 +532,7 @@ def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int)
         last_id = row.id
         break
   
-  print(last_id)
+  
   last = next(filter(lambda x: x.vcs_row_id == last_id, formulas))
 
   new_last = connect_model.FormulaPost(

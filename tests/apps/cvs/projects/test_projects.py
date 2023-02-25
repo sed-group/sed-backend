@@ -73,7 +73,7 @@ def test_create_no_name_project(client, std_headers):
 def test_create_too_long_currency_project(client, std_headers):
     #Act
     res2 = client.post("/api/cvs/project",
-                std_headers,
+                headers=std_headers,
                 json={
                     "name": testutils.random_str(3, 30),
                     "description": testutils.random_str(20, 200),
@@ -87,7 +87,7 @@ def test_create_too_long_currency_project(client, std_headers):
 def test_create_too_long_name_project(client, std_headers):
         #Act
     res2 = client.post("/api/cvs/project",
-                std_headers,
+                headers=std_headers,
                 json={
                     "name": testutils.random_str(255, 300),
                     "description": testutils.random_str(20, 200),
