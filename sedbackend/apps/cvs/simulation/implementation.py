@@ -13,7 +13,9 @@ from sedbackend.apps.cvs.project import exceptions as project_exceptions
 from sedbackend.apps.cvs.design import exceptions as design_exc
 from sedbackend.apps.cvs.simulation.exceptions import BadlyFormattedSettingsException, DSMFileNotFoundException, \
     DesignIdsNotFoundException, FormulaEvalException, NegativeTimeException, ProcessNotFoundException, \
-    RateWrongOrderException, InvalidFlowSettingsException, VcsFailedException, FlowProcessNotFoundException
+    RateWrongOrderException, InvalidFlowSettingsException, VcsFailedException, FlowProcessNotFoundException, \
+    SimSettingsNotFoundException
+    
 from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.market_input import exceptions as market_input_exceptions
 
@@ -194,6 +196,11 @@ def get_sim_settings(project_id: int) -> models.SimSettings:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find project'
+        )
+    except SimSettingsNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Could not find simulation settings'
         )
     except Exception as e:
         logger.debug(e)

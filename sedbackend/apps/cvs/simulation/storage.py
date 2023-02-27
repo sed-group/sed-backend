@@ -360,6 +360,9 @@ def get_simulation_settings(db_connection: PooledMySQLConnection, project_id: in
         .where('project = %s', [project_id]) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
+    if res is None:
+        raise e.SimSettingsNotFoundException
+        
     return populate_sim_settings(res)
 
 
