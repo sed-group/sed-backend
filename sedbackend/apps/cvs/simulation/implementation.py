@@ -13,7 +13,9 @@ from sedbackend.apps.cvs.project import exceptions as project_exceptions
 from sedbackend.apps.cvs.design import exceptions as design_exc
 from sedbackend.apps.cvs.simulation.exceptions import BadlyFormattedSettingsException, DSMFileNotFoundException, \
     DesignIdsNotFoundException, FormulaEvalException, NegativeTimeException, ProcessNotFoundException, \
-    RateWrongOrderException, InvalidFlowSettingsException, SimSettingsNotFoundException, VcsFailedException
+    RateWrongOrderException, InvalidFlowSettingsException, VcsFailedException, FlowProcessNotFoundException, \
+    SimSettingsNotFoundException
+    
 from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.market_input import exceptions as market_input_exceptions
 
@@ -219,6 +221,11 @@ def edit_sim_settings(project_id: int, sim_settings: models.EditSimSettings) -> 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Both flow process and flow start time supplied or neither supplied'
+        )
+    except FlowProcessNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'The supplied flow process can not be found in any vcs'
         )
     except Exception as e:
         logger.debug(e)
