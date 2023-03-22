@@ -281,13 +281,27 @@ def get_all_value_driver(db_connection: PooledMySQLConnection, user_id: int) -> 
     return [populate_value_driver(result) for result in results]
 
 
+def get_all_value_drivers_vcs_row(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
+                                  vcs_row: int) -> List[models.ValueDriver]:
+    logger.debug(f'Fetching all value drivers for vcs with id={vcs_id} and vcs row with id={vcs_row}')
+
+    get_vcs(db_connection, project_id, vcs_id)  # Perform checks for existing VCS and matching project
+    vcs_row = get_vcs_row(db_connection, project_id, vcs_row)
+
+    value_drivers = []
+    for need in vcs_row.stakeholder_needs:
+        if len(need.value_drivers) > 0:
+            value_drivers += [vd.id for vd in need.value_drivers]
+
+    value_drivers = list(dict.fromkeys(value_drivers))
+    return [get_value_driver(db_connection, vd_id) for vd_id in value_drivers]
+
+
 def get_vcs_need_drivers(db_connection: PooledMySQLConnection, need_id: int) -> List[models.ValueDriver]:
     logger.debug(f'Fetching all value drivers for stakeholder need with id={need_id}.')
 
     where_statement = f'stakeholder_need = %s'
     where_values = [need_id]
-
-    # TODO: Maybe don't work idk
 
     select_statement = MySQLStatementBuilder(db_connection)
     results = select_statement \
