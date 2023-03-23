@@ -155,13 +155,18 @@ def test_get_all_value_drivers_vcs_row(client, std_headers, std_user):
     project = tu.seed_random_project(current_user.id)
     vcs = tu.seed_random_vcs(project.id)
     vcs_row = tu.seed_vcs_table_rows(current_user.id, project.id, vcs.id, 1)[0]
-    tu.seed_vcs_table_rows(current_user.id, project.id, vcs.id)
+    needs = vcs_row.stakeholder_needs
+    value_drivers = []
+    for need in needs:
+        value_drivers += [vd.id for vd in need.value_drivers]
+    value_drivers = list(dict.fromkeys(value_drivers))
 
     # Act
     res = client.get(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/row/{vcs_row.id}/value-driver/all',
                      headers=std_headers)
     # Assert
     assert res.status_code == 200  # 200 OK
+    assert len(res.json()) == len(value_drivers)
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
