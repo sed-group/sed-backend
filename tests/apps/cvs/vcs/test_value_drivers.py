@@ -147,3 +147,99 @@ def test_get_all_value_drivers_from_vcs(client, std_headers, std_user):
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
+
+
+def test_add_value_drivers_to_needs(client, std_headers, std_user):
+    #Setup 
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    project = tu.seed_random_project(current_user.id)
+    vcs = tu.seed_random_vcs(project.id)
+    table = tu.seed_vcs_table_rows(current_user.id, project.id, vcs.id)
+    
+    vds = []
+    for _ in range(5):
+        new_vd = tu.seed_random_value_driver(current_user.id)
+        vds.append(new_vd)
+    
+    needs = []
+    for row in table:
+        if row.stakeholder_needs is not None:
+            needs.extend(row.stakeholder_needs)
+
+    need_driver_ids = []
+    
+    for i in range(2):
+        need = needs[i]
+        for vd in vds:
+            need_driver_ids.append((need.id, vd.id))
+    
+    #Act
+    res = client.post(f'/api/cvs/value-driver/need', headers=std_headers, json=need_driver_ids)
+    
+    #Assert
+    assert res.status_code == 200 #200 Ok
+    
+    #Cleanup
+    tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
+    
+    
+def test_add_driver_needs_invalid_needs(client, std_headers, std_user):
+        #Setup 
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    project = tu.seed_random_project(current_user.id)
+    vcs = tu.seed_random_vcs(project.id)
+    table = tu.seed_vcs_table_rows(current_user.id, project.id, vcs.id)
+    
+    vds = []
+    for _ in range(5):
+        new_vd = tu.seed_random_value_driver(current_user.id)
+        vds.append(new_vd)
+    
+    need_driver_ids = []
+    
+    invalid_need = 10000
+    for i in range(2):
+        need = invalid_need + i
+        for vd in vds:
+            need_driver_ids.append((need, vd.id))
+    
+    #Act
+    res = client.post(f'/api/cvs/value-driver/need', headers=std_headers, json=need_driver_ids)
+    
+    #Assert
+    assert res.status_code == 400 #400 DB Error
+    
+    #Cleanup
+    tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
+    
+
+def test_add_driver_needs_invalid_drivers(client, std_headers, std_user):
+    #Setup 
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    project = tu.seed_random_project(current_user.id)
+    vcs = tu.seed_random_vcs(project.id)
+    table = tu.seed_vcs_table_rows(current_user.id, project.id, vcs.id)
+    
+    needs = []
+    for row in table:
+        if row.stakeholder_needs is not None:
+            needs.extend(row.stakeholder_needs)
+
+    need_driver_ids = []
+    
+    for i in range(2):
+        need = needs[i]
+        for vd in range(30000, 30004):
+            need_driver_ids.append((need.id, vd))
+    
+    #Act
+    res = client.post(f'/api/cvs/value-driver/need', headers=std_headers, json=need_driver_ids)
+    
+    #Assert
+    assert res.status_code == 400 #400 DB Error
+    
+    #Cleanup
+    tu.delete_project_by_id(project.id, current_user.id)
+    tu.delete_vd_from_user(current_user.id)
