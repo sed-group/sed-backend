@@ -174,7 +174,7 @@ def test_add_value_drivers_to_needs(client, std_headers, std_user):
             need_driver_ids.append((need.id, vd.id))
     
     #Act
-    res = client.post(f'/api/cvs/value-driver/need', headers=std_headers, json=need_driver_ids)
+    res = client.post(f'/api/cvs/project/{project.id}/value-driver/need', headers=std_headers, json=need_driver_ids)
     
     #Assert
     assert res.status_code == 200 #200 Ok
@@ -205,7 +205,7 @@ def test_add_driver_needs_invalid_needs(client, std_headers, std_user):
             need_driver_ids.append((need, vd.id))
     
     #Act
-    res = client.post(f'/api/cvs/value-driver/need', headers=std_headers, json=need_driver_ids)
+    res = client.post(f'/api/cvs/project/{project.id}/value-driver/need', headers=std_headers, json=need_driver_ids)
     
     #Assert
     assert res.status_code == 400 #400 DB Error
@@ -235,7 +235,7 @@ def test_add_driver_needs_invalid_drivers(client, std_headers, std_user):
             need_driver_ids.append((need.id, vd))
     
     #Act
-    res = client.post(f'/api/cvs/value-driver/need', headers=std_headers, json=need_driver_ids)
+    res = client.post(f'/api/cvs/project/{project.id}/value-driver/need', headers=std_headers, json=need_driver_ids)
     
     #Assert
     assert res.status_code == 400 #400 DB Error

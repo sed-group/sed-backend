@@ -137,11 +137,12 @@ async def create_value_driver(value_driver_post: models.ValueDriverPost,
 
 
 @router.post(
-    '/value-driver/need',
+    '/project/{native_project_id}/value-driver/need',
     summary=f'Add value drivers to stakeholder needs',
-    response_model=bool
+    response_model=bool,
+    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def add_drivers_to_needs(need_driver_ids: List[Tuple[int, int]]):
+async def add_drivers_to_needs(native_project_id: int, need_driver_ids: List[Tuple[int, int]]):
     return implementation.add_vcs_multiple_needs_drivers(need_driver_ids)
 
 @router.put(
