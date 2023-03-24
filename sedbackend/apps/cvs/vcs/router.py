@@ -118,6 +118,16 @@ async def get_all_value_driver_vcs(native_project_id: int, vcs_id: int) -> List[
 
 
 @router.get(
+    '/project/{native_project_id}/vcs/{vcs_id}/row/{vcs_row_id}/value-driver/all',
+    summary='Fetch all value drivers from a vcs row',
+    response_model=List[ValueDriver],
+    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
+)
+async def get_value_drivers_vcs_row(native_project_id: int, vcs_id: int, vcs_row_id: int) -> List[ValueDriver]:
+    return vcs_impl.get_all_value_drivers_vcs_row(native_project_id, vcs_id, vcs_row_id)
+
+
+@router.get(
     '/value-driver/{value_driver_id}',
     summary='Returns a value driver',
     response_model=models.ValueDriver,
