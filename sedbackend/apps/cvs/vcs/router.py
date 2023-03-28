@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 from fastapi import Depends, APIRouter
 from sedbackend.apps.core.authentication.utils import get_current_active_user
 from sedbackend.apps.core.projects.dependencies import SubProjectAccessChecker
@@ -145,6 +145,15 @@ async def create_value_driver(value_driver_post: models.ValueDriverPost,
                               user: User = Depends(get_current_active_user)) -> models.ValueDriver:
     return implementation.create_value_driver(user.id, value_driver_post)
 
+
+@router.post(
+    '/project/{native_project_id}/value-driver/need',
+    summary=f'Add value drivers to stakeholder needs',
+    response_model=bool,
+    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
+)
+async def add_drivers_to_needs(native_project_id: int, need_driver_ids: List[Tuple[int, int]]):
+    return implementation.add_vcs_multiple_needs_drivers(need_driver_ids)
 
 @router.put(
     '/value-driver/{value_driver_id}',

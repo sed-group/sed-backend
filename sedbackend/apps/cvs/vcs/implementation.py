@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 from fastapi import HTTPException
 from starlette import status
@@ -301,6 +301,18 @@ def delete_all_value_drivers(user_id: int) -> bool:
             detail='Unauthorized user.',
         )
 
+
+def add_vcs_multiple_needs_drivers(need_driver_ids: List[Tuple[int, int]]):
+    try:
+        with get_connection() as con:
+            res = storage.add_vcs_multiple_needs_drivers(con, need_driver_ids)
+            con.commit()
+            return res
+    except exceptions.GenericDatabaseException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Badly formatted request'
+        )
 
 # ======================================================================================================================
 # VCS ISO Processes

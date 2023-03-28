@@ -329,6 +329,24 @@ def add_vcs_need_driver(db_connection: PooledMySQLConnection, need_id: int, valu
 
     return True
 
+def add_vcs_multiple_needs_drivers(db_connection: PooledMySQLConnection, need_driver_ids: List[Tuple[int, int]]):
+    logger.debug(f'Add value drivers to stakeholder needs')
+    
+    prepared_list = []
+    try:
+        insert_statement = f'INSERT INTO {CVS_VCS_NEED_DRIVERS_TABLE} (stakeholder_need, value_driver) VALUES'
+        for need, driver in need_driver_ids:
+            insert_statement += f'(%s, %s),'
+            prepared_list.append(need)
+            prepared_list.append(driver)
+        
+        with db_connection.cursor(prepared=True) as cursor:
+            cursor.execute(insert_statement[:-1], prepared_list)
+    except Error as e:
+        logger.debug(f'Error msg: {e.msg}')
+        raise exceptions.GenericDatabaseException
+    
+    return True
 
 def update_vcs_need_driver(db_connection: PooledMySQLConnection, need_id: int, value_drivers: List[int]) -> bool:
     logger.debug(f'Update value drivers in stakeholder need with id={need_id}.')
