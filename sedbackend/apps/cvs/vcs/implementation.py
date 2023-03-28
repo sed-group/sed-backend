@@ -180,6 +180,29 @@ def get_all_value_driver_vcs(project_id: int, vcs_id: int) -> List[models.ValueD
         )
 
 
+def get_all_value_drivers_vcs_row(project_id: int, vcs_id: int, row_id: int) -> List[models.ValueDriver]:
+    try:
+        with get_connection() as con:
+            res = storage.get_all_value_drivers_vcs_row(con, project_id, vcs_id, row_id)
+            con.commit()
+            return res
+    except exceptions.VCSNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find vcs with id: {vcs_id}'
+        )
+    except exceptions.ValueDriverNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find value drivers'
+        )
+    except project_exceptions.CVSProjectNoMatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'VCS with id={vcs_id} does not belong to project with id={project_id}.',
+        )
+
+
 def get_value_driver(value_driver_id: int) -> models.ValueDriver:
     try:
         with get_connection() as con:
