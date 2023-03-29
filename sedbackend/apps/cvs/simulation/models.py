@@ -73,3 +73,16 @@ class FileParams:
     vcs_ids: str = Form(...)
     design_ids: str = Form(...)
     normalized_npv: Optional[bool] = Form(None)
+
+
+class ValueDriverDesignValue(BaseModel):
+    id: int
+    design: int
+    name: str
+    value: float
+
+
+class MarketInputValue(BaseModel):
+    id: int
+    name: str
+    value: float
