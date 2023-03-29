@@ -447,6 +447,7 @@ def get_market_values(db_connection: PooledMySQLConnection, vcs_row_id: int, vcs
 
 
 # TODO fix how the formulas are parsed
+'''
 def parse_formula(formula: str, vd_values, mi_values):
     new_formula = formula
     vd_ids = expr.get_prefix_ids('vd', new_formula)
@@ -461,6 +462,24 @@ def parse_formula(formula: str, vd_values, mi_values):
             if int(id) == mi['id']:
                 new_formula = expr.replace_all(
                     'mi' + id, mi['value'], new_formula)
+
+    return new_formula
+'''
+
+
+def parse_formula(formula: str, vd_values, mi_values) -> str:
+    new_formula = formula
+    vd_names = expr.get_prefix_names('VD', new_formula)
+    mi_names = expr.get_prefix_names('EF', new_formula)
+
+    for vd in vd_values:
+        for name in vd_names:
+            if name == vd['name']:
+                new_formula = expr.replace_prefix_names("VD", name, str(vd["value"]), new_formula)
+    for mi in mi_values:
+        for name in mi_names:
+            if name == mi['name']:
+                new_formula = expr.replace_prefix_names("EF", name, str(mi["value"]), new_formula)
 
     return new_formula
 
