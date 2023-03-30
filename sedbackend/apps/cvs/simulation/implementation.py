@@ -20,11 +20,13 @@ from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.market_input import exceptions as market_input_exceptions
 
 
-def run_simulation(project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int], design_ids: List[int],
+def run_simulation(project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int],
+                   design_group_ids: List[int],
                    normalized_npv: bool, user_id: int) -> List[models.Simulation]:
     try:
         with get_connection() as con:
-            result = storage.run_simulation(con, project_id, sim_settings, vcs_ids, design_ids, normalized_npv, user_id)
+            result = storage.run_simulation(con, project_id, sim_settings, vcs_ids, design_group_ids,
+                                            normalized_npv, user_id)
             return result
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(

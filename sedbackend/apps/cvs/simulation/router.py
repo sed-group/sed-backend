@@ -19,10 +19,11 @@ router = APIRouter()
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read, CVS_APP_SID))]
 )
 async def run_simulation(native_project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int],
-                         design_ids: Optional[List[int]] = None,
+                         design_group_ids: List[int],
                          normalized_npv: Optional[bool] = False,
                          user: User = Depends(get_current_active_user)) -> List[models.Simulation]:
-    return implementation.run_simulation(native_project_id, sim_settings, vcs_ids, design_ids, normalized_npv, user.id)
+    return implementation.run_simulation(native_project_id, sim_settings, vcs_ids, design_group_ids, normalized_npv,
+                                         user.id)
 
 
 @router.post(
