@@ -349,11 +349,11 @@ def get_vd_design_values(db_connection: PooledMySQLConnection, vcs_row_id: int,
 
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement \
-        .select('cvs_vd_design_values', ['id', 'design', 'name', 'value']) \
-        .inner_join('cvs_value_drivers', 'cvs_vd_design_values.value_driver = id') \
-        .inner_join('cvs_formulas_value_drivers',
-                    'cvs_formulas_value_drivers.value_driver = cvs_vd_design_values.value_driver') \
-        .where('formulas = %s and design = %s', [vcs_row_id, design]) \
+        .select('cvs_vd_design_values', ['cvs_value_drivers.id', 'design', 'name', 'value', 'unit']) \
+        .inner_join('cvs_value_drivers', 'cvs_vd_design_values.value_driver = cvs_value_drivers.id') \
+        .inner_join('cvs_vcs_need_drivers', 'cvs_vcs_need_drivers.value_driver = cvs_value_drivers.id') \
+        .inner_join('cvs_stakeholder_needs', 'cvs_stakeholder_needs.id = cvs_vcs_need_drivers.stakeholder_need') \
+        .where('vcs_row = %s and design = %s', [vcs_row_id, design]) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
     return res
@@ -443,7 +443,7 @@ def create_sim_settings(db_connection: PooledMySQLConnection, project_id: int,
 def get_market_values(db_connection: PooledMySQLConnection, vcs_row_id: int, vcs: int):
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement \
-        .select('cvs_market_input_values', ['id', 'name', 'value']) \
+        .select('cvs_market_input_values', ['id', 'name', 'value', 'unit']) \
         .inner_join('cvs_market_inputs', 'cvs_market_input_values.market_input = cvs_market_inputs.id') \
         .inner_join('cvs_formulas_market_inputs',
                     'cvs_formulas_market_inputs.market_input = cvs_market_input_values.market_input') \
@@ -476,17 +476,20 @@ def parse_formula(formula: str, vd_values, mi_values):
 
 def parse_formula(formula: str, vd_values, mi_values) -> str:
     new_formula = formula
-    vd_names = expr.get_prefix_names('VD', new_formula)
-    mi_names = expr.get_prefix_names('EF', new_formula)
+    vd_names = expr.get_prefix_variables('VD', new_formula)
+    mi_names = expr.get_prefix_variables('EF', new_formula)
 
     for vd in vd_values:
         for name in vd_names:
-            if name == vd['name']:
-                new_formula = expr.replace_prefix_names("VD", name, str(vd["value"]), new_formula)
+            unit = vd["unit"] if vd["unit"] is not None and vd["unit"] != "" else "N/A"
+            if name == f'{vd["name"]} [{unit}]':
+                new_formula = expr.replace_prefix_variables("VD", name, str(vd["value"]), new_formula)
     for mi in mi_values:
         for name in mi_names:
-            if name == mi['name']:
-                new_formula = expr.replace_prefix_names("EF", name, str(mi["value"]), new_formula)
+            unit = mi["unit"] if mi["unit"] is not None and mi["unit"] != "" else "N/A"
+            if name == f'{mi["name"]} [{unit}]':
+                new_formula = expr.replace_prefix_variables("EF", name, str(mi["value"]), new_formula)
+    new_formula = expr.remove_strings_replace_zero(new_formula)
 
     return new_formula
 
