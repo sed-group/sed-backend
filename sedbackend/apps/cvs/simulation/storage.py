@@ -193,7 +193,7 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, sim_se
 
 def run_sim_monte_carlo(db_connection: PooledMySQLConnection, project_id: int, simSettings: models.EditSimSettings,
                         vcs_ids: List[int],
-                        design_ids: List[int], normalized_npv: bool = False, user_id: int = None) -> List[
+                        design_group_ids: List[int], normalized_npv: bool = False, user_id: int = None) -> List[
         models.Simulation]:
     design_results = []
 
@@ -210,47 +210,50 @@ def run_sim_monte_carlo(db_connection: PooledMySQLConnection, project_id: int, s
     runs = simSettings.runs
 
     for vcs_id in vcs_ids:
-        res = get_sim_data(db_connection, vcs_id)
-        if res is None or res == []:
-            raise e.VcsFailedException
+        for design_group_id in design_group_ids:
+            res = get_sim_data(db_connection, vcs_id, design_group_id)
+            if res is None or res == []:
+                raise e.VcsFailedException
 
-        if not check_entity_rate(res, process):
-            raise e.RateWrongOrderException
+            if not check_entity_rate(res, process):
+                raise e.RateWrongOrderException
 
-        if design_ids is None or []:
-            raise e.DesignIdsNotFoundException
+            design_ids = [design.id for design in design_impl.get_all_designs(project_id, design_group_id)]
 
-        for design_id in design_ids:
-            get_design(design_id)
-            processes, non_tech_processes = populate_processes(
-                non_tech_add, res, db_connection, vcs_id, design_id)
-            logger.debug('Fetched Processes and non-techproc')
-            # TODO Change to using BPMN AND move out of the for loop
-            dsm = create_simple_dsm(processes)
+            if design_ids is None or []:
+                raise e.DesignIdsNotFoundException
 
-            sim = des.Des()
+            for design_id in design_ids:
+                get_design(design_id)
+                processes, non_tech_processes = populate_processes(
+                    non_tech_add, res, db_connection, vcs_id, design_id)
+                logger.debug('Fetched Processes and non-techproc')
+                # TODO Change to using BPMN AND move out of the for loop
+                dsm = create_simple_dsm(processes)
 
-            try:
-                results = sim.run_parallell_simulations(flow_time, interarrival, process, processes, non_tech_processes,
-                                                        non_tech_add, dsm, time_unit, discount_rate, runtime, runs)
+                sim = des.Des()
 
-            except Exception as exc:
-                logger.debug(f'{exc.__class__}, {exc}')
-                raise e.SimulationFailedException
+                try:
+                    results = sim.run_parallell_simulations(flow_time, interarrival, process, processes, non_tech_processes,
+                                                            non_tech_add, dsm, time_unit, discount_rate, runtime, runs)
 
-            if normalized_npv:
-                m_npv = results.normalize_npv()
-            else:
-                m_npv = results.mean_npv()
+                except Exception as exc:
+                    logger.debug(f'{exc.__class__}, {exc}')
+                    raise e.SimulationFailedException
 
-            sim_res = models.Simulation(
-                time=results.timesteps[-1],
-                mean_NPV=m_npv,
-                max_NPVs=results.all_max_npv(),
-                mean_payback_time=results.mean_npv_payback_time(),
-                all_npvs=results.npvs
-            )
-            design_results.append(sim_res)
+                if normalized_npv:
+                    m_npv = results.normalize_npv()
+                else:
+                    m_npv = results.mean_npv()
+
+                sim_res = models.Simulation(
+                    time=results.timesteps[-1],
+                    mean_NPV=m_npv,
+                    max_NPVs=results.all_max_npv(),
+                    mean_payback_time=results.mean_npv_payback_time(),
+                    all_npvs=results.npvs
+                )
+                design_results.append(sim_res)
 
     return design_results
 
