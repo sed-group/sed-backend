@@ -306,7 +306,8 @@ def test_run_sim_invalid_proj(client, std_headers, std_user):
   tu.delete_project_by_id(project.id, current_user.id)
   tu.delete_vd_from_user(current_user.id)
 
-
+#Temporarly disabled
+'''
 def test_run_single_xlsx_sim(client, std_headers, std_user):
   #Setup 
   current_user = impl_users.impl_get_user_with_username(std_user.username)
@@ -656,3 +657,5 @@ def test_run_csv_sim(client, std_headers, std_user):
   tu.delete_VCS_with_ids(project.id, vcss)
   tu.delete_project_by_id(project.id, current_user.id)   
   tu.delete_vd_from_user(current_user.id)
+  
+  '''

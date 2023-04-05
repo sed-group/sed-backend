@@ -25,7 +25,8 @@ async def run_simulation(native_project_id: int, sim_settings: models.EditSimSet
     return implementation.run_simulation(native_project_id, sim_settings, vcs_ids, design_group_ids, normalized_npv,
                                          user.id)
 
-
+# Temporary disabled
+''' 
 @router.post(
     '/project/{native_project_id}/sim/upload-dsm',
     summary='Run simulation with DSM predefined in Excel or CSV file',
@@ -40,6 +41,7 @@ async def run_dsm_file_simulation(native_project_id: int, sim_params: models.Fil
         print("Content-type: ", dsm_file.content_type)
         raise HTTPException(400, detail="Invalid file type")
     return implementation.run_dsm_file_simulation(user.id, native_project_id, sim_params, dsm_file)
+'''
 
 
 @router.post(
