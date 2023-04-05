@@ -19,12 +19,14 @@ router = APIRouter()
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read, CVS_APP_SID))]
 )
 async def run_simulation(native_project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int],
-                         design_ids: Optional[List[int]] = None,
+                         design_group_ids: List[int],
                          normalized_npv: Optional[bool] = False,
                          user: User = Depends(get_current_active_user)) -> List[models.Simulation]:
-    return implementation.run_simulation(native_project_id, sim_settings, vcs_ids, design_ids, normalized_npv, user.id)
+    return implementation.run_simulation(native_project_id, sim_settings, vcs_ids, design_group_ids, normalized_npv,
+                                         user.id)
 
-
+# Temporary disabled
+''' 
 @router.post(
     '/project/{native_project_id}/sim/upload-dsm',
     summary='Run simulation with DSM predefined in Excel or CSV file',
@@ -39,6 +41,7 @@ async def run_dsm_file_simulation(native_project_id: int, sim_params: models.Fil
         print("Content-type: ", dsm_file.content_type)
         raise HTTPException(400, detail="Invalid file type")
     return implementation.run_dsm_file_simulation(user.id, native_project_id, sim_params, dsm_file)
+'''
 
 
 @router.post(
@@ -48,11 +51,11 @@ async def run_dsm_file_simulation(native_project_id: int, sim_params: models.Fil
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read, CVS_APP_SID))]
 )
 async def run_sim_monte_carlo(native_project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int],
-                              design_ids: Optional[List[int]] = None,
+                              design_group_ids: List[int],
                               normalized_npv: Optional[bool] = False,
                               user: User = Depends(get_current_active_user)) -> List[models.Simulation]:
     return implementation.run_sim_monte_carlo(native_project_id, sim_settings, vcs_ids,
-                                              design_ids, normalized_npv, user.id)
+                                              design_group_ids, normalized_npv, user.id)
 
 
 @router.get(
