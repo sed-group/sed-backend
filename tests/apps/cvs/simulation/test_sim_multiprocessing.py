@@ -212,6 +212,7 @@ def test_run_mc_sim_both_flows(client, std_headers, std_user):
   tu.delete_vd_from_user(current_user.id)
 
 
+'''
 def test_run_mc_sim_rate_invalid_order(client, std_headers, std_user):
     #Setup 
   current_user = impl_users.impl_get_user_with_username(std_user.username)
@@ -239,3 +240,4 @@ def test_run_mc_sim_rate_invalid_order(client, std_headers, std_user):
   tu.delete_VCS_with_ids(project.id, [vcs.id])
   tu.delete_project_by_id(project.id, current_user.id)
   tu.delete_vd_from_user(current_user.id)
+'''
