@@ -265,7 +265,6 @@ def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: Poo
     technical_processes = []
     non_tech_processes = []
     mi_values = get_market_values(db_connection, vcs)
-    print("ef", mi_values)
     for row in db_results:
         vd_values = get_vd_design_values(db_connection, row['id'], design)
         if row['category'] != 'Technical processes':
