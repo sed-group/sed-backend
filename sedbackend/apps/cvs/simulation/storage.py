@@ -345,7 +345,7 @@ def get_sim_data(db_connection: PooledMySQLConnection, vcs_id: int, design_group
 
 
 def get_vd_design_values(db_connection: PooledMySQLConnection, vcs_row_id: int,
-                         design: int):  # TODO fetch value driver values.
+                         design: int):
 
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement \

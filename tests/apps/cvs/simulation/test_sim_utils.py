@@ -109,3 +109,18 @@ def test_replace_prefix_variables():
     assert new_text_vd == f'2*2+"VD(Test [T])"'
     assert new_text_mi == f'2*4+"EF(Test2 [T2])"'
 
+
+def test_value_not_found():
+    # Setup
+    vd_values = [{"id": 1, "name": "Speed", "unit": "km/h", "value": 2}]
+    mi_values = [{"id": 2, "name": "Test 2", "unit": "T", "value": 3}]
+    formula = f'2*"VD(NO [km/h])"+"EF(NOTFOUND [T])"'
+    nsp = NumericStringParser()
+
+    # Act
+    new_formula = parse_formula(formula, vd_values, mi_values)
+
+    # Assert
+    assert new_formula == "2*0+0"
+    assert nsp.eval(new_formula) == 0
+
