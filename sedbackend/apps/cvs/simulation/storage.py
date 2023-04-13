@@ -20,6 +20,8 @@ from sedbackend.libs.parsing.parser import NumericStringParser
 from sedbackend.libs.parsing import expressions as expr
 from sedbackend.apps.cvs.simulation import models
 import sedbackend.apps.cvs.simulation.exceptions as e
+from sedbackend.apps.cvs.vcs import implementation as vcs_impl
+from sedbackend.apps.cvs.design import implementation as design_impl
 
 SIM_SETTINGS_TABLE = "cvs_simulation_settings"
 SIM_SETTINGS_COLUMNS = ['project', 'time_unit', 'flow_process', 'flow_start_time', 'flow_time',
@@ -43,8 +45,10 @@ def run_sim_with_dsm_file(db_connection: PooledMySQLConnection, user_id: int, pr
 
     if file_extension == '.xlsx':
         try:
-            tmp_xlsx = tempfile.TemporaryFile()  # Workaround because current python version doesn't support
-            tmp_xlsx.write(dsm_file.file.read())  # readable() attribute on SpooledTemporaryFile which UploadFile
+            # Workaround because current python version doesn't support
+            tmp_xlsx = tempfile.TemporaryFile()
+            # readable() attribute on SpooledTemporaryFile which UploadFile
+            tmp_xlsx.write(dsm_file.file.read())
             tmp_xlsx.seek(
                 0)  # is an alias for. PR is accepted for python v3.12, see https://github.com/python/cpython/pull/29560
 
@@ -57,12 +61,15 @@ def run_sim_with_dsm_file(db_connection: PooledMySQLConnection, user_id: int, pr
             tmp_xlsx.close()
     elif file_extension == '.csv':
         try:
-            tmp_csv = tempfile.TemporaryFile()  # Workaround because current python version doesn't support
-            tmp_csv.write(dsm_file.file.read())  # readable() attribute on SpooledTemporaryFile which UploadFile
+            # Workaround because current python version doesn't support
+            tmp_csv = tempfile.TemporaryFile()
+            # readable() attribute on SpooledTemporaryFile which UploadFile
+            tmp_csv.write(dsm_file.file.read())
             tmp_csv.seek(
                 0)  # is an alias for. PR is accepted for python v3.12, see https://github.com/python/cpython/pull/29560
 
-            dsm = get_dsm_from_csv(tmp_csv)  # This should hopefully open up the file for the processor.
+            # This should hopefully open up the file for the processor.
+            dsm = get_dsm_from_csv(tmp_csv)
             if dsm is None:
                 raise e.DSMFileNotFoundException
         except Exception as exc:
@@ -94,7 +101,8 @@ def run_sim_with_dsm_file(db_connection: PooledMySQLConnection, user_id: int, pr
             raise e.DesignIdsNotFoundException
 
         for design_id in design_ids:
-            processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id)
+            processes, non_tech_processes = populate_processes(
+                non_tech_add, res, db_connection, vcs_id, design_id)
             sim = des.Des()
 
             try:
@@ -120,69 +128,73 @@ def run_sim_with_dsm_file(db_connection: PooledMySQLConnection, user_id: int, pr
     return design_results
 
 
-def run_simulation(db_connection: PooledMySQLConnection, project_id: int, simSettings: models.EditSimSettings,
+def run_simulation(db_connection: PooledMySQLConnection, project_id: int, sim_settings: models.EditSimSettings,
                    vcs_ids: List[int],
-                   design_ids: List[int], normalized_npv: bool, user_id: int) -> List[models.Simulation]:
+                   design_group_ids: List[int], normalized_npv: bool, user_id: int) -> List[models.Simulation]:
     design_results = []
 
-    if not check_sim_settings(simSettings):
+    if not check_sim_settings(sim_settings):
         raise e.BadlyFormattedSettingsException
-    interarrival = simSettings.interarrival_time
-    flow_time = simSettings.flow_time
-    runtime = simSettings.end_time - simSettings.start_time
-    non_tech_add = simSettings.non_tech_add
-    discount_rate = simSettings.discount_rate
-    process = simSettings.flow_process
-    time_unit = TIME_FORMAT_DICT.get(simSettings.time_unit)
+    interarrival = sim_settings.interarrival_time
+    flow_time = sim_settings.flow_time
+    runtime = sim_settings.end_time - sim_settings.start_time
+    non_tech_add = sim_settings.non_tech_add
+    discount_rate = sim_settings.discount_rate
+    process = sim_settings.flow_process
+    time_unit = TIME_FORMAT_DICT.get(sim_settings.time_unit)
 
     for vcs_id in vcs_ids:
-        res = get_sim_data(db_connection, vcs_id)
-        if res is None or res == []:
-            raise e.VcsFailedException
+        for design_group_id in design_group_ids:
+            res = get_sim_data(db_connection, vcs_id, design_group_id)
+            if res is None or res == []:
+                raise e.VcsFailedException
 
-        if not check_entity_rate(res, process):
-            raise e.RateWrongOrderException
+            if not check_entity_rate(res, process):
+                raise e.RateWrongOrderException
 
-        if design_ids is None or []:
-            raise e.DesignIdsNotFoundException
+            design_ids = [design.id for design in design_impl.get_all_designs(project_id, design_group_id)]
 
-        for design_id in design_ids:
-            get_design(design_id)
-            processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id,
-                                                               design_id)  # BUG probably. Populate processes changes the order of the processes.
+            if design_ids is None or []:
+                raise e.DesignIdsNotFoundException
 
-            dsm = create_simple_dsm(processes)  # TODO Change to using BPMN
+            for design_id in design_ids:
+                # get_design(design_id)
+                processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id,
+                                                                   design_id)  # BUG probably. Populate processes changes the order of the processes.
 
-            sim = des.Des()
+                dsm = create_simple_dsm(processes)  # TODO Change to using BPMN
 
-            try:
-                results = sim.run_simulation(flow_time, interarrival, process, processes, non_tech_processes,
-                                             non_tech_add, dsm, time_unit,
-                                             discount_rate, runtime)
+                sim = des.Des()
 
-            except Exception as exc:
-                tb = sys.exc_info()[2]
-                logger.debug(f'{exc.__class__}, {exc}, {exc.with_traceback(tb)}')
-                print(f'{exc.__class__}, {exc}')
-                raise e.SimulationFailedException
+                try:
+                    results = sim.run_simulation(flow_time, interarrival, process, processes, non_tech_processes,
+                                                 non_tech_add, dsm, time_unit,
+                                                 discount_rate, runtime)
 
-            design_res = models.Simulation(
-                time=results.timesteps[-1],
-                mean_NPV=results.mean_npv(),
-                max_NPVs=results.all_max_npv(),
-                mean_payback_time=results.mean_npv_payback_time(),
-                all_npvs=results.npvs
-            )
+                except Exception as exc:
+                    tb = sys.exc_info()[2]
+                    logger.debug(
+                        f'{exc.__class__}, {exc}, {exc.with_traceback(tb)}')
+                    print(f'{exc.__class__}, {exc}')
+                    raise e.SimulationFailedException
 
-            design_results.append(design_res)
+                design_res = models.Simulation(
+                    time=results.timesteps[-1],
+                    mean_NPV=results.mean_npv(),
+                    max_NPVs=results.all_max_npv(),
+                    mean_payback_time=results.mean_npv_payback_time(),
+                    all_npvs=results.npvs
+                )
+
+                design_results.append(design_res)
     logger.debug('Returning the results')
     return design_results
 
 
 def run_sim_monte_carlo(db_connection: PooledMySQLConnection, project_id: int, simSettings: models.EditSimSettings,
                         vcs_ids: List[int],
-                        design_ids: List[int], normalized_npv: bool = False, user_id: int = None) -> List[
-    models.Simulation]:
+                        design_group_ids: List[int], normalized_npv: bool = False, user_id: int = None) -> List[
+        models.Simulation]:
     design_results = []
 
     if not check_sim_settings(simSettings):
@@ -198,45 +210,50 @@ def run_sim_monte_carlo(db_connection: PooledMySQLConnection, project_id: int, s
     runs = simSettings.runs
 
     for vcs_id in vcs_ids:
-        res = get_sim_data(db_connection, vcs_id)
-        if res is None or res == []:
-            raise e.VcsFailedException
+        for design_group_id in design_group_ids:
+            res = get_sim_data(db_connection, vcs_id, design_group_id)
+            if res is None or res == []:
+                raise e.VcsFailedException
 
-        if not check_entity_rate(res, process):
-            raise e.RateWrongOrderException
+            if not check_entity_rate(res, process):
+                raise e.RateWrongOrderException
 
-        if design_ids is None or []:
-            raise e.DesignIdsNotFoundException
+            design_ids = [design.id for design in design_impl.get_all_designs(project_id, design_group_id)]
 
-        for design_id in design_ids:
-            get_design(design_id)
-            processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id, design_id)
-            logger.debug('Fetched Processes and non-techproc')
-            dsm = create_simple_dsm(processes)  # TODO Change to using BPMN AND move out of the for loop
+            if design_ids is None or []:
+                raise e.DesignIdsNotFoundException
 
-            sim = des.Des()
+            for design_id in design_ids:
+                get_design(design_id)
+                processes, non_tech_processes = populate_processes(
+                    non_tech_add, res, db_connection, vcs_id, design_id)
+                logger.debug('Fetched Processes and non-techproc')
+                # TODO Change to using BPMN AND move out of the for loop
+                dsm = create_simple_dsm(processes)
 
-            try:
-                results = sim.run_parallell_simulations(flow_time, interarrival, process, processes, non_tech_processes,
-                                                        non_tech_add, dsm, time_unit, discount_rate, runtime, runs)
+                sim = des.Des()
 
-            except Exception as exc:
-                logger.debug(f'{exc.__class__}, {exc}')
-                raise e.SimulationFailedException
+                try:
+                    results = sim.run_parallell_simulations(flow_time, interarrival, process, processes, non_tech_processes,
+                                                            non_tech_add, dsm, time_unit, discount_rate, runtime, runs)
 
-            if normalized_npv:
-                m_npv = results.normalize_npv()
-            else:
-                m_npv = results.mean_npv()
+                except Exception as exc:
+                    logger.debug(f'{exc.__class__}, {exc}')
+                    raise e.SimulationFailedException
 
-            sim_res = models.Simulation(
-                time=results.timesteps[-1],
-                mean_NPV=m_npv,
-                max_NPVs=results.all_max_npv(),
-                mean_payback_time=results.mean_npv_payback_time(),
-                all_npvs=results.npvs
-            )
-            design_results.append(sim_res)
+                if normalized_npv:
+                    m_npv = results.normalize_npv()
+                else:
+                    m_npv = results.mean_npv()
+
+                sim_res = models.Simulation(
+                    time=results.timesteps[-1],
+                    mean_NPV=m_npv,
+                    max_NPVs=results.all_max_npv(),
+                    mean_payback_time=results.mean_npv_payback_time(),
+                    all_npvs=results.npvs
+                )
+                design_results.append(sim_res)
 
     return design_results
 
@@ -247,9 +264,9 @@ def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: Poo
 
     technical_processes = []
     non_tech_processes = []
+    mi_values = get_market_values(db_connection, vcs)
     for row in db_results:
         vd_values = get_vd_design_values(db_connection, row['id'], design)
-        mi_values = get_market_values(db_connection, row['id'], vcs)
         if row['category'] != 'Technical processes':
             try:
                 non_tech = models.NonTechnicalProcess(cost=nsp.eval(parse_formula(row['cost'], vd_values, mi_values)),
@@ -263,14 +280,19 @@ def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: Poo
 
         elif row['iso_name'] is not None and row['sub_name'] is None:
             try:
-                time = nsp.eval(parse_formula(row['time'], vd_values, mi_values))
+                time = nsp.eval(parse_formula(
+                    row['time'], vd_values, mi_values))
                 cost_formula = parse_formula(row['cost'], vd_values, mi_values)
-                revenue_formula = parse_formula(row['revenue'], vd_values, mi_values)
+                revenue_formula = parse_formula(
+                    row['revenue'], vd_values, mi_values)
                 p = Process(row['id'],
                             time,
-                            nsp.eval(expr.replace_all('time', time, cost_formula)),
-                            nsp.eval(expr.replace_all('time', time, revenue_formula)),
-                            row['iso_name'], non_tech_add, TIME_FORMAT_DICT.get(row['time_unit'].lower())
+                            nsp.eval(expr.replace_all(
+                                'time', time, cost_formula)),
+                            nsp.eval(expr.replace_all(
+                                'time', time, revenue_formula)),
+                            row['iso_name'], non_tech_add, TIME_FORMAT_DICT.get(
+                                row['time_unit'].lower())
                             )
                 if p.time < 0:
                     raise e.NegativeTimeException(row['id'])
@@ -280,14 +302,19 @@ def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: Poo
             technical_processes.append(p)
         elif row['sub_name'] is not None:
             try:
-                time = nsp.eval(parse_formula(row['time'], vd_values, mi_values))
+                time = nsp.eval(parse_formula(
+                    row['time'], vd_values, mi_values))
                 cost_formula = parse_formula(row['cost'], vd_values, mi_values)
-                revenue_formula = parse_formula(row['revenue'], vd_values, mi_values)
+                revenue_formula = parse_formula(
+                    row['revenue'], vd_values, mi_values)
                 p = Process(row['id'],
                             time,
-                            nsp.eval(expr.replace_all('time', time, cost_formula)),
-                            nsp.eval(expr.replace_all('time', time, revenue_formula)),
-                            row['sub_name'], non_tech_add, TIME_FORMAT_DICT.get(row['time_unit'].lower())
+                            nsp.eval(expr.replace_all(
+                                'time', time, cost_formula)),
+                            nsp.eval(expr.replace_all(
+                                'time', time, revenue_formula)),
+                            row['sub_name'], non_tech_add, TIME_FORMAT_DICT.get(
+                                row['time_unit'].lower())
                             )
 
                 if p.time < 0:
@@ -302,31 +329,31 @@ def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: Poo
     return technical_processes, non_tech_processes
 
 
-def get_sim_data(db_connection: PooledMySQLConnection, vcs_id: int):
+def get_sim_data(db_connection: PooledMySQLConnection, vcs_id: int, design_group_id: int):
     query = f'SELECT cvs_vcs_rows.id, cvs_vcs_rows.iso_process, cvs_iso_processes.name as iso_name, category, \
             subprocess, cvs_subprocesses.name as sub_name, time, time_unit, cost, revenue, rate FROM cvs_vcs_rows \
             LEFT OUTER JOIN cvs_subprocesses ON cvs_vcs_rows.subprocess = cvs_subprocesses.id \
             LEFT OUTER JOIN cvs_iso_processes ON cvs_vcs_rows.iso_process = cvs_iso_processes.id \
                 OR cvs_subprocesses.iso_process = cvs_iso_processes.id \
             LEFT OUTER JOIN cvs_design_mi_formulas ON cvs_vcs_rows.id = cvs_design_mi_formulas.vcs_row \
-            WHERE cvs_vcs_rows.vcs = %s ORDER BY `index`'
+            WHERE cvs_vcs_rows.vcs = %s AND cvs_design_mi_formulas.design_group = %s ORDER BY `index`'
     with db_connection.cursor(prepared=True) as cursor:
-        cursor.execute(query, [vcs_id])
+        cursor.execute(query, [vcs_id, design_group_id])
         res = cursor.fetchall()
         res = [dict(zip(cursor.column_names, row)) for row in res]
     return res
 
 
 def get_vd_design_values(db_connection: PooledMySQLConnection, vcs_row_id: int,
-                         design: int):  # TODO fetch value driver values.
+                         design: int):
 
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement \
-        .select('cvs_vd_design_values', ['id', 'design', 'name', 'value']) \
-        .inner_join('cvs_value_drivers', 'cvs_vd_design_values.value_driver = id') \
-        .inner_join('cvs_formulas_value_drivers',
-                    'cvs_formulas_value_drivers.value_driver = cvs_vd_design_values.value_driver') \
-        .where('formulas = %s and design = %s', [vcs_row_id, design]) \
+        .select('cvs_vd_design_values', ['cvs_value_drivers.id', 'design', 'name', 'value', 'unit']) \
+        .inner_join('cvs_value_drivers', 'cvs_vd_design_values.value_driver = cvs_value_drivers.id') \
+        .inner_join('cvs_vcs_need_drivers', 'cvs_vcs_need_drivers.value_driver = cvs_value_drivers.id') \
+        .inner_join('cvs_stakeholder_needs', 'cvs_stakeholder_needs.id = cvs_vcs_need_drivers.stakeholder_need') \
+        .where('vcs_row = %s and design = %s', [vcs_row_id, design]) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
     return res
@@ -340,6 +367,9 @@ def get_simulation_settings(db_connection: PooledMySQLConnection, project_id: in
         .where('project = %s', [project_id]) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
+    if res is None:
+        raise e.SimSettingsNotFoundException
+        
     return populate_sim_settings(res)
 
 
@@ -358,6 +388,20 @@ def edit_simulation_settings(db_connection: PooledMySQLConnection, project_id: i
 
     count = count['count']
     logger.debug(count)
+
+    if sim_settings.flow_process is not None:
+        flow_process_exists = False
+        vcss = vcs_impl.get_all_vcs(project_id).chunk
+        for vcs in vcss:
+            rows = vcs_impl.get_vcs_table(project_id, vcs.id)
+            for row in rows:
+                if (row.iso_process is not None and row.iso_process.name == sim_settings.flow_process) or \
+                        (row.subprocess is not None and row.subprocess.name == sim_settings.flow_process):
+                    flow_process_exists = True
+                    break
+
+        if not flow_process_exists:
+            raise e.FlowProcessNotFoundException
 
     if (count == 1):
         columns = SIM_SETTINGS_COLUMNS[1:]
@@ -396,38 +440,41 @@ def create_sim_settings(db_connection: PooledMySQLConnection, project_id: int,
     return True
 
 
-def get_market_values(db_connection: PooledMySQLConnection, vcs_row_id: int, vcs: int):
+def get_market_values(db_connection: PooledMySQLConnection, vcs: int):
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement \
-        .select('cvs_market_input_values', ['id', 'name', 'value']) \
+        .select('cvs_market_input_values', ['id', 'name', 'value', 'unit']) \
         .inner_join('cvs_market_inputs', 'cvs_market_input_values.market_input = cvs_market_inputs.id') \
-        .inner_join('cvs_formulas_market_inputs',
-                    'cvs_formulas_market_inputs.market_input = cvs_market_input_values.market_input') \
-        .where('formulas = %s and vcs = %s', [vcs_row_id, vcs]) \
+        .where('vcs = %s', [vcs]) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
     return res
 
 
-def parse_formula(formula: str, vd_values, mi_values):  # TODO fix how the formulas are parsed
+def parse_formula(formula: str, vd_values, mi_values) -> str:
     new_formula = formula
-    vd_ids = expr.get_prefix_ids('vd', new_formula)
-    mi_ids = expr.get_prefix_ids('mi', new_formula)
+    vd_names = expr.get_prefix_variables('VD', new_formula)
+    mi_names = expr.get_prefix_variables('EF', new_formula)
+
     for vd in vd_values:
-        for id in vd_ids:
-            if int(id) == vd['id']:
-                new_formula = expr.replace_all('vd' + id, vd['value'], new_formula)
+        for name in vd_names:
+            unit = vd["unit"] if vd["unit"] is not None and vd["unit"] != "" else "N/A"
+            if name == f'{vd["name"]} [{unit}]':
+                new_formula = expr.replace_prefix_variables("VD", name, str(vd["value"]), new_formula)
     for mi in mi_values:
-        for id in mi_ids:
-            if int(id) == mi['id']:
-                new_formula = expr.replace_all('mi' + id, mi['value'], new_formula)
+        for name in mi_names:
+            unit = mi["unit"] if mi["unit"] is not None and mi["unit"] != "" else "N/A"
+            if name == f'{mi["name"]} [{unit}]':
+                new_formula = expr.replace_prefix_variables("EF", name, str(mi["value"]), new_formula)
+    new_formula = expr.remove_strings_replace_zero(new_formula)
 
     return new_formula
 
 
 def check_entity_rate(db_results, flow_process_name: str):
     rate_check = True
-    flow_process_index = len(db_results)  # Set the flow_process_index to be highest possible.
+    # Set the flow_process_index to be highest possible.
+    flow_process_index = len(db_results)
     for i in range(len(db_results)):
         if db_results[i]['sub_name'] == flow_process_name or db_results[i]['iso_name'] == flow_process_name:
             flow_process_index = i
