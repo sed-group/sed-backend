@@ -1,6 +1,7 @@
 import sedbackend.apps.core.users.implementation as users_impl
 import tests.testutils as tu
 import tests.apps.core.users.testutils as tu_users
+import pandas as pd
 
 
 def test_create_user(client, admin_headers):
@@ -20,6 +21,40 @@ def test_create_user(client, admin_headers):
 
     # Clean
     users_impl.impl_delete_user_from_db(res.json()["id"])
+
+
+def test_create_users_bulk_as_admin(client, admin_headers):
+    # Setup
+    test_file = 'tests/test_assets/core/users/bulk_user_sheet.xlsx'
+    df_users = pd.read_excel(test_file)
+
+    # Act
+    files = {'file': ('bulk_user_sheet.xlsx', open(test_file, 'rb'))}
+    res = client.post("/api/core/users/bulk", files=files, headers=admin_headers)
+
+    # Assert
+    assert res.status_code == 200
+    for index, row in df_users.iterrows():
+        assert users_impl.impl_get_user_with_username(row['username']).username == row['username']
+        assert users_impl.impl_get_user_with_username(row['username']).disabled is None
+
+    # Clean
+    for index, row in df_users.iterrows():
+        users_impl.impl_delete_user_from_db(users_impl.impl_get_user_with_username(row['username']).id)
+
+
+def test_create_users_bulk(client, std_headers):
+    # Setup
+    test_file = 'tests/test_assets/core/users/bulk_user_sheet.xlsx'
+
+    # Act
+    files = {'file': ('bulk_user_sheet.xlsx', open(test_file, 'rb'))}
+    res_1 = client.post("/api/core/users/bulk", files=files, headers=std_headers)
+    res_2 = client.post("/api/core/users/bulk", files=files)
+
+    # Assert
+    assert res_1.status_code == 403
+    assert res_2.status_code == 401
 
 
 def test_delete_user_as_admin(client, admin_headers):
