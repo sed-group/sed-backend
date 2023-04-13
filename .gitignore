@@ -15,3 +15,6 @@ venv/
 
 # Mac files
 *.DS_Store
+
+# GitHub
+.github/ISSUE_TEMPLATE/
