@@ -479,7 +479,7 @@ def check_entity_rate(db_results, flow_process_name: str):
         if db_results[i]['sub_name'] == flow_process_name or db_results[i]['iso_name'] == flow_process_name:
             flow_process_index = i
 
-        if i >= flow_process_index:
+        if i > flow_process_index:
             for j in range(i, len(db_results)):
                 if db_results[j]['rate'] == 'per_project' and db_results[j]['category'] == 'Technical processes':
                     print("Rate check false")
