@@ -45,12 +45,9 @@ def run_sim_with_dsm_file(db_connection: PooledMySQLConnection, user_id: int, pr
 
     if file_extension == '.xlsx':
         try:
-            # Workaround because current python version doesn't support
-            tmp_xlsx = tempfile.TemporaryFile()
-            # readable() attribute on SpooledTemporaryFile which UploadFile
-            tmp_xlsx.write(dsm_file.file.read())
-            tmp_xlsx.seek(
-                0)  # is an alias for. PR is accepted for python v3.12, see https://github.com/python/cpython/pull/29560
+            tmp_xlsx = tempfile.TemporaryFile() # Workaround because current python version doesn't support
+            tmp_xlsx.write(dsm_file.file.read()) # readable() attribute on SpooledTemporaryFile which UploadFile
+            tmp_xlsx.seek(0)  # is an alias for. PR is accepted for python v3.12, see https://github.com/python/cpython/pull/29560
 
             dsm = get_dsm_from_excel(tmp_xlsx)
             if dsm is None:
@@ -61,12 +58,9 @@ def run_sim_with_dsm_file(db_connection: PooledMySQLConnection, user_id: int, pr
             tmp_xlsx.close()
     elif file_extension == '.csv':
         try:
-            # Workaround because current python version doesn't support
-            tmp_csv = tempfile.TemporaryFile()
-            # readable() attribute on SpooledTemporaryFile which UploadFile
-            tmp_csv.write(dsm_file.file.read())
-            tmp_csv.seek(
-                0)  # is an alias for. PR is accepted for python v3.12, see https://github.com/python/cpython/pull/29560
+            tmp_csv = tempfile.TemporaryFile() # Workaround because current python version doesn't support
+            tmp_csv.write(dsm_file.file.read()) # readable() attribute on SpooledTemporaryFile which UploadFile
+            tmp_csv.seek(0)  # is an alias for. PR is accepted for python v3.12, see https://github.com/python/cpython/pull/29560
 
             # This should hopefully open up the file for the processor.
             dsm = get_dsm_from_csv(tmp_csv)
