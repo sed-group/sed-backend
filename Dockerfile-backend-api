@@ -4,7 +4,6 @@ FROM tiangolo/uvicorn-gunicorn-fastapi:python3.11
 COPY . /app
 
 # Install additional deps
-RUN pip install jose
 RUN pip install -r requirements.txt
 
 # Copy wait-for-it script
