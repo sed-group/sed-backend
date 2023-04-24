@@ -34,5 +34,5 @@ jobs:
       # Run tests inside docker environment
       - name: Run tests
         run: |
-          sleep 10
+          sleep 15
           docker exec backend-api pytest
