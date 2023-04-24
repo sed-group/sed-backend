@@ -34,5 +34,5 @@ jobs:
       # Run tests inside docker environment
       - name: Run tests
         run: |
-          docker exec /etc/scripts/wait-for-it.sh -t 30 core-db:3306 -- echo "Database online"
+          docker exec backend-api /etc/scripts/wait-for-it.sh -t 30 core-db:3306 -- echo "Database online"
           docker exec backend-api pytest
