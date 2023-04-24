@@ -35,7 +35,7 @@ def admin_headers(client, admin_user):
         "username": admin_user.username,
         "password": admin_user.password
     }
-    res = client.post('/api/core/auth/token', data)
+    res = client.post('/api/core/auth/token', data=data)
 
     assert res.status_code == 200
     return {
@@ -49,7 +49,7 @@ def std_headers(client, std_user):
         "username": std_user.username,
         "password": std_user.password
     }
-    res = client.post('/api/core/auth/token', data)
+    res = client.post('/api/core/auth/token', data=data)
 
     assert res.status_code == 200
     return {
