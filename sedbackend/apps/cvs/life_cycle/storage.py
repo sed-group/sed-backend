@@ -1,4 +1,5 @@
 from fastapi.logger import logger
+from fastapi.responses import FileResponse
 from mysql.connector.pooling import PooledMySQLConnection
 
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
@@ -7,6 +8,7 @@ from sedbackend.apps.cvs.vcs import storage as vcs_storage, exceptions as vcs_ex
 from mysql.connector import Error
 from sedbackend.apps.core.files import models as file_models
 from sedbackend.apps.core.files import implementation as file_impl
+
 
 CVS_NODES_TABLE = 'cvs_nodes'
 CVS_NODES_COLUMNS = ['cvs_nodes.id', 'vcs', 'from', 'to', 'pos_x', 'pos_y']
@@ -17,6 +19,8 @@ CVS_PROCESS_NODES_COLUMNS = CVS_NODES_COLUMNS + ['vcs_row']
 CVS_START_STOP_NODES_TABLE = 'cvs_start_stop_nodes'
 CVS_START_STOP_NODES_COLUMNS = CVS_NODES_COLUMNS + ['type']
 
+CVS_DSM_FILES_TABLE = 'cvs_dsm_files'
+CVS_DSM_FILES_COLUMNS = ['vcs_id', 'file_id']
 
 # TODO error handling
 
@@ -264,4 +268,32 @@ def update_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: i
 def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int, 
                   vcs_id: int, file: file_models.StoredFilePost) -> bool:
     
-    pass
+    #TODO 
+    # * ensure that the file is what it says
+    # * Make sure that all fields (all processes in vcs) in the file exists
+    # * Check file size
+
+    stored_file = file_impl.impl_save_file(file)
+
+    insert_statement = MySQLStatementBuilder(db_connection)
+    insert_statement.insert(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS) \
+        .set_values([vcs_id, stored_file.id])\
+        .execute(fetch_type=FetchType.FETCH_NONE)
+    
+    return True
+
+def get_dsm_file(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id: int) -> FileResponse:
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    file_res = select_statement.select(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS)\
+        .where('vcs_id = %s', [vcs_id]) \
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+    
+    file_path = file_impl.impl_get_file_path(file_res['file_id'], user_id)
+    resp = FileResponse(
+        path=file_path.path,
+        filename=file_path.filename
+    )
+
+    return resp
+
