@@ -1,7 +1,7 @@
 from sedbackend.apps.cvs.simulation.storage import parse_formula
-from sedbackend.libs.parsing.expressions import get_prefix_names, get_prefix_variables, \
+from sedbackend.libs.formula_parser.expressions import get_prefix_names, get_prefix_variables, \
     replace_prefix_variables
-from sedbackend.libs.parsing.parser import NumericStringParser
+from sedbackend.libs.formula_parser.parser import NumericStringParser
 
 
 def test_parse_formula_simple():
