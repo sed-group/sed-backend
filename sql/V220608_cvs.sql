@@ -332,3 +332,13 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_formulas_value_drivers`
         REFERENCES `seddb`.`cvs_value_drivers`(`id`)
         ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_dsm_files`
+(
+    `vcs_id` INT UNSIGNED NOT NULL,
+    `file_id` INT UNSIGNED NOT NULL,
+    PRIMARY KEY (`vcs_id`),
+    FOREIGN KEY (`vcs_id`)
+        REFERENCES `seddb`.`cvs_vcss`(`id`)
+        ON DELETE CASCADE,
+);

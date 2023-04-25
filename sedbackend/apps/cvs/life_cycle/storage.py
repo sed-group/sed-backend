@@ -5,6 +5,8 @@ from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.cvs.life_cycle import exceptions, models
 from sedbackend.apps.cvs.vcs import storage as vcs_storage, exceptions as vcs_exceptions
 from mysql.connector import Error
+from sedbackend.apps.core.files import models as file_models
+from sedbackend.apps.core.files import implementation as file_impl
 
 CVS_NODES_TABLE = 'cvs_nodes'
 CVS_NODES_COLUMNS = ['cvs_nodes.id', 'vcs', 'from', 'to', 'pos_x', 'pos_y']
@@ -257,3 +259,9 @@ def update_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: i
         update_node(db_connection, project_id, node.id, updated_node)
 
     return True
+
+
+def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int, 
+                  vcs_id: int, file: file_models.StoredFilePost) -> bool:
+    
+    pass
