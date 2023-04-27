@@ -1,9 +1,4 @@
 {
-  "MOD.EFM": {
-    "name": "EF-M",
-    "description": "Enhanced function-means modelling tool.",
-    "href_api": "/efm/"
-  },
   "MOD.CVS": {
     "name": "Club Design",
     "description": "In this Module, the user is guided to: 1) identify what characteristics in a design add value to the stakeholders, and 2) evaluate the value of different design alternatives, assessed both in engineering terms as well as in monetary terms. This can enable more efficient communication with decision-makers.",
