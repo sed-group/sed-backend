@@ -22,20 +22,3 @@ router.include_router(router_projects, prefix='/projects', tags=['projects'], de
 router.include_router(router_individuals, prefix='/individuals', tags=['individuals'], dependencies=[Security(verify_token)])
 router.include_router(router_measurements, prefix='/data', tags=['data'], dependencies=[Security(verify_token)])
 router.include_router(router_files, prefix='/files', tags=['files'], dependencies=[Security(verify_token)])
-
-
-@router.get("/ping",
-            summary="Check server connection",
-            response_model=int,
-            tags=["core"])
-async def get_ping():
-    dt = datetime.now()
-    return dt.timestamp() * 1000
-
-
-@router.get("/ping-db",
-            summary="Check database connection",
-            response_model=int,
-            tags=['core'])
-async def get_ping_db() -> int:
-    return impl_check_db_connection()
