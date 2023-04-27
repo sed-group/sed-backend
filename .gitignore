@@ -6,7 +6,6 @@ venv/
 .idea/
 .vscode/
 .devcontainer/
-.github/
 
 # Cache files
 *.pyc
