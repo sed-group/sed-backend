@@ -1,5 +1,6 @@
 from typing import Optional, List
 from pydantic import BaseModel
+from datetime import datetime
 
 from sedbackend.apps.core.users.models import User
 
@@ -21,3 +22,10 @@ class TokenData(BaseModel):
     username: Optional[str] = None
     scopes: List[str] = []
     expires: int = 0
+
+
+class SSOResolutionData(BaseModel):
+    id: int
+    user_id: int
+    expiration: datetime
+

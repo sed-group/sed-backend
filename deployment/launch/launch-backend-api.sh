@@ -5,4 +5,4 @@
 
 # Go to application directory and launch FastAPI app
 cd /app
-uvicorn sedbackend.main:app --host 0.0.0.0 --port 80
+uvicorn sedbackend.main:app --host 0.0.0.0 --port 80 --proxy-headers
