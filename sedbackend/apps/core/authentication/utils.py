@@ -62,6 +62,9 @@ async def verify_token(security_scopes: SecurityScopes, request: Request, token:
     :param request: HTTP Request
     :return: The user
     """
+
+    client_host = request.client.host
+
     if security_scopes.scopes:
         authenticate_value = f'Bearer scope="{security_scopes.scope_str}"'
     else:
