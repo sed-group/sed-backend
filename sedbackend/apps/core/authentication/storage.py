@@ -36,7 +36,7 @@ def get_user_auth_only(connection, user_name: str) -> UserAuth:
 def db_insert_sso_token(connetion: PooledMySQLConnection, user_id: int, ip: str) -> str:
     nonce = secrets.token_urlsafe()
     stmnt = MySQLStatementBuilder(connetion)
-    stmnt.insert('sso_tokens', ['user_id', 'ip', 'nonce']).set_values([user_id, ip, nonce]).execute()
+    stmnt.insert('sso_tokens', ['user_id', 'ip', 'nonce']).set_values([user_id, ip, nonce]).execute(no_logs=True)
     return nonce
 
 
@@ -50,7 +50,7 @@ def db_resolve_sso_token(connection: PooledMySQLConnection, ip: str, nonce: str)
     stmnt = MySQLStatementBuilder(connection)
     res = stmnt.select('sso_tokens', ['id', 'user_id', 'expiration'])\
         .where('nonce = %s AND ip = %s', [nonce, ip])\
-        .execute(dictionary=True, fetch_type=FetchType.FETCH_ONE)
+        .execute(dictionary=True, fetch_type=FetchType.FETCH_ONE, no_logs=True)
 
     if res is None:
         raise InvalidNonceException
@@ -64,7 +64,7 @@ def db_resolve_sso_token(connection: PooledMySQLConnection, ip: str, nonce: str)
         raise InvalidNonceException
 
     stmnt_del = MySQLStatementBuilder(connection)
-    res_del, rows = stmnt_del.delete('sso_tokens').where('id = %s', [res_data.id]).execute(return_affected_rows=True)
+    res_del, rows = stmnt_del.delete('sso_tokens').where('id = %s', [res_data.id]).execute(return_affected_rows=True, no_logs=True)
 
     if rows == 0:
         raise FaultyNonceOperation
