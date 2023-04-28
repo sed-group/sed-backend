@@ -33,10 +33,10 @@ async def renew_token(current_user: User = Depends(get_current_active_user)) -> 
 @router.get("/sso_token", dependencies=[Security(verify_token)])
 async def get_sso_token(request: Request, current_user: User = Depends(get_current_active_user)) -> str:
     """
-
-    :param request:
-    :param current_user:
-    :return:
+    Get SSO token (nonce). Only lasts for a few seconds.
+    :param request: client request object
+    :param current_user: user object
+    :return: Nonce string
     """
     return impl.impl_get_sso_token(current_user, request.client.host)
 
@@ -44,9 +44,9 @@ async def get_sso_token(request: Request, current_user: User = Depends(get_curre
 @router.post("/sso_token")
 async def resolve_sso_token(request: Request, nonce: str):
     """
-    Token for nonce trade
-    :param request:
-    :param nonce:
-    :return:
+    Token for nonce trade. Turn in nonce within a limited time to retrieve an auth token
+    :param request: client request object
+    :param nonce: nonce token
+    :return: Auth token string
     """
     return impl.impl_resolve_sso_token(nonce, request.client.host)
