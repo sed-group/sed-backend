@@ -1,10 +1,12 @@
 from typing import List
+from fastapi.logger import logger
 
 import sedbackend.apps.core.users.exceptions as exc
 import sedbackend.apps.core.users.models as models
 from sedbackend.apps.core.authentication.utils import get_password_hash
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType
-from mysql.connector.errors import IntegrityError
+from mysql.connector.errors import Error as SQLError
+from mysql.connector import errorcode
 
 USERS_COLUMNS_SAFE = ['id', 'username', 'email', 'full_name', 'scopes', 'disabled'] # Safe, as it does not contain passwords
 USERS_TABLE = 'users'
@@ -121,7 +123,8 @@ def db_insert_user(connection, user: models.UserPost) -> models.User:
 
         return db_get_user_safe_with_id(connection, user_id)
 
-    except IntegrityError:
+    except SQLError as err:
+        logger.error(err)
         raise exc.UserNotUniqueException('Suggested user is not unique.')
 
 
