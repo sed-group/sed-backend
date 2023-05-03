@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import Depends, status, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer, SecurityScopes
 from fastapi.logger import logger
@@ -60,6 +62,9 @@ async def verify_token(security_scopes: SecurityScopes, request: Request, token:
     :param request: HTTP Request
     :return: The user
     """
+
+    client_host = request.client.host
+
     if security_scopes.scopes:
         authenticate_value = f'Bearer scope="{security_scopes.scope_str}"'
     else:
@@ -72,13 +77,8 @@ async def verify_token(security_scopes: SecurityScopes, request: Request, token:
     )
 
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-        token_scopes = payload.get("scopes", [])
-        token_data = TokenData(scopes=token_scopes, username=username)
-    except (JWTError, ValidationError):
+        token_data = parse_jwt_token(token)
+    except JWTError:
         raise credentials_exception
 
     user = get_user_with_pwd_from_db(username=token_data.username)
@@ -88,13 +88,25 @@ async def verify_token(security_scopes: SecurityScopes, request: Request, token:
 
     # Assert that the user has the scopes it claims it has
     scopes_in_db = set(parse_scopes(user.scopes))
-    for scope in token_scopes:
+    for scope in token_data.scopes:
         if scope not in scopes_in_db:
             raise HTTPException(status_code=401, detail="Scope validation failed.")
 
     # Store user ID in request for easy access
     request.state.user_id = user.id
     return user
+
+
+def parse_jwt_token(token) -> Optional[TokenData]:
+    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    username: str = payload.get("sub")
+    if username is None:
+        raise JWTError
+    token_scopes = payload.get("scopes", [])
+    token_exp = payload.get("exp")
+
+    token_data = TokenData(scopes=token_scopes, username=username, expires=token_exp)
+    return token_data
 
 
 async def get_current_active_user(current_user: User = Depends(verify_token)) -> User:
@@ -107,11 +119,11 @@ def get_password_hash(plain_pwd):
     return pwd_context.hash(plain_pwd)
 
 
-def parse_scopes(scopes_array):
+def parse_scopes(scopes_array: str):
     """
     Parses a scopes string into an array
 
-    :param user:
+    :param scopes_array: String array of scopes
     :return:
     """
     return parse_scopes_array(scopes_array)

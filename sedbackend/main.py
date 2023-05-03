@@ -15,13 +15,14 @@ setup.config_default_logging()
 app = FastAPI(
     title="SED lab API",
     description="The SED lab API contains all HTTP operations available within the SED lab application.",
-    version="1.0.0",
+    version="1.0.1",
 )
 
 app.include_router(api.router, prefix="/api")
 
 # CORS
-origins = ["http://localhost:8080", "http://localhost:3000", "https://clubdesign.netlify.app"]
+origins = ["http://localhost:8080", "http://localhost:3000", "https://sedlab.netlify.app",
+           "https://clubdesign.netlify.app"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,

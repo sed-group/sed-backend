@@ -175,18 +175,6 @@ CREATE TABLE IF NOT EXISTS `seddb`.`measurements_sets_subprojects_map` (
   ON DELETE CASCADE
   ON UPDATE NO ACTION);
 
-
-# Difam projects
-CREATE TABLE IF NOT EXISTS `seddb`.`difam_projects` (
-  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(255) NULL DEFAULT 'Unnamed project',
-  `individual_archetype_id` INT UNSIGNED NULL DEFAULT NULL,
-  `owner_id` INT UNSIGNED NOT NULL,
-  `datetime_created` DATETIME(3) NOT NULL DEFAULT NOW(3),
-  PRIMARY KEY (`id`),
-  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE);
-
-
 CREATE TABLE IF NOT EXISTS `seddb`.`files` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `temp` TINYINT UNSIGNED NOT NULL DEFAULT 0,

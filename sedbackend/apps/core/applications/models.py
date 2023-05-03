@@ -7,3 +7,4 @@ class Application(BaseModel):
     name: str
     description: Optional[str] = None
     href_api: Optional[str] = None      # Reference to associated API root endpoint
+    href_url: Optional[str] = None      # Reference to website
