@@ -77,12 +77,6 @@ def edit_cvs_project(db_connection: PooledMySQLConnection, project_id: int,
                      new_project: models.CVSProjectPost) -> models.CVSProject:
     logger.debug(f'Editing CVS project with id={project_id}.')
 
-    old_project = get_cvs_project(db_connection, project_id)
-
-    if (old_project.name, old_project.description) == (new_project.name, new_project.description):
-        # No change
-        return old_project
-
     # Updating
     update_statement = MySQLStatementBuilder(db_connection)
     update_statement.update(
@@ -91,10 +85,7 @@ def edit_cvs_project(db_connection: PooledMySQLConnection, project_id: int,
         values=[new_project.name, new_project.description, new_project.currency],
     )
     update_statement.where('id = %s', [project_id])
-    _, rows = update_statement.execute(return_affected_rows=True)
-
-    if rows == 0:
-        raise exceptions.CVSProjectFailedToUpdateException
+    update_statement.execute(return_affected_rows=True)
 
     return get_cvs_project(db_connection, project_id)
 

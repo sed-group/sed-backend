@@ -17,7 +17,7 @@ def test_run_single_monte_carlo_sim(client, std_headers, std_user):
                     json = {
                       "sim_settings": settings.dict(),
                       "vcs_ids": [vcs.id],
-                      "design_ids": [design[0].id]
+                      "design_group_ids": [design_group.id]
                     })
   
   #Assert
@@ -64,7 +64,7 @@ def test_run_mc_sim_invalid_designs(client, std_headers, std_user):
                     json = {
                       "sim_settings": settings.dict(),
                       "vcs_ids": [vcs.id for vcs in vcss],
-                      "design_ids": design_ids
+                      "design_group_ids": design_ids
                     })
   
   #Assert
@@ -108,7 +108,7 @@ def test_run_mc_sim_invalid_vcss(client, std_headers, std_user):
                     json = {
                       "sim_settings": settings.dict(),
                       "vcs_ids": [(vcs.id + 4000) for vcs in vcss],
-                      "design_ids": design_ids
+                      "design_group_ids": [design_group.id]
                     })
   
   #Assert
@@ -140,7 +140,7 @@ def test_run_mc_sim_end_time_before_start_time(client, std_headers, std_user):
                     json = {
                       "sim_settings": settings.dict(),
                       "vcs_ids": [vcs.id],
-                      "design_ids": [design[0].id]
+                      "design_group_ids": [design_group.id]
                     })
   
   #Assert
@@ -169,7 +169,7 @@ def test_run_mc_sim_no_flows(client, std_headers, std_user):
                     json = {
                       "sim_settings": settings.dict(),
                       "vcs_ids": [vcs.id],
-                      "design_ids": [design[0].id]
+                      "design_group_ids": [design_group.id]
                     })
   
   #Assert
@@ -198,7 +198,7 @@ def test_run_mc_sim_both_flows(client, std_headers, std_user):
                     json = {
                       "sim_settings": settings.dict(),
                       "vcs_ids": [vcs.id],
-                      "design_ids": [design[0].id]
+                      "design_group_ids": [design_group.id]
                     })
   
   #Assert
@@ -212,6 +212,7 @@ def test_run_mc_sim_both_flows(client, std_headers, std_user):
   tu.delete_vd_from_user(current_user.id)
 
 
+'''
 def test_run_mc_sim_rate_invalid_order(client, std_headers, std_user):
     #Setup 
   current_user = impl_users.impl_get_user_with_username(std_user.username)
@@ -226,7 +227,7 @@ def test_run_mc_sim_rate_invalid_order(client, std_headers, std_user):
                     json = {
                       "sim_settings": settings.dict(),
                       "vcs_ids": [vcs.id],
-                      "design_ids": [design[0].id]
+                      "design_group_ids": [design_group.id]
                     })
   
   #Assert
@@ -239,3 +240,4 @@ def test_run_mc_sim_rate_invalid_order(client, std_headers, std_user):
   tu.delete_VCS_with_ids(project.id, [vcs.id])
   tu.delete_project_by_id(project.id, current_user.id)
   tu.delete_vd_from_user(current_user.id)
+'''

@@ -144,7 +144,7 @@ def edit_design_group(db_connection: PooledMySQLConnection, project_id: int, des
         for vd_id in to_delete:
             delete_statement = MySQLStatementBuilder(db_connection)
             delete_statement.delete(DESIGN_GROUP_DRIVER_TABLE) \
-                .where('value_driver = %s', [vd_id]) \
+                .where('design_group = %s and value_driver = %s', [design_group_id, vd_id]) \
                 .execute(fetch_type=FetchType.FETCH_NONE)
 
     return get_design_group(db_connection, project_id, design_group_id)
@@ -248,7 +248,7 @@ def edit_design(db_connection: PooledMySQLConnection, design: models.DesignPut) 
         for val in vd_values:
             delete_statement = MySQLStatementBuilder(db_connection)
             delete_statement.delete(VD_DESIGN_VALUES_TABLE) \
-                .where('value_driver = %s', [val.vd_id]) \
+                .where('value_driver = %s AND design = %s', [val.vd_id, design_id]) \
                 .execute(fetch_type=FetchType.FETCH_NONE)
 
     for val in design.vd_design_values:
