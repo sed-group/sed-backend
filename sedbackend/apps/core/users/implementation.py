@@ -92,7 +92,7 @@ def impl_post_users_bulk(file: File):
                 )
 
             for index, row in df.iterrows():
-                user = models.UserPost(username=row["username"], password=row["password"])
+                user = models.UserPost(username=row["username"], password=row["password"], scopes="user")
                 storage.db_insert_user(con, user)
 
             logger.info(f'Added {index} new users through bulk insertion.')
