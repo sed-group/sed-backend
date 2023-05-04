@@ -248,7 +248,7 @@ def edit_design(db_connection: PooledMySQLConnection, design: models.DesignPut) 
         for val in vd_values:
             delete_statement = MySQLStatementBuilder(db_connection)
             delete_statement.delete(VD_DESIGN_VALUES_TABLE) \
-                .where('value_driver = %s', [val.vd_id]) \
+                .where('value_driver = %s AND design = %s', [val.vd_id, design_id]) \
                 .execute(fetch_type=FetchType.FETCH_NONE)
 
     for val in design.vd_design_values:
