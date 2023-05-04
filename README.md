@@ -55,7 +55,7 @@ everytime something in the application is changed.
 However, if you don't want to change anything in the databases, then you could use docker to contain only the databases.
 
 ### Prerequisites
-- Python 3.8
+- Python 3.11
 - MySQL server
 
 ### Setup
