@@ -110,10 +110,12 @@ class MySQLStatementBuilder:
     def execute(self,
                 fetch_type: Optional[FetchType] = None,
                 dictionary: bool = False,
-                return_affected_rows = False):
+                return_affected_rows: bool = False,
+                no_logs: bool = False):
         """
         Executes constructed MySQL query. Does not need to be closed (closes automatically).
 
+        :param no_logs: If performing sensitive operations, then logs should not be saved. Setting this to True will ensure the operation is not recorded in detail.
         :param dictionary: boolean. Default is False. Converts response to dictionaries
         :param fetch_type: FetchType.FETCH_NONE by default
         :param return_affected_rows: When deleting rows, the amount of rows deleted may be returned if this is true
@@ -125,7 +127,8 @@ class MySQLStatementBuilder:
         if fetch_type is None:
             fetch_type = FetchType.FETCH_NONE
 
-        logger.debug(f'executing query "{self.query}" with values "{self.values}". fetch_type={fetch_type}')
+        if no_logs is False:
+            logger.debug(f'Executing query "{self.query}" with values "{self.values}". fetch_type={fetch_type}')
 
         with self.con.cursor(prepared=True) as cursor:
             cursor.execute(self.query, self.values)

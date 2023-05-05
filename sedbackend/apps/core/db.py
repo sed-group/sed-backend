@@ -15,7 +15,6 @@ host = 'localhost'
 database = 'seddb'
 port = 3306
 
-
 try:
     connection_pool = mysql.connector.pooling.MySQLConnectionPool(
         user=user,

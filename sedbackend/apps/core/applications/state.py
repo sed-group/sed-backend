@@ -49,6 +49,7 @@ def _get_application_instance(app_id):
         name=_applications_data[key]["name"],
         description=_applications_data[key]["description"],
         href_api=_applications_data[key]["href_api"],
+        href_url=_applications_data[key]["href_url"]
     )
 
     return app

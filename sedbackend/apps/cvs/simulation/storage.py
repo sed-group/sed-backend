@@ -16,8 +16,8 @@ from sedbackend.apps.cvs.design.implementation import get_design
 
 from sedbackend.libs.mysqlutils.builder import FetchType, MySQLStatementBuilder
 
-from sedbackend.libs.parsing.parser import NumericStringParser
-from sedbackend.libs.parsing import expressions as expr
+from sedbackend.libs.formula_parser.parser import NumericStringParser
+from sedbackend.libs.formula_parser import expressions as expr
 from sedbackend.apps.cvs.simulation import models
 import sedbackend.apps.cvs.simulation.exceptions as e
 from sedbackend.apps.cvs.vcs import implementation as vcs_impl
