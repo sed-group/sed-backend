@@ -1,5 +1,6 @@
 from typing import List
 from fastapi.logger import logger
+from mysql.connector.pooling import PooledMySQLConnection
 
 import sedbackend.apps.core.users.exceptions as exc
 import sedbackend.apps.core.users.models as models
@@ -11,7 +12,7 @@ USERS_COLUMNS_SAFE = ['id', 'username', 'email', 'full_name', 'scopes', 'disable
 USERS_TABLE = 'users'
 
 
-def db_get_user_safe_with_username(connection, user_name: str) -> models.User:
+def db_get_user_safe_with_username(connection: PooledMySQLConnection, user_name: str) -> models.User:
     mysql_statement = MySQLStatementBuilder(connection)
     cols = ['id', 'username', 'email', 'full_name']
     user_data = mysql_statement\
@@ -26,7 +27,7 @@ def db_get_user_safe_with_username(connection, user_name: str) -> models.User:
     return user
 
 
-def db_get_user_safe_with_id(connection, user_id: int) -> models.User:
+def db_get_user_safe_with_id(connection: PooledMySQLConnection, user_id: int) -> models.User:
     try:
         int(user_id)
     except ValueError:
@@ -45,7 +46,7 @@ def db_get_user_safe_with_id(connection, user_id: int) -> models.User:
     return user
 
 
-def db_get_user_list(connection, segment_length: int, index: int) -> List[models.User]:
+def db_get_user_list(connection: PooledMySQLConnection, segment_length: int, index: int) -> List[models.User]:
     try:
         int(segment_length)
         int(index)
@@ -74,7 +75,7 @@ def db_get_user_list(connection, segment_length: int, index: int) -> List[models
     return users
 
 
-def db_get_users_with_ids(connection, user_ids) -> List[models.User]:
+def db_get_users_with_ids(connection: PooledMySQLConnection, user_ids) -> List[models.User]:
     id_set = set(user_ids)
 
     mysql_statement = MySQLStatementBuilder(connection)
@@ -99,7 +100,7 @@ def db_get_users_with_ids(connection, user_ids) -> List[models.User]:
     return users
 
 
-def db_insert_user(connection, user: models.UserPost) -> models.User:
+def db_insert_user(connection: PooledMySQLConnection, user: models.UserPost) -> models.User:
     try:
         mysql_statement = MySQLStatementBuilder(connection)
 
@@ -127,7 +128,7 @@ def db_insert_user(connection, user: models.UserPost) -> models.User:
         raise exc.UserNotUniqueException('Suggested user is not unique.')
 
 
-def db_delete_user(connection, user_id: int) -> bool:
+def db_delete_user(connection: PooledMySQLConnection, user_id: int) -> bool:
 
     where_stmnt = 'id = %s'
 
@@ -142,12 +143,26 @@ def db_delete_user(connection, user_id: int) -> bool:
     return True
 
 
-def db_update_user_password(connection, user_id: int, new_password: str) -> bool:
+def db_update_user_password(connection: PooledMySQLConnection, user_id: int, new_password: str) -> bool:
     hashed_pwd = get_password_hash(new_password)
     mysql_stmnt = MySQLStatementBuilder(connection)
     res, rows = mysql_stmnt.update('users', 'password = ?', [hashed_pwd])\
         .where("id = ?", [user_id])\
         .execute(fetch_type=FetchType.FETCH_NONE, return_affected_rows=True, no_logs=True)
+
+    if rows == 0:
+        raise exc.UserNotFoundException
+
+    return True
+
+
+def db_update_user_details(connection: PooledMySQLConnection, user_id: int,
+                           update_details_request: models.UpdateDetailsRequest):
+    stmnt = MySQLStatementBuilder(connection)
+    res, rows = stmnt\
+        .update('users', 'full_name = ?, email = ?', [update_details_request.full_name, update_details_request.email])\
+        .where('id = ?', [user_id])\
+        .execute(fetch_type=FetchType.FETCH_NONE, return_affected_rows=True)
 
     if rows == 0:
         raise exc.UserNotFoundException

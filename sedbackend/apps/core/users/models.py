@@ -24,6 +24,10 @@ class UserPost(BaseModel):
 
 
 class NewPasswordRequest(BaseModel):
-    user_id: int
-    current_password: str
+    current_password: Optional[str]
     new_password: str
+
+
+class UpdateDetailsRequest(BaseModel):
+    email: str
+    full_name: str
