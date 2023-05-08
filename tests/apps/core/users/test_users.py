@@ -1,4 +1,8 @@
+import pytest
+
 import sedbackend.apps.core.users.implementation as users_impl
+import sedbackend.apps.core.authentication.implementation as auth_impl
+import sedbackend.apps.core.authentication.exceptions as auth_exc
 import tests.testutils as tu
 import tests.apps.core.users.testutils as tu_users
 import pandas as pd
@@ -103,7 +107,7 @@ def test_get_user_me_as_admin(client, admin_headers, admin_user):
     assert res.json()["username"] == admin_user.username
 
 
-def test_get_user_me(client, std_headers, std_user, request):
+def test_get_user_me(client, std_headers, std_user):
     # Act
     res = client.get("/api/core/users/me", headers=std_headers)
     # Assert
@@ -174,3 +178,120 @@ def test_delete_user_unauthenticated(client):
 
     # Cleanup
     users_impl.impl_delete_user_from_db(new_user.id)
+
+
+def test_update_details(client, std_headers, std_user):
+    # Setup
+    user = users_impl.impl_get_user_with_username(std_user.username)
+    random_name = f'{tu.random_str(5, 20)} {tu.random_str(5, 20)}'
+    random_email = f'{tu.random_str(5, 20)}@{tu.random_str(5, 20)}'
+
+    # Act
+    res = client.put(f'/api/core/users/{user.id}/details',
+                     json={'full_name': random_name, 'email': random_email}, headers=std_headers)
+
+    me = users_impl.impl_get_users_me(user)
+
+    # Assert
+    assert res.status_code == 200
+    assert me.id == user.id
+    assert me.full_name == random_name
+    assert me.email == random_email
+
+
+def test_update_details_of_other_user(client, std_headers, std_user):
+    # Setup
+    user = tu_users.random_user_post(admin=False, disabled=False)
+    new_user = users_impl.impl_post_user(user)
+    random_name = f'{tu.random_str(5, 20)} {tu.random_str(5, 20)}'
+    random_email = f'{tu.random_str(5, 20)}@{tu.random_str(5, 20)}'
+
+    # Act
+    res = client.put(f'/api/core/users/{new_user.id}/details',
+                     json={'full_name': random_name, 'email': random_email}, headers=std_headers)
+
+    new_user_refreshed = users_impl.impl_get_user_with_id(new_user.id)
+
+    # Assert
+    assert res.status_code == 403
+    assert new_user_refreshed.id == new_user.id
+    assert new_user_refreshed.full_name != random_name
+    assert new_user_refreshed.email != random_email
+
+
+def test_update_password(client, std_headers, std_user):
+    # Setup
+    user = users_impl.impl_get_user_with_username(std_user.username)
+    random_pwd = tu.random_str(8, 20)
+
+    # Act
+    res = client.put(f'/api/core/users/{user.id}/password',
+                     json={'current_password': std_user.password, 'new_password': random_pwd}, headers=std_headers)
+
+    # Assert
+    assert res.status_code == 200
+    with pytest.raises(auth_exc.InvalidCredentialsException):
+        auth_impl.login(std_user.username, std_user.password)
+    auth_impl.login(std_user.username, random_pwd)
+
+    # Cleanup
+    client.put(f'/api/core/users/{user.id}/password',
+               json={'current_password': random_pwd, 'new_password': std_user.password}, headers=std_headers)
+
+
+def test_update_other_user_password(client, std_headers, std_user):
+    # Setup
+    user = tu_users.random_user_post(admin=False, disabled=False)
+    new_user = users_impl.impl_post_user(user)
+    random_pwd = tu.random_str(8, 10)
+
+    # Act
+    res = client.put(f'/api/core/users/{new_user.id}/password',
+                     json={'current_password': None, 'new_password': random_pwd}, headers=std_headers)
+
+    # Assert
+    assert res.status_code == 403
+    with pytest.raises(auth_exc.InvalidCredentialsException):
+        auth_impl.login(new_user.username, random_pwd)
+
+    # Cleanup
+    users_impl.impl_delete_user_from_db(new_user.id)
+
+
+def test_update_other_user_password_as_admin(client, admin_headers, admin_user):
+    # Setup
+    user = tu_users.random_user_post(admin=False, disabled=False)
+    new_user = users_impl.impl_post_user(user)
+    random_pwd = tu.random_str(8, 10)
+
+    # Act
+    res = client.put(f'/api/core/users/{new_user.id}/password',
+                     json={'current_password': None, 'new_password': random_pwd}, headers=admin_headers)
+
+    # Assert
+    assert res.status_code == 200
+    auth_impl.login(new_user.username, random_pwd)
+
+    # Cleanup
+    users_impl.impl_delete_user_from_db(new_user.id)
+
+
+def test_update_other_admin_password_as_admin(client, admin_headers, admin_user):
+    # Setup
+    admin = tu_users.random_user_post(admin=True, disabled=False)
+    new_admin = users_impl.impl_post_user(admin)
+    random_pwd = tu.random_str(8, 10)
+
+    # Act
+    res = client.put(f'/api/core/users/{new_admin.id}/password',
+                     json={'current_password': None, 'new_password': random_pwd}, headers=admin_headers)
+
+    # Assert
+    assert res.status_code == 403
+    with pytest.raises(auth_exc.InvalidCredentialsException):
+        auth_impl.login(new_admin.username, random_pwd)
+    auth_impl.login(new_admin.username, admin.password)
+
+    # Cleanup
+    users_impl.impl_delete_user_from_db(new_admin.id)
+
