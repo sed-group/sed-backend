@@ -4,6 +4,8 @@ from fastapi import HTTPException, status, File
 from fastapi.logger import logger
 
 from sedbackend.apps.core.authentication.exceptions import UnauthorizedOperationException
+import sedbackend.apps.core.authentication.login as auth_login
+import sedbackend.apps.core.authentication.exceptions as exc_auth
 import sedbackend.apps.core.users.exceptions as exc
 import sedbackend.apps.core.users.models as models
 from sedbackend.apps.core.db import get_connection
@@ -121,4 +123,33 @@ def impl_delete_user_from_db(user_id: int) -> bool:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with ID {user_id} could not be found"
+        )
+
+
+def impl_update_user_password(current_user: models.User, user_id: int, current_password: str, new_password: str) -> bool:
+    try:
+        if current_user.id != user_id:
+            # Current user is not the targeted user
+            scopes = auth_login.parse_scopes_array(current_user.scopes)
+            if 'admin' not in scopes:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="User is not allowed to change the password of another user."
+                )
+        else:
+            auth_login.authenticate_user(current_user.username, current_password)
+
+        with get_connection() as connection:
+            storage.db_update_user_password(connection, user_id, new_password)
+            connection.commit()
+            return True
+    except exc.UserNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"No user with ID = {user_id} was found."
+        )
+    except exc_auth.InvalidCredentialsException:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Current password incorrect."
         )

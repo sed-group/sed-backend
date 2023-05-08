@@ -6,7 +6,6 @@ import sedbackend.apps.core.users.models as models
 from sedbackend.apps.core.authentication.utils import get_password_hash
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType
 from mysql.connector.errors import Error as SQLError
-from mysql.connector import errorcode
 
 USERS_COLUMNS_SAFE = ['id', 'username', 'email', 'full_name', 'scopes', 'disabled'] # Safe, as it does not contain passwords
 USERS_TABLE = 'users'
@@ -139,5 +138,18 @@ def db_delete_user(connection, user_id: int) -> bool:
 
     del_stmnt = MySQLStatementBuilder(connection)
     del_stmnt.delete(USERS_TABLE).where(where_stmnt, [user_id]).execute()
+
+    return True
+
+
+def db_update_user_password(connection, user_id: int, new_password: str) -> bool:
+    hashed_pwd = get_password_hash(new_password)
+    mysql_stmnt = MySQLStatementBuilder(connection)
+    res, rows = mysql_stmnt.update('users', 'password = ?', [hashed_pwd])\
+        .where("id = ?", [user_id])\
+        .execute(fetch_type=FetchType.FETCH_NONE, return_affected_rows=True, no_logs=True)
+
+    if rows == 0:
+        raise exc.UserNotFoundException
 
     return True

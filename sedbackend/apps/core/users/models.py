@@ -21,3 +21,9 @@ class UserPost(BaseModel):
     disabled: Optional[bool] = False
     password: str
     scopes: str = None
+
+
+class NewPasswordRequest(BaseModel):
+    user_id: int
+    current_password: str
+    new_password: str
