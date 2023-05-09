@@ -17,3 +17,7 @@ class InvalidNodeType(Exception):
 
 class NodeFailedToUpdateException(Exception):
     pass
+
+
+class InvalidFileTypeException(Exception):
+    pass
