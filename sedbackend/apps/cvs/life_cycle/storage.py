@@ -1,4 +1,3 @@
-import magic 
 from fastapi.logger import logger
 from fastapi.responses import FileResponse
 from mysql.connector.pooling import PooledMySQLConnection
@@ -9,6 +8,7 @@ from sedbackend.apps.cvs.vcs import storage as vcs_storage, exceptions as vcs_ex
 from mysql.connector import Error
 from sedbackend.apps.core.files import models as file_models
 from sedbackend.apps.core.files import implementation as file_impl
+import magic
 
 
 CVS_NODES_TABLE = 'cvs_nodes'
@@ -272,8 +272,9 @@ def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int,
     if file.extension != ".csv":
         raise exceptions.InvalidFileTypeException
     
-    mime = magic.from_buffer(open(file.file_object, "rb").read(2048), mime=True)
-    print(mime)
+    #mime = magic.from_buffer(open(file.file_object, "rb").read(2048), mime=True)
+    #print(mime)
+    #logger.debug(mime)
     #TODO 
     # * ensure that the file is what it says
     # * Make sure that all fields (all processes in vcs) in the file exists

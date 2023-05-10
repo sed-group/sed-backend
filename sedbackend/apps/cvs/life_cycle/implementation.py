@@ -6,6 +6,7 @@ from sedbackend.apps.core.db import get_connection
 from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.life_cycle import exceptions, storage, models
 from sedbackend.apps.cvs.project import exceptions as project_exceptions
+from sedbackend.apps.core.files import models as file_models
 
 
 def create_process_node(project_id: int, vcs_id: int, node: models.ProcessNodePost) -> models.ProcessNodeGet:
@@ -155,3 +156,18 @@ def update_bpmn(project_id: int, vcs_id: int, bpmn: models.BPMNGet) -> bool:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Project with id={project_id} is not a part of vcs with id={vcs_id}.',
         )
+
+def save_dsm_file(project_id: int, vcs_id: int, 
+                  file: file_models.StoredFilePost) -> bool:
+    try: 
+        with get_connection() as con:
+            result = storage.save_dsm_file(con, project_id, vcs_id, file)
+            con.commit()
+            return result
+    except exceptions.InvalidFileTypeException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Wrong filetype'
+        )
+    
+    

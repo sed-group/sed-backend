@@ -340,5 +340,5 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_dsm_files`
     PRIMARY KEY (`vcs_id`),
     FOREIGN KEY (`vcs_id`)
         REFERENCES `seddb`.`cvs_vcss`(`id`)
-        ON DELETE CASCADE,
+        ON DELETE CASCADE
 );
