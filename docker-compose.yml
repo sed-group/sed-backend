@@ -5,7 +5,7 @@ services:
     networks:
       - sedlab
     ports:
-      - "3001:3306"
+      - "3001:3006"
     build:
       context: .
       dockerfile: Dockerfile-mysql-server

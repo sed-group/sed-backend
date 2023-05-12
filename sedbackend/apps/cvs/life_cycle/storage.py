@@ -272,15 +272,29 @@ def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int,
     if file.extension != ".csv":
         raise exceptions.InvalidFileTypeException
     
-    #mime = magic.from_buffer(open(file.file_object, "rb").read(2048), mime=True)
-    #print(mime)
-    #logger.debug(mime)
+    with file.file_object as f:
+        f.seek(0)
+        tmp_file = f.read()
+        #TODO check file size
+        #TODO Check fields in file
+        mime = magic.from_buffer(tmp_file)
+        print(mime)
+        logger.debug(mime)
+        if mime != "CSV text": #TODO doesn't work with windows if we create the file in excel. 
+            raise exceptions.InvalidFileTypeException
+        
+        
+        f.seek(0)
+        
+        
+        stored_file = file_impl.impl_save_file(file)
     #TODO 
     # * ensure that the file is what it says
     # * Make sure that all fields (all processes in vcs) in the file exists
     # * Check file size
+    # * If file exists, then remove the previous file and replace it. 
 
-    stored_file = file_impl.impl_save_file(file)
+    
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement.insert(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS) \
