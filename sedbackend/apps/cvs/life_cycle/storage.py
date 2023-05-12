@@ -292,9 +292,9 @@ def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int,
 def get_dsm_file(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id: int) -> FileResponse:
 
     select_statement = MySQLStatementBuilder(db_connection)
-    file_res = select_statement.select(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS)\
+    file_res = select_statement.select(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS) \
         .where('vcs_id = %s', [vcs_id]) \
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
     
     file_path = file_impl.impl_get_file_path(file_res['file_id'], user_id)
     resp = FileResponse(

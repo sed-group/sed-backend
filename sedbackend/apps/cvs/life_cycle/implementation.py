@@ -1,5 +1,6 @@
 from fastapi import HTTPException
 from starlette import status
+from fastapi.responses import FileResponse
 
 from sedbackend.apps.core.authentication import exceptions as auth_ex
 from sedbackend.apps.core.db import get_connection
@@ -171,3 +172,14 @@ def save_dsm_file(project_id: int, vcs_id: int,
         )
     
     
+def get_dsm_file(project_id: int, vcs_id: int, user_id: int) -> FileResponse:
+    try:
+        with get_connection() as con:
+            res = storage.get_dsm_file(con, project_id, vcs_id, user_id)
+            con.commit()
+            return res
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Something wrong"
+        )

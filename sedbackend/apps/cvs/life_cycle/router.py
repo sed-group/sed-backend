@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 from fastapi.datastructures import UploadFile
+from fastapi.responses import FileResponse
 
 from sedbackend.apps.core.projects.dependencies import SubProjectAccessChecker
 from sedbackend.apps.core.projects.models import AccessLevel
@@ -71,3 +72,12 @@ async def update_bpmn(native_project_id: int, vcs_id: int, bpmn: models.BPMNGet)
 async def upload_dsm_file(native_project_id: int, vcs_id: int, file: UploadFile, user: User = Depends(get_current_active_user)) -> bool:
     model_file = file_models.StoredFilePost.import_fastapi_file(file, user.id)
     return implementation.save_dsm_file(native_project_id, vcs_id, model_file)
+
+@router.get(
+    '/project/{native_project_id}/vcs/{vcs_id}/get-dsm',
+    summary="Fetch DSM file",
+    response_class=FileResponse,
+    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
+)
+async def get_dsm_file(native_project_id: int, vcs_id: int, user: User = Depends(get_current_active_user)) -> FileResponse:
+    return implementation.get_dsm_file(native_project_id, vcs_id, user.id)
