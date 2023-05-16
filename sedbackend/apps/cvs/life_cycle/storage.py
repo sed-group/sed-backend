@@ -4,10 +4,11 @@ from mysql.connector.pooling import PooledMySQLConnection
 
 from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.cvs.life_cycle import exceptions, models
-from sedbackend.apps.cvs.vcs import storage as vcs_storage, exceptions as vcs_exceptions
+from sedbackend.apps.cvs.vcs import storage as vcs_storage, exceptions as vcs_exceptions, implementation as vcs_impl
 from mysql.connector import Error
 from sedbackend.apps.core.files import models as file_models
 from sedbackend.apps.core.files import implementation as file_impl
+import pandas as pd
 import magic
 
 
@@ -22,6 +23,8 @@ CVS_START_STOP_NODES_COLUMNS = CVS_NODES_COLUMNS + ['type']
 
 CVS_DSM_FILES_TABLE = 'cvs_dsm_files'
 CVS_DSM_FILES_COLUMNS = ['vcs_id', 'file_id']
+
+MAX_FILE_SIZE = 100 * 10**8 #100 MB
 
 # TODO error handling
 
@@ -283,15 +286,30 @@ def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int,
         if mime != "CSV text": #TODO doesn't work with windows if we create the file in excel. 
             raise exceptions.InvalidFileTypeException
         
+        if f.tell() > MAX_FILE_SIZE:
+            raise exceptions.TooLargeFileException
         
         f.seek(0)
+        dsm_file = pd.read_csv(f)
+        print(dsm_file)
+        print(dsm_file['processes'].values)
+        vcs_table = vcs_impl.get_vcs_table(project_id, vcs_id) #Question: Should we demand that it is in the exact same order
+                                                                # or is it enough that it exist in the vcs?
+        print(vcs_table)
         
+        vcs_processes = [row.iso_process.name if row.iso_process is not None else \
+                        row.subprocess.name for row in vcs_table]
         
+        for process in dsm_file['processes'].values:
+            if process not in vcs_processes:
+                raise exceptions.ProcessesDoesNotMatchVcsException
+        
+        f.seek(0)
         stored_file = file_impl.impl_save_file(file)
     #TODO 
-    # * ensure that the file is what it says
-    # * Make sure that all fields (all processes in vcs) in the file exists
-    # * Check file size
+    # * ensure that the file is what it says DONE
+    # * Make sure that all fields (all processes in vcs) in the file exists DONE ish
+    # * Check file size DONE
     # * If file exists, then remove the previous file and replace it. 
 
     

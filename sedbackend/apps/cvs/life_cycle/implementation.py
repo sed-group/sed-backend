@@ -167,8 +167,18 @@ def save_dsm_file(project_id: int, vcs_id: int,
             return result
     except exceptions.InvalidFileTypeException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail='Wrong filetype'
+        )
+    except exceptions.TooLargeFileException:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail='File too large'
+        )
+    except exceptions.ProcessesDoesNotMatchVcsException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Processes in DSM does not match processes in VCS'
         )
     
     

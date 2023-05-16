@@ -21,3 +21,9 @@ class NodeFailedToUpdateException(Exception):
 
 class InvalidFileTypeException(Exception):
     pass
+
+class TooLargeFileException(Exception):
+    pass
+
+class ProcessesDoesNotMatchVcsException(Exception):
+    pass
