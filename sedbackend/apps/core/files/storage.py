@@ -61,12 +61,12 @@ def db_get_file_entry(con: PooledMySQLConnection, file_id: int, current_user_id:
         cursor.execute(query, values)
 
         # Handle results
-        rs = cursor.fetchall()
-        for res in rs:
-            res_dict = dict(zip(cursor.column_names, res))
+        results = cursor.fetchone()
 
-    if res_dict is None:
-        raise exc.FileNotFoundException
+        if results is None:
+            raise exc.FileNotFoundException
+
+        res_dict = dict(zip(cursor.column_names, results))
 
     stored_file = models.StoredFileEntry(**res_dict)
     return stored_file
@@ -95,3 +95,15 @@ def db_put_file_temp(con: PooledMySQLConnection, file_id: int, temp: bool, curre
 def db_put_filename(con: PooledMySQLConnection, file_id: int, filename_new: str, current_user_id: int) \
         -> models.StoredFileEntry:
     pass
+
+
+def db_get_file_mapped_subproject_id(con: PooledMySQLConnection, file_id) -> int:
+    select_stmnt = MySQLStatementBuilder(con)
+    res = select_stmnt.select(FILES_TO_SUBPROJECTS_MAP_TABLE, ['subproject_id'])\
+        .where('file_id=?', [file_id])\
+        .execute(dictionary=True, fetch_type=FetchType.FETCH_ONE)
+
+    if res is None:
+        raise exc.SubprojectMappingNotFound('Mapping could not be found.')
+
+    return res['subproject_id']
