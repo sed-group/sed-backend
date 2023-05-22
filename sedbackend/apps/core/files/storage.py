@@ -10,7 +10,9 @@ from sedbackend.libs.mysqlutils import MySQLStatementBuilder, exclude_cols, Fetc
 
 FILES_RELATIVE_UPLOAD_DIR = f'{os.path.abspath(os.sep)}sed_lab/uploaded_files/'
 FILES_TABLE = 'files'
+FILES_TO_SUBPROJECT_MAP_TABLE = 'files_subprojects_map'
 FILES_COLUMNS = ['id', 'temp', 'uuid', 'filename', 'insert_timestamp', 'directory', 'owner_id', 'extension']
+FILES_TO_SUBPROJECT_MAP_COLUMNS = ['id', 'file_id', 'subproject_id']
 
 
 def db_save_file(con: PooledMySQLConnection, file: models.StoredFilePost) -> models.StoredFileEntry:
@@ -27,6 +29,11 @@ def db_save_file(con: PooledMySQLConnection, file: models.StoredFilePost) -> mod
         .execute()
 
     file_id = insert_stmnt.last_insert_id
+
+    insert_mapping_stmnt = MySQLStatementBuilder(con)
+    insert_mapping_stmnt.insert(FILES_TO_SUBPROJECT_MAP_TABLE, ['file_id', 'subproject_id'])\
+        .set_values([file_id, file.subproject_id])\
+        .execute()
 
     return db_get_file_entry(con, file_id, file.owner_id)
 
