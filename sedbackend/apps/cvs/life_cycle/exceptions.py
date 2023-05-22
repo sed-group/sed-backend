@@ -27,3 +27,6 @@ class TooLargeFileException(Exception):
 
 class ProcessesDoesNotMatchVcsException(Exception):
     pass
+
+class FileDeletionFailedException(Exception):
+    pass

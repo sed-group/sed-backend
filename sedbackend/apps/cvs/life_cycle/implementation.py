@@ -193,3 +193,16 @@ def get_dsm_file(project_id: int, vcs_id: int, user_id: int) -> FileResponse:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Something wrong"
         )
+
+
+def delete_dsm_file(project_id: int, vcs_id: int, user_id: int) -> bool:
+    try:
+        with get_connection() as con:
+            res = storage.delete_dsm_file(con, project_id, vcs_id, user_id)
+            con.commit()
+            return res
+    except exceptions.FileDeletionFailedException:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'"File could not be deleted'
+        )

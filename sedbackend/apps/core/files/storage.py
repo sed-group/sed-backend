@@ -12,7 +12,8 @@ FILES_CHOPS_TEMP_DIR = f'{os.path.abspath(os.sep)}/home/chops/'
 FILES_RELATIVE_UPLOAD_DIR = f'{os.path.abspath(os.sep)}sed_lab/uploaded_files/'
 FILES_RELATIVE_UPLOAD_DIR = FILES_CHOPS_TEMP_DIR + "/sed_lab/uploaded_files/"
 FILES_TABLE = 'files'
-FILES_COLUMNS = ['id', 'temp', 'uuid', 'filename', 'insert_timestamp', 'directory', 'owner_id', 'extension']
+FILES_COLUMNS = ['id', 'temp', 'uuid', 'filename',
+                 'insert_timestamp', 'directory', 'owner_id', 'extension']
 
 
 def db_save_file(con: PooledMySQLConnection, file: models.StoredFilePost) -> models.StoredFileEntry:
@@ -34,6 +35,20 @@ def db_save_file(con: PooledMySQLConnection, file: models.StoredFilePost) -> mod
 
 
 def db_delete_file(con: PooledMySQLConnection, file_id: int, current_user_id: int) -> bool:
+    stored_file_path = db_get_file_path(con, file_id, current_user_id)
+    
+    if stored_file_path.owner_id != current_user_id: #perhaps check admin scopes
+        pass #Raise permissions exception
+    try:
+        os.remove(stored_file_path.path)
+        delete_stmnt = MySQLStatementBuilder(con)
+        delete_stmnt.delete(FILES_TABLE)\
+            .where('id=?', [file_id])\
+            .execute(fetch_type=FetchType.FETCH_NONE)
+            
+    except Exception as e:
+        raise exc.FileNotDeletedException
+
     return True
 
 
@@ -53,7 +68,7 @@ def db_get_file_entry(con: PooledMySQLConnection, file_id: int, current_user_id:
 def db_get_file_path(con: PooledMySQLConnection, file_id: int, current_user_id: int) -> models.StoredFilePath:
     select_stmnt = MySQLStatementBuilder(con)
     res = select_stmnt\
-        .select(FILES_TABLE, ['filename', 'uuid', 'directory', 'extension'])\
+        .select(FILES_TABLE, ['filename', 'uuid', 'directory', 'owner_id', 'extension'])\
         .where('id=?', [file_id])\
         .execute(dictionary=True, fetch_type=FetchType.FETCH_ONE)
 
@@ -61,7 +76,8 @@ def db_get_file_path(con: PooledMySQLConnection, file_id: int, current_user_id: 
         raise exc.FileNotFoundException('File not found in DB')
 
     path = res['directory'] + res['uuid']
-    stored_path = models.StoredFilePath(id=file_id, filename=res['filename'], path=path, extension=res['extension'])
+    stored_path = models.StoredFilePath(
+        id=file_id, filename=res['filename'], path=path, owner_id=res['owner_id'], extension=res['extension'])
     return stored_path
 
 

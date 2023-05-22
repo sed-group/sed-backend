@@ -39,6 +39,11 @@ def impl_delete_file(file_id: int, current_user_id: int) -> bool:
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"User does not have access to a file with id = {file_id}"
         )
+    except exc.FileNotDeletedException:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"File could not be deleted"
+        )
 
 
 def impl_get_file_path(file_id: int, current_user_id: int) -> models.StoredFilePath:

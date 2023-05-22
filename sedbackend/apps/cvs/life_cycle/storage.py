@@ -278,12 +278,10 @@ def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int,
     with file.file_object as f:
         f.seek(0)
         tmp_file = f.read()
-        #TODO check file size
-        #TODO Check fields in file
         mime = magic.from_buffer(tmp_file)
         print(mime)
         logger.debug(mime)
-        if mime != "CSV text": #TODO doesn't work with windows if we create the file in excel. 
+        if mime != "CSV text" and mime != "ASCII text": #TODO doesn't work with windows if we create the file in excel. 
             raise exceptions.InvalidFileTypeException
         
         if f.tell() > MAX_FILE_SIZE:
@@ -336,3 +334,22 @@ def get_dsm_file(db_connection: PooledMySQLConnection, project_id: int, vcs_id: 
 
     return resp
 
+
+def delete_dsm_file(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id: int) -> bool:
+    select_statement = MySQLStatementBuilder(db_connection)
+    file_res = select_statement.select(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS) \
+        .where('vcs_id = %s', [vcs_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+
+    file_impl.impl_delete_file(file_res['file_id'], user_id)
+    
+    delete_stmt = MySQLStatementBuilder(db_connection)
+    _, rows = delete_stmt.delete(CVS_DSM_FILES_TABLE) \
+        .where('vcs_id = %s', [vcs_id]) \
+        .execute(return_affected_rows=True)
+    
+    if len(rows) == 0:
+        raise exceptions.FileDeletionFailedException
+    
+    return True
