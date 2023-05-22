@@ -25,4 +25,4 @@ class FileAccessChecker:
 
         # Run subproject access check
         subproject = impl_get_subproject_by_id(subproject_id)
-        return SubProjectAccessChecker.check_user_subproject_access(subproject, AccessLevel.list_can_read(), user_id)
+        return SubProjectAccessChecker.check_user_subproject_access(subproject, self.access_levels, user_id)
