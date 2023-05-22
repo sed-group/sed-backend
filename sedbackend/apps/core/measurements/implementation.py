@@ -119,9 +119,9 @@ def impl_post_measurement_result(measurement_id: int, mr: models.MeasurementResu
         return res
 
 
-def impl_post_upload_set(file, current_user_id: int, csv_delimiter: Optional[str] = None) -> List:
+def impl_post_upload_set(file, current_user_id: int, subproject_id: int, csv_delimiter: Optional[str] = None) -> List:
     try:
-        stored_file_post = models_files.StoredFilePost.import_fastapi_file(file, current_user_id)
+        stored_file_post = models_files.StoredFilePost.import_fastapi_file(file, current_user_id, subproject_id)
         with get_connection() as con:
             file_entry = storage_files.db_save_file(con, stored_file_post)
             file_path = storage_files.db_get_file_path(con, file_entry.id, current_user_id)

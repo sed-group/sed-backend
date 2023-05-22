@@ -1,4 +1,5 @@
 from .statements import *
+from .exceptions import InvalidStatementConfiguration
 from typing import Any, List, Optional, Tuple
 from fastapi.logger import logger
 from enum import Enum
@@ -126,6 +127,10 @@ class MySQLStatementBuilder:
 
         if fetch_type is None:
             fetch_type = FetchType.FETCH_NONE
+
+        if fetch_type is FetchType.FETCH_NONE and dictionary is True:
+            logger.error('FetchType cannot be None if dictionary is set to True.')
+            raise InvalidStatementConfiguration('FetchType cannot be None if dictionary is set to True.')
 
         if no_logs is False:
             logger.debug(f'Executing query "{self.query}" with values "{self.values}". fetch_type={fetch_type}')

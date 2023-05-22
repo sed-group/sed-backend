@@ -3,7 +3,7 @@ from typing import List
 from fastapi import HTTPException, Request, status
 from fastapi.logger import logger
 
-from sedbackend.apps.core.projects.models import AccessLevel
+from sedbackend.apps.core.projects.models import AccessLevel, SubProject
 from sedbackend.apps.core.projects.implementation import impl_get_project, impl_get_subproject_native
 
 
@@ -53,18 +53,23 @@ class SubProjectAccessChecker:
         # Get subproject
         subproject = impl_get_subproject_native(self.application_sid, native_project_id)
 
+        return SubProjectAccessChecker.check_user_subproject_access(subproject, self.access_levels, user_id)
+
+    @staticmethod
+    def check_user_subproject_access(subproject: SubProject, access_levels: List[AccessLevel], user_id: int):
         if subproject.project_id is not None:
             # Get project
             project = impl_get_project(subproject.project_id)   # <-- This can throw
             # Check user access level in that project
             access = project.participants_access[user_id]
-            if access in self.access_levels:
+            if access in access_levels:
                 logger.debug(f"Yes, user {user_id} has access level {access}")
                 return True
         else:
             # Fallback solution: Check if user is the owner/creator of the subproject.
-            if request.state.user_id == subproject.owner_id:
-                logger.debug("User is owner of subproject.")
+            if user_id == subproject.owner_id:
+                logger.debug(f"User with id {user_id} is the owner of subproject with id {subproject.id} "
+                             f"(owner_id = {subproject.owner_id}).")
                 return True
 
         logger.debug(f"No, user {user_id} does not have the minimum required access level")
@@ -72,4 +77,5 @@ class SubProjectAccessChecker:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User does not have the necessary access level",
         )
+
 

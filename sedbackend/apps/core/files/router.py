@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
 
 import sedbackend.apps.core.files.implementation as impl
+from sedbackend.apps.core.files.dependencies import FileAccessChecker
 from sedbackend.apps.core.authentication.utils import get_current_active_user
+from sedbackend.apps.core.projects.models import AccessLevel
 from sedbackend.apps.core.users.models import User
 
 
@@ -10,8 +12,10 @@ router = APIRouter()
 
 
 @router.get("/{file_id}/download",
-             summary="Download file",
-             response_class=FileResponse)
+            summary="Download file",
+            response_class=FileResponse,
+            dependencies=[Depends(FileAccessChecker(AccessLevel.list_can_read()))]
+            )
 async def get_file(file_id: int, current_user: User = Depends(get_current_active_user)):
     """
     Download an uploaded file
