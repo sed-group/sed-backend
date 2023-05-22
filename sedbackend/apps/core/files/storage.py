@@ -31,6 +31,7 @@ def db_save_file(con: PooledMySQLConnection, file: models.StoredFilePost) -> mod
 
     file_id = insert_stmnt.last_insert_id
 
+    # Store mapping between file id and subproject id in database
     insert_mapping_stmnt = MySQLStatementBuilder(con)
     insert_mapping_stmnt.insert(FILES_TO_SUBPROJECTS_MAP_TABLE, ['file_id', 'subproject_id'])\
         .set_values([file_id, file.subproject_id])\
