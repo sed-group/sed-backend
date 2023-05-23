@@ -3,7 +3,9 @@ from fastapi.datastructures import UploadFile
 from fastapi.responses import FileResponse
 
 from sedbackend.apps.core.projects.dependencies import SubProjectAccessChecker
+from sedbackend.apps.core.files.dependencies import FileAccessChecker
 from sedbackend.apps.core.projects.models import AccessLevel
+from sedbackend.apps.core.projects.implementation import impl_get_subproject_native
 from sedbackend.apps.cvs.life_cycle import models, implementation
 from sedbackend.apps.core.files import models as file_models
 from sedbackend.apps.core.users.models import User
@@ -70,14 +72,16 @@ async def update_bpmn(native_project_id: int, vcs_id: int, bpmn: models.BPMNGet)
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
 async def upload_dsm_file(native_project_id: int, vcs_id: int, file: UploadFile, user: User = Depends(get_current_active_user)) -> bool:
-    model_file = file_models.StoredFilePost.import_fastapi_file(file, user.id)
+    subproject = impl_get_subproject_native(CVS_APP_SID, native_project_id)
+    print(subproject)
+    model_file = file_models.StoredFilePost.import_fastapi_file(file, user.id, subproject.id)
     return implementation.save_dsm_file(native_project_id, vcs_id, model_file)
 
 @router.get(
     '/project/{native_project_id}/vcs/{vcs_id}/get-dsm',
     summary="Fetch DSM file",
     response_class=FileResponse,
-    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
+    dependencies=[Depends(FileAccessChecker(AccessLevel.list_can_read()))]
 )
 async def get_dsm_file(native_project_id: int, vcs_id: int, user: User = Depends(get_current_active_user)) -> FileResponse:
     return implementation.get_dsm_file(native_project_id, vcs_id, user.id)

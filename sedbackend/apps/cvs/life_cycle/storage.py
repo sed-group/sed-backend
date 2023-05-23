@@ -326,6 +326,7 @@ def get_dsm_file(db_connection: PooledMySQLConnection, project_id: int, vcs_id: 
         .where('vcs_id = %s', [vcs_id]) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
     
+    print(file_res)
     file_path = file_impl.impl_get_file_path(file_res['file_id'], user_id)
     resp = FileResponse(
         path=file_path.path,
