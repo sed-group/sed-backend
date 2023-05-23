@@ -5,7 +5,7 @@ from mysql.connector.pooling import PooledMySQLConnection
 import sedbackend.apps.core.users.exceptions as exc
 import sedbackend.apps.core.users.models as models
 from sedbackend.apps.core.authentication.utils import get_password_hash
-from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType
+from mysqlsb import MySQLStatementBuilder, FetchType
 from mysql.connector.errors import Error as SQLError
 
 USERS_COLUMNS_SAFE = ['id', 'username', 'email', 'full_name', 'scopes', 'disabled'] # Safe, as it does not contain passwords

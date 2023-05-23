@@ -8,7 +8,7 @@ from sedbackend.apps.cvs.vcs.storage import get_vcs_row
 from sedbackend.apps.cvs.project.implementation import get_cvs_project
 from sedbackend.apps.cvs.vcs.implementation import get_vcs
 from sedbackend.apps.cvs.link_design_lifecycle import models, exceptions
-from sedbackend.libs.mysqlutils.builder import FetchType, MySQLStatementBuilder
+from mysqlsb import FetchType, MySQLStatementBuilder
 from sedbackend.apps.cvs.market_input import implementation as market_impl
 from sedbackend.apps.cvs.design import implementation as design_impl
 

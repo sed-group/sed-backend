@@ -1,2 +1,0 @@
-class InvalidStatementConfiguration(Exception):
-    pass
