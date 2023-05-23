@@ -14,7 +14,7 @@ import os
 from typing import List
 from sedbackend.apps.cvs.design.implementation import get_design
 
-from sedbackend.libs.mysqlutils.builder import FetchType, MySQLStatementBuilder
+from mysqlsb import FetchType, MySQLStatementBuilder
 
 from sedbackend.libs.formula_parser.parser import NumericStringParser
 from sedbackend.libs.formula_parser import expressions as expr

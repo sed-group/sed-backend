@@ -1,7 +1,7 @@
 from typing import List, Optional
 
 from fastapi.logger import logger
-from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType
+from mysqlsb import MySQLStatementBuilder, FetchType
 from mysql.connector.pooling import PooledMySQLConnection
 
 from sedbackend.apps.core.applications.state import get_application

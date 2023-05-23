@@ -3,7 +3,7 @@ from typing import List
 from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
 
-from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
+from mysqlsb import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.cvs.market_input import models, exceptions
 from sedbackend.apps.cvs.vcs import storage as vcs_storage, implementation as vcs_impl
 from sedbackend.apps.cvs.project import exceptions as project_exceptions
