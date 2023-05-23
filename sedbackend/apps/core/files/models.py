@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 from datetime import datetime
 import os
 from tempfile import SpooledTemporaryFile
@@ -12,15 +12,17 @@ class StoredFilePost(BaseModel):
     owner_id: int
     extension: str
     file_object: Any
+    subproject_id: int
 
     @staticmethod
-    def import_fastapi_file(file: UploadFile, current_user_id: int):
+    def import_fastapi_file(file: UploadFile, current_user_id: int, subproject_id: int):
         filename = file.filename
         extension = os.path.splitext(file.filename)[1]
         return StoredFilePost(filename=filename,
                               extension=extension,
                               owner_id=current_user_id,
-                              file_object=file.file)
+                              file_object=file.file,
+                              subproject_id=subproject_id)
 
 
 class StoredFileEntry(BaseModel):
@@ -30,6 +32,7 @@ class StoredFileEntry(BaseModel):
     insert_timestamp: datetime
     owner_id: int
     extension: str
+    subproject_id: int
 
 
 class StoredFile(BaseModel):

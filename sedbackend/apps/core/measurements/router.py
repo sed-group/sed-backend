@@ -30,9 +30,9 @@ async def get_measurement_sets(subproject_id: Optional[int] = None):
              response_model=List[str],
              description="Upload a measurement set using a CSV or Excel file. Leaving csv_delimiter as None will "
                          "result in the value being inferred automatically.")
-async def post_upload_set(file: UploadFile = File(...), current_user: User = Depends(get_current_active_user),
+async def post_upload_set(subproject_id: int, file: UploadFile = File(...), current_user: User = Depends(get_current_active_user),
                           csv_delimiter: Optional[str] = None):
-    return impl.impl_post_upload_set(file, current_user.id, csv_delimiter=csv_delimiter)
+    return impl.impl_post_upload_set(file, current_user.id, subproject_id, csv_delimiter=csv_delimiter)
 
 
 @router.get("/sets/{measurement_set_id}",

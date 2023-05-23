@@ -1,7 +1,7 @@
 from typing import List, Optional
 
 from fastapi.logger import logger
-from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType
+from mysqlsb import MySQLStatementBuilder, FetchType
 from mysql.connector.pooling import PooledMySQLConnection
 
 from sedbackend.apps.core.applications.state import get_application
@@ -225,13 +225,27 @@ def db_get_subprojects(connection: PooledMySQLConnection, project_id: int) \
 
 
 def db_get_subproject(connection, project_id, subproject_id) -> models.SubProject:
-
     db_get_project_exists(connection, project_id) # Raises exception if project does not exist
 
     select_stmnt = MySQLStatementBuilder(connection)
     res = select_stmnt\
         .select(SUBPROJECTS_TABLE, SUBPROJECT_COLUMNS)\
         .where("id = %s AND project_id = %s", [subproject_id, project_id])\
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if res is None:
+        raise exc.SubProjectNotFoundException
+
+    sub_project = models.SubProject(**res)
+
+    return sub_project
+
+
+def db_get_subproject_with_id(connection, subproject_id) -> models.SubProject:
+    select_stmnt = MySQLStatementBuilder(connection)
+    res = select_stmnt\
+        .select(SUBPROJECTS_TABLE, SUBPROJECT_COLUMNS)\
+        .where("id = %s", [subproject_id])\
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if res is None:

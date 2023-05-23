@@ -2,7 +2,7 @@ from fastapi.logger import logger
 from fastapi.responses import FileResponse
 from mysql.connector.pooling import PooledMySQLConnection
 
-from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
+from mysqlsb import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.cvs.life_cycle import exceptions, models
 from sedbackend.apps.cvs.vcs import storage as vcs_storage, exceptions as vcs_exceptions, implementation as vcs_impl
 from mysql.connector import Error

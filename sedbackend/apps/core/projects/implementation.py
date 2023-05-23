@@ -158,12 +158,23 @@ def impl_get_subproject_native(application_sid: str, native_project_id: int) -> 
     except exc.SubProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Sub project not found"
+            detail="Sub-project not found."
         )
     except ApplicationNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No such application"
+            detail="No such application."
+        )
+
+
+def impl_get_subproject_by_id(subproject_id: int) -> models.SubProject:
+    try:
+        with get_connection() as con:
+            return storage.db_get_subproject_with_id(con, subproject_id)
+    except exc.SubProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sub-project not found."
         )
 
 

@@ -6,7 +6,7 @@ from sedbackend.apps.cvs.project.exceptions import CVSProjectNotFoundException, 
 from sedbackend.apps.cvs.vcs.models import ValueDriver
 from sedbackend.apps.cvs.vcs import storage as vcs_storage
 from sedbackend.apps.cvs.vcs.storage import CVS_VALUE_DRIVER_COLUMNS, CVS_VALUE_DRIVER_TABLE, populate_value_driver
-from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType, Sort
+from mysqlsb import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.cvs.design import models, exceptions
 
 DESIGN_GROUPS_TABLE = 'cvs_design_groups'

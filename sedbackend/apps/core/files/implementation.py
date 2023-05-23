@@ -107,3 +107,15 @@ def impl_get_file(file_id: int, current_user_id: int):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User does not have access to requested file."
         )
+
+
+def impl_get_file_mapped_subproject_id(file_id):
+    try:
+        with get_connection() as con:
+            subproject_id = storage.db_get_file_mapped_subproject_id(con, file_id)
+            return subproject_id
+    except exc.SubprojectMappingNotFound:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"No subproject mapping found for file with id = {file_id}"
+        )

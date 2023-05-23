@@ -1,5 +1,5 @@
 from datetime import timedelta, datetime
-from typing import Optional
+from typing import Optional, List
 
 from jose import jwt
 from passlib.context import CryptContext
@@ -84,6 +84,6 @@ def parse_user_scopes(user):
     return scopes
 
 
-def parse_scopes_array(scopes_array):
+def parse_scopes_array(scopes_array: str) -> List[str]:
     scopes = scopes_array.split(';')
     return scopes
