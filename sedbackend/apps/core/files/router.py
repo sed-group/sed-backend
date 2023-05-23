@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Security
 from fastapi.responses import FileResponse
 
 import sedbackend.apps.core.files.implementation as impl

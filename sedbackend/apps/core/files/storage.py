@@ -10,7 +10,9 @@ import sedbackend.apps.core.files.exceptions as exc
 import sedbackend.apps.core.files.implementation as impl
 from mysqlsb import MySQLStatementBuilder, exclude_cols, FetchType
 
+FILES_CHOPS_TEMP_DIR = f'{os.path.abspath(os.sep)}/home/chops/'
 FILES_RELATIVE_UPLOAD_DIR = f'{os.path.abspath(os.sep)}sed_lab/uploaded_files/'
+FILES_RELATIVE_UPLOAD_DIR = FILES_CHOPS_TEMP_DIR + "/sed_lab/uploaded_files/"
 FILES_TABLE = 'files'
 FILES_TO_SUBPROJECTS_MAP_TABLE = 'files_subprojects_map'
 FILES_COLUMNS = ['id', 'temp', 'uuid', 'filename', 'insert_timestamp', 'directory', 'owner_id', 'extension']
@@ -88,7 +90,7 @@ def db_get_file_entry(con: PooledMySQLConnection, file_id: int, current_user_id:
 def db_get_file_path(con: PooledMySQLConnection, file_id: int, current_user_id: int) -> models.StoredFilePath:
     select_stmnt = MySQLStatementBuilder(con)
     res = select_stmnt\
-        .select(FILES_TABLE, ['filename', 'uuid', 'directory', 'extension'])\
+        .select(FILES_TABLE, ['filename', 'uuid', 'directory', 'owner_id', 'extension'])\
         .where('id=?', [file_id])\
         .execute(dictionary=True, fetch_type=FetchType.FETCH_ONE)
 
@@ -96,7 +98,8 @@ def db_get_file_path(con: PooledMySQLConnection, file_id: int, current_user_id: 
         raise exc.FileNotFoundException('File not found in DB')
 
     path = res['directory'] + res['uuid']
-    stored_path = models.StoredFilePath(id=file_id, filename=res['filename'], path=path, extension=res['extension'])
+    stored_path = models.StoredFilePath(
+        id=file_id, filename=res['filename'], path=path, owner_id=res['owner_id'], extension=res['extension'])
     return stored_path
 
 

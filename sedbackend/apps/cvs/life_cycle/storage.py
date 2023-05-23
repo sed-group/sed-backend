@@ -1,10 +1,16 @@
 from fastapi.logger import logger
+from fastapi.responses import FileResponse
 from mysql.connector.pooling import PooledMySQLConnection
 
 from mysqlsb import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.cvs.life_cycle import exceptions, models
-from sedbackend.apps.cvs.vcs import storage as vcs_storage, exceptions as vcs_exceptions
+from sedbackend.apps.cvs.vcs import storage as vcs_storage, exceptions as vcs_exceptions, implementation as vcs_impl
 from mysql.connector import Error
+from sedbackend.apps.core.files import models as file_models
+from sedbackend.apps.core.files import implementation as file_impl
+import pandas as pd
+import magic
+
 
 CVS_NODES_TABLE = 'cvs_nodes'
 CVS_NODES_COLUMNS = ['cvs_nodes.id', 'vcs', 'from', 'to', 'pos_x', 'pos_y']
@@ -15,6 +21,10 @@ CVS_PROCESS_NODES_COLUMNS = CVS_NODES_COLUMNS + ['vcs_row']
 CVS_START_STOP_NODES_TABLE = 'cvs_start_stop_nodes'
 CVS_START_STOP_NODES_COLUMNS = CVS_NODES_COLUMNS + ['type']
 
+CVS_DSM_FILES_TABLE = 'cvs_dsm_files'
+CVS_DSM_FILES_COLUMNS = ['vcs_id', 'file_id']
+
+MAX_FILE_SIZE = 100 * 10**8 #100 MB
 
 # TODO error handling
 
@@ -256,4 +266,90 @@ def update_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: i
         )
         update_node(db_connection, project_id, node.id, updated_node)
 
+    return True
+
+
+def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int, 
+                  vcs_id: int, file: file_models.StoredFilePost) -> bool:
+    
+    if file.extension != ".csv":
+        raise exceptions.InvalidFileTypeException
+    
+    with file.file_object as f:
+        f.seek(0)
+        tmp_file = f.read()
+        mime = magic.from_buffer(tmp_file)
+        print(mime)
+        logger.debug(mime)
+        if mime != "CSV text" and mime != "ASCII text": #TODO doesn't work with windows if we create the file in excel. 
+            raise exceptions.InvalidFileTypeException
+        
+        if f.tell() > MAX_FILE_SIZE:
+            raise exceptions.TooLargeFileException
+        
+        f.seek(0)
+        dsm_file = pd.read_csv(f)
+        print(dsm_file)
+        print(dsm_file['processes'].values)
+        vcs_table = vcs_impl.get_vcs_table(project_id, vcs_id) #Question: Should we demand that it is in the exact same order
+                                                                # or is it enough that it exist in the vcs?
+        print(vcs_table)
+        
+        vcs_processes = [row.iso_process.name if row.iso_process is not None else \
+                        row.subprocess.name for row in vcs_table]
+        
+        for process in dsm_file['processes'].values:
+            if process not in vcs_processes:
+                raise exceptions.ProcessesDoesNotMatchVcsException
+        
+        f.seek(0)
+        stored_file = file_impl.impl_save_file(file)
+    #TODO 
+    # * ensure that the file is what it says DONE
+    # * Make sure that all fields (all processes in vcs) in the file exists DONE ish
+    # * Check file size DONE
+    # * If file exists, then remove the previous file and replace it. 
+
+    
+
+    insert_statement = MySQLStatementBuilder(db_connection)
+    insert_statement.insert(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS) \
+        .set_values([vcs_id, stored_file.id])\
+        .execute(fetch_type=FetchType.FETCH_NONE)
+    
+    return True
+
+def get_dsm_file(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id: int) -> FileResponse:
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    file_res = select_statement.select(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS) \
+        .where('vcs_id = %s', [vcs_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+    
+    file_path = file_impl.impl_get_file_path(file_res['file_id'], user_id)
+    resp = FileResponse(
+        path=file_path.path,
+        filename=file_path.filename
+    )
+
+    return resp
+
+
+def delete_dsm_file(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id: int) -> bool:
+    select_statement = MySQLStatementBuilder(db_connection)
+    file_res = select_statement.select(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS) \
+        .where('vcs_id = %s', [vcs_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+
+    file_impl.impl_delete_file(file_res['file_id'], user_id)
+    
+    delete_stmt = MySQLStatementBuilder(db_connection)
+    _, rows = delete_stmt.delete(CVS_DSM_FILES_TABLE) \
+        .where('vcs_id = %s', [vcs_id]) \
+        .execute(return_affected_rows=True)
+    
+    if len(rows) == 0:
+        raise exceptions.FileDeletionFailedException
+    
     return True
