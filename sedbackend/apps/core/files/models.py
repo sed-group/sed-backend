@@ -47,7 +47,6 @@ class StoredFilePath(BaseModel):
     id: int
     filename: str
     path: str
-    owner_id: int
     extension: str
 
 
