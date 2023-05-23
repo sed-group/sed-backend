@@ -7,6 +7,7 @@ from fastapi.logger import logger
 
 import sedbackend.apps.core.files.models as models
 import sedbackend.apps.core.files.exceptions as exc
+import sedbackend.apps.core.files.implementation as impl
 from mysqlsb import MySQLStatementBuilder, exclude_cols, FetchType
 
 FILES_RELATIVE_UPLOAD_DIR = f'{os.path.abspath(os.sep)}sed_lab/uploaded_files/'
@@ -41,6 +42,18 @@ def db_save_file(con: PooledMySQLConnection, file: models.StoredFilePost) -> mod
 
 
 def db_delete_file(con: PooledMySQLConnection, file_id: int, current_user_id: int) -> bool:
+    stored_file_path = impl.impl_get_file_path(file_id, current_user_id)
+    
+    try:
+        os.remove(stored_file_path.path)
+        delete_stmnt = MySQLStatementBuilder(con)
+        delete_stmnt.delete(FILES_TABLE) \
+            .where('id=?', [file_id]) \
+            .execute(fetch_type=FetchType.FETCH_NONE)
+            
+    except Exception:
+        raise exc.FileNotDeletedException
+
     return True
 
 

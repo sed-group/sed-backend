@@ -12,3 +12,7 @@ class FileParsingException(Exception):
 
 class SubprojectMappingNotFound(Exception):
     pass
+
+
+class FileNotDeletedException(Exception):
+    pass
