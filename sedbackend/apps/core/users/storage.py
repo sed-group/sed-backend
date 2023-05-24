@@ -1,4 +1,6 @@
 from typing import List
+
+import mysqlsb.exceptions
 from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
 
@@ -6,6 +8,7 @@ import sedbackend.apps.core.users.exceptions as exc
 import sedbackend.apps.core.users.models as models
 from sedbackend.apps.core.authentication.utils import get_password_hash
 from mysqlsb import MySQLStatementBuilder, FetchType, Sort
+from mysqlsb.utils import validate_order_request
 from mysql.connector.errors import Error as SQLError
 
 USERS_COLUMNS_SAFE = ['id', 'username', 'email', 'full_name', 'scopes', 'disabled'] # Safe, as it does not contain passwords
@@ -46,7 +49,8 @@ def db_get_user_safe_with_id(connection: PooledMySQLConnection, user_id: int) ->
     return user
 
 
-def db_get_user_list(connection: PooledMySQLConnection, segment_length: int, index: int) -> List[models.User]:
+def db_get_user_list(connection: PooledMySQLConnection, segment_length: int, index: int,
+                     order_by: str = 'username', order_direction: str = 'asc') -> List[models.User]:
     try:
         int(segment_length)
         int(index)
@@ -57,10 +61,17 @@ def db_get_user_list(connection: PooledMySQLConnection, segment_length: int, ind
     except ValueError:
         raise TypeError
 
+    try:
+        # Order by is not a prepared statement, so we need to validate it for security
+        (order_by, direction) = validate_order_request(order_by, USERS_COLUMNS_SAFE, order_direction)
+    except mysqlsb.exceptions.OrderValueException as err:
+        raise ValueError(str(err))
+
+    # Build and run statement
     mysql_statement = MySQLStatementBuilder(connection)
     rs = mysql_statement\
         .select(USERS_TABLE, USERS_COLUMNS_SAFE)\
-        .order_by(['username'], order=Sort.ASCENDING)\
+        .order_by([order_by], order=direction)\
         .limit(segment_length)\
         .offset(segment_length * index)\
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
@@ -172,9 +183,15 @@ def db_update_user_details(connection: PooledMySQLConnection, user_id: int,
 
 
 def db_search_users(connection: PooledMySQLConnection, username_search_str: str, full_name_search_str: str,
-                    limit: int = 100) -> List[models.User]:
+                    limit: int = 100, order_by: str = 'username', order_direction: str = 'asc') -> List[models.User]:
 
     users = []
+
+    try:
+        # Order by is not a prepared statement, so we need to validate it for security
+        (order_by, direction) = validate_order_request(order_by, USERS_COLUMNS_SAFE, order_direction)
+    except mysqlsb.exceptions.OrderValueException as err:
+        raise ValueError(str(err))
 
     username_search_stmnt = "(`username` rlike ?)"
     full_name_search_stmnt = "(`full_name` rlike ?)"
@@ -188,7 +205,7 @@ def db_search_users(connection: PooledMySQLConnection, username_search_str: str,
     stmnt = MySQLStatementBuilder(connection)
     rs = stmnt.select('users', USERS_COLUMNS_SAFE)\
         .where(f'{username_search_stmnt} AND {full_name_search_stmnt}', [username_search_str, full_name_search_str])\
-        .order_by(['username'], order=Sort.ASCENDING) \
+        .order_by([order_by], order=direction) \
         .limit(limit)\
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 

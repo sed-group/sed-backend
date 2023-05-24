@@ -14,8 +14,9 @@ router = APIRouter()
             summary="Lists all users",
             description="Produces a list of users in alphabetical order",
             response_model=List[models.User])
-async def get_users(segment_length: int, index: int):
-    return impl.impl_get_users(segment_length, index)
+async def get_users(segment_length: int, index: int, order_by: Optional[str] = 'username',
+                    order_direction: Optional[str] = 'asc'):
+    return impl.impl_get_users(segment_length, index, order_by=order_by, order_direction=order_direction)
 
 
 @router.post("",
@@ -46,8 +47,10 @@ async def get_users_me(current_user: models.User = Depends(get_current_active_us
 @router.get("/search",
             summary="Search for users",
             response_model=List[models.User])
-async def get_search_users(username: Optional[str] = "", full_name: Optional[str] = "", limit: Optional[int] = 10):
-    return impl.impl_search_users(username, full_name, limit)
+async def get_search_users(username: Optional[str] = "", full_name: Optional[str] = "",
+                           limit: Optional[int] = 10, order_by: Optional[str] = 'username',
+                           order_direction: str = 'asc'):
+    return impl.impl_search_users(username, full_name, limit, order_by=order_by, order_direction=order_direction)
 
 
 @router.get("/{user_id}",
