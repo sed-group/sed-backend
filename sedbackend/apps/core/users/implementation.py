@@ -1,4 +1,5 @@
 from typing import List
+import re
 
 from fastapi import HTTPException, status, File
 from fastapi.logger import logger
@@ -167,6 +168,28 @@ def impl_update_user_details(current_user: models.User,
     return True
 
 
+def impl_search_users(username: str, full_name: str, limit: int) -> List[models.User]:
+    if len(username) < 3 and len(full_name) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one of the search terms needs to be more than three characters"
+        )
+
+    max_limit = 500
+    if limit > max_limit:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Highest allowed limit is {max_limit}"
+        )
+
+    # Escape special characters that might break the search term
+    username = re.escape(username)
+    full_name = re.escape(full_name)
+
+    with get_connection() as con:
+        return storage.db_search_users(con, username, full_name, limit=limit)
+
+
 def check_if_current_user_or_admin(current_user, user_id):
     if current_user.id == user_id:
         return True
@@ -189,3 +212,8 @@ def check_if_current_user_or_admin(current_user, user_id):
         )
 
     return True
+
+
+
+
+

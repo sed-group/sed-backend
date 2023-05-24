@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Security, File, Request
 
@@ -43,6 +43,13 @@ async def get_users_me(current_user: models.User = Depends(get_current_active_us
     return impl.impl_get_users_me(current_user)
 
 
+@router.get("/search",
+            summary="Search for users",
+            response_model=List[models.User])
+async def get_search_users(username: Optional[str] = "", full_name: Optional[str] = "", limit: Optional[int] = 10):
+    return impl.impl_search_users(username, full_name, limit)
+
+
 @router.get("/{user_id}",
             summary="Get user with ID",
             response_model=models.User)
@@ -76,3 +83,4 @@ async def update_user_password(user_id: int,
 async def update_user_details(user_id: int, update_email_request: models.UpdateDetailsRequest,
                               current_user: models.User = Depends(get_current_active_user)):
     return impl.impl_update_user_details(current_user, user_id, update_email_request)
+

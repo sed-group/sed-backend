@@ -5,7 +5,7 @@ from mysql.connector.pooling import PooledMySQLConnection
 import sedbackend.apps.core.users.exceptions as exc
 import sedbackend.apps.core.users.models as models
 from sedbackend.apps.core.authentication.utils import get_password_hash
-from mysqlsb import MySQLStatementBuilder, FetchType
+from mysqlsb import MySQLStatementBuilder, FetchType, Sort
 from mysql.connector.errors import Error as SQLError
 
 USERS_COLUMNS_SAFE = ['id', 'username', 'email', 'full_name', 'scopes', 'disabled'] # Safe, as it does not contain passwords
@@ -60,6 +60,7 @@ def db_get_user_list(connection: PooledMySQLConnection, segment_length: int, ind
     mysql_statement = MySQLStatementBuilder(connection)
     rs = mysql_statement\
         .select(USERS_TABLE, USERS_COLUMNS_SAFE)\
+        .order_by(['username'], order=Sort.ASCENDING)\
         .limit(segment_length)\
         .offset(segment_length * index)\
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
@@ -168,3 +169,31 @@ def db_update_user_details(connection: PooledMySQLConnection, user_id: int,
         raise exc.UserNotFoundException
 
     return True
+
+
+def db_search_users(connection: PooledMySQLConnection, username_search_str: str, full_name_search_str: str,
+                    limit: int = 100) -> List[models.User]:
+
+    users = []
+
+    username_search_stmnt = "(`username` rlike ?)"
+    full_name_search_stmnt = "(`full_name` rlike ?)"
+
+    if len(username_search_str) == 0:
+        username_search_str = "."
+    if len(full_name_search_str) == 0:
+        full_name_search_stmnt = '(`full_name` rlike ? OR `full_name` IS NULL)'
+        full_name_search_str = "."
+
+    stmnt = MySQLStatementBuilder(connection)
+    rs = stmnt.select('users', USERS_COLUMNS_SAFE)\
+        .where(f'{username_search_stmnt} AND {full_name_search_stmnt}', [username_search_str, full_name_search_str])\
+        .order_by(['username'], order=Sort.ASCENDING) \
+        .limit(limit)\
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    for res in rs:
+        user = models.User(**res)
+        users.append(user)
+
+    return users
