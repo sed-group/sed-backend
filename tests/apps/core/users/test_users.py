@@ -117,9 +117,99 @@ def test_get_user_me(client, std_headers, std_user):
 
 def test_get_users_unauthenticated(client):
     # Act
-    res = client.get("/api/core/users/users")
+    res = client.get("/api/core/users")
     # Assert
     assert res.status_code == 401
+
+
+def test_get_users(client, std_headers):
+    # Setup
+    users = [tu_users.seed_random_user(), tu_users.seed_random_user(), tu_users.seed_random_user()]
+
+    # Act
+    res = client.get("/api/core/users?segment_length=100&index=0&order_by=id&order_direction=desc", headers=std_headers)
+
+    # Assert
+    assert res.status_code == 200
+    assert len(res.json()) > 0
+    ids = []
+    for u in res.json():
+        ids.append(u["id"])
+    for u in users:
+        assert u.id in ids
+
+    # Clean
+    tu_users.delete_users(users)
+
+
+def test_get_users_forbidden(client, std_headers):
+    # Act
+    res_1 = client.get(f'/api/core/users?segment_length=100&index=0&order_by=username&order_direction=desc', headers=std_headers)
+    res_2 = client.get(f'/api/core/users?segment_length=100&index=0&order_by=password&order_direction=desc', headers=std_headers)
+    res_3 = client.get(f'/api/core/users?segment_length=100&index=0&order_by=password&order_direction=blah', headers=std_headers)
+    res_4 = client.get(f'/api/core/users?segment_length=100&index=0&order_by=username&order_direction=blah', headers=std_headers)
+
+    # Assert
+    assert res_1.status_code == 200
+    assert res_2.status_code == 400
+    assert res_3.status_code == 400
+    assert res_4.status_code == 400
+
+
+def test_search_users(client, std_headers):
+    # Setup
+    prefix_1 = 'search_test_' + tu.random_str(3, 3)
+    prefix_2 = prefix_1 + '2' + tu.random_str(3, 3)
+    prefix_3 = prefix_2 + '3' + tu.random_str(3, 3)
+    u1 = tu_users.seed_random_user(name_prefix=prefix_1)
+    u2 = tu_users.seed_random_user(name_prefix=prefix_2)
+    u3 = tu_users.seed_random_user(name_prefix=prefix_3)
+
+    # Act
+    res_1 = client.get(f'/api/core/users/search?username={prefix_1}&order_by=username&order_direction=desc', headers=std_headers)
+    res_2 = client.get(f'/api/core/users/search?username={prefix_2}', headers=std_headers)
+    res_3 = client.get(f'/api/core/users/search?username={prefix_3}&order_by=id&order_direction=asc', headers=std_headers)
+
+    # Assert
+    assert res_1.status_code == 200 and res_2.status_code == 200 and res_3.status_code == 200
+    assert len(res_1.json()) == 3
+    assert len(res_2.json()) == 2
+    assert len(res_3.json()) == 1
+
+    # Clean
+    tu_users.delete_users([u1, u2, u3])
+
+
+def test_search_users_unauthenticated(client):
+    # Setup
+    prefix = tu.random_str(8, 8)
+    user = tu_users.seed_random_user(name_prefix=prefix)
+
+    # Act
+    res = client.get(f'/api/core/users/search?username={prefix}')
+
+    # Assert
+    assert res.status_code == 401
+
+    # Clean
+    tu_users.delete_users([user])
+
+
+def test_search_users_forbidden(client, std_headers):
+    # Setup
+    prefix = tu.random_str(8, 8)
+    user = tu_users.seed_random_user(name_prefix=prefix)
+
+    # Act
+    res_1 = client.get(f'/api/core/users/search?username={prefix}&order_by=password', headers=std_headers)
+    res_2 = client.get(f'/api/core/users/search?username={prefix}&order_direction=blah', headers=std_headers)
+
+    # Assert
+    assert res_1.status_code == 400     # Should be forbidden
+    assert res_2.status_code == 400     # Should be forbidden
+
+    # Clean
+    tu_users.delete_users([user])
 
 
 def test_post_user_unauthenticated(client):
