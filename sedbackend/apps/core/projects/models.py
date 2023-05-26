@@ -1,6 +1,7 @@
 from __future__ import annotations          # Obsolete in Python 3.10
 from typing import Optional, List, Dict
 from enum import IntEnum, unique
+from datetime import datetime
 
 from pydantic import BaseModel
 
@@ -41,14 +42,18 @@ class ProjectPost(BaseModel):
 
 
 class SubProjectPost(BaseModel):
+    name: str
     application_sid: str
     native_project_id: int
 
 
 class SubProject(SubProjectPost):
     id: int
+    name: str = None
     owner_id: int
     project_id: Optional[int]
+    native_project_id: int
+    datetime_created: datetime
 
 
 class Project(BaseModel):

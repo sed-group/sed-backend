@@ -207,3 +207,21 @@ def impl_delete_subproject_native(application_id: str, native_project_id: int):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No such subproject"
         )
+
+
+def impl_get_user_subprojects_with_application_sid(current_user_id: int, user_id: int, application_id: str):
+    # This may look redundant, but it is there to prevent devs from accidentally giving access to any user.
+    if current_user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not have access to this information"
+        )
+
+    try:
+        with get_connection() as con:
+            return storage.db_get_user_subprojects_with_application_sid(con, user_id, application_id)
+    except ApplicationNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Application with ID = {application_id} is not available."
+        )

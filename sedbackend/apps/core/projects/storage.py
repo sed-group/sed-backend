@@ -12,7 +12,8 @@ from sedbackend.apps.core.users.storage import db_get_users_with_ids
 PROJECTS_TABLE = 'projects'
 PROJECTS_COLUMNS = ['id', 'name']
 SUBPROJECTS_TABLE = 'projects_subprojects'
-SUBPROJECT_COLUMNS = ['id', 'application_sid', 'project_id', 'native_project_id', 'owner_id']
+SUBPROJECT_COLUMNS = ['id', 'name', 'application_sid', 'project_id', 'native_project_id', 'owner_id',
+                      'datetime_created']
 PROJECTS_PARTICIPANTS_TABLE = 'projects_participants'
 PROJECTS_PARTICIPANTS_COLUMNS = ['id', 'user_id', 'project_id', 'access_level']
 
@@ -195,8 +196,8 @@ def db_post_subproject(connection, subproject: models.SubProjectPost, current_us
     except exc.SubProjectNotFoundException:
         insert_stmnt = MySQLStatementBuilder(connection)
         insert_stmnt\
-            .insert(SUBPROJECTS_TABLE, ['application_sid', 'project_id', 'native_project_id', 'owner_id'])\
-            .set_values([subproject.application_sid, project_id, subproject.native_project_id, current_user_id])\
+            .insert(SUBPROJECTS_TABLE, ['name', 'application_sid', 'project_id', 'native_project_id', 'owner_id'])\
+            .set_values([subproject.name, subproject.application_sid, project_id, subproject.native_project_id, current_user_id])\
             .execute()
 
         return db_get_subproject_native(connection, subproject.application_sid, subproject.native_project_id)
@@ -288,6 +289,9 @@ def db_delete_subproject(connection, project_id, subproject_id) -> bool:
 
 
 def db_get_user_subprojects_with_application_sid(con, user_id, application_sid) -> List[models.SubProject]:
+    # Validate that the application is listed
+    get_application(application_sid)
+
     # Get projects in which this user is a participant
     project_list = db_get_user_projects(con, user_id)
     project_id_list = []
