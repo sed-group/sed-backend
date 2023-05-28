@@ -3,7 +3,7 @@ from typing import Optional, List, Dict
 from enum import IntEnum, unique
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, constr
 
 from sedbackend.apps.core.users.models import User
 
@@ -36,13 +36,13 @@ class ProjectListing(BaseModel):
 
 
 class ProjectPost(BaseModel):
-    name: str
+    name: constr(min_length=5)
     participants: List[int]
     participants_access: Dict[int, AccessLevel]
 
 
 class SubProjectPost(BaseModel):
-    name: str
+    name: Optional[constr(min_length=5)] = 'Unnamed sub-project'
     application_sid: str
     native_project_id: int
 
