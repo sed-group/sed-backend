@@ -13,7 +13,7 @@ router = APIRouter()
 
 
 @router.get("",
-            summary="Lists all projects",
+            summary="Lists all accessible projects",
             description="Lists all projects in alphabetical order",
             response_model=List[models.ProjectListing])
 async def get_projects(segment_length: int = None, index: int = None, current_user: User = Depends(get_current_active_user)):

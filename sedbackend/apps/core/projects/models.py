@@ -33,12 +33,15 @@ class ProjectListing(BaseModel):
     id: int
     name: str
     access_level: AccessLevel = AccessLevel.NONE
+    participants: int = 0
+    datetime_created: datetime
 
 
 class ProjectPost(BaseModel):
     name: constr(min_length=5)
     participants: List[int]
     participants_access: Dict[int, AccessLevel]
+    subprojects: Optional[List[int]] = []       # List of sub-project IDs (not native)
 
 
 class SubProjectPost(BaseModel):
