@@ -11,9 +11,9 @@ import sedbackend.apps.core.projects.models as models
 import sedbackend.apps.core.projects.exceptions as exc
 
 
-def impl_get_projects(segment_length: int = None, index: int = None):
+def impl_get_projects(user_id: int, segment_length: int = 0, index: int = 0):
     with get_connection() as con:
-        return storage.db_get_projects(con, segment_length, index)
+        return storage.db_get_projects(con, user_id, segment_length, index)
 
 
 def impl_get_user_projects(user_id: int, segment_length: int = 0, index: int = 0) -> List[models.ProjectListing]:

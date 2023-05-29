@@ -18,22 +18,43 @@ PROJECTS_PARTICIPANTS_TABLE = 'projects_participants'
 PROJECTS_PARTICIPANTS_COLUMNS = ['id', 'user_id', 'project_id', 'access_level']
 
 
-def db_get_projects(connection, segment_length: int = None, index: int = None) -> List[models.ProjectListing]:
-    mysql_statement = MySQLStatementBuilder(connection)
-    stmnt = mysql_statement \
-        .select('projects', PROJECTS_COLUMNS)
+def db_get_projects(connection, user_id: int, segment_length: int = 0, index: int = 0) -> List[models.ProjectListing]:
 
-    if segment_length is not None:
-        stmnt = stmnt.limit(segment_length)
-        if index is not None:
-            stmnt = stmnt.offset(segment_length * index)
+    if index < 0:
+        index = 0
 
-    rs = stmnt.execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-    projects = []
-    for res in rs:
-        projects.append(models.ProjectListing(**res))
+    if segment_length < 0:
+        segment_length = 0
 
-    return projects
+    with connection.cursor(prepared=True) as cursor:
+        select_stmnt = 'SELECT projects.name, projects.id as pid, ' \
+                       'projects.datetime_created, ' \
+                       '(SELECT count(*) as participant_count FROM projects_participants WHERE project_id = pid), ' \
+                       '(SELECT access_level FROM projects_participants WHERE project_id = pid AND user_id = %s) ' \
+                       'FROM projects ' \
+                       f'ORDER BY `projects`.`datetime_created` ASC ' \
+                       f'LIMIT {segment_length} OFFSET {segment_length * index} '
+
+        values = [user_id]
+        logger.debug(f'db_get_projects: {select_stmnt} with values {values}')
+        cursor.execute(select_stmnt, values)
+        rs = cursor.fetchall()
+
+        project_list = []
+        for res in rs:
+            res_dict = dict(zip(['name', 'pid', 'datetime_created', 'participant_count', 'access_level'], res))
+
+            access_level = res_dict["access_level"]
+            if access_level is None:
+                access_level = 0
+
+            pl = models.ProjectListing(id=res_dict['pid'], name=res_dict['name'],
+                                       access_level=models.AccessLevel(access_level),
+                                       participants=res_dict["participant_count"],
+                                       datetime_created=res_dict['datetime_created'])
+            project_list.append(pl)
+
+    return project_list
 
 
 def db_get_user_projects(connection, user_id: int, segment_length: int = 0, index: int = 0) \
@@ -42,6 +63,9 @@ def db_get_user_projects(connection, user_id: int, segment_length: int = 0, inde
     if index < 0:
         index = 0
 
+    if segment_length < 0:
+        segment_length = 0
+
     with connection.cursor(prepared=True) as cursor:
         select_stmnt = 'SELECT projects_participants.access_level, projects.name, projects.id as pid, ' \
                        'projects.datetime_created, ' \
@@ -49,8 +73,9 @@ def db_get_user_projects(connection, user_id: int, segment_length: int = 0, inde
                        'FROM projects ' \
                        'INNER JOIN projects_participants ON projects_participants.project_id = projects.id ' \
                        f'WHERE projects_participants.user_id = %s ' \
-                       f'ORDER BY `projects`.`datetime_created` ASC ' \
-                       f'LIMIT {segment_length} OFFSET {segment_length * index} ' \
+                       f'ORDER BY `projects`.`datetime_created` ASC '
+        if segment_length != 0:
+            select_stmnt += f'LIMIT {segment_length} OFFSET {segment_length * index} ' \
 
 
         values = [user_id]

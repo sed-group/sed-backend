@@ -44,7 +44,7 @@ def test_get_all_projects_as_admin(client, admin_headers, admin_user):
     max_projects = 30
     current_user = impl_users.impl_get_user_with_username(admin_user.username)
     seeded_projects = tu_projects.seed_random_projects(current_user.id, amount=r.randint(5, max_projects))
-    amount_of_projects = len(impl.impl_get_projects())
+    amount_of_projects = len(impl.impl_get_projects(current_user.id))
     # Act
     res = client.get('/api/core/projects/all', headers=admin_headers)
     # Assert

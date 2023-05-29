@@ -16,9 +16,11 @@ router = APIRouter()
             summary="Lists all accessible projects",
             description="Lists all projects in alphabetical order",
             response_model=List[models.ProjectListing])
-async def get_projects(segment_length: int = None, index: int = None, current_user: User = Depends(get_current_active_user)):
+async def get_projects(segment_length: Optional[int] = 0, index: Optional[int] = 0,
+                       current_user: User = Depends(get_current_active_user)):
     """
     Lists all projects that the current user has access to
+    :param current_user:
     :param segment_length:
     :param index:
     :return:
@@ -31,14 +33,16 @@ async def get_projects(segment_length: int = None, index: int = None, current_us
             description="Lists all projects that exist, and is only available to those who have the authority.",
             response_model=List[models.ProjectListing],
             dependencies=[Security(verify_scopes, scopes=['admin'])])
-async def get_all_projects(segment_length: Optional[int] = None, index: Optional[int] = None):
+async def get_all_projects(segment_length: Optional[int] = 0, index: Optional[int] = 0,
+                           current_user: User = Depends(get_current_active_user)):
     """
     Lists all projects that exists, and is only available to those who have the authority.
+    :param current_user:
     :param segment_length:
     :param index:
     :return:
     """
-    return impl.impl_get_projects(segment_length, index)
+    return impl.impl_get_projects(current_user.id, segment_length, index)
 
 
 @router.get("/{project_id}",
