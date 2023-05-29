@@ -52,6 +52,11 @@ def impl_post_project(project: models.ProjectPost, owner_id: int) -> models.Proj
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+    except exc.ConflictingProjectAssociationException as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e)
+        )
 
 
 def impl_delete_project(project_id: int) -> bool:
@@ -209,7 +214,8 @@ def impl_delete_subproject_native(application_id: str, native_project_id: int):
         )
 
 
-def impl_get_user_subprojects_with_application_sid(current_user_id: int, user_id: int, application_id: str):
+def impl_get_user_subprojects_with_application_sid(current_user_id: int, user_id: int, application_id: str,
+                                                   no_project_association: bool = False):
     # This may look redundant, but it is there to prevent devs from accidentally giving access to any user.
     if current_user_id != user_id:
         raise HTTPException(
@@ -219,7 +225,8 @@ def impl_get_user_subprojects_with_application_sid(current_user_id: int, user_id
 
     try:
         with get_connection() as con:
-            return storage.db_get_user_subprojects_with_application_sid(con, user_id, application_id)
+            return storage.db_get_user_subprojects_with_application_sid(con, user_id, application_id,
+                                                                        no_project_association=no_project_association)
     except ApplicationNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

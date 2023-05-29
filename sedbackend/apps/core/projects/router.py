@@ -144,5 +144,7 @@ async def get_app_native_project(app_id, native_project_id):
 @router.get("/apps/{app_id}/native-subprojects",
             summary="List application specific native subprojects available to the user",
             response_model=List[models.SubProject])
-async def get_user_subprojects_with_application_sid(app_id: str, current_user: User = Depends(get_current_active_user)):
-    return impl.impl_get_user_subprojects_with_application_sid(current_user.id, current_user.id, app_id)
+async def get_user_subprojects_with_application_sid(app_id: str, current_user: User = Depends(get_current_active_user),
+                                                    no_project_association: Optional[bool] = False):
+    return impl.impl_get_user_subprojects_with_application_sid(current_user.id, current_user.id, app_id,
+                                                               no_project_association = no_project_association)

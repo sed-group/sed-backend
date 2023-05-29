@@ -169,8 +169,21 @@ def db_post_project(connection, project: models.ProjectPost, owner_id: int) -> m
 
 
 def db_update_subprojects_project_association(connection: PooledMySQLConnection, subproject_id_list: List[int],
-                                              project_id: int):
+                                              project_id: int, overwrite: bool = False):
     logger.debug(f'Associating sub-projects with IDs {subproject_id_list} to project with ID {project_id}')
+
+    if overwrite is False:
+        # Assert that these subprojects are not already members of other projects
+        select_stmnt = MySQLStatementBuilder(connection)
+        rs = select_stmnt.select(SUBPROJECTS_TABLE, ['project_id', 'id', 'name'])\
+            .where(f'id IN {MySQLStatementBuilder.placeholder_array(len(subproject_id_list))}', subproject_id_list)\
+            .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+        for res in rs:
+            if res['project_id'] is not None:
+                raise exc.ConflictingProjectAssociationException(f'Subproject "{res["name"]}" (id: {res["id"]}) '
+                                                                 f'is already associated with another project, '
+                                                                 f'and overwrite has been disabled.')
 
     update_stmnt = MySQLStatementBuilder(connection)
     update_stmnt\
@@ -349,7 +362,10 @@ def db_delete_subproject(connection, project_id, subproject_id) -> bool:
     return True
 
 
-def db_get_user_subprojects_with_application_sid(con, user_id, application_sid) -> List[models.SubProject]:
+def db_get_user_subprojects_with_application_sid(con, user_id, application_sid,
+                                                 no_project_association: Optional[bool] = False) \
+        -> List[models.SubProject]:
+
     # Validate that the application is listed
     get_application(application_sid)
 
@@ -363,11 +379,16 @@ def db_get_user_subprojects_with_application_sid(con, user_id, application_sid) 
         return []
 
     # Figure out which of those projects have an attached subproject with specified application SID.
-    where_values = project_id_list.copy()
-    where_values.append(application_sid)
+    where_values = [application_sid]
+    where_values.extend(project_id_list.copy())
+    where_values.append(user_id)
+    where_stmnt = f"application_sid = %s AND " \
+                  f"((project_id IN {MySQLStatementBuilder.placeholder_array(len(project_id_list))}) OR " \
+                  f"(project_id is null AND owner_id = %s))"
+
     stmnt = MySQLStatementBuilder(con)
     rs = stmnt.select(SUBPROJECTS_TABLE, SUBPROJECT_COLUMNS)\
-        .where(f"project_id IN {MySQLStatementBuilder.placeholder_array(len(project_id_list))} AND application_sid = %s",
+        .where(where_stmnt,
                where_values)\
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
@@ -375,6 +396,9 @@ def db_get_user_subprojects_with_application_sid(con, user_id, application_sid) 
     subproject_list = []
     for res in rs:
         subproject_list.append(models.SubProject(**res))
+
+    if no_project_association:
+        subproject_list = list(filter(lambda p: p.project_id is None, subproject_list))
 
     return subproject_list
 
