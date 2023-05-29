@@ -11,9 +11,9 @@ import sedbackend.apps.core.projects.models as models
 import sedbackend.apps.core.projects.exceptions as exc
 
 
-def impl_get_projects(segment_length: int = None, index: int = None):
+def impl_get_projects(user_id: int, segment_length: int = 0, index: int = 0):
     with get_connection() as con:
-        return storage.db_get_projects(con, segment_length, index)
+        return storage.db_get_projects(con, user_id, segment_length, index)
 
 
 def impl_get_user_projects(user_id: int, segment_length: int = 0, index: int = 0) -> List[models.ProjectListing]:
@@ -50,6 +50,11 @@ def impl_post_project(project: models.ProjectPost, owner_id: int) -> models.Proj
     except exc_users.UserNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except exc.ConflictingProjectAssociationException as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
             detail=str(e)
         )
 
@@ -206,4 +211,24 @@ def impl_delete_subproject_native(application_id: str, native_project_id: int):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No such subproject"
+        )
+
+
+def impl_get_user_subprojects_with_application_sid(current_user_id: int, user_id: int, application_id: str,
+                                                   no_project_association: bool = False):
+    # This may look redundant, but it is there to prevent devs from accidentally giving access to any user.
+    if current_user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not have access to this information"
+        )
+
+    try:
+        with get_connection() as con:
+            return storage.db_get_user_subprojects_with_application_sid(con, user_id, application_id,
+                                                                        no_project_association=no_project_association)
+    except ApplicationNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Application with ID = {application_id} is not available."
         )
