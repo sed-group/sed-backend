@@ -1,13 +1,11 @@
 from fastapi import HTTPException
 from starlette import status
-from fastapi.responses import FileResponse
 
 from sedbackend.apps.core.authentication import exceptions as auth_ex
 from sedbackend.apps.core.db import get_connection
 from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.life_cycle import exceptions, storage, models
 from sedbackend.apps.cvs.project import exceptions as project_exceptions
-from sedbackend.apps.core.files import models as file_models
 
 
 def create_process_node(project_id: int, vcs_id: int, node: models.ProcessNodePost) -> models.ProcessNodeGet:
@@ -158,7 +156,7 @@ def update_bpmn(project_id: int, vcs_id: int, bpmn: models.BPMNGet) -> bool:
             detail=f'Project with id={project_id} is not a part of vcs with id={vcs_id}.',
         )
 
-
+        
 def save_dsm_file(project_id: int, vcs_id: int,
                   file: file_models.StoredFilePost) -> bool:
     try:
@@ -194,3 +192,4 @@ def get_dsm_file_id(project_id: int, vcs_id: int, user_id: int) -> int:
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"File for vcs with id {e.vcs_id} could not be found"
         )
+

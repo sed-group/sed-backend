@@ -18,7 +18,6 @@ class InvalidNodeType(Exception):
 class NodeFailedToUpdateException(Exception):
     pass
 
-
 class InvalidFileTypeException(Exception):
     pass
 
@@ -34,3 +33,4 @@ class ProcessesVcsMatchException(Exception):
 class FileNotFoundException(Exception):
     def __init__(self, vcs_id: int = None):
         self.vcs_id = vcs_id
+

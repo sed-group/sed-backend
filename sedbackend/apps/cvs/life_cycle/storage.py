@@ -6,10 +6,6 @@ from mysqlsb import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.cvs.life_cycle import exceptions, models
 from sedbackend.apps.cvs.vcs import storage as vcs_storage, exceptions as vcs_exceptions, implementation as vcs_impl
 from mysql.connector import Error
-from sedbackend.apps.core.files import models as file_models
-from sedbackend.apps.core.files import implementation as file_impl
-import pandas as pd
-import magic
 
 
 CVS_NODES_TABLE = 'cvs_nodes'
@@ -21,12 +17,6 @@ CVS_PROCESS_NODES_COLUMNS = CVS_NODES_COLUMNS + ['vcs_row']
 CVS_START_STOP_NODES_TABLE = 'cvs_start_stop_nodes'
 CVS_START_STOP_NODES_COLUMNS = CVS_NODES_COLUMNS + ['type']
 
-CVS_DSM_FILES_TABLE = 'cvs_dsm_files'
-CVS_DSM_FILES_COLUMNS = ['vcs_id', 'file_id']
-
-MAX_FILE_SIZE = 100 * 10**8 #100 MB
-
-# TODO error handling
 
 def populate_process_node(db_connection, project_id, result) -> models.ProcessNodeGet:
     logger.debug(f'Populating model for process node with id={result["id"]} ')
@@ -267,7 +257,6 @@ def update_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: i
         update_node(db_connection, project_id, node.id, updated_node)
 
     return True
-
 
 def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int, 
                   vcs_id: int, file: file_models.StoredFilePost) -> bool:

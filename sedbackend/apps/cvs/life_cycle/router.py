@@ -1,14 +1,9 @@
 from fastapi import APIRouter, Depends
-from fastapi.datastructures import UploadFile
-from fastapi.responses import FileResponse
 
 from sedbackend.apps.core.projects.dependencies import SubProjectAccessChecker
 from sedbackend.apps.core.projects.models import AccessLevel
 from sedbackend.apps.core.projects.implementation import impl_get_subproject_native
 from sedbackend.apps.cvs.life_cycle import models, implementation
-from sedbackend.apps.core.files import models as file_models
-from sedbackend.apps.core.users.models import User
-from sedbackend.apps.core.authentication.utils import get_current_active_user
 from sedbackend.apps.cvs.project.router import CVS_APP_SID
 
 router = APIRouter()
@@ -76,6 +71,7 @@ async def upload_dsm_file(native_project_id: int, vcs_id: int, file: UploadFile,
     model_file = file_models.StoredFilePost.import_fastapi_file(file, user.id, subproject.id)
     return implementation.save_dsm_file(native_project_id, vcs_id, model_file)
 
+  
 @router.get(
     '/project/{native_project_id}/vcs/{vcs_id}/get-dsm-id',
     summary="Fetch DSM file id",
@@ -84,3 +80,4 @@ async def upload_dsm_file(native_project_id: int, vcs_id: int, file: UploadFile,
 )
 async def get_dsm_file(native_project_id: int, vcs_id: int, user: User = Depends(get_current_active_user)) -> int:
     return implementation.get_dsm_file_id(native_project_id, vcs_id, user.id)
+
