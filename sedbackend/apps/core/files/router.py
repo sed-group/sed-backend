@@ -12,10 +12,10 @@ router = APIRouter()
 
 
 @router.get("/{file_id}/download",
-            summary="Download file",
-            response_class=FileResponse,
-            dependencies=[Depends(FileAccessChecker(AccessLevel.list_can_read()))]
-            )
+             summary="Download file",
+             response_class=FileResponse,
+             dependencies=[Depends(FileAccessChecker(AccessLevel.list_can_read()))]
+             )
 async def get_file(file_id: int, current_user: User = Depends(get_current_active_user)):
     """
     Download an uploaded file

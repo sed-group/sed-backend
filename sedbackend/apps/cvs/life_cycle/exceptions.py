@@ -17,3 +17,20 @@ class InvalidNodeType(Exception):
 
 class NodeFailedToUpdateException(Exception):
     pass
+
+class InvalidFileTypeException(Exception):
+    pass
+
+
+class FileSizeException(Exception):
+    pass
+
+
+class ProcessesVcsMatchException(Exception):
+    pass
+
+
+class FileNotFoundException(Exception):
+    def __init__(self, vcs_id: int = None):
+        self.vcs_id = vcs_id
+
