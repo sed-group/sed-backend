@@ -6,7 +6,7 @@ from sedbackend.apps.core.db import get_connection
 from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.life_cycle import exceptions, storage, models
 from sedbackend.apps.cvs.project import exceptions as project_exceptions
-
+from sedbackend.apps.core.files import models as file_models
 
 def create_process_node(project_id: int, vcs_id: int, node: models.ProcessNodePost) -> models.ProcessNodeGet:
     try:

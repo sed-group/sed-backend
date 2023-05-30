@@ -5,8 +5,10 @@ from mysql.connector.pooling import PooledMySQLConnection
 from mysqlsb import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.cvs.life_cycle import exceptions, models
 from sedbackend.apps.cvs.vcs import storage as vcs_storage, exceptions as vcs_exceptions, implementation as vcs_impl
+from sedbackend.apps.core.files import models as file_models, implementation as file_impl
 from mysql.connector import Error
-
+import magic
+import pandas as pd
 
 CVS_NODES_TABLE = 'cvs_nodes'
 CVS_NODES_COLUMNS = ['cvs_nodes.id', 'vcs', 'from', 'to', 'pos_x', 'pos_y']
@@ -16,6 +18,11 @@ CVS_PROCESS_NODES_COLUMNS = CVS_NODES_COLUMNS + ['vcs_row']
 
 CVS_START_STOP_NODES_TABLE = 'cvs_start_stop_nodes'
 CVS_START_STOP_NODES_COLUMNS = CVS_NODES_COLUMNS + ['type']
+
+CVS_DSM_FILES_TABLE = 'cvs_dsm_files'
+CVS_DSM_FILES_COLUMNS = ['vcs_id', 'file_id']
+
+MAX_FILE_SIZE = 100*10**6  # 100MB
 
 
 def populate_process_node(db_connection, project_id, result) -> models.ProcessNodeGet:
@@ -28,12 +35,14 @@ def populate_process_node(db_connection, project_id, result) -> models.ProcessNo
         to_node=result['to'],
         pos_x=result['pos_x'],
         pos_y=result['pos_y'],
-        vcs_row=vcs_storage.get_vcs_row(db_connection, project_id, result['vcs_row'])
+        vcs_row=vcs_storage.get_vcs_row(
+            db_connection, project_id, result['vcs_row'])
     )
 
 
 def populate_start_stop_node(result) -> models.StartStopNodeGet:
-    logger.debug(f'Populating model for start/stop node with id={result["id"]}')
+    logger.debug(
+        f'Populating model for start/stop node with id={result["id"]}')
     return models.StartStopNodeGet(
         id=result['id'],
         vcs_id=result['vcs'],
@@ -60,7 +69,8 @@ def get_node(db_connection: PooledMySQLConnection, project_id: int, node_id: int
         logger.debug(f'Error msg: {e.msg}')
         raise exceptions.NodeNotFoundException
 
-    vcs_storage.get_vcs(db_connection, result['vcs'], project_id)  # Check if vcs exists and matches project id
+    # Check if vcs exists and matches project id
+    vcs_storage.get_vcs(db_connection, result['vcs'], project_id)
 
     return result
 
@@ -173,7 +183,8 @@ def create_start_stop_node(db_connection: PooledMySQLConnection, node: models.St
 def delete_node(db_connection: PooledMySQLConnection, project_id: int, node_id: int) -> bool:
     logger.debug(f'Delete node with id={node_id}.')
 
-    get_node(db_connection, project_id, node_id)  # Check if node exists and matches project id
+    # Check if node exists and matches project id
+    get_node(db_connection, project_id, node_id)
 
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement.delete(CVS_NODES_TABLE) \
@@ -209,7 +220,8 @@ def update_node(db_connection: PooledMySQLConnection, project_id: int, node_id: 
 def get_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> models.BPMNGet:
     logger.debug(f'Get BPMN for vcs with id={vcs_id}.')
 
-    vcs_storage.get_vcs(db_connection, project_id, vcs_id)  # Check if vcs exists and matches project id
+    # Check if vcs exists and matches project id
+    vcs_storage.get_vcs(db_connection, project_id, vcs_id)
 
     where_statement = f'vcs = %s'
     where_values = [vcs_id]
@@ -222,7 +234,8 @@ def get_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int)
             .where(where_statement, where_values) \
             .order_by(['cvs_nodes.id'], Sort.ASCENDING) \
             .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-        process_nodes = [populate_process_node(db_connection, project_id, result) for result in process_nodes_result]
+        process_nodes = [populate_process_node(
+            db_connection, project_id, result) for result in process_nodes_result]
 
         select_statement = MySQLStatementBuilder(db_connection)
         # start_stop_nodes_result = \
@@ -247,7 +260,8 @@ def update_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: i
                 bpmn: models.BPMNGet) -> bool:
     logger.debug(f'Updating bpmn with vcs id={vcs_id}.')
 
-    vcs_storage.get_vcs(db_connection, project_id, vcs_id)  # Check if vcs exists and matches project id
+    # Check if vcs exists and matches project id
+    vcs_storage.get_vcs(db_connection, project_id, vcs_id)
 
     for node in bpmn.nodes:
         updated_node = models.NodePost(
@@ -258,36 +272,37 @@ def update_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: i
 
     return True
 
-def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int, 
+
+def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int,
                   vcs_id: int, file: file_models.StoredFilePost) -> bool:
-    
+
     if file.extension != ".csv":
         raise exceptions.InvalidFileTypeException
-    
+
     with file.file_object as f:
         f.seek(0)
         tmp_file = f.read()
         mime = magic.from_buffer(tmp_file)
         print(mime)
         logger.debug(mime)
-        if mime != "CSV text" and mime != "ASCII text": #TODO doesn't work with windows if we create the file in excel. 
+        # TODO doesn't work with windows if we create the file in excel.
+        if mime != "CSV text" and mime != "ASCII text":
             raise exceptions.InvalidFileTypeException
-        
+
         if f.tell() > MAX_FILE_SIZE:
             raise exceptions.FileSizeException
-        
+
         f.seek(0)
         dsm_file = pd.read_csv(f)
         vcs_table = vcs_impl.get_vcs_table(project_id, vcs_id)
-                                                                
-        
-        vcs_processes = [row.iso_process.name if row.iso_process is not None else \
-                        row.subprocess.name for row in vcs_table]
-        
+
+        vcs_processes = [row.iso_process.name if row.iso_process is not None else
+                         row.subprocess.name for row in vcs_table]
+
         for process in dsm_file['processes'].values:
             if process not in vcs_processes:
                 raise exceptions.ProcessesVcsMatchException
-        
+
         f.seek(0)
         stored_file = file_impl.impl_save_file(file)
 
@@ -295,7 +310,7 @@ def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int,
     insert_statement.insert(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS) \
         .set_values([vcs_id, stored_file.id])\
         .execute(fetch_type=FetchType.FETCH_NONE)
-    
+
     return True
 
 
@@ -305,8 +320,8 @@ def get_dsm_file_id(db_connection: PooledMySQLConnection, project_id: int, vcs_i
     file_res = select_statement.select(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS) \
         .where('vcs_id = %s', [vcs_id]) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-    
+
     if file_res == None:
         raise exceptions.FileNotFoundException
-    
+
     return file_res['file_id']
