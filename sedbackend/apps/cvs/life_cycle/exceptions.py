@@ -22,11 +22,15 @@ class NodeFailedToUpdateException(Exception):
 class InvalidFileTypeException(Exception):
     pass
 
-class TooLargeFileException(Exception):
+
+class FileSizeException(Exception):
     pass
 
-class ProcessesDoesNotMatchVcsException(Exception):
+
+class ProcessesVcsMatchException(Exception):
     pass
 
-class FileDeletionFailedException(Exception):
-    pass
+
+class FileNotFoundException(Exception):
+    def __init__(self, vcs_id: int = None):
+        self.vcs_id = vcs_id
