@@ -4,6 +4,9 @@ from sedbackend.apps.core.projects.dependencies import SubProjectAccessChecker
 from sedbackend.apps.core.projects.models import AccessLevel
 from sedbackend.apps.core.projects.implementation import impl_get_subproject_native
 from sedbackend.apps.cvs.life_cycle import models, implementation
+from sedbackend.apps.core.files import models as file_models
+from sedbackend.apps.core.users.models import User
+from sedbackend.apps.core.authentication.utils import get_current_active_user
 from sedbackend.apps.cvs.project.router import CVS_APP_SID
 from sedbackend.apps.core.files import models as file_models
 from sedbackend.apps.core.users.models import User
@@ -60,27 +63,4 @@ async def get_bpmn(native_project_id: int, vcs_id: int) -> models.BPMNGet:
 )
 async def update_bpmn(native_project_id: int, vcs_id: int, bpmn: models.BPMNGet) -> bool:
     return implementation.update_bpmn(native_project_id, vcs_id, bpmn)
-
-
-@router.post(
-    '/project/{native_project_id}/vcs/{vcs_id}/upload-dsm',
-    summary="Upload DSM file",
-    response_model=bool,
-    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
-)
-async def upload_dsm_file(native_project_id: int, vcs_id: int, file: UploadFile, user: User = Depends(get_current_active_user)) -> bool:
-    subproject = impl_get_subproject_native(CVS_APP_SID, native_project_id)
-    print(subproject)
-    model_file = file_models.StoredFilePost.import_fastapi_file(file, user.id, subproject.id)
-    return implementation.save_dsm_file(native_project_id, vcs_id, model_file)
-
-  
-@router.get(
-    '/project/{native_project_id}/vcs/{vcs_id}/get-dsm-id',
-    summary="Fetch DSM file id",
-    response_model=int,
-    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
-)
-async def get_dsm_file(native_project_id: int, vcs_id: int, user: User = Depends(get_current_active_user)) -> int:
-    return implementation.get_dsm_file_id(native_project_id, vcs_id, user.id)
 

@@ -17,6 +17,12 @@ CVS_PROCESS_NODES_COLUMNS = CVS_NODES_COLUMNS + ['vcs_row']
 CVS_START_STOP_NODES_TABLE = 'cvs_start_stop_nodes'
 CVS_START_STOP_NODES_COLUMNS = CVS_NODES_COLUMNS + ['type']
 
+CVS_DSM_FILES_TABLE = 'cvs_dsm_files'
+CVS_DSM_FILES_COLUMNS = ['vcs_id', 'file_id']
+
+MAX_FILE_SIZE = 100 * 10**8 #100 MB
+
+# TODO error handling
 
 def populate_process_node(db_connection, project_id, result) -> models.ProcessNodeGet:
     logger.debug(f'Populating model for process node with id={result["id"]} ')
@@ -258,55 +264,3 @@ def update_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: i
 
     return True
 
-def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int, 
-                  vcs_id: int, file: file_models.StoredFilePost) -> bool:
-    
-    if file.extension != ".csv":
-        raise exceptions.InvalidFileTypeException
-    
-    with file.file_object as f:
-        f.seek(0)
-        tmp_file = f.read()
-        mime = magic.from_buffer(tmp_file)
-        print(mime)
-        logger.debug(mime)
-        if mime != "CSV text" and mime != "ASCII text": #TODO doesn't work with windows if we create the file in excel. 
-            raise exceptions.InvalidFileTypeException
-        
-        if f.tell() > MAX_FILE_SIZE:
-            raise exceptions.FileSizeException
-        
-        f.seek(0)
-        dsm_file = pd.read_csv(f)
-        vcs_table = vcs_impl.get_vcs_table(project_id, vcs_id)
-                                                                
-        
-        vcs_processes = [row.iso_process.name if row.iso_process is not None else \
-                        row.subprocess.name for row in vcs_table]
-        
-        for process in dsm_file['processes'].values:
-            if process not in vcs_processes:
-                raise exceptions.ProcessesVcsMatchException
-        
-        f.seek(0)
-        stored_file = file_impl.impl_save_file(file)
-
-    insert_statement = MySQLStatementBuilder(db_connection)
-    insert_statement.insert(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS) \
-        .set_values([vcs_id, stored_file.id])\
-        .execute(fetch_type=FetchType.FETCH_NONE)
-    
-    return True
-
-
-def get_dsm_file_id(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id: int) -> int:
-
-    select_statement = MySQLStatementBuilder(db_connection)
-    file_res = select_statement.select(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS) \
-        .where('vcs_id = %s', [vcs_id]) \
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-    
-    if file_res == None:
-        raise exceptions.FileNotFoundException
-    
-    return file_res['file_id']
