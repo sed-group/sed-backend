@@ -1,10 +1,13 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, UploadFile
 
 from sedbackend.apps.core.projects.dependencies import SubProjectAccessChecker
 from sedbackend.apps.core.projects.models import AccessLevel
 from sedbackend.apps.core.projects.implementation import impl_get_subproject_native
 from sedbackend.apps.cvs.life_cycle import models, implementation
 from sedbackend.apps.cvs.project.router import CVS_APP_SID
+from sedbackend.apps.core.files import models as file_models
+from sedbackend.apps.core.users.models import User
+from sedbackend.apps.core.authentication.utils import get_current_active_user
 
 router = APIRouter()
 

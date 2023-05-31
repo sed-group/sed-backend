@@ -16,3 +16,7 @@ class SubprojectMappingNotFound(Exception):
 
 class FileNotDeletedException(Exception):
     pass
+
+
+class PathMismatchException(Exception):
+    pass

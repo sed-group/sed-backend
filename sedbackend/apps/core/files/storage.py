@@ -4,6 +4,8 @@ import os
 
 from mysql.connector.pooling import PooledMySQLConnection
 from fastapi.logger import logger
+import os
+import pathlib
 
 import sedbackend.apps.core.files.models as models
 import sedbackend.apps.core.files.exceptions as exc
@@ -44,6 +46,9 @@ def db_save_file(con: PooledMySQLConnection, file: models.StoredFilePost) -> mod
 def db_delete_file(con: PooledMySQLConnection, file_id: int, current_user_id: int) -> bool:
     stored_file_path = impl.impl_get_file_path(file_id, current_user_id)
     
+    if os.path.commonpath([FILES_RELATIVE_UPLOAD_DIR]) != os.path.commonpath([FILES_RELATIVE_UPLOAD_DIR, os.path.abspath(stored_file_path.path)]):
+        raise exc.PathMismatchException
+        
     try:
         os.remove(stored_file_path.path)
         delete_stmnt = MySQLStatementBuilder(con)
