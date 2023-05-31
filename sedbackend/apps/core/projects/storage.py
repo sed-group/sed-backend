@@ -1,7 +1,7 @@
 from typing import List, Optional
 
 from fastapi.logger import logger
-from mysqlsb import MySQLStatementBuilder, FetchType
+from mysqlsb import MySQLStatementBuilder, FetchType, utils
 from mysql.connector.pooling import PooledMySQLConnection
 
 from sedbackend.apps.core.applications.state import get_application
@@ -12,52 +12,97 @@ from sedbackend.apps.core.users.storage import db_get_users_with_ids
 PROJECTS_TABLE = 'projects'
 PROJECTS_COLUMNS = ['id', 'name']
 SUBPROJECTS_TABLE = 'projects_subprojects'
-SUBPROJECT_COLUMNS = ['id', 'application_sid', 'project_id', 'native_project_id', 'owner_id']
+SUBPROJECT_COLUMNS = ['id', 'name', 'application_sid', 'project_id', 'native_project_id', 'owner_id',
+                      'datetime_created']
 PROJECTS_PARTICIPANTS_TABLE = 'projects_participants'
 PROJECTS_PARTICIPANTS_COLUMNS = ['id', 'user_id', 'project_id', 'access_level']
 
 
-def db_get_projects(connection, segment_length: int = None, index: int = None) -> List[models.ProjectListing]:
-    mysql_statement = MySQLStatementBuilder(connection)
-    stmnt = mysql_statement \
-        .select('projects', PROJECTS_COLUMNS)
-
-    if segment_length is not None:
-        stmnt = stmnt.limit(segment_length)
-        if index is not None:
-            stmnt = stmnt.offset(segment_length * index)
-
-    rs = stmnt.execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-    projects = []
-    for res in rs:
-        projects.append(models.ProjectListing(**res))
-
-    return projects
-
-
-def db_get_user_projects(connection, user_id: int, segment_length: int = 0, index: int = 0) -> List[
-    models.ProjectListing]:
-    participating_sql = MySQLStatementBuilder(connection)
+def db_get_projects(connection, user_id: int, segment_length: int = 0, index: int = 0) -> List[models.ProjectListing]:
 
     if index < 0:
         index = 0
 
-    sql = participating_sql\
-        .select(PROJECTS_TABLE, ['projects_participants.access_level', 'projects.name', 'projects.id']) \
-        .inner_join(PROJECTS_PARTICIPANTS_TABLE, 'projects_participants.project_id = projects.id')\
-        .where('projects_participants.user_id = %s', [user_id])
-    if segment_length > 0:
-        # Segment if segment length is specified
-        sql = sql.limit(segment_length).offset(segment_length * index)
+    if segment_length < 0:
+        segment_length = 0
 
-    rs = sql.execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+    with connection.cursor(prepared=True) as cursor:
+        select_stmnt = 'SELECT projects.name, projects.id as pid, ' \
+                       'projects.datetime_created, ' \
+                       '(SELECT count(*) as participant_count FROM projects_participants WHERE project_id = pid), ' \
+                       '(SELECT access_level FROM projects_participants WHERE project_id = pid AND user_id = %s) ' \
+                       'FROM projects ' \
+                       f'ORDER BY `projects`.`datetime_created` ASC ' \
+                       f'LIMIT {segment_length} OFFSET {segment_length * index} '
 
-    project_list = []
-    for result in rs:
-        pl = models.ProjectListing(name=result['name'], access_level=result['access_level'], id=result['id'])
-        project_list.append(pl)
+        values = [user_id]
+        logger.debug(f'db_get_projects: {select_stmnt} with values {values}')
+        cursor.execute(select_stmnt, values)
+        rs = cursor.fetchall()
+
+        project_list = []
+        for res in rs:
+            res_dict = dict(zip(['name', 'pid', 'datetime_created', 'participant_count', 'access_level'], res))
+
+            access_level = res_dict["access_level"]
+            if access_level is None:
+                access_level = 0
+
+            pl = models.ProjectListing(id=res_dict['pid'], name=res_dict['name'],
+                                       access_level=models.AccessLevel(access_level),
+                                       participants=res_dict["participant_count"],
+                                       datetime_created=res_dict['datetime_created'])
+            project_list.append(pl)
 
     return project_list
+
+
+def db_get_user_projects(connection, user_id: int, segment_length: int = 0, index: int = 0) \
+        -> List[models.ProjectListing]:
+
+    if index < 0:
+        index = 0
+
+    if segment_length < 0:
+        segment_length = 0
+
+    with connection.cursor(prepared=True) as cursor:
+        select_stmnt = 'SELECT projects_participants.access_level, projects.name, projects.id as pid, ' \
+                       'projects.datetime_created, ' \
+                       '(SELECT count(*) as participant_count FROM projects_participants WHERE project_id = pid) ' \
+                       'FROM projects ' \
+                       'INNER JOIN projects_participants ON projects_participants.project_id = projects.id ' \
+                       f'WHERE projects_participants.user_id = %s ' \
+                       f'ORDER BY `projects`.`datetime_created` ASC '
+        if segment_length != 0:
+            select_stmnt += f'LIMIT {segment_length} OFFSET {segment_length * index} ' \
+
+
+        values = [user_id]
+        logger.debug(f'db_get_user_projects: {select_stmnt} with values {values}')
+        cursor.execute(select_stmnt, values)
+        rs = cursor.fetchall()
+
+        project_list = []
+        for res in rs:
+            res_dict = dict(zip(['access_level', 'name', 'pid', 'datetime_created', 'participant_count'], res))
+            pl = models.ProjectListing(id=res_dict['pid'], name=res_dict['name'],
+                                       access_level=models.AccessLevel(res_dict["access_level"]),
+                                       participants=res_dict["participant_count"],
+                                       datetime_created=res_dict['datetime_created'])
+            project_list.append(pl)
+
+    return project_list
+
+
+def db_get_participant_count (connection, project_id) -> int:
+    select_stmnt = MySQLStatementBuilder(connection)
+    res = select_stmnt\
+        .count(PROJECTS_PARTICIPANTS_TABLE)\
+        .where('project_id = %s', [project_id])\
+        .execute(dictionary=True)
+
+    return res["count"]
 
 
 def db_get_project(connection, project_id) -> models.Project:
@@ -101,6 +146,7 @@ def db_post_project(connection, project: models.ProjectPost, owner_id: int) -> m
     # Set owner if it is not already set
     if owner_id not in project.participants:
         project.participants.append(owner_id)
+
     project.participants_access[owner_id] = models.AccessLevel.OWNER
 
     project_sql = MySQLStatementBuilder(connection)
@@ -116,7 +162,36 @@ def db_post_project(connection, project: models.ProjectPost, owner_id: int) -> m
 
         db_add_participant(connection, project_id, participant_id, access_level, check_project_exists=False)
 
+    if len(project.subprojects) > 0:
+        db_update_subprojects_project_association(connection, project.subprojects, project_id)
+
     return db_get_project(connection, project_id)
+
+
+def db_update_subprojects_project_association(connection: PooledMySQLConnection, subproject_id_list: List[int],
+                                              project_id: int, overwrite: bool = False):
+    logger.debug(f'Associating sub-projects with IDs {subproject_id_list} to project with ID {project_id}')
+
+    if overwrite is False:
+        # Assert that these subprojects are not already members of other projects
+        select_stmnt = MySQLStatementBuilder(connection)
+        rs = select_stmnt.select(SUBPROJECTS_TABLE, ['project_id', 'id', 'name'])\
+            .where(f'id IN {MySQLStatementBuilder.placeholder_array(len(subproject_id_list))}', subproject_id_list)\
+            .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+        for res in rs:
+            if res['project_id'] is not None:
+                raise exc.ConflictingProjectAssociationException(f'Subproject "{res["name"]}" (id: {res["id"]}) '
+                                                                 f'is already associated with another project, '
+                                                                 f'and overwrite has been disabled.')
+
+    update_stmnt = MySQLStatementBuilder(connection)
+    update_stmnt\
+        .update(SUBPROJECTS_TABLE, "project_id = %s", [project_id])\
+        .where(f'id IN {MySQLStatementBuilder.placeholder_array(len(subproject_id_list))}', subproject_id_list)\
+        .execute(fetch_type=FetchType.FETCH_NONE)
+
+    return
 
 
 def db_delete_project(connection, project_id: int) -> bool:
@@ -195,8 +270,8 @@ def db_post_subproject(connection, subproject: models.SubProjectPost, current_us
     except exc.SubProjectNotFoundException:
         insert_stmnt = MySQLStatementBuilder(connection)
         insert_stmnt\
-            .insert(SUBPROJECTS_TABLE, ['application_sid', 'project_id', 'native_project_id', 'owner_id'])\
-            .set_values([subproject.application_sid, project_id, subproject.native_project_id, current_user_id])\
+            .insert(SUBPROJECTS_TABLE, ['name', 'application_sid', 'project_id', 'native_project_id', 'owner_id'])\
+            .set_values([subproject.name, subproject.application_sid, project_id, subproject.native_project_id, current_user_id])\
             .execute()
 
         return db_get_subproject_native(connection, subproject.application_sid, subproject.native_project_id)
@@ -287,7 +362,13 @@ def db_delete_subproject(connection, project_id, subproject_id) -> bool:
     return True
 
 
-def db_get_user_subprojects_with_application_sid(con, user_id, application_sid) -> List[models.SubProject]:
+def db_get_user_subprojects_with_application_sid(con, user_id, application_sid,
+                                                 no_project_association: Optional[bool] = False) \
+        -> List[models.SubProject]:
+
+    # Validate that the application is listed
+    get_application(application_sid)
+
     # Get projects in which this user is a participant
     project_list = db_get_user_projects(con, user_id)
     project_id_list = []
@@ -298,11 +379,16 @@ def db_get_user_subprojects_with_application_sid(con, user_id, application_sid) 
         return []
 
     # Figure out which of those projects have an attached subproject with specified application SID.
-    where_values = project_id_list.copy()
-    where_values.append(application_sid)
+    where_values = [application_sid]
+    where_values.extend(project_id_list.copy())
+    where_values.append(user_id)
+    where_stmnt = f"application_sid = %s AND " \
+                  f"((project_id IN {MySQLStatementBuilder.placeholder_array(len(project_id_list))}) OR " \
+                  f"(project_id is null AND owner_id = %s))"
+
     stmnt = MySQLStatementBuilder(con)
     rs = stmnt.select(SUBPROJECTS_TABLE, SUBPROJECT_COLUMNS)\
-        .where(f"project_id IN {MySQLStatementBuilder.placeholder_array(len(project_id_list))} AND application_sid = %s",
+        .where(where_stmnt,
                where_values)\
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
@@ -310,6 +396,9 @@ def db_get_user_subprojects_with_application_sid(con, user_id, application_sid) 
     subproject_list = []
     for res in rs:
         subproject_list.append(models.SubProject(**res))
+
+    if no_project_association:
+        subproject_list = list(filter(lambda p: p.project_id is None, subproject_list))
 
     return subproject_list
 

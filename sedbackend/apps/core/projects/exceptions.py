@@ -36,3 +36,7 @@ class SubProjectDuplicateException(Exception):
 
 class ParticipantInconsistencyException(Exception):
     pass
+
+
+class ConflictingProjectAssociationException(Exception):
+    pass
