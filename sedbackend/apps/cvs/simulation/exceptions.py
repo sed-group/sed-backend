@@ -52,3 +52,7 @@ class FlowProcessNotFoundException(Exception):
   
 class SimSettingsNotFoundException(Exception):
     pass
+
+
+class NoTechnicalProcessException(Exception):
+    pass

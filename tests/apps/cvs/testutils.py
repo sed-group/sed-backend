@@ -153,7 +153,10 @@ def random_table_row(
         subprocess = random_subprocess(project_id, vcs_id)
         subprocess_id = subprocess.id
     else:
-        iso_process_id = random.randint(1, 25)
+        if random.randint(1, 5) == 1: #Give 1/5 chance to produce non-tech process
+            iso_process_id = random.randint(1, 14)
+        else:
+            iso_process_id = random.randint(15, 25)
 
     if stakeholder is None:
         stakeholder = tu.random_str(5, 50)
@@ -556,10 +559,10 @@ def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int)
     rows.reverse()  # reverse back to find first technical process
     for row in rows:
         if row.iso_process is not None:
-            if row.iso_process.category == 'Technical processes':
+            if row.iso_process.category == 'Technical processes' and row.id != last_id:
                 return row
         else:
-            if row.subprocess.parent_process.category == 'Technical processes':
+            if row.subprocess.parent_process.category == 'Technical processes' and row.id != last_id:
                 return row
 
 
