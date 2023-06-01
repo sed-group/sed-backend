@@ -1,9 +1,10 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from fastapi.logger import logger
 from mysqlsb import MySQLStatementBuilder, FetchType, utils
 from mysql.connector.pooling import PooledMySQLConnection
 
+from sedbackend.apps.core.exceptions import NoChangeException
 from sedbackend.apps.core.applications.state import get_application
 import sedbackend.apps.core.projects.models as models
 import sedbackend.apps.core.projects.exceptions as exc
@@ -220,6 +221,17 @@ def db_add_participant(connection, project_id, user_id, access_level, check_proj
     return True
 
 
+def db_add_participants(connection: PooledMySQLConnection, project_id: int,
+                        user_id_access_map: Dict[int, models.AccessLevel], check_project_exists=True) -> bool:
+    if check_project_exists:
+        db_get_project_exists(connection, project_id) # Raises exception if project does not exist
+
+    insert_stmnt = MySQLStatementBuilder(connection)
+    insert_stmnt.insert(PROJECTS_PARTICIPANTS_TABLE, ['user_id', 'project_id', 'access_level']).set_values([])
+
+    return True
+
+
 def db_delete_participant(connection, project_id, user_id, check_project_exists=True) -> bool:
     if check_project_exists:
         db_get_project_exists(connection, project_id)  # Raises exception if project does not exist
@@ -232,6 +244,23 @@ def db_delete_participant(connection, project_id, user_id, check_project_exists=
 
     if row_count == 0:
         raise exc.ParticipantChangeException("Failed to remove participant from project")
+
+    return True
+
+
+def db_delete_participants(connection: PooledMySQLConnection, project_id: int, user_ids: List[int],
+                           check_project_exists=True) -> bool:
+    if check_project_exists:
+        db_get_project_exists(connection, project_id)
+
+    del_stmnt = MySQLStatementBuilder(connection)
+    res, row_count = del_stmnt\
+        .delete(PROJECTS_PARTICIPANTS_TABLE)\
+        .where(f'project_id = %s AND user_id IN {MySQLStatementBuilder.placeholder_array(len(user_ids))}',
+               [project_id].extend(user_ids)).execute(return_affected_rows=True)
+
+    if row_count != len(user_ids):
+        raise NoChangeException('Not all participants could be found')
 
     return True
 
@@ -401,6 +430,54 @@ def db_get_user_subprojects_with_application_sid(con, user_id, application_sid,
         subproject_list = list(filter(lambda p: p.project_id is None, subproject_list))
 
     return subproject_list
+
+
+def db_update_project(con: PooledMySQLConnection, project_updated: models.ProjectEdit) -> models.Project:
+
+    # Check if project exists
+    project_original = db_get_project(con, project_updated.id)
+
+    # Change name if requested
+    if project_original.name != project_updated.name:
+        update_project_stmnt = MySQLStatementBuilder(con)
+        res, row_count = update_project_stmnt\
+            .update(PROJECTS_TABLE, "name = %s, ", [project_updated.name])\
+            .execute(fetch_type=FetchType.FETCH_NONE, return_affected_rows=True)
+        if row_count != 1:
+            raise NoChangeException
+
+    participants_changed_access = {}    # Participant ID -> New access level
+    participants_added_access = {}      # Participant ID -> Access level
+    participants_to_remove = list(project_original.participants_access.keys())
+
+    # Search for changes to participant access
+    for participant_id in project_updated.participants:
+
+        # Participant is represented in both versions and will thus be removed from the removal-list
+        participants_to_remove.remove(participant_id)
+
+        if participant_id not in project_original.participants_access.keys():
+            # Stage new participant
+            participants_added_access[participant_id] = project_updated.participants_access[participant_id]
+
+        elif participant_id in project_original.participants_access.keys():
+            # Check if access needs to change
+
+            if project_updated.participants_access[participant_id] == project_original.participants_access[participant_id]:
+                # Participant access has not changed
+                continue
+
+            # Stage for participant access level change
+            participants_changed_access[participant_id] = project_updated.participants_access[participant_id]
+
+    # Remove participants in bulk
+    db_delete_participants(con, project_updated.id, participants_to_remove, check_project_exists=False)
+
+    # Add participants in bulk
+    db_add_participants(con, project_updated.id, participants_added_access, check_project_exists=False)
+
+    # Update participant access in bulk
+    pass
 
 
 def db_get_project_exists(connection: PooledMySQLConnection, project_id: int) -> bool:

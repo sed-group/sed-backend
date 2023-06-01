@@ -44,6 +44,10 @@ class ProjectPost(BaseModel):
     subprojects: Optional[List[int]] = []       # List of sub-project IDs (not native)
 
 
+class ProjectEdit(ProjectPost):
+    id: int
+
+
 class SubProjectPost(BaseModel):
     name: Optional[constr(min_length=5)] = 'Unnamed sub-project'
     application_sid: str
