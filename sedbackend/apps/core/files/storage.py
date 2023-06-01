@@ -5,7 +5,6 @@ import os
 from mysql.connector.pooling import PooledMySQLConnection
 from fastapi.logger import logger
 import os
-import pathlib
 
 import sedbackend.apps.core.files.models as models
 import sedbackend.apps.core.files.exceptions as exc
