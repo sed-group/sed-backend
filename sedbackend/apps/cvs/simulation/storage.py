@@ -11,7 +11,7 @@ from desim.data import NonTechCost, TimeFormat, SimResults
 from desim.simulation import Process
 import os
 
-from typing import List
+from typing import Optional, List
 from sedbackend.apps.cvs.design.implementation import get_design
 
 from sedbackend.libs.mysqlutils.builder import FetchType, MySQLStatementBuilder
@@ -21,7 +21,8 @@ from sedbackend.libs.formula_parser import expressions as expr
 from sedbackend.apps.cvs.simulation import models
 import sedbackend.apps.cvs.simulation.exceptions as e
 from sedbackend.apps.cvs.vcs import implementation as vcs_impl
-from sedbackend.apps.cvs.design import implementation as design_impl
+from sedbackend.apps.cvs.design import implementation as design_impl, models as design_models
+from sedbackend.apps.cvs.market_input import models as mi_models
 
 SIM_SETTINGS_TABLE = "cvs_simulation_settings"
 SIM_SETTINGS_COLUMNS = ['project', 'time_unit', 'flow_process', 'flow_start_time', 'flow_time',
@@ -102,7 +103,7 @@ def run_sim_with_dsm_file(db_connection: PooledMySQLConnection, user_id: int, pr
 
         for design_id in design_ids:
             processes, non_tech_processes = populate_processes(
-                non_tech_add, res, db_connection, vcs_id, design_id)
+                non_tech_add, res, db_connection, design_id)
             sim = des.Des()
 
             try:
@@ -144,23 +145,24 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, sim_se
     time_unit = TIME_FORMAT_DICT.get(sim_settings.time_unit)
 
     for vcs_id in vcs_ids:
+        market_values = get_market_values(db_connection, vcs_id)  # 1 * vcs
         for design_group_id in design_group_ids:
-            res = get_sim_data(db_connection, vcs_id, design_group_id)
-            if res is None or res == []:
+            sim_data = get_sim_data(db_connection, vcs_id, design_group_id)  # 1 * vcs * design_group
+            if sim_data is None or sim_data == []:
                 raise e.VcsFailedException
 
-            if not check_entity_rate(res, process):
+            if not check_entity_rate(sim_data, process):
                 raise e.RateWrongOrderException
 
-            design_ids = [design.id for design in design_impl.get_all_designs(project_id, design_group_id)]
+            designs = [design for design in design_impl.get_all_designs(project_id, design_group_id)]  # 1 * vcs * design_group
 
-            if design_ids is None or []:
+            if designs is None or []:
                 raise e.DesignIdsNotFoundException
 
-            for design_id in design_ids:
-                # get_design(design_id)
-                processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id,
-                                                                   design_id)  # BUG probably. Populate processes changes the order of the processes.
+            for design in designs:
+                processes, non_tech_processes = populate_processes(non_tech_add, sim_data, db_connection,  # 1 * vcs * design_group
+                                                                   design.id,
+                                                                   market_values, design.vd_design_values)  # BUG probably. Populate processes changes the order of the processes.
 
                 dsm = create_simple_dsm(processes)  # TODO Change to using BPMN
 
@@ -194,7 +196,7 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, sim_se
 def run_sim_monte_carlo(db_connection: PooledMySQLConnection, project_id: int, simSettings: models.EditSimSettings,
                         vcs_ids: List[int],
                         design_group_ids: List[int], normalized_npv: bool = False, user_id: int = None) -> List[
-        models.Simulation]:
+    models.Simulation]:
     design_results = []
 
     if not check_sim_settings(simSettings):
@@ -210,6 +212,7 @@ def run_sim_monte_carlo(db_connection: PooledMySQLConnection, project_id: int, s
     runs = simSettings.runs
 
     for vcs_id in vcs_ids:
+        market_values = get_market_values(db_connection, vcs_id)
         for design_group_id in design_group_ids:
             res = get_sim_data(db_connection, vcs_id, design_group_id)
             if res is None or res == []:
@@ -226,7 +229,7 @@ def run_sim_monte_carlo(db_connection: PooledMySQLConnection, project_id: int, s
             for design_id in design_ids:
                 get_design(design_id)
                 processes, non_tech_processes = populate_processes(
-                    non_tech_add, res, db_connection, vcs_id, design_id)
+                    non_tech_add, res, db_connection, market_values, design_id)
                 logger.debug('Fetched Processes and non-techproc')
                 # TODO Change to using BPMN AND move out of the for loop
                 dsm = create_simple_dsm(processes)
@@ -234,7 +237,8 @@ def run_sim_monte_carlo(db_connection: PooledMySQLConnection, project_id: int, s
                 sim = des.Des()
 
                 try:
-                    results = sim.run_parallell_simulations(flow_time, interarrival, process, processes, non_tech_processes,
+                    results = sim.run_parallell_simulations(flow_time, interarrival, process, processes,
+                                                            non_tech_processes,
                                                             non_tech_add, dsm, time_unit, discount_rate, runtime, runs)
 
                 except Exception as exc:
@@ -258,15 +262,19 @@ def run_sim_monte_carlo(db_connection: PooledMySQLConnection, project_id: int, s
     return design_results
 
 
-def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: PooledMySQLConnection, vcs: int,
-                       design: int):
+def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: PooledMySQLConnection, design: int,
+                       mi_values=None,
+                       vd_values=None):
+    if vd_values is None:
+        vd_values = []
+    if mi_values is None:
+        mi_values = []
     nsp = NumericStringParser()
 
     technical_processes = []
     non_tech_processes = []
-    mi_values = get_market_values(db_connection, vcs)
+
     for row in db_results:
-        vd_values = get_vd_design_values(db_connection, row['id'], design)
         if row['category'] != 'Technical processes':
             try:
                 non_tech = models.NonTechnicalProcess(cost=nsp.eval(parse_formula(row['cost'], vd_values, mi_values)),
@@ -292,7 +300,7 @@ def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: Poo
                             nsp.eval(expr.replace_all(
                                 'time', time, revenue_formula)),
                             row['iso_name'], non_tech_add, TIME_FORMAT_DICT.get(
-                                row['time_unit'].lower())
+                        row['time_unit'].lower())
                             )
                 if p.time < 0:
                     raise e.NegativeTimeException(row['id'])
@@ -314,7 +322,7 @@ def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: Poo
                             nsp.eval(expr.replace_all(
                                 'time', time, revenue_formula)),
                             row['sub_name'], non_tech_add, TIME_FORMAT_DICT.get(
-                                row['time_unit'].lower())
+                        row['time_unit'].lower())
                             )
 
                 if p.time < 0:
@@ -346,7 +354,6 @@ def get_sim_data(db_connection: PooledMySQLConnection, vcs_id: int, design_group
 
 def get_vd_design_values(db_connection: PooledMySQLConnection, vcs_row_id: int,
                          design: int):
-
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement \
         .select('cvs_vd_design_values', ['cvs_value_drivers.id', 'design', 'name', 'value', 'unit']) \
@@ -369,7 +376,7 @@ def get_simulation_settings(db_connection: PooledMySQLConnection, project_id: in
 
     if res is None:
         raise e.SimSettingsNotFoundException
-        
+
     return populate_sim_settings(res)
 
 
