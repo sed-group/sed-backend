@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Union
 
 from fastapi import HTTPException, status
 
@@ -72,10 +72,43 @@ def impl_delete_project(project_id: int) -> bool:
         )
 
 
+def impl_update_project(project_id: int, project_updated: models.ProjectEdit) -> models.Project:
+    # Validate input
+    if project_id != project_updated.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Conflicting project IDs (payload vs URL)"
+        )
+
+    try:
+        with get_connection() as con:
+            res = storage.db_update_project(con, project_updated)
+            con.commit()
+            return res
+    except exc.ProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Project not found"
+        )
+
+
 def impl_post_participant(project_id: int, user_id: int, access_level: models.AccessLevel) -> bool:
     try:
         with get_connection() as con:
             res = storage.db_add_participant(con, project_id, user_id, access_level)
+            con.commit()
+            return res
+    except exc.ProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found",
+        )
+
+
+def impl_post_participants(project_id: int, participants_access_dict: dict[int, models.AccessLevel]) -> bool:
+    try:
+        with get_connection() as con:
+            res = storage.db_add_participants(con, project_id, participants_access_dict)
             con.commit()
             return res
     except exc.ProjectNotFoundException:
@@ -183,7 +216,7 @@ def impl_get_subproject_by_id(subproject_id: int) -> models.SubProject:
         )
 
 
-def impl_delete_subproject(project_id: int, subproject_id: int) -> bool:
+def impl_delete_subproject(project_id: Union[int, None], subproject_id: int) -> bool:
     try:
         with get_connection() as con:
             res = storage.db_delete_subproject(con, project_id, subproject_id)

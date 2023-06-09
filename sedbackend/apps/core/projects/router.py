@@ -73,6 +73,15 @@ async def delete_project(project_id: int):
     return impl.impl_delete_project(project_id)
 
 
+@router.put("/{project_id}",
+            summary="Edit project",
+            description="Edit project",
+            response_model=models.Project,
+            dependencies=[Depends(ProjectAccessChecker(models.AccessLevel.list_are_admins()))])
+async def update_project(project_id: int, project_updated: models.ProjectEdit):
+    return impl.impl_update_project(project_id, project_updated)
+
+
 @router.post("/{project_id}/participants",
              summary="Add participant to project",
              description="Add a participant to a project",

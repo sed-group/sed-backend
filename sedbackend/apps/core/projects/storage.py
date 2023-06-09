@@ -1,9 +1,10 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from fastapi.logger import logger
-from mysqlsb import MySQLStatementBuilder, FetchType, utils
+from mysqlsb import MySQLStatementBuilder, FetchType
 from mysql.connector.pooling import PooledMySQLConnection
 
+from sedbackend.apps.core.exceptions import NoChangeException
 from sedbackend.apps.core.applications.state import get_application
 import sedbackend.apps.core.projects.models as models
 import sedbackend.apps.core.projects.exceptions as exc
@@ -140,9 +141,6 @@ def db_get_project(connection, project_id) -> models.Project:
 
 
 def db_post_project(connection, project: models.ProjectPost, owner_id: int) -> models.Project:
-    logger.debug('Adding new project:')
-    logger.debug(project)
-
     # Set owner if it is not already set
     if owner_id not in project.participants:
         project.participants.append(owner_id)
@@ -166,6 +164,16 @@ def db_post_project(connection, project: models.ProjectPost, owner_id: int) -> m
         db_update_subprojects_project_association(connection, project.subprojects, project_id)
 
     return db_get_project(connection, project_id)
+
+
+def db_clear_subproject_project_association(connection: PooledMySQLConnection, subproject_id_list: List[int], current_project_id: int):
+    logger.debug(f"Clearing subproject association with project with ID = {current_project_id} "
+                 f"for subprojects with IDs {str(subproject_id_list)})")
+
+    update_stmnt = MySQLStatementBuilder(connection)
+    update_stmnt.update(SUBPROJECTS_TABLE, "project_id = NULL", [])\
+        .where(f'id IN {MySQLStatementBuilder.placeholder_array(len(subproject_id_list))}', subproject_id_list)\
+        .execute()
 
 
 def db_update_subprojects_project_association(connection: PooledMySQLConnection, subproject_id_list: List[int],
@@ -220,6 +228,23 @@ def db_add_participant(connection, project_id, user_id, access_level, check_proj
     return True
 
 
+def db_add_participants(connection: PooledMySQLConnection, project_id: int,
+                        user_id_access_map: Dict[int, models.AccessLevel], check_project_exists=True) -> bool:
+    if check_project_exists:
+        db_get_project_exists(connection, project_id) # Raises exception if project does not exist
+
+    insert_stmnt = MySQLStatementBuilder(connection)
+    insert_stmnt.insert(PROJECTS_PARTICIPANTS_TABLE, ['user_id', 'project_id', 'access_level'])
+
+    insert_values = []
+    for user_id, access_level in user_id_access_map.items():
+        insert_values.append([user_id, project_id, access_level])
+
+    insert_stmnt.set_values(insert_values).execute()
+
+    return True
+
+
 def db_delete_participant(connection, project_id, user_id, check_project_exists=True) -> bool:
     if check_project_exists:
         db_get_project_exists(connection, project_id)  # Raises exception if project does not exist
@@ -232,6 +257,28 @@ def db_delete_participant(connection, project_id, user_id, check_project_exists=
 
     if row_count == 0:
         raise exc.ParticipantChangeException("Failed to remove participant from project")
+
+    return True
+
+
+def db_delete_participants(connection: PooledMySQLConnection, project_id: int, user_ids: List[int],
+                           check_project_exists=True) -> bool:
+
+    logger.debug(f"Removing participants with ids = {user_ids} from project with id = {project_id}")
+
+    if check_project_exists:
+        db_get_project_exists(connection, project_id)
+
+    del_stmnt = MySQLStatementBuilder(connection)
+    values = [project_id]
+    values.extend(user_ids)
+    res, row_count = del_stmnt\
+        .delete(PROJECTS_PARTICIPANTS_TABLE)\
+        .where(f'project_id = %s AND user_id IN {MySQLStatementBuilder.placeholder_array(len(user_ids))}',
+               values).execute(return_affected_rows=True)
+
+    if row_count != len(user_ids):
+        raise NoChangeException('Not all participants could be found')
 
     return True
 
@@ -349,12 +396,15 @@ def db_get_subproject_native(connection, application_sid, native_project_id) -> 
 
 
 def db_delete_subproject(connection, project_id, subproject_id) -> bool:
-    db_get_subproject(connection, project_id, subproject_id)  # Raises exception if project does not exist
-
     delete_stmnt = MySQLStatementBuilder(connection)
-    res, row_count = delete_stmnt.delete(SUBPROJECTS_TABLE)\
-        .where("project_id = %s AND id = %s", [project_id, subproject_id])\
-        .execute(return_affected_rows=True)
+    delete_stmnt.delete(SUBPROJECTS_TABLE)
+
+    if project_id is not None:
+        delete_stmnt.where("project_id = %s AND id = %s", [project_id, subproject_id])
+    else:
+        delete_stmnt.where("id = %s AND project_id IS NULL", [subproject_id])
+
+    res, row_count = delete_stmnt.execute(return_affected_rows=True)
 
     if row_count == 0:
         raise exc.SubProjectNotDeletedException
@@ -401,6 +451,37 @@ def db_get_user_subprojects_with_application_sid(con, user_id, application_sid,
         subproject_list = list(filter(lambda p: p.project_id is None, subproject_list))
 
     return subproject_list
+
+
+def db_update_project(con: PooledMySQLConnection, project_updated: models.ProjectEdit) -> models.Project:
+
+    # Check if project exists
+    project_original = db_get_project(con, project_updated.id)
+
+    # Change name if requested
+    if project_original.name != project_updated.name:
+        update_project_stmnt = MySQLStatementBuilder(con)
+        res, row_count = update_project_stmnt\
+            .update(PROJECTS_TABLE, "name = %s", [project_updated.name])\
+            .where("id = %s", [project_updated.id])\
+            .execute(fetch_type=FetchType.FETCH_NONE, return_affected_rows=True)
+        if row_count != 1:
+            raise NoChangeException
+
+    # Add participants if requested
+    db_add_participants(con, project_updated.id, project_updated.participants_to_add, check_project_exists=False)
+
+    # Remove participants if requested
+    db_delete_participants(con, project_updated.id, project_updated.participants_to_remove, check_project_exists=False)
+
+    # Add subprojects if requested
+    db_update_subprojects_project_association(con, project_updated.subprojects_to_add, project_updated.id, overwrite=False)
+
+    # Remove subprojects if requested
+    db_clear_subproject_project_association(con, project_updated.subprojects_to_remove, project_updated.id)
+
+    # Return project
+    return db_get_project(con, project_updated.id)
 
 
 def db_get_project_exists(connection: PooledMySQLConnection, project_id: int) -> bool:
