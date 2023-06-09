@@ -77,7 +77,7 @@ async def delete_project(project_id: int):
             summary="Edit project",
             description="Edit project",
             response_model=models.Project,
-            dependencies=[Depends(ProjectAccessChecker([models.AccessLevel.list_are_admins()]))])
+            dependencies=[Depends(ProjectAccessChecker(models.AccessLevel.list_are_admins()))])
 async def update_project(project_id: int, project_updated: models.ProjectEdit):
     return impl.impl_update_project(project_id, project_updated)
 
