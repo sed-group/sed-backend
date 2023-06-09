@@ -92,11 +92,23 @@ def impl_update_project(project_id: int, project_updated: models.ProjectEdit) ->
         )
 
 
-
 def impl_post_participant(project_id: int, user_id: int, access_level: models.AccessLevel) -> bool:
     try:
         with get_connection() as con:
             res = storage.db_add_participant(con, project_id, user_id, access_level)
+            con.commit()
+            return res
+    except exc.ProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found",
+        )
+
+
+def impl_post_participants(project_id: int, participants_access_dict: dict[int, models.AccessLevel]) -> bool:
+    try:
+        with get_connection() as con:
+            res = storage.db_add_participants(con, project_id, participants_access_dict)
             con.commit()
             return res
     except exc.ProjectNotFoundException:

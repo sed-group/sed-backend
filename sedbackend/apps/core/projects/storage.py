@@ -141,9 +141,6 @@ def db_get_project(connection, project_id) -> models.Project:
 
 
 def db_post_project(connection, project: models.ProjectPost, owner_id: int) -> models.Project:
-    logger.debug('Adding new project:')
-    logger.debug(project)
-
     # Set owner if it is not already set
     if owner_id not in project.participants:
         project.participants.append(owner_id)
@@ -227,7 +224,13 @@ def db_add_participants(connection: PooledMySQLConnection, project_id: int,
         db_get_project_exists(connection, project_id) # Raises exception if project does not exist
 
     insert_stmnt = MySQLStatementBuilder(connection)
-    insert_stmnt.insert(PROJECTS_PARTICIPANTS_TABLE, ['user_id', 'project_id', 'access_level']).set_values([])
+    insert_stmnt.insert(PROJECTS_PARTICIPANTS_TABLE, ['user_id', 'project_id', 'access_level'])
+
+    insert_values = []
+    for user_id, access_level in user_id_access_map.items():
+        insert_values.append([user_id, project_id, access_level])
+
+    insert_stmnt.set_values(insert_values).execute()
 
     return True
 
@@ -477,7 +480,6 @@ def db_update_project(con: PooledMySQLConnection, project_updated: models.Projec
     db_add_participants(con, project_updated.id, participants_added_access, check_project_exists=False)
 
     # Update participant access in bulk
-    pass
 
 
 def db_get_project_exists(connection: PooledMySQLConnection, project_id: int) -> bool:
