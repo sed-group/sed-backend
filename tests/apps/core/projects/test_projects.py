@@ -353,14 +353,25 @@ def test_add_participants_as_admin(client, std_headers, std_user):
 def test_update_project(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
-    participant_1 = tu_users.seed_random_user(False, False)
-    participant_2 = tu_users.seed_random_user(False, False)
-    participant_3 = tu_users.seed_random_user(False, False)
+    old_participant_1 = tu_users.seed_random_user(False, False)
+    old_participant_2 = tu_users.seed_random_user(False, False)
 
-    project = tu_projects.seed_random_project(current_user.id)
+    new_participant_1 = tu_users.seed_random_user(False, False)
+    new_participant_2 = tu_users.seed_random_user(False, False)
+    new_participant_3 = tu_users.seed_random_user(False, False)
 
-    subproject_1 = tu_projects.seed_random_subproject(participant_3.id, None)
-    subproject_2 = tu_projects.seed_random_subproject(current_user.id, None)
+    project = tu_projects.seed_random_project(current_user.id, participants={
+        old_participant_1.id: models.AccessLevel.EDITOR,
+        old_participant_2.id: models.AccessLevel.READONLY
+    })
+
+    # Add three subprojects to the project
+    old_subproject_1 = tu_projects.seed_random_subproject(current_user.id, project.id)
+    old_subproject_2 = tu_projects.seed_random_subproject(current_user.id, project.id)
+    old_subproject_3 = tu_projects.seed_random_subproject(current_user.id, project.id)
+
+    new_subproject_1 = tu_projects.seed_random_subproject(new_participant_3.id, None)
+    new_subproject_2 = tu_projects.seed_random_subproject(current_user.id, None)
 
     new_name = tu.random_str(5, 50)
 
@@ -371,29 +382,37 @@ def test_update_project(client, std_headers, std_user):
     res_after = client.put(f'/api/core/projects/{project.id}', headers=std_headers, json={
         "id": project.id,
         "name": new_name,
-        "participants": [participant_1.id, participant_2.id, participant_3.id],
-        "subprojects": [subproject_1.id, subproject_2.id],
-        "participants_access": {
-            participant_1.id: models.AccessLevel.ADMIN.value,
-            participant_2.id: models.AccessLevel.EDITOR.value,
-            participant_3.id: models.AccessLevel.READONLY.value
-        }
+        "participants_to_add": {
+            new_participant_1.id: models.AccessLevel.ADMIN.value,
+            new_participant_2.id: models.AccessLevel.EDITOR.value,
+            new_participant_3.id: models.AccessLevel.READONLY.value
+        },
+        "participants_to_remove": [old_participant_1.id, old_participant_2.id],
+        "subprojects_to_add": [new_subproject_1.id, new_subproject_2.id],
+        "subprojects_to_remove": [old_subproject_1.id, old_subproject_2.id, old_subproject_3.id]
     })
     p_after_json = res_after.json()
 
     # Assert - before
     assert p_before_json["id"] == project.id
-    assert len(p_before_json["participants"]) == 1
-    assert len(p_before_json["subprojects"]) == 0
+    assert len(p_before_json["participants"]) == 3
+    assert len(p_before_json["subprojects"]) == 3
     assert p_before_json["name"] == project.name
     # Assert - after
     assert res_after.status_code == 200
     assert p_after_json["id"] == project.id
+    assert p_after_json["name"] == new_name
     assert len(p_after_json["participants"]) == 4
     assert len(p_after_json["subprojects"]) == 2
-    assert p_after_json["name"] == new_name
 
     # Cleanup
-    tu_users.delete_users([participant_1, participant_2, participant_3])
+    tu_users.delete_users([new_participant_1, new_participant_2, new_participant_3, old_participant_1, old_participant_2])
+
+    old_subproject_1.project_id = None
+    old_subproject_2.project_id = None
+    old_subproject_3.project_id = None
+    new_subproject_1.project_id = project.id
+    new_subproject_2.project_id = project.id
+
+    tu_projects.delete_subprojects([old_subproject_1, old_subproject_2, old_subproject_3, new_subproject_1, new_subproject_2])
     tu_projects.delete_projects([project])
-    tu_projects.delete_subprojects([subproject_1, subproject_2])

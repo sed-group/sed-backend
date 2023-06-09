@@ -44,8 +44,13 @@ class ProjectPost(BaseModel):
     subprojects: Optional[List[int]] = []       # List of sub-project IDs (not native)
 
 
-class ProjectEdit(ProjectPost):
+class ProjectEdit(BaseModel):
     id: int
+    name: Optional[constr(min_length=5)] = None
+    participants_to_add: Optional[Dict[int, AccessLevel]] = {}
+    participants_to_remove: Optional[List[int]] = []
+    subprojects_to_add: Optional[List[int]] = []
+    subprojects_to_remove: Optional[List[int]] = []
 
 
 class SubProjectPost(BaseModel):

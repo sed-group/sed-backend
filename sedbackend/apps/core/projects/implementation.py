@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Union
 
 from fastapi import HTTPException, status
 
@@ -216,7 +216,7 @@ def impl_get_subproject_by_id(subproject_id: int) -> models.SubProject:
         )
 
 
-def impl_delete_subproject(project_id: int, subproject_id: int) -> bool:
+def impl_delete_subproject(project_id: Union[int, None], subproject_id: int) -> bool:
     try:
         with get_connection() as con:
             res = storage.db_delete_subproject(con, project_id, subproject_id)
