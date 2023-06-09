@@ -264,7 +264,7 @@ def db_delete_participant(connection, project_id, user_id, check_project_exists=
 def db_delete_participants(connection: PooledMySQLConnection, project_id: int, user_ids: List[int],
                            check_project_exists=True) -> bool:
 
-    logger.debug(f"Removing participants with ids = {user_ids}")
+    logger.debug(f"Removing participants with ids = {user_ids} from project with id = {project_id}")
 
     if check_project_exists:
         db_get_project_exists(connection, project_id)
@@ -481,7 +481,6 @@ def db_update_project(con: PooledMySQLConnection, project_updated: models.Projec
     db_clear_subproject_project_association(con, project_updated.subprojects_to_remove, project_updated.id)
 
     # Return project
-    logger.debug('Returning updated project')
     return db_get_project(con, project_updated.id)
 
 
