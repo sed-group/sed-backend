@@ -369,13 +369,14 @@ def test_update_project(client, std_headers, std_user):
     p_before_json = res_before.json()
 
     res_after = client.put(f'/api/core/projects/{project.id}', headers=std_headers, json={
+        "id": project.id,
         "name": new_name,
         "participants": [participant_1.id, participant_2.id, participant_3.id],
         "subprojects": [subproject_1.id, subproject_2.id],
         "participants_access": {
-            participant_1.id: models.AccessLevel.ADMIN,
-            participant_2.id: models.AccessLevel.EDITOR,
-            participant_3.id: models.AccessLevel.READONLY
+            participant_1.id: models.AccessLevel.ADMIN.value,
+            participant_2.id: models.AccessLevel.EDITOR.value,
+            participant_3.id: models.AccessLevel.READONLY.value
         }
     })
     p_after_json = res_after.json()
