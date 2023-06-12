@@ -1,6 +1,5 @@
 import uuid
 import shutil
-import os
 
 from mysql.connector.pooling import PooledMySQLConnection
 from fastapi.logger import logger
@@ -49,13 +48,15 @@ def db_delete_file(con: PooledMySQLConnection, file_id: int, current_user_id: in
         raise exc.PathMismatchException
         
     try:
-        os.remove(stored_file_path.path)
         delete_stmnt = MySQLStatementBuilder(con)
         delete_stmnt.delete(FILES_TABLE) \
             .where('id=?', [file_id]) \
             .execute(fetch_type=FetchType.FETCH_NONE)
+        os.remove(stored_file_path.path)
             
     except Exception:
+        logger.error(f'Unexpected error when deleting file from database or filesystem. '
+                     f'id = {file_id}, path = \"{stored_file_path.path}\"')
         raise exc.FileNotDeletedException
 
     return True
