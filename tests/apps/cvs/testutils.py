@@ -398,7 +398,7 @@ def seed_random_designs(project_id: int, dg_id: int, amount: int = 10):
     design_impl.edit_designs(project_id, dg_id, [design_model.DesignPut(name=tu.random_str(5, 50))
                                                  for _ in range(amount)])
 
-    return design_impl.get_all_designs(project_id, dg_id)
+    return design_impl.get_designs(project_id, dg_id)
 
 
 # ======================================================================================================================

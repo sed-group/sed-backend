@@ -21,3 +21,11 @@ class MarketInputValue(BaseModel):
     vcs_id: int
     market_input_id: int
     value: float
+
+
+class MarketInputValueSim(BaseModel):
+    vcs_id: int
+    market_input_id: int
+    value: float
+    name: str
+    unit: str

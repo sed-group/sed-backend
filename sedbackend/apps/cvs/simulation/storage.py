@@ -7,12 +7,14 @@ import pandas as pd
 from fastapi.logger import logger
 
 from desim import interface as des
-from desim.data import NonTechCost, TimeFormat, SimResults
+from desim.data import NonTechCost, TimeFormat
 from desim.simulation import Process
 import os
 
 from typing import Optional, List
 from sedbackend.apps.cvs.design.implementation import get_design
+from sedbackend.apps.cvs.design.models import ValueDriverDesignValue
+from sedbackend.apps.cvs.design.storage import get_all_designs
 
 from sedbackend.libs.mysqlutils.builder import FetchType, MySQLStatementBuilder
 
@@ -21,7 +23,7 @@ from sedbackend.libs.formula_parser import expressions as expr
 from sedbackend.apps.cvs.simulation import models
 import sedbackend.apps.cvs.simulation.exceptions as e
 from sedbackend.apps.cvs.vcs import implementation as vcs_impl
-from sedbackend.apps.cvs.design import implementation as design_impl, models as design_models
+from sedbackend.apps.cvs.design import implementation as design_impl
 from sedbackend.apps.cvs.market_input import models as mi_models
 
 SIM_SETTINGS_TABLE = "cvs_simulation_settings"
@@ -144,25 +146,39 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, sim_se
     process = sim_settings.flow_process
     time_unit = TIME_FORMAT_DICT.get(sim_settings.time_unit)
 
+    all_sim_data = get_all_sim_data(db_connection, vcs_ids, design_group_ids)  # 1
+
+    all_market_inputs = get_all_market_values(db_connection, vcs_ids)  # 1
+
+    all_designs = get_all_designs(db_connection, design_group_ids)  # 1
+
+    logger.debug(f'Designs: {len(all_designs)}')
+
+    all_vd_design_values = get_all_vd_design_values(db_connection, [design.id for design in all_designs])  # 1
+
+    logger.debug(f'vd values: {len(all_vd_design_values)}')
+
     for vcs_id in vcs_ids:
-        market_values = get_market_values(db_connection, vcs_id)  # 1 * vcs
+        market_values = [mi for mi in all_market_inputs if mi['vcs'] == vcs_id]
         for design_group_id in design_group_ids:
-            sim_data = get_sim_data(db_connection, vcs_id, design_group_id)  # 1 * vcs * design_group
+            sim_data = [sd for sd in all_sim_data if sd['vcs'] == vcs_id and sd['design_group'] == design_group_id]
             if sim_data is None or sim_data == []:
                 raise e.VcsFailedException
 
             if not check_entity_rate(sim_data, process):
                 raise e.RateWrongOrderException
 
-            designs = [design for design in design_impl.get_all_designs(project_id, design_group_id)]  # 1 * vcs * design_group
+            designs = [design for design in all_designs if design.design_group_id == design_group_id]
 
             if designs is None or []:
                 raise e.DesignIdsNotFoundException
 
             for design in designs:
-                processes, non_tech_processes = populate_processes(non_tech_add, sim_data, db_connection,  # 1 * vcs * design_group
+                vd_values = [vd for vd in all_vd_design_values if vd['design'] == design.id]
+                logger.debug(f'vd values 2: {len(vd_values)}')  # returns for last design 0
+                processes, non_tech_processes = populate_processes(non_tech_add, sim_data, db_connection,
                                                                    design.id,
-                                                                   market_values, design.vd_design_values)  # BUG probably. Populate processes changes the order of the processes.
+                                                                   market_values, vd_values)
 
                 dsm = create_simple_dsm(processes)  # TODO Change to using BPMN
 
@@ -221,7 +237,7 @@ def run_sim_monte_carlo(db_connection: PooledMySQLConnection, project_id: int, s
             if not check_entity_rate(res, process):
                 raise e.RateWrongOrderException
 
-            design_ids = [design.id for design in design_impl.get_all_designs(project_id, design_group_id)]
+            design_ids = [design.id for design in design_impl.get_designs(project_id, design_group_id)]
 
             if design_ids is None or []:
                 raise e.DesignIdsNotFoundException
@@ -265,8 +281,6 @@ def run_sim_monte_carlo(db_connection: PooledMySQLConnection, project_id: int, s
 def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: PooledMySQLConnection, design: int,
                        mi_values=None,
                        vd_values=None):
-    if vd_values is None:
-        vd_values = []
     if mi_values is None:
         mi_values = []
     nsp = NumericStringParser()
@@ -275,6 +289,8 @@ def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: Poo
     non_tech_processes = []
 
     for row in db_results:
+        # vd_values = [vd for vd in vd_values if vd['vcs_row'] == row['id'] and vd['design'] == design]
+        vd_values = get_vd_design_values(db_connection, row['id'], design)  # TODO fix this
         if row['category'] != 'Technical processes':
             try:
                 non_tech = models.NonTechnicalProcess(cost=nsp.eval(parse_formula(row['cost'], vd_values, mi_values)),
@@ -352,8 +368,26 @@ def get_sim_data(db_connection: PooledMySQLConnection, vcs_id: int, design_group
     return res
 
 
+def get_all_sim_data(db_connection: PooledMySQLConnection, vcs_ids: List[int], design_group_ids: List[int]):
+    query = f'SELECT cvs_vcs_rows.id, cvs_vcs_rows.vcs, cvs_design_mi_formulas.design_group, \
+                cvs_vcs_rows.iso_process, cvs_iso_processes.name as iso_name, category, \
+                subprocess, cvs_subprocesses.name as sub_name, time, time_unit, cost, revenue, rate FROM cvs_vcs_rows \
+                LEFT OUTER JOIN cvs_subprocesses ON cvs_vcs_rows.subprocess = cvs_subprocesses.id \
+                LEFT OUTER JOIN cvs_iso_processes ON cvs_vcs_rows.iso_process = cvs_iso_processes.id \
+                    OR cvs_subprocesses.iso_process = cvs_iso_processes.id \
+                LEFT OUTER JOIN cvs_design_mi_formulas ON cvs_vcs_rows.id = cvs_design_mi_formulas.vcs_row \
+                WHERE cvs_vcs_rows.vcs IN ({",".join([str(vcs) for vcs in vcs_ids])}) \
+                AND cvs_design_mi_formulas.design_group \
+                IN ({",".join([str(dg) for dg in design_group_ids])}) ORDER BY `index`'
+    with db_connection.cursor(prepared=True) as cursor:
+        cursor.execute(query)
+        res = cursor.fetchall()
+        res = [dict(zip(cursor.column_names, row)) for row in res]
+    return res
+
+
 def get_vd_design_values(db_connection: PooledMySQLConnection, vcs_row_id: int,
-                         design: int):
+                         design: int) -> List[ValueDriverDesignValue]:
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement \
         .select('cvs_vd_design_values', ['cvs_value_drivers.id', 'design', 'name', 'value', 'unit']) \
@@ -361,6 +395,20 @@ def get_vd_design_values(db_connection: PooledMySQLConnection, vcs_row_id: int,
         .inner_join('cvs_vcs_need_drivers', 'cvs_vcs_need_drivers.value_driver = cvs_value_drivers.id') \
         .inner_join('cvs_stakeholder_needs', 'cvs_stakeholder_needs.id = cvs_vcs_need_drivers.stakeholder_need') \
         .where('vcs_row = %s and design = %s', [vcs_row_id, design]) \
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    logger.debug(f'Fetched {len(res)} value driver design values')
+    return res
+
+
+def get_all_vd_design_values(db_connection: PooledMySQLConnection, designs: List[int]):
+    select_statement = MySQLStatementBuilder(db_connection)
+    res = select_statement \
+        .select('cvs_vd_design_values', ['cvs_value_drivers.id', 'design', 'name', 'value', 'unit', 'vcs_row']) \
+        .inner_join('cvs_value_drivers', 'cvs_vd_design_values.value_driver = cvs_value_drivers.id') \
+        .inner_join('cvs_vcs_need_drivers', 'cvs_vcs_need_drivers.value_driver = cvs_value_drivers.id') \
+        .inner_join('cvs_stakeholder_needs', 'cvs_stakeholder_needs.id = cvs_vcs_need_drivers.stakeholder_need') \
+        .where('design IN (%s)', [','.join([str(design) for design in designs])]) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
     return res
@@ -454,8 +502,27 @@ def get_market_values(db_connection: PooledMySQLConnection, vcs: int):
         .inner_join('cvs_market_inputs', 'cvs_market_input_values.market_input = cvs_market_inputs.id') \
         .where('vcs = %s', [vcs]) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-
     return res
+
+
+def get_all_market_values(db_connection: PooledMySQLConnection, vcs_ids: List[int]):
+    select_statement = MySQLStatementBuilder(db_connection)
+    res = select_statement \
+        .select('cvs_market_input_values', ['id', 'name', 'value', 'unit', 'vcs']) \
+        .inner_join('cvs_market_inputs', 'cvs_market_input_values.market_input = cvs_market_inputs.id') \
+        .where('vcs IN (%s)', [','.join([str(vcs) for vcs in vcs_ids])]) \
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+    return res
+
+
+def populate_market_input_values(res) -> mi_models.MarketInputValueSim:
+    return mi_models.MarketInputValueSim(
+        vcs_id=res['vcs'],
+        market_input_id=res['market_input'],
+        value=res['value'],
+        name=res['name'],
+        unit=res['unit']
+    )
 
 
 def parse_formula(formula: str, vd_values, mi_values) -> str:
