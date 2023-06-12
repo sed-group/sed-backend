@@ -8,3 +8,15 @@ class FileNotFoundException(Exception):
 
 class FileParsingException(Exception):
     pass
+
+  
+class SubprojectMappingNotFound(Exception):
+    pass
+
+
+class FileNotDeletedException(Exception):
+    pass
+
+
+class PathMismatchException(Exception):
+    pass

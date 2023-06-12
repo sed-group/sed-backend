@@ -9,7 +9,7 @@ from sedbackend.apps.cvs.vcs import models, exceptions, implementation as vcs_im
 from sedbackend.apps.cvs.life_cycle import storage as life_cycle_storage, models as life_cycle_models
 from sedbackend.libs.datastructures.pagination import ListChunk
 from sedbackend.apps.core.users import exceptions as user_exceptions
-from sedbackend.libs.mysqlutils import MySQLStatementBuilder, Sort, FetchType
+from mysqlsb import MySQLStatementBuilder, Sort, FetchType
 
 DEBUG_ERROR_HANDLING = True  # Set to false in production
 

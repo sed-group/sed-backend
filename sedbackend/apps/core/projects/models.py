@@ -1,8 +1,9 @@
 from __future__ import annotations          # Obsolete in Python 3.10
 from typing import Optional, List, Dict
 from enum import IntEnum, unique
+from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, constr
 
 from sedbackend.apps.core.users.models import User
 
@@ -32,23 +33,39 @@ class ProjectListing(BaseModel):
     id: int
     name: str
     access_level: AccessLevel = AccessLevel.NONE
+    participants: int = 0
+    datetime_created: datetime
 
 
 class ProjectPost(BaseModel):
-    name: str
+    name: constr(min_length=5)
     participants: List[int]
     participants_access: Dict[int, AccessLevel]
+    subprojects: Optional[List[int]] = []       # List of sub-project IDs (not native)
+
+
+class ProjectEdit(BaseModel):
+    id: int
+    name: Optional[constr(min_length=5)] = None
+    participants_to_add: Optional[Dict[int, AccessLevel]] = {}
+    participants_to_remove: Optional[List[int]] = []
+    subprojects_to_add: Optional[List[int]] = []
+    subprojects_to_remove: Optional[List[int]] = []
 
 
 class SubProjectPost(BaseModel):
+    name: Optional[constr(min_length=5)] = 'Unnamed sub-project'
     application_sid: str
     native_project_id: int
 
 
 class SubProject(SubProjectPost):
     id: int
+    name: str = None
     owner_id: int
     project_id: Optional[int]
+    native_project_id: int
+    datetime_created: datetime
 
 
 class Project(BaseModel):

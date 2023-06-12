@@ -2,6 +2,7 @@ import pytest
 import tests.apps.cvs.testutils as tu
 import testutils as sim_tu
 import sedbackend.apps.core.users.implementation as impl_users
+import sedbackend.apps.cvs.simulation.exceptions as sim_exceptions
 
 def test_run_single_monte_carlo_sim(client, std_headers, std_user):
   #Setup 
@@ -212,13 +213,15 @@ def test_run_mc_sim_both_flows(client, std_headers, std_user):
   tu.delete_vd_from_user(current_user.id)
 
 
-'''
+
 def test_run_mc_sim_rate_invalid_order(client, std_headers, std_user):
     #Setup 
   current_user = impl_users.impl_get_user_with_username(std_user.username)
 
   project, vcs, design_group, design, settings = sim_tu.setup_single_simulation(current_user.id)
-  tu.edit_rate_order_formulas(project.id, vcs.id, design_group.id)
+  first_tech_process = tu.edit_rate_order_formulas(project.id, vcs.id, design_group.id)
+  if first_tech_process is None:
+    raise sim_exceptions.NoTechnicalProcessException
   settings.monte_carlo = False
 
   #Act
@@ -240,4 +243,3 @@ def test_run_mc_sim_rate_invalid_order(client, std_headers, std_user):
   tu.delete_VCS_with_ids(project.id, [vcs.id])
   tu.delete_project_by_id(project.id, current_user.id)
   tu.delete_vd_from_user(current_user.id)
-'''

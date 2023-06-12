@@ -5,8 +5,11 @@ import sedbackend.apps.core.users.implementation as impl
 import tests.testutils as tu
 
 
-def random_user_post(admin=False, disabled=False) -> models.UserPost:
-    random_name = 'test_user_' + tu.random_str(5, 15)
+RANDOM_NAME_PREFIX = 'test_user_'
+
+
+def random_user_post(admin=False, disabled=False, name_prefix=RANDOM_NAME_PREFIX) -> models.UserPost:
+    random_name = name_prefix + tu.random_str(5, 15)
     random_email = random_name + "@sed-mock-email.com"
     random_password = tu.random_str(5, 20)
 
@@ -25,8 +28,8 @@ def random_user_post(admin=False, disabled=False) -> models.UserPost:
     return user
 
 
-def seed_random_user(admin=False, disabled=False) -> models.User:
-    user_post = random_user_post(admin=admin, disabled=disabled)
+def seed_random_user(admin=False, disabled=False, name_prefix=RANDOM_NAME_PREFIX) -> models.User:
+    user_post = random_user_post(admin=admin, disabled=disabled, name_prefix=name_prefix)
     user = impl.impl_post_user(user_post)
     return user
 
