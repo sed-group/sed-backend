@@ -1,18 +1,21 @@
 from typing import List
+
+import mysqlsb.exceptions
 from fastapi.logger import logger
+from mysql.connector.pooling import PooledMySQLConnection
 
 import sedbackend.apps.core.users.exceptions as exc
 import sedbackend.apps.core.users.models as models
 from sedbackend.apps.core.authentication.utils import get_password_hash
-from sedbackend.libs.mysqlutils import MySQLStatementBuilder, FetchType
+from mysqlsb import MySQLStatementBuilder, FetchType, Sort
+from mysqlsb.utils import validate_order_request
 from mysql.connector.errors import Error as SQLError
-from mysql.connector import errorcode
 
 USERS_COLUMNS_SAFE = ['id', 'username', 'email', 'full_name', 'scopes', 'disabled'] # Safe, as it does not contain passwords
 USERS_TABLE = 'users'
 
 
-def db_get_user_safe_with_username(connection, user_name: str) -> models.User:
+def db_get_user_safe_with_username(connection: PooledMySQLConnection, user_name: str) -> models.User:
     mysql_statement = MySQLStatementBuilder(connection)
     cols = ['id', 'username', 'email', 'full_name']
     user_data = mysql_statement\
@@ -27,7 +30,7 @@ def db_get_user_safe_with_username(connection, user_name: str) -> models.User:
     return user
 
 
-def db_get_user_safe_with_id(connection, user_id: int) -> models.User:
+def db_get_user_safe_with_id(connection: PooledMySQLConnection, user_id: int) -> models.User:
     try:
         int(user_id)
     except ValueError:
@@ -46,7 +49,8 @@ def db_get_user_safe_with_id(connection, user_id: int) -> models.User:
     return user
 
 
-def db_get_user_list(connection, segment_length: int, index: int) -> List[models.User]:
+def db_get_user_list(connection: PooledMySQLConnection, segment_length: int, index: int,
+                     order_by: str = 'username', order_direction: str = 'asc') -> List[models.User]:
     try:
         int(segment_length)
         int(index)
@@ -57,9 +61,17 @@ def db_get_user_list(connection, segment_length: int, index: int) -> List[models
     except ValueError:
         raise TypeError
 
+    try:
+        # Order by is not a prepared statement, so we need to validate it for security
+        (order_by, direction) = validate_order_request(order_by, USERS_COLUMNS_SAFE, order_direction)
+    except mysqlsb.exceptions.OrderValueException as err:
+        raise ValueError(str(err))
+
+    # Build and run statement
     mysql_statement = MySQLStatementBuilder(connection)
     rs = mysql_statement\
         .select(USERS_TABLE, USERS_COLUMNS_SAFE)\
+        .order_by([order_by], order=direction)\
         .limit(segment_length)\
         .offset(segment_length * index)\
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
@@ -75,7 +87,7 @@ def db_get_user_list(connection, segment_length: int, index: int) -> List[models
     return users
 
 
-def db_get_users_with_ids(connection, user_ids) -> List[models.User]:
+def db_get_users_with_ids(connection: PooledMySQLConnection, user_ids) -> List[models.User]:
     id_set = set(user_ids)
 
     mysql_statement = MySQLStatementBuilder(connection)
@@ -100,7 +112,7 @@ def db_get_users_with_ids(connection, user_ids) -> List[models.User]:
     return users
 
 
-def db_insert_user(connection, user: models.UserPost) -> models.User:
+def db_insert_user(connection: PooledMySQLConnection, user: models.UserPost) -> models.User:
     try:
         mysql_statement = MySQLStatementBuilder(connection)
 
@@ -128,7 +140,7 @@ def db_insert_user(connection, user: models.UserPost) -> models.User:
         raise exc.UserNotUniqueException('Suggested user is not unique.')
 
 
-def db_delete_user(connection, user_id: int) -> bool:
+def db_delete_user(connection: PooledMySQLConnection, user_id: int) -> bool:
 
     where_stmnt = 'id = %s'
 
@@ -141,3 +153,64 @@ def db_delete_user(connection, user_id: int) -> bool:
     del_stmnt.delete(USERS_TABLE).where(where_stmnt, [user_id]).execute()
 
     return True
+
+
+def db_update_user_password(connection: PooledMySQLConnection, user_id: int, new_password: str) -> bool:
+    hashed_pwd = get_password_hash(new_password)
+    mysql_stmnt = MySQLStatementBuilder(connection)
+    res, rows = mysql_stmnt.update('users', 'password = ?', [hashed_pwd])\
+        .where("id = ?", [user_id])\
+        .execute(fetch_type=FetchType.FETCH_NONE, return_affected_rows=True, no_logs=True)
+
+    if rows == 0:
+        raise exc.UserNotFoundException
+
+    return True
+
+
+def db_update_user_details(connection: PooledMySQLConnection, user_id: int,
+                           update_details_request: models.UpdateDetailsRequest):
+    stmnt = MySQLStatementBuilder(connection)
+    res, rows = stmnt\
+        .update('users', 'full_name = ?, email = ?', [update_details_request.full_name, update_details_request.email])\
+        .where('id = ?', [user_id])\
+        .execute(fetch_type=FetchType.FETCH_NONE, return_affected_rows=True)
+
+    if rows == 0:
+        raise exc.UserNotFoundException
+
+    return True
+
+
+def db_search_users(connection: PooledMySQLConnection, username_search_str: str, full_name_search_str: str,
+                    limit: int = 100, order_by: str = 'username', order_direction: str = 'asc') -> List[models.User]:
+
+    users = []
+
+    try:
+        # Order by is not a prepared statement, so we need to validate it for security
+        (order_by, direction) = validate_order_request(order_by, USERS_COLUMNS_SAFE, order_direction)
+    except mysqlsb.exceptions.OrderValueException as err:
+        raise ValueError(str(err))
+
+    username_search_stmnt = "(`username` rlike ?)"
+    full_name_search_stmnt = "(`full_name` rlike ?)"
+
+    if len(username_search_str) == 0:
+        username_search_str = "."
+    if len(full_name_search_str) == 0:
+        full_name_search_stmnt = '(`full_name` rlike ? OR `full_name` IS NULL)'
+        full_name_search_str = "."
+
+    stmnt = MySQLStatementBuilder(connection)
+    rs = stmnt.select('users', USERS_COLUMNS_SAFE)\
+        .where(f'{username_search_stmnt} AND {full_name_search_stmnt}', [username_search_str, full_name_search_str])\
+        .order_by([order_by], order=direction) \
+        .limit(limit)\
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    for res in rs:
+        user = models.User(**res)
+        users.append(user)
+
+    return users

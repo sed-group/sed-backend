@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Union
 
 from fastapi import HTTPException, status
 
@@ -11,9 +11,9 @@ import sedbackend.apps.core.projects.models as models
 import sedbackend.apps.core.projects.exceptions as exc
 
 
-def impl_get_projects(segment_length: int = None, index: int = None):
+def impl_get_projects(user_id: int, segment_length: int = 0, index: int = 0):
     with get_connection() as con:
-        return storage.db_get_projects(con, segment_length, index)
+        return storage.db_get_projects(con, user_id, segment_length, index)
 
 
 def impl_get_user_projects(user_id: int, segment_length: int = 0, index: int = 0) -> List[models.ProjectListing]:
@@ -52,6 +52,11 @@ def impl_post_project(project: models.ProjectPost, owner_id: int) -> models.Proj
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+    except exc.ConflictingProjectAssociationException as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e)
+        )
 
 
 def impl_delete_project(project_id: int) -> bool:
@@ -67,10 +72,43 @@ def impl_delete_project(project_id: int) -> bool:
         )
 
 
+def impl_update_project(project_id: int, project_updated: models.ProjectEdit) -> models.Project:
+    # Validate input
+    if project_id != project_updated.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Conflicting project IDs (payload vs URL)"
+        )
+
+    try:
+        with get_connection() as con:
+            res = storage.db_update_project(con, project_updated)
+            con.commit()
+            return res
+    except exc.ProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Project not found"
+        )
+
+
 def impl_post_participant(project_id: int, user_id: int, access_level: models.AccessLevel) -> bool:
     try:
         with get_connection() as con:
             res = storage.db_add_participant(con, project_id, user_id, access_level)
+            con.commit()
+            return res
+    except exc.ProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found",
+        )
+
+
+def impl_post_participants(project_id: int, participants_access_dict: dict[int, models.AccessLevel]) -> bool:
+    try:
+        with get_connection() as con:
+            res = storage.db_add_participants(con, project_id, participants_access_dict)
             con.commit()
             return res
     except exc.ProjectNotFoundException:
@@ -158,16 +196,27 @@ def impl_get_subproject_native(application_sid: str, native_project_id: int) -> 
     except exc.SubProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Sub project not found"
+            detail="Sub-project not found."
         )
     except ApplicationNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No such application"
+            detail="No such application."
         )
 
 
-def impl_delete_subproject(project_id: int, subproject_id: int) -> bool:
+def impl_get_subproject_by_id(subproject_id: int) -> models.SubProject:
+    try:
+        with get_connection() as con:
+            return storage.db_get_subproject_with_id(con, subproject_id)
+    except exc.SubProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sub-project not found."
+        )
+
+
+def impl_delete_subproject(project_id: Union[int, None], subproject_id: int) -> bool:
     try:
         with get_connection() as con:
             res = storage.db_delete_subproject(con, project_id, subproject_id)
@@ -195,4 +244,24 @@ def impl_delete_subproject_native(application_id: str, native_project_id: int):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No such subproject"
+        )
+
+
+def impl_get_user_subprojects_with_application_sid(current_user_id: int, user_id: int, application_id: str,
+                                                   no_project_association: bool = False):
+    # This may look redundant, but it is there to prevent devs from accidentally giving access to any user.
+    if current_user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not have access to this information"
+        )
+
+    try:
+        with get_connection() as con:
+            return storage.db_get_user_subprojects_with_application_sid(con, user_id, application_id,
+                                                                        no_project_association=no_project_association)
+    except ApplicationNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Application with ID = {application_id} is not available."
         )

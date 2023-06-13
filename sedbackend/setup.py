@@ -3,9 +3,13 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 import tempfile
 
+import mysqlsb
 from fastapi import Request
 from fastapi.logger import logger
 from starlette.responses import Response
+
+# Set database logger
+mysqlsb.Configuration.logger = logger
 
 
 def config_default_logging():
