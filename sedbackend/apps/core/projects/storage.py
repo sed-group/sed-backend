@@ -468,17 +468,17 @@ def db_update_project(con: PooledMySQLConnection, project_updated: models.Projec
         if row_count != 1:
             raise NoChangeException
 
-    # Add participants if requested
-    db_add_participants(con, project_updated.id, project_updated.participants_to_add, check_project_exists=False)
-
     # Remove participants if requested
     db_delete_participants(con, project_updated.id, project_updated.participants_to_remove, check_project_exists=False)
 
-    # Add subprojects if requested
-    db_update_subprojects_project_association(con, project_updated.subprojects_to_add, project_updated.id, overwrite=False)
-
     # Remove subprojects if requested
     db_clear_subproject_project_association(con, project_updated.subprojects_to_remove, project_updated.id)
+
+    # Add participants if requested
+    db_add_participants(con, project_updated.id, project_updated.participants_to_add, check_project_exists=False)
+
+    # Add subprojects if requested
+    db_update_subprojects_project_association(con, project_updated.subprojects_to_add, project_updated.id, overwrite=False)
 
     # Return project
     return db_get_project(con, project_updated.id)
