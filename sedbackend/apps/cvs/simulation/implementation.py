@@ -14,18 +14,19 @@ from sedbackend.apps.cvs.design import exceptions as design_exc
 from sedbackend.apps.cvs.simulation.exceptions import BadlyFormattedSettingsException, DSMFileNotFoundException, \
     DesignIdsNotFoundException, FormulaEvalException, NegativeTimeException, ProcessNotFoundException, \
     RateWrongOrderException, InvalidFlowSettingsException, VcsFailedException, FlowProcessNotFoundException, \
-    SimSettingsNotFoundException, CouldNotFetchSimulationDataException, CouldNotFetchMarketInputValuesException, \
-    CouldNotFetchValueDriverDesignValuesException, NoTechnicalProcessException
-
+    SimSettingsNotFoundException
+    
 from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.market_input import exceptions as market_input_exceptions
 
 
-def run_simulation(sim_settings: models.EditSimSettings, vcs_ids: List[int],
-                   design_group_ids: List[int]) -> List[models.Simulation]:
+def run_simulation(project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int],
+                   design_group_ids: List[int],
+                   normalized_npv: bool, user_id: int) -> List[models.Simulation]:
     try:
         with get_connection() as con:
-            result = storage.run_simulation(con, sim_settings, vcs_ids, design_group_ids)
+            result = storage.run_simulation(con, project_id, sim_settings, vcs_ids, design_group_ids,
+                                            normalized_npv, user_id)
             return result
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
@@ -81,26 +82,6 @@ def run_simulation(sim_settings: models.EditSimSettings, vcs_ids: List[int],
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Settings are not correct'
-        )
-    except CouldNotFetchSimulationDataException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not fetch simulation data'
-        )
-    except CouldNotFetchMarketInputValuesException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not fetch market input values'
-        )
-    except CouldNotFetchValueDriverDesignValuesException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not fetch value driver design values'
-        )
-    except NoTechnicalProcessException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'No technical processes found'
         )
 
 
@@ -162,11 +143,13 @@ def run_dsm_file_simulation(user_id: int, project_id: int, sim_params: models.Fi
         )
 
 
-def run_sim_monte_carlo(sim_settings: models.EditSimSettings, vcs_ids: List[int], design_group_ids: List[int],
-                        normalized_npv: bool) -> List[models.Simulation]:
+def run_sim_monte_carlo(project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int],
+                        design_group_ids: List[int],
+                        normalized_npv: bool, user_id: int = None) -> List[models.Simulation]:
     try:
         with get_connection() as con:
-            result = storage.run_sim_monte_carlo(con, sim_settings, vcs_ids, design_group_ids, normalized_npv)
+            result = storage.run_sim_monte_carlo(con, project_id, sim_settings, vcs_ids,
+                                                 design_group_ids, normalized_npv, user_id)
             return result
     except vcs_exceptions.GenericDatabaseException:
         raise HTTPException(
@@ -202,26 +185,6 @@ def run_sim_monte_carlo(sim_settings: models.EditSimSettings, vcs_ids: List[int]
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Settings are not correct'
-        )
-    except CouldNotFetchSimulationDataException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not fetch simulation data'
-        )
-    except CouldNotFetchMarketInputValuesException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not fetch market input values'
-        )
-    except CouldNotFetchValueDriverDesignValuesException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not fetch value driver design values'
-        )
-    except NoTechnicalProcessException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'No technical processes found'
         )
 
 

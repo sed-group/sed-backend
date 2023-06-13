@@ -158,10 +158,10 @@ def get_design(design_id: int) -> models.Design:
         )
 
 
-def get_designs(project_id: int, design_group_id: int) -> List[models.Design]:
+def get_all_designs(project_id: int, design_group_id: int) -> List[models.Design]:
     try:
         with get_connection() as con:
-            res = storage.get_designs(con, project_id, design_group_id)
+            res = storage.get_all_designs(con, project_id, design_group_id)
             con.commit()
             return res
     except exceptions.DesignGroupNotFoundException:

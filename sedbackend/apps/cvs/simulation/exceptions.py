@@ -56,15 +56,3 @@ class SimSettingsNotFoundException(Exception):
 
 class NoTechnicalProcessException(Exception):
     pass
-
-
-class CouldNotFetchSimulationDataException(Exception):
-    pass
-
-
-class CouldNotFetchMarketInputValuesException(Exception):
-    pass
-
-
-class CouldNotFetchValueDriverDesignValuesException(Exception):
-    pass
