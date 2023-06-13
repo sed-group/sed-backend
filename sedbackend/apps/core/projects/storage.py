@@ -416,6 +416,8 @@ def db_get_user_subprojects_with_application_sid(con, user_id, application_sid,
                                                  no_project_association: Optional[bool] = False) \
         -> List[models.SubProject]:
 
+    logger.debug(f"Getting subprojects for user {user_id} and application {application_sid}, "
+                 f"with no project association: {no_project_association}")
     # Validate that the application is listed
     get_application(application_sid)
 
@@ -425,16 +427,14 @@ def db_get_user_subprojects_with_application_sid(con, user_id, application_sid,
     for project in project_list:
         project_id_list.append(project.id)
 
-    if len(project_id_list) == 0:
-        return []
-
     # Figure out which of those projects have an attached subproject with specified application SID.
     where_values = [application_sid]
     where_values.extend(project_id_list.copy())
     where_values.append(user_id)
-    where_stmnt = f"application_sid = %s AND " \
-                  f"((project_id IN {MySQLStatementBuilder.placeholder_array(len(project_id_list))}) OR " \
-                  f"(project_id is null AND owner_id = %s))"
+    where_stmnt = f"application_sid = %s AND ("
+    if len(project_id_list) != 0:
+        where_stmnt += f"(project_id IN {MySQLStatementBuilder.placeholder_array(len(project_id_list))}) OR "
+    where_stmnt += f"(project_id is null AND owner_id = %s))"
 
     stmnt = MySQLStatementBuilder(con)
     rs = stmnt.select(SUBPROJECTS_TABLE, SUBPROJECT_COLUMNS)\
