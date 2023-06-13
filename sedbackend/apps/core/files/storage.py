@@ -1,16 +1,20 @@
 import uuid
 import shutil
-import os
 
 from mysql.connector.pooling import PooledMySQLConnection
+from fastapi.logger import logger
+import os
 
 import sedbackend.apps.core.files.models as models
 import sedbackend.apps.core.files.exceptions as exc
-from sedbackend.libs.mysqlutils import MySQLStatementBuilder, exclude_cols, FetchType
+import sedbackend.apps.core.files.implementation as impl
+from mysqlsb import MySQLStatementBuilder, exclude_cols, FetchType
 
 FILES_RELATIVE_UPLOAD_DIR = f'{os.path.abspath(os.sep)}sed_lab/uploaded_files/'
 FILES_TABLE = 'files'
+FILES_TO_SUBPROJECTS_MAP_TABLE = 'files_subprojects_map'
 FILES_COLUMNS = ['id', 'temp', 'uuid', 'filename', 'insert_timestamp', 'directory', 'owner_id', 'extension']
+FILES_TO_SUBPROJECTS_MAP_COLUMNS = ['id', 'file_id', 'subproject_id']
 
 
 def db_save_file(con: PooledMySQLConnection, file: models.StoredFilePost) -> models.StoredFileEntry:
@@ -28,30 +32,68 @@ def db_save_file(con: PooledMySQLConnection, file: models.StoredFilePost) -> mod
 
     file_id = insert_stmnt.last_insert_id
 
+    # Store mapping between file id and subproject id in database
+    insert_mapping_stmnt = MySQLStatementBuilder(con)
+    insert_mapping_stmnt.insert(FILES_TO_SUBPROJECTS_MAP_TABLE, ['file_id', 'subproject_id'])\
+        .set_values([file_id, file.subproject_id])\
+        .execute()
+
     return db_get_file_entry(con, file_id, file.owner_id)
 
 
 def db_delete_file(con: PooledMySQLConnection, file_id: int, current_user_id: int) -> bool:
+    stored_file_path = impl.impl_get_file_path(file_id, current_user_id)
+    
+    if os.path.commonpath([FILES_RELATIVE_UPLOAD_DIR]) != os.path.commonpath([FILES_RELATIVE_UPLOAD_DIR, os.path.abspath(stored_file_path.path)]):
+        raise exc.PathMismatchException
+        
+    try:
+        delete_stmnt = MySQLStatementBuilder(con)
+        delete_stmnt.delete(FILES_TABLE) \
+            .where('id=?', [file_id]) \
+            .execute(fetch_type=FetchType.FETCH_NONE)
+        os.remove(stored_file_path.path)
+            
+    except Exception:
+        logger.error(f'Unexpected error when deleting file from database or filesystem. '
+                     f'id = {file_id}, path = \"{stored_file_path.path}\"')
+        raise exc.FileNotDeletedException
+
     return True
 
 
 def db_get_file_entry(con: PooledMySQLConnection, file_id: int, current_user_id: int) -> models.StoredFileEntry:
-    select_stmnt = MySQLStatementBuilder(con)
-    res = select_stmnt.select(FILES_TABLE, exclude_cols(FILES_COLUMNS, ['uuid', 'directory']))\
-        .where('id = ?', [file_id])\
-        .execute(dictionary=True, fetch_type=FetchType.FETCH_ONE)
+    res_dict = None
+    with con.cursor(prepared=True) as cursor:
+        # This expression uses two tables (files and files_to_subprojects_map)
+        query = f"SELECT {', '.join(['f.id', 'f.temp', 'f.uuid', 'f.filename', 'f.insert_timestamp', 'f.directory', 'f.owner_id', 'f.extension'])}, fsm.`subproject_id` " \
+                f"FROM `{FILES_TABLE}` f " \
+                f"INNER JOIN {FILES_TO_SUBPROJECTS_MAP_TABLE} fsm ON (f.id = fsm.file_id) " \
+                f"WHERE f.`id` = ?"
+        values = [file_id]
 
-    if res is None:
-        raise exc.FileNotFoundException
+        # Log for sanity-check
+        logger.debug(f"db_get_file_entry query: '{query}' with values: {values}")
 
-    stored_file = models.StoredFileEntry(**res)
+        # Execute query
+        cursor.execute(query, values)
+
+        # Handle results
+        results = cursor.fetchone()
+
+        if results is None:
+            raise exc.FileNotFoundException
+
+        res_dict = dict(zip(cursor.column_names, results))
+
+    stored_file = models.StoredFileEntry(**res_dict)
     return stored_file
 
 
 def db_get_file_path(con: PooledMySQLConnection, file_id: int, current_user_id: int) -> models.StoredFilePath:
     select_stmnt = MySQLStatementBuilder(con)
     res = select_stmnt\
-        .select(FILES_TABLE, ['filename', 'uuid', 'directory', 'extension'])\
+        .select(FILES_TABLE, ['filename', 'uuid', 'directory', 'owner_id', 'extension'])\
         .where('id=?', [file_id])\
         .execute(dictionary=True, fetch_type=FetchType.FETCH_ONE)
 
@@ -59,7 +101,8 @@ def db_get_file_path(con: PooledMySQLConnection, file_id: int, current_user_id: 
         raise exc.FileNotFoundException('File not found in DB')
 
     path = res['directory'] + res['uuid']
-    stored_path = models.StoredFilePath(id=file_id, filename=res['filename'], path=path, extension=res['extension'])
+    stored_path = models.StoredFilePath(
+        id=file_id, filename=res['filename'], path=path, owner_id=res['owner_id'], extension=res['extension'])
     return stored_path
 
 
@@ -71,3 +114,15 @@ def db_put_file_temp(con: PooledMySQLConnection, file_id: int, temp: bool, curre
 def db_put_filename(con: PooledMySQLConnection, file_id: int, filename_new: str, current_user_id: int) \
         -> models.StoredFileEntry:
     pass
+
+
+def db_get_file_mapped_subproject_id(con: PooledMySQLConnection, file_id) -> int:
+    select_stmnt = MySQLStatementBuilder(con)
+    res = select_stmnt.select(FILES_TO_SUBPROJECTS_MAP_TABLE, ['subproject_id'])\
+        .where('file_id=?', [file_id])\
+        .execute(dictionary=True, fetch_type=FetchType.FETCH_ONE)
+
+    if res is None:
+        raise exc.SubprojectMappingNotFound('Mapping could not be found.')
+
+    return res['subproject_id']
