@@ -39,8 +39,7 @@ class ValueDriverDesignValue(BaseModel):
 class Design(BaseModel):
     id: int
     name: str
-    design_group_id: Optional[int] = None
-    vd_design_values: Optional[List[ValueDriverDesignValue]]
+    vd_design_values: List[ValueDriverDesignValue]
 
 
 class DesignPut(BaseModel):
