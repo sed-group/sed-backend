@@ -528,16 +528,6 @@ def get_all_market_values(db_connection: PooledMySQLConnection, vcs_ids: List[in
     return res
 
 
-def populate_market_input_values(res) -> mi_models.MarketInputValueSim:
-    return mi_models.MarketInputValueSim(
-        vcs_id=res['vcs'],
-        market_input_id=res['market_input'],
-        value=res['value'],
-        name=res['name'],
-        unit=res['unit']
-    )
-
-
 def parse_formula(formula: str, vd_values, mi_values) -> str:
     new_formula = formula
     vd_names = expr.get_prefix_variables('VD', new_formula)

@@ -36,7 +36,6 @@ class ValueDriverDesignValue(BaseModel):
         return self.vd_id == other.vd_id
 
 
-
 class Design(BaseModel):
     id: int
     name: str

@@ -15,7 +15,7 @@ from sedbackend.apps.cvs.simulation.exceptions import BadlyFormattedSettingsExce
     DesignIdsNotFoundException, FormulaEvalException, NegativeTimeException, ProcessNotFoundException, \
     RateWrongOrderException, InvalidFlowSettingsException, VcsFailedException, FlowProcessNotFoundException, \
     SimSettingsNotFoundException, CouldNotFetchSimulationDataException, CouldNotFetchMarketInputValuesException, \
-    CouldNotFetchValueDriverDesignValuesException
+    CouldNotFetchValueDriverDesignValuesException, NoTechnicalProcessException
 
 from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.market_input import exceptions as market_input_exceptions
@@ -96,6 +96,11 @@ def run_simulation(sim_settings: models.EditSimSettings, vcs_ids: List[int],
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not fetch value driver design values'
+        )
+    except NoTechnicalProcessException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'No technical processes found'
         )
 
 
@@ -212,6 +217,11 @@ def run_sim_monte_carlo(sim_settings: models.EditSimSettings, vcs_ids: List[int]
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not fetch value driver design values'
+        )
+    except NoTechnicalProcessException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'No technical processes found'
         )
 
 
