@@ -146,17 +146,13 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, sim_se
     process = sim_settings.flow_process
     time_unit = TIME_FORMAT_DICT.get(sim_settings.time_unit)
 
-    all_sim_data = get_all_sim_data(db_connection, vcs_ids, design_group_ids)  # 1
+    all_sim_data = get_all_sim_data(db_connection, vcs_ids, design_group_ids)
 
-    all_market_inputs = get_all_market_values(db_connection, vcs_ids)  # 1
+    all_market_inputs = get_all_market_values(db_connection, vcs_ids)
 
-    all_designs = get_all_designs(db_connection, design_group_ids)  # 1
+    all_designs = get_all_designs(db_connection, design_group_ids)
 
-    logger.debug(f'Designs: {len(all_designs)}')
-
-    all_vd_design_values = get_all_vd_design_values(db_connection, [design.id for design in all_designs])  # 1
-
-    logger.debug(f'vd values: {len(all_vd_design_values)}')
+    all_vd_design_values = get_all_vd_design_values(db_connection, [design.id for design in all_designs])
 
     for vcs_id in vcs_ids:
         market_values = [mi for mi in all_market_inputs if mi['vcs'] == vcs_id]
@@ -168,16 +164,15 @@ def run_simulation(db_connection: PooledMySQLConnection, project_id: int, sim_se
             if not check_entity_rate(sim_data, process):
                 raise e.RateWrongOrderException
 
-            designs = [design for design in all_designs if design.design_group_id == design_group_id]
+            designs = [design.id for design in all_designs if design.design_group_id == design_group_id]
 
             if designs is None or []:
                 raise e.DesignIdsNotFoundException
 
             for design in designs:
-                vd_values = [vd for vd in all_vd_design_values if vd['design'] == design.id]
-                logger.debug(f'vd values 2: {len(vd_values)}')  # returns for last design 0
-                processes, non_tech_processes = populate_processes(non_tech_add, sim_data, db_connection,
-                                                                   design.id,
+                vd_values = [vd for vd in all_vd_design_values if vd['design'] == design]
+                processes, non_tech_processes = populate_processes(non_tech_add, sim_data,
+                                                                   design,
                                                                    market_values, vd_values)
 
                 dsm = create_simple_dsm(processes)  # TODO Change to using BPMN
@@ -278,7 +273,7 @@ def run_sim_monte_carlo(db_connection: PooledMySQLConnection, project_id: int, s
     return design_results
 
 
-def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: PooledMySQLConnection, design: int,
+def populate_processes(non_tech_add: NonTechCost, db_results, design: int,
                        mi_values=None,
                        vd_values=None):
     if mi_values is None:
@@ -289,13 +284,12 @@ def populate_processes(non_tech_add: NonTechCost, db_results, db_connection: Poo
     non_tech_processes = []
 
     for row in db_results:
-        # vd_values = [vd for vd in vd_values if vd['vcs_row'] == row['id'] and vd['design'] == design]
-        vd_values = get_vd_design_values(db_connection, row['id'], design)  # TODO fix this
+        vd_values_row = [vd for vd in vd_values if vd['vcs_row'] == row['id'] and vd['design'] == design]
         if row['category'] != 'Technical processes':
             try:
-                non_tech = models.NonTechnicalProcess(cost=nsp.eval(parse_formula(row['cost'], vd_values, mi_values)),
+                non_tech = models.NonTechnicalProcess(cost=nsp.eval(parse_formula(row['cost'], vd_values_row, mi_values)),
                                                       revenue=nsp.eval(
-                                                          parse_formula(row['revenue'], vd_values, mi_values)),
+                                                          parse_formula(row['revenue'], vd_values_row, mi_values)),
                                                       name=row['iso_name'])
             except Exception as exc:
                 logger.debug(f'{exc.__class__}, {exc}')
@@ -402,14 +396,16 @@ def get_vd_design_values(db_connection: PooledMySQLConnection, vcs_row_id: int,
 
 
 def get_all_vd_design_values(db_connection: PooledMySQLConnection, designs: List[int]):
-    select_statement = MySQLStatementBuilder(db_connection)
-    res = select_statement \
-        .select('cvs_vd_design_values', ['cvs_value_drivers.id', 'design', 'name', 'value', 'unit', 'vcs_row']) \
-        .inner_join('cvs_value_drivers', 'cvs_vd_design_values.value_driver = cvs_value_drivers.id') \
-        .inner_join('cvs_vcs_need_drivers', 'cvs_vcs_need_drivers.value_driver = cvs_value_drivers.id') \
-        .inner_join('cvs_stakeholder_needs', 'cvs_stakeholder_needs.id = cvs_vcs_need_drivers.stakeholder_need') \
-        .where('design IN (%s)', [','.join([str(design) for design in designs])]) \
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+    query = f'SELECT cvs_value_drivers.id, design, name, value, unit, vcs_row \
+                    FROM cvs_vd_design_values \
+                    INNER JOIN cvs_value_drivers ON cvs_vd_design_values.value_driver = cvs_value_drivers.id \
+                    INNER JOIN cvs_vcs_need_drivers ON cvs_vcs_need_drivers.value_driver = cvs_value_drivers.id \
+                    INNER JOIN cvs_stakeholder_needs ON cvs_stakeholder_needs.id = cvs_vcs_need_drivers.stakeholder_need \
+                    WHERE design IN ({",".join([str(design) for design in designs])})'
+    with db_connection.cursor(prepared=True) as cursor:
+        cursor.execute(query)
+        res = cursor.fetchall()
+        res = [dict(zip(cursor.column_names, row)) for row in res]
 
     return res
 
@@ -506,12 +502,16 @@ def get_market_values(db_connection: PooledMySQLConnection, vcs: int):
 
 
 def get_all_market_values(db_connection: PooledMySQLConnection, vcs_ids: List[int]):
-    select_statement = MySQLStatementBuilder(db_connection)
-    res = select_statement \
-        .select('cvs_market_input_values', ['id', 'name', 'value', 'unit', 'vcs']) \
-        .inner_join('cvs_market_inputs', 'cvs_market_input_values.market_input = cvs_market_inputs.id') \
-        .where('vcs IN (%s)', [','.join([str(vcs) for vcs in vcs_ids])]) \
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    query = f'SELECT id, name, value, unit, vcs \
+            FROM cvs_market_input_values \
+            INNER JOIN cvs_market_inputs ON cvs_market_input_values.market_input = cvs_market_inputs.id \
+            WHERE cvs_market_input_values.vcs IN ({",".join([str(vcs) for vcs in vcs_ids])})'
+    with db_connection.cursor(prepared=True) as cursor:
+        cursor.execute(query)
+        res = cursor.fetchall()
+        res = [dict(zip(cursor.column_names, row)) for row in res]
+
     return res
 
 
