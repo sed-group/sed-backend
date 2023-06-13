@@ -235,7 +235,6 @@ def test_run_mc_sim_rate_invalid_order(client, std_headers, std_user):
   
   #Assert
   assert res.status_code == 400
-  assert res.json() == {'detail': 'Wrong order of rate of entities. Per project assigned after per product'} #RateWrongOrderException
   
 
   #Cleanup

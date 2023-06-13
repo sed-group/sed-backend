@@ -158,11 +158,19 @@ def populate_design_group(db_result) -> models.DesignGroup:
     )
 
 
+def populate_design_with_values(db_result) -> models.Design:
+    return models.Design(
+        id=db_result['id'],
+        name=db_result['name'],
+        design_group_id=db_result['design_group'],
+        vd_design_values=db_result['vd_values']
+    )
+
 def populate_design(db_result) -> models.Design:
     return models.Design(
         id=db_result['id'],
         name=db_result['name'],
-        vd_design_values=db_result['vd_values']
+        design_group_id=db_result['design_group']
     )
 
 
@@ -180,10 +188,10 @@ def get_design(db_connection: PooledMySQLConnection, design_id: int):
     vd_design_values = get_all_vd_design_values(db_connection, result['id'])
     result.update({'vd_values': vd_design_values})
 
-    return populate_design(result)
+    return populate_design_with_values(result)
 
 
-def get_all_designs(db_connection: PooledMySQLConnection, project_id: int, design_group_id: int) -> List[models.Design]:
+def get_designs(db_connection: PooledMySQLConnection, project_id: int, design_group_id: int) -> List[models.Design]:
     logger.debug(f'Get all designs in design group with id = {design_group_id}')
 
     get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
@@ -202,9 +210,27 @@ def get_all_designs(db_connection: PooledMySQLConnection, project_id: int, desig
     for result in res:
         vd_design_values = get_all_vd_design_values(db_connection, result['id'])
         result.update({'vd_values': vd_design_values})
-        designs.append(populate_design(result))
+        designs.append(populate_design_with_values(result))
 
     return designs
+
+
+def get_all_designs(db_connection: PooledMySQLConnection, design_group_ids: List[int]) -> List[models.Design]:
+    logger.debug(f'Get all designs in design groups with ids = {design_group_ids}')
+
+    try:
+        query = f'SELECT cvs_designs.id, cvs_designs.design_group, cvs_designs.name \
+                    FROM cvs_designs \
+                    WHERE cvs_designs.design_group IN ({",".join([str(dg) for dg in design_group_ids])})'
+        with db_connection.cursor(prepared=True) as cursor:
+            cursor.execute(query)
+            res = cursor.fetchall()
+            res = [dict(zip(cursor.column_names, row)) for row in res]
+    except Error as e:
+        logger.debug(f'Error msg: {e.msg}')
+        raise exceptions.DesignGroupNotFoundException
+
+    return [populate_design(result) for result in res]
 
 
 def create_design(db_connection: PooledMySQLConnection, design_group_id: int,
@@ -277,7 +303,7 @@ def edit_designs(db_connection: PooledMySQLConnection, project_id: int, design_g
     logger.debug(f'Edit designs with design group id = {design_group_id}')
 
     # Check if design group exists and matches project
-    curr_designs = get_all_designs(db_connection, project_id, design_group_id)
+    curr_designs = get_designs(db_connection, project_id, design_group_id)
     for design in curr_designs:
         if design.id not in [d.id for d in designs]:
             delete_design(db_connection, design.id)
