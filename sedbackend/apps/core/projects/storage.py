@@ -176,6 +176,21 @@ def db_clear_subproject_project_association(connection: PooledMySQLConnection, s
         .execute()
 
 
+def db_update_participants(connection: PooledMySQLConnection,
+                           project_id: int,
+                           participants_access_map: Dict[int, models.AccessLevel]):
+    logger.debug(f'Updating participants for project with ID {project_id} to {participants_access_map}')
+
+    # This could be turned into a single db-call using CASE-WHEN-THEN, but it would be too complex for the gains
+    for participant_id, access_level in participants_access_map.items():
+        update_stmnt = MySQLStatementBuilder(connection)
+        update_stmnt.update(PROJECTS_PARTICIPANTS_TABLE, 'access_level = %s', [access_level.value])\
+            .where('project_id = %s AND user_id = %s', [project_id, participant_id])\
+            .execute()
+
+    return
+
+
 def db_update_subprojects_project_association(connection: PooledMySQLConnection, subproject_id_list: List[int],
                                               project_id: int, overwrite: bool = False):
     logger.debug(f'Associating sub-projects with IDs {subproject_id_list} to project with ID {project_id}')
@@ -231,7 +246,7 @@ def db_add_participant(connection, project_id, user_id, access_level, check_proj
 def db_add_participants(connection: PooledMySQLConnection, project_id: int,
                         user_id_access_map: Dict[int, models.AccessLevel], check_project_exists=True) -> bool:
     if check_project_exists:
-        db_get_project_exists(connection, project_id) # Raises exception if project does not exist
+        db_get_project_exists(connection, project_id)   # Raises exception if project does not exist
 
     insert_stmnt = MySQLStatementBuilder(connection)
     insert_stmnt.insert(PROJECTS_PARTICIPANTS_TABLE, ['user_id', 'project_id', 'access_level'])
@@ -416,6 +431,8 @@ def db_get_user_subprojects_with_application_sid(con, user_id, application_sid,
                                                  no_project_association: Optional[bool] = False) \
         -> List[models.SubProject]:
 
+    logger.debug(f"Getting subprojects for user {user_id} and application {application_sid}, "
+                 f"with no project association: {no_project_association}")
     # Validate that the application is listed
     get_application(application_sid)
 
@@ -425,16 +442,14 @@ def db_get_user_subprojects_with_application_sid(con, user_id, application_sid,
     for project in project_list:
         project_id_list.append(project.id)
 
-    if len(project_id_list) == 0:
-        return []
-
     # Figure out which of those projects have an attached subproject with specified application SID.
     where_values = [application_sid]
     where_values.extend(project_id_list.copy())
     where_values.append(user_id)
-    where_stmnt = f"application_sid = %s AND " \
-                  f"((project_id IN {MySQLStatementBuilder.placeholder_array(len(project_id_list))}) OR " \
-                  f"(project_id is null AND owner_id = %s))"
+    where_stmnt = f"application_sid = %s AND ("
+    if len(project_id_list) != 0:
+        where_stmnt += f"(project_id IN {MySQLStatementBuilder.placeholder_array(len(project_id_list))}) OR "
+    where_stmnt += f"(project_id is null AND owner_id = %s))"
 
     stmnt = MySQLStatementBuilder(con)
     rs = stmnt.select(SUBPROJECTS_TABLE, SUBPROJECT_COLUMNS)\
@@ -468,17 +483,25 @@ def db_update_project(con: PooledMySQLConnection, project_updated: models.Projec
         if row_count != 1:
             raise NoChangeException
 
-    # Add participants if requested
-    db_add_participants(con, project_updated.id, project_updated.participants_to_add, check_project_exists=False)
-
     # Remove participants if requested
-    db_delete_participants(con, project_updated.id, project_updated.participants_to_remove, check_project_exists=False)
-
-    # Add subprojects if requested
-    db_update_subprojects_project_association(con, project_updated.subprojects_to_add, project_updated.id, overwrite=False)
+    if len(project_updated.participants_to_remove) > 0:
+        db_delete_participants(con, project_updated.id, project_updated.participants_to_remove, check_project_exists=False)
 
     # Remove subprojects if requested
-    db_clear_subproject_project_association(con, project_updated.subprojects_to_remove, project_updated.id)
+    if len(project_updated.subprojects_to_remove) > 0:
+        db_clear_subproject_project_association(con, project_updated.subprojects_to_remove, project_updated.id)
+
+    # Add participants if requested
+    if len(project_updated.participants_to_add.keys()) > 0:
+        db_add_participants(con, project_updated.id, project_updated.participants_to_add, check_project_exists=False)
+
+    # Add subprojects if requested
+    if len(project_updated.subprojects_to_add) > 0:
+        db_update_subprojects_project_association(con, project_updated.subprojects_to_add, project_updated.id, overwrite=False)
+
+    # Update participants if requested
+    if len(project_updated.participants_to_update.keys()) > 0:
+        db_update_participants(con, project_updated.id, project_updated.participants_to_update)
 
     # Return project
     return db_get_project(con, project_updated.id)
