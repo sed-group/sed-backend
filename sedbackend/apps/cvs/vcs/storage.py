@@ -918,31 +918,28 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, project_id: int, vcs_id
 
 def remove_duplicate_names(project_id: int, vcs_id: int, rows: List[models.VcsRowPost]):
     for i in range(0, len(rows)):
+        dups: List[Tuple[int, models.VCSSubprocessPost]] = []
         for j in range(i + 1, len(rows)):
             if rows[i].iso_process is None:
                 break
-            dups: List[Tuple[int, models.VCSSubprocessPost]] = []
-            if rows[i].iso_process == rows[j].iso_process:
+            if rows[i].iso_process and rows[i].iso_process == rows[j].iso_process:
                 process = vcs_impl.get_iso_process(rows[i].iso_process)
-                sub = models.VCSSubprocessPost(name=process.name + str(len(dups) + 2), parent_process_id=process.id)
+                sub = models.VCSSubprocessPost(name=process.name + " (" + str(len(dups) + 1) + ")",
+                                               parent_process_id=process.id)
                 dups.append((j, sub))
 
-            if len(dups) > 0:
-                subfst = models.VCSSubprocessPost(name=process.name + "1", parent_process_id=process.id)
-                dups.append((i, subfst))
+        for index, dup in dups:
+            subp = vcs_impl.create_subprocess(project_id, vcs_id, dup)
+            rowPost = models.VcsRowPost(
+                id=rows[index].id,
+                index=rows[index].index,
+                stakeholder=rows[index].stakeholder,
+                stakeholder_needs=rows[index].stakeholder_needs,
+                stakeholder_expectations=rows[index].stakeholder_expectations,
+                iso_process=None,
+                subprocess=subp.id)
 
-                for index, dup in dups:
-                    subp = vcs_impl.create_subprocess(project_id, vcs_id, dup)
-                    rowPost = models.VcsRowPost(
-                        id=rows[index].id,
-                        index=rows[index].index,
-                        stakeholder=rows[index].stakeholder,
-                        stakeholder_needs=rows[index].stakeholder_needs,
-                        stakeholder_expectations=rows[index].stakeholder_expectations,
-                        iso_process=None,
-                        subprocess=subp.id)
-
-                    rows[index] = rowPost
+            rows[index] = rowPost
 
     return rows
 
