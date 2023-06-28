@@ -16,5 +16,11 @@
     "description": "Visualization interface used to visualize and interact with multidisciplinary data.",
     "href_api": null,
     "href_url": "https://mdac.netlify.app/"
+  },
+  "MOD.MORPH": {
+    "name": "Morpheus",
+    "description": "Morphological matrix tool. This tool is used to create morphological matrices, which are used to explore the design space of a problem. Constraints can be added to the design space, and solutions can be generated using different strategies.",
+    "href_api": null,
+    "href_url": "https://morpheus-matrix.netlify.app/"
   }
 }
