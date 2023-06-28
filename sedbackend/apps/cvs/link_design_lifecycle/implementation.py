@@ -4,7 +4,7 @@ from starlette import status
 from sedbackend.apps.core.db import get_connection
 from sedbackend.apps.cvs.link_design_lifecycle import models, storage
 from sedbackend.apps.cvs.link_design_lifecycle.exceptions import FormulasFailedDeletionException, \
-    FormulasFailedUpdateException, FormulasNotFoundException, TooManyFormulasUpdatedException, \
+    FormulasFailedUpdateException, TooManyFormulasUpdatedException, \
     VCSNotFoundException, WrongTimeUnitException
 from sedbackend.apps.cvs.project import exceptions as project_exceptions
 from sedbackend.apps.cvs.design import exceptions as design_exceptions
@@ -49,7 +49,7 @@ def edit_formulas(project_id: int, vcs_row_id: int, design_group_id: int, new_fo
             )
 
 
-def get_all_formulas(project_id: int, vcs_id: int, design_group_id: int) -> List[models.FormulaRowGet]:
+def get_all_formulas(project_id: int, vcs_id: int, design_group_id: int) -> List[models.FormulaGet]:
     with get_connection() as con:
         try:
             res = storage.get_all_formulas(con, project_id, vcs_id, design_group_id)

@@ -44,7 +44,7 @@ def test_get_all_projects_as_admin(client, admin_headers, admin_user):
     max_projects = 30
     current_user = impl_users.impl_get_user_with_username(admin_user.username)
     seeded_projects = tu_projects.seed_random_projects(current_user.id, amount=r.randint(5, max_projects))
-    amount_of_projects = len(impl.impl_get_projects())
+    amount_of_projects = len(impl.impl_get_projects(current_user.id))
     # Act
     res = client.get('/api/core/projects/all', headers=admin_headers)
     # Assert
@@ -310,3 +310,109 @@ def test_change_name_as_non_admin(client, std_headers, std_user):
     # Cleanup
     impl.impl_delete_project(p.id)
     impl_users.impl_delete_user_from_db(owner_user.id)
+
+
+def test_add_participants_as_admin(client, std_headers, std_user):
+    # Setup
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    participant_1 = tu_users.seed_random_user(admin=False, disabled=False)
+    participant_2 = tu_users.seed_random_user(admin=False, disabled=False)
+    participant_3 = tu_users.seed_random_user(admin=False, disabled=False)
+
+    p = tu_projects.seed_random_project(current_user.id)
+
+    participants_access_dict = {
+        participant_1.id: models.AccessLevel.ADMIN,
+        participant_2.id: models.AccessLevel.EDITOR,
+        participant_3.id: models.AccessLevel.READONLY
+    }
+
+    # Act
+    impl.impl_post_participants(p.id, participants_access_dict)
+    p_updated = impl.impl_get_project(p.id)
+
+    # Assert
+    for participant in p_updated.participants:
+
+        # Check owner
+        if participant.id == current_user.id:
+            assert p_updated.participants_access[participant.id] == models.AccessLevel.OWNER
+            continue
+
+        # Check other participants
+        assert participant.id in participants_access_dict.keys()
+        assert p_updated.participants_access[participant.id] == participants_access_dict[participant.id]
+
+    # Cleanup
+    impl.impl_delete_project(p.id)
+    impl_users.impl_delete_user_from_db(participant_1.id)
+    impl_users.impl_delete_user_from_db(participant_2.id)
+    impl_users.impl_delete_user_from_db(participant_3.id)
+
+
+def test_update_project(client, std_headers, std_user):
+    # Setup
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    old_participant_1 = tu_users.seed_random_user(False, False)
+    old_participant_2 = tu_users.seed_random_user(False, False)
+
+    new_participant_1 = tu_users.seed_random_user(False, False)
+    new_participant_2 = tu_users.seed_random_user(False, False)
+    new_participant_3 = tu_users.seed_random_user(False, False)
+
+    project = tu_projects.seed_random_project(current_user.id, participants={
+        old_participant_1.id: models.AccessLevel.EDITOR,
+        old_participant_2.id: models.AccessLevel.READONLY
+    })
+
+    # Add three subprojects to the project
+    old_subproject_1 = tu_projects.seed_random_subproject(current_user.id, project.id)
+    old_subproject_2 = tu_projects.seed_random_subproject(current_user.id, project.id)
+    old_subproject_3 = tu_projects.seed_random_subproject(current_user.id, project.id)
+
+    new_subproject_1 = tu_projects.seed_random_subproject(new_participant_3.id, None)
+    new_subproject_2 = tu_projects.seed_random_subproject(current_user.id, None)
+
+    new_name = tu.random_str(5, 50)
+
+    # Act
+    res_before = client.get(f'/api/core/projects/{project.id}', headers=std_headers)
+    p_before_json = res_before.json()
+
+    res_after = client.put(f'/api/core/projects/{project.id}', headers=std_headers, json={
+        "id": project.id,
+        "name": new_name,
+        "participants_to_add": {
+            new_participant_1.id: models.AccessLevel.ADMIN.value,
+            new_participant_2.id: models.AccessLevel.EDITOR.value,
+            new_participant_3.id: models.AccessLevel.READONLY.value
+        },
+        "participants_to_remove": [old_participant_1.id, old_participant_2.id],
+        "subprojects_to_add": [new_subproject_1.id, new_subproject_2.id],
+        "subprojects_to_remove": [old_subproject_1.id, old_subproject_2.id, old_subproject_3.id]
+    })
+    p_after_json = res_after.json()
+
+    # Assert - before
+    assert p_before_json["id"] == project.id
+    assert len(p_before_json["participants"]) == 3
+    assert len(p_before_json["subprojects"]) == 3
+    assert p_before_json["name"] == project.name
+    # Assert - after
+    assert res_after.status_code == 200
+    assert p_after_json["id"] == project.id
+    assert p_after_json["name"] == new_name
+    assert len(p_after_json["participants"]) == 4
+    assert len(p_after_json["subprojects"]) == 2
+
+    # Cleanup
+    tu_users.delete_users([new_participant_1, new_participant_2, new_participant_3, old_participant_1, old_participant_2])
+
+    old_subproject_1.project_id = None
+    old_subproject_2.project_id = None
+    old_subproject_3.project_id = None
+    new_subproject_1.project_id = project.id
+    new_subproject_2.project_id = project.id
+
+    tu_projects.delete_subprojects([old_subproject_1, old_subproject_2, old_subproject_3, new_subproject_1, new_subproject_2])
+    tu_projects.delete_projects([project])
