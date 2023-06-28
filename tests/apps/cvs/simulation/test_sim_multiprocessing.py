@@ -1,8 +1,8 @@
-import pytest
 import tests.apps.cvs.testutils as tu
 import testutils as sim_tu
 import sedbackend.apps.core.users.implementation as impl_users
 import sedbackend.apps.cvs.simulation.exceptions as sim_exceptions
+
 
 def test_run_single_monte_carlo_sim(client, std_headers, std_user):
   #Setup 
@@ -213,7 +213,6 @@ def test_run_mc_sim_both_flows(client, std_headers, std_user):
   tu.delete_vd_from_user(current_user.id)
 
 
-
 def test_run_mc_sim_rate_invalid_order(client, std_headers, std_user):
     #Setup 
   current_user = impl_users.impl_get_user_with_username(std_user.username)
@@ -227,7 +226,7 @@ def test_run_mc_sim_rate_invalid_order(client, std_headers, std_user):
   #Act
   res = client.post(f'/api/cvs/project/{project.id}/simulation/run-multiprocessing', 
                     headers=std_headers,
-                    json = {
+                    json={
                       "sim_settings": settings.dict(),
                       "vcs_ids": [vcs.id],
                       "design_group_ids": [design_group.id]
