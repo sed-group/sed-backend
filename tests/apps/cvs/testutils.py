@@ -407,18 +407,17 @@ def seed_random_designs(project_id: int, dg_id: int, amount: int = 10):
 def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, user_id: int,
                          amount: int = 10) -> List[connect_model.FormulaGet]:
     vcs_rows = seed_vcs_table_rows(user_id,  project_id, vcs_id, amount)
-    rate_per_prod = False
-    for vcs_row in vcs_rows:
+
+    for i, vcs_row in enumerate(vcs_rows):
 
         time = str(tu.random.randint(1, 200))
         time_unit = random_time_unit()
         cost = str(tu.random.randint(1, 2000))
         revenue = str(tu.random.randint(1, 10000))
-        rate = random_rate_choice()
-        if rate == Rate.PRODUCT.value:
-            rate_per_prod = True
-        if rate_per_prod and rate == Rate.PROJECT.value:
-            rate = Rate.PRODUCT.value
+        if i == 0:
+            rate = Rate.PROJECT
+        else:
+            rate = Rate.PRODUCT
 
         formula_post = connect_model.FormulaPost(
             time=time,
@@ -575,7 +574,7 @@ def seed_simulation_settings(project_id: int, vcs_ids: List[int], design_ids: Li
     start_time = round(tu.random.uniform(1, 300), ndigits=5)
     end_time = round(tu.random.uniform(300, 1000), ndigits=5)
     print("Row len", len(rows))
-    flow_process = tu.random.choice(rows)
+    flow_process = rows[1]
     flow_start_time = None  # Get valid start time
     flow_time = round(tu.random.uniform(0, end_time - start_time), ndigits=5)
 

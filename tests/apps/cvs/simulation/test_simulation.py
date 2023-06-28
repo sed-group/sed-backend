@@ -1,9 +1,7 @@
-import pytest
 import tests.apps.cvs.testutils as tu
 import testutils as sim_tu
 import sedbackend.apps.core.users.implementation as impl_users
-from pathlib import Path
-import os
+
 
 def test_run_single_simulation(client, std_headers, std_user):
   #Setup 
@@ -16,7 +14,7 @@ def test_run_single_simulation(client, std_headers, std_user):
   #Act
   res = client.post(f'/api/cvs/project/{project.id}/simulation/run', 
                     headers=std_headers,
-                    json = {
+                    json={
                       "sim_settings": settings.dict(),
                       "vcs_ids": [vcs.id],
                       "design_group_ids": [design_group.id]
