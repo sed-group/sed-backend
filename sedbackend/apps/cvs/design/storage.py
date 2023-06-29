@@ -221,9 +221,9 @@ def get_all_designs(db_connection: PooledMySQLConnection, design_group_ids: List
     try:
         query = f'SELECT cvs_designs.id, cvs_designs.design_group, cvs_designs.name \
                     FROM cvs_designs \
-                    WHERE cvs_designs.design_group IN ({",".join([str(dg) for dg in design_group_ids])})'
+                    WHERE cvs_designs.design_group IN ({",".join(["%s" for _ in range(len(design_group_ids))])})'
         with db_connection.cursor(prepared=True) as cursor:
-            cursor.execute(query)
+            cursor.execute(query, design_group_ids)
             res = cursor.fetchall()
             res = [dict(zip(cursor.column_names, row)) for row in res]
     except Error as e:

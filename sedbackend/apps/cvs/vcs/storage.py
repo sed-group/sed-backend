@@ -578,14 +578,17 @@ def create_multiple_subprocesses(db_connection: PooledMySQLConnection, vcs_id: i
     if len(subprocesses) == 0:
         return []
 
-    values = ",".join([f'({vcs_id}, "{subprocess[1].name}", {subprocess[1].parent_process_id})'
-                       for subprocess in subprocesses])
+    prepared_list = []
 
     try:
-        insert_statement = f'INSERT INTO {CVS_VCS_SUBPROCESS_TABLE} (vcs, name, iso_process) VALUES {values};'
-        logger.debug(f'Insert statement: {insert_statement}')
+        insert_statement = f'INSERT INTO {CVS_VCS_SUBPROCESS_TABLE} (vcs, name, iso_process) VALUES '
+        for subprocess in subprocesses:
+            insert_statement += f'(%s,%s,%s),'
+            prepared_list.append(vcs_id)
+            prepared_list.append(subprocess[1].name)
+            prepared_list.append(subprocess[1].parent_process_id)
         with db_connection.cursor(prepared=True) as cursor:
-            cursor.execute(insert_statement)
+            cursor.execute(insert_statement[:-1], prepared_list)
             insert_id = cursor.lastrowid
             row_count = cursor.rowcount
     except Error as e:

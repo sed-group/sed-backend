@@ -374,11 +374,11 @@ def get_all_sim_data(db_connection: PooledMySQLConnection, vcs_ids: List[int], d
                     LEFT OUTER JOIN cvs_iso_processes ON cvs_vcs_rows.iso_process = cvs_iso_processes.id \
                         OR cvs_subprocesses.iso_process = cvs_iso_processes.id \
                     LEFT OUTER JOIN cvs_design_mi_formulas ON cvs_vcs_rows.id = cvs_design_mi_formulas.vcs_row \
-                    WHERE cvs_vcs_rows.vcs IN ({",".join([str(vcs) for vcs in vcs_ids])}) \
+                    WHERE cvs_vcs_rows.vcs IN ({",".join(["%s" for _ in range(len(vcs_ids))])}) \
                     AND cvs_design_mi_formulas.design_group \
-                    IN ({",".join([str(dg) for dg in design_group_ids])}) ORDER BY `index`'
+                    IN ({",".join(["%s" for _ in range(len(design_group_ids))])}) ORDER BY `index`'
         with db_connection.cursor(prepared=True) as cursor:
-            cursor.execute(query)
+            cursor.execute(query, vcs_ids+design_group_ids)
             res = cursor.fetchall()
             res = [dict(zip(cursor.column_names, row)) for row in res]
     except Error as error:
@@ -409,9 +409,9 @@ def get_all_vd_design_values(db_connection: PooledMySQLConnection, designs: List
                         INNER JOIN cvs_value_drivers ON cvs_vd_design_values.value_driver = cvs_value_drivers.id \
                         INNER JOIN cvs_vcs_need_drivers ON cvs_vcs_need_drivers.value_driver = cvs_value_drivers.id \
                         INNER JOIN cvs_stakeholder_needs ON cvs_stakeholder_needs.id = cvs_vcs_need_drivers.stakeholder_need \
-                        WHERE design IN ({",".join([str(design) for design in designs])})'
+                        WHERE design IN ({",".join(["%s" for _ in range(len(designs))])})'
         with db_connection.cursor(prepared=True) as cursor:
-            cursor.execute(query)
+            cursor.execute(query, designs)
             res = cursor.fetchall()
             res = [dict(zip(cursor.column_names, row)) for row in res]
     except Error as error:
@@ -516,9 +516,9 @@ def get_all_market_values(db_connection: PooledMySQLConnection, vcs_ids: List[in
         query = f'SELECT id, name, value, unit, vcs \
                 FROM cvs_market_input_values \
                 INNER JOIN cvs_market_inputs ON cvs_market_input_values.market_input = cvs_market_inputs.id \
-                WHERE cvs_market_input_values.vcs IN ({",".join([str(vcs) for vcs in vcs_ids])})'
+                WHERE cvs_market_input_values.vcs IN ({",".join(["%s" for _ in range(len(vcs_ids))])})'
         with db_connection.cursor(prepared=True) as cursor:
-            cursor.execute(query)
+            cursor.execute(query, vcs_ids)
             res = cursor.fetchall()
             res = [dict(zip(cursor.column_names, row)) for row in res]
     except Error as error:
