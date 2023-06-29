@@ -1,7 +1,6 @@
 from typing import Any, Optional
 from datetime import datetime
 import os
-from tempfile import SpooledTemporaryFile
 
 from pydantic import BaseModel
 from fastapi.datastructures import UploadFile

@@ -91,7 +91,7 @@ def test_create_too_long_name_project(client, std_headers):
                 json={
                     "name": testutils.random_str(255, 300),
                     "description": testutils.random_str(20, 200),
-                    "currency": testutils.random_str(0,10)
+                    "currency": testutils.random_str(0, 10)
                 })
 
     #Assert

@@ -1,6 +1,4 @@
-from operator import mod
-from fastapi import Depends, APIRouter, UploadFile, File, HTTPException
-
+from fastapi import Depends, APIRouter
 from typing import List, Optional
 from sedbackend.apps.core.authentication.utils import get_current_active_user
 from sedbackend.apps.core.projects.dependencies import SubProjectAccessChecker
@@ -18,12 +16,9 @@ router = APIRouter()
     response_model=List[models.Simulation],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read, CVS_APP_SID))]
 )
-async def run_simulation(native_project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int],
-                         design_group_ids: List[int],
-                         normalized_npv: Optional[bool] = False,
-                         user: User = Depends(get_current_active_user)) -> List[models.Simulation]:
-    return implementation.run_simulation(native_project_id, sim_settings, vcs_ids, design_group_ids, normalized_npv,
-                                         user.id)
+async def run_simulation(sim_settings: models.EditSimSettings, vcs_ids: List[int],
+                         design_group_ids: List[int]) -> List[models.Simulation]:
+    return implementation.run_simulation(sim_settings, vcs_ids, design_group_ids)
 
 # Temporary disabled
 ''' 
@@ -50,12 +45,10 @@ async def run_dsm_file_simulation(native_project_id: int, sim_params: models.Fil
     response_model=List[models.Simulation],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read, CVS_APP_SID))]
 )
-async def run_sim_monte_carlo(native_project_id: int, sim_settings: models.EditSimSettings, vcs_ids: List[int],
+async def run_sim_monte_carlo(sim_settings: models.EditSimSettings, vcs_ids: List[int],
                               design_group_ids: List[int],
-                              normalized_npv: Optional[bool] = False,
-                              user: User = Depends(get_current_active_user)) -> List[models.Simulation]:
-    return implementation.run_sim_monte_carlo(native_project_id, sim_settings, vcs_ids,
-                                              design_group_ids, normalized_npv, user.id)
+                              normalized_npv: Optional[bool] = False) -> List[models.Simulation]:
+    return implementation.run_sim_monte_carlo(sim_settings, vcs_ids, design_group_ids, normalized_npv)
 
 
 @router.get(

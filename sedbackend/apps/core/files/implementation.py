@@ -44,6 +44,11 @@ def impl_delete_file(file_id: int, current_user_id: int) -> bool:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"File could not be deleted"
         )
+    except exc.PathMismatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Path to file does not match internal path'
+        )
 
 
 def impl_get_file_path(file_id: int, current_user_id: int) -> models.StoredFilePath:

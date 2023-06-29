@@ -2,13 +2,11 @@ from typing import List
 
 from fastapi import Request
 from fastapi.logger import logger
-from fastapi import HTTPException, status
 
 from sedbackend.apps.core.projects.dependencies import SubProjectAccessChecker
 from sedbackend.apps.core.projects.models import AccessLevel
 from sedbackend.apps.core.projects.implementation import impl_get_subproject_by_id
 from sedbackend.apps.core.files.implementation import impl_get_file_mapped_subproject_id
-from sedbackend.apps.core.users.implementation import impl_get_user_with_id
 
 
 class FileAccessChecker:

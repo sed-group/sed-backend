@@ -1,4 +1,5 @@
 from typing import List
+import re
 
 from fastapi import HTTPException, status, File
 from fastapi.logger import logger
@@ -26,10 +27,17 @@ def impl_get_users_me(current_user: models.User) -> models.User:
         )
 
 
-def impl_get_users(segment_length: int, index: int) -> List[models.User]:
-    with get_connection() as con:
-        user_list = storage.db_get_user_list(con, segment_length, index)
-        return user_list
+def impl_get_users(segment_length: int, index: int, order_by='username', order_direction='asc') -> List[models.User]:
+    try:
+        with get_connection() as con:
+            user_list = storage.db_get_user_list(con, segment_length, index, order_by=order_by,
+                                                 order_direction=order_direction)
+            return user_list
+    except ValueError as err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(err)
+        )
 
 
 def impl_get_users_with_id(user_ids: List[int]) -> List[models.User]:
@@ -167,6 +175,36 @@ def impl_update_user_details(current_user: models.User,
     return True
 
 
+def impl_search_users(username: str, full_name: str, limit: int, order_by: str = 'username',
+                      order_direction: str = 'asc') -> List[models.User]:
+    if len(username) < 3 and len(full_name) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one of the search terms needs to be more than three characters"
+        )
+
+    max_limit = 500
+    if limit > max_limit:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Highest allowed limit is {max_limit}"
+        )
+
+    # Escape special characters that might break the search term
+    username = re.escape(username)
+    full_name = re.escape(full_name)
+
+    try:
+        with get_connection() as con:
+            return storage.db_search_users(con, username, full_name, limit=limit, order_by=order_by,
+                                           order_direction=order_direction)
+    except ValueError as err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(err)
+        )
+
+
 def check_if_current_user_or_admin(current_user, user_id):
     if current_user.id == user_id:
         return True
@@ -189,3 +227,8 @@ def check_if_current_user_or_admin(current_user, user_id):
         )
 
     return True
+
+
+
+
+
