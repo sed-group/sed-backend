@@ -294,7 +294,7 @@ def test_run_sim_invalid_proj(client, std_headers, std_user):
   
   #Assert
   assert res.status_code == 404
-  assert res.json() == {'detail': 'Sub project not found'}
+  assert res.json() == {'detail': 'Sub-project not found.'}
   
   #Should probably assert some other stuff about the output to ensure that it is correct. 
   

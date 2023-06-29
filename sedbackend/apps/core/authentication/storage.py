@@ -6,7 +6,7 @@ from fastapi.logger import logger
 from sedbackend.apps.core.authentication.models import UserAuth, SSOResolutionData
 from sedbackend.apps.core.users.exceptions import UserNotFoundException
 from sedbackend.apps.core.authentication.exceptions import InvalidNonceException, FaultyNonceOperation
-from sedbackend.libs.mysqlutils.builder import MySQLStatementBuilder, FetchType
+from mysqlsb.builder import MySQLStatementBuilder, FetchType
 
 from mysql.connector.pooling import PooledMySQLConnection
 

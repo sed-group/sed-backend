@@ -1,9 +1,12 @@
 from typing import List
+import re
 
 from fastapi import HTTPException, status, File
 from fastapi.logger import logger
 
 from sedbackend.apps.core.authentication.exceptions import UnauthorizedOperationException
+import sedbackend.apps.core.authentication.login as auth_login
+import sedbackend.apps.core.authentication.exceptions as exc_auth
 import sedbackend.apps.core.users.exceptions as exc
 import sedbackend.apps.core.users.models as models
 from sedbackend.apps.core.db import get_connection
@@ -24,10 +27,17 @@ def impl_get_users_me(current_user: models.User) -> models.User:
         )
 
 
-def impl_get_users(segment_length: int, index: int) -> List[models.User]:
-    with get_connection() as con:
-        user_list = storage.db_get_user_list(con, segment_length, index)
-        return user_list
+def impl_get_users(segment_length: int, index: int, order_by='username', order_direction='asc') -> List[models.User]:
+    try:
+        with get_connection() as con:
+            user_list = storage.db_get_user_list(con, segment_length, index, order_by=order_by,
+                                                 order_direction=order_direction)
+            return user_list
+    except ValueError as err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(err)
+        )
 
 
 def impl_get_users_with_id(user_ids: List[int]) -> List[models.User]:
@@ -122,3 +132,103 @@ def impl_delete_user_from_db(user_id: int) -> bool:
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with ID {user_id} could not be found"
         )
+
+
+def impl_update_user_password(current_user: models.User, user_id: int, current_password: str, new_password: str) -> bool:
+    try:
+        if check_if_current_user_or_admin(current_user, user_id) is False:
+            auth_login.authenticate_user(current_user.username, current_password)
+
+        with get_connection() as connection:
+            storage.db_update_user_password(connection, user_id, new_password)
+            connection.commit()
+            return True
+    except exc.UserNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"No user with ID = {user_id} was found."
+        )
+    except exc_auth.InvalidCredentialsException:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Current password incorrect."
+        )
+
+
+def impl_update_user_details(current_user: models.User,
+                             user_id:int,
+                             update_details_request: models.UpdateDetailsRequest) -> bool:
+    try:
+        if check_if_current_user_or_admin(current_user, user_id) is False:
+            return False
+
+        with get_connection() as connection:
+            storage.db_update_user_details(connection, user_id, update_details_request)
+            connection.commit()
+
+    except exc.UserNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"No user with ID = {user_id} was found."
+        )
+
+    return True
+
+
+def impl_search_users(username: str, full_name: str, limit: int, order_by: str = 'username',
+                      order_direction: str = 'asc') -> List[models.User]:
+    if len(username) < 3 and len(full_name) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one of the search terms needs to be more than three characters"
+        )
+
+    max_limit = 500
+    if limit > max_limit:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Highest allowed limit is {max_limit}"
+        )
+
+    # Escape special characters that might break the search term
+    username = re.escape(username)
+    full_name = re.escape(full_name)
+
+    try:
+        with get_connection() as con:
+            return storage.db_search_users(con, username, full_name, limit=limit, order_by=order_by,
+                                           order_direction=order_direction)
+    except ValueError as err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(err)
+        )
+
+
+def check_if_current_user_or_admin(current_user, user_id):
+    if current_user.id == user_id:
+        return True
+
+    # Current user is not the targeted user
+    # Check if Admin
+    scopes = auth_login.parse_scopes_array(current_user.scopes)
+    if 'admin' not in scopes:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User is not allowed to change the password of another user."
+        )
+
+    # Check if trying to change other admin
+    target_user = impl_get_user_with_id(user_id)
+    if 'admin' in auth_login.parse_scopes_array(target_user.scopes):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User is not allowed to change administrator details."
+        )
+
+    return True
+
+
+
+
+

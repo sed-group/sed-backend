@@ -5,7 +5,7 @@ from sedbackend.apps.core.authentication import exceptions as auth_exceptions
 from sedbackend.apps.core.users.storage import db_get_user_safe_with_id
 from sedbackend.apps.cvs.project import models as models, exceptions as exceptions
 from sedbackend.libs.datastructures.pagination import ListChunk
-from sedbackend.libs.mysqlutils import MySQLStatementBuilder, Sort, FetchType
+from mysqlsb import MySQLStatementBuilder, Sort, FetchType
 import sedbackend.apps.core.projects.models as proj_models
 import sedbackend.apps.core.projects.storage as proj_storage
 
