@@ -6,6 +6,7 @@ from mysql.connector.pooling import PooledMySQLConnection
 from sedbackend.apps.cvs.design.storage import get_design_group
 from sedbackend.apps.cvs.vcs.storage import get_vcs_row
 from sedbackend.apps.cvs.vcs.storage import get_vcs
+from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.link_design_lifecycle import models, exceptions
 from mysqlsb import FetchType, MySQLStatementBuilder
 
@@ -89,7 +90,7 @@ def get_all_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
     if res is None:
-        raise exceptions.VCSNotFoundException
+        raise vcs_exceptions.VCSNotFoundException
 
     return [populate_formula(r) for r in res]
 

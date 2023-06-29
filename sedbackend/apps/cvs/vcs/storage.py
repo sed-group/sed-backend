@@ -83,6 +83,7 @@ def get_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) 
 
     if result is None:
         raise exceptions.VCSNotFoundException
+
     elif result['project'] != project_id:
         raise project_exceptions.CVSProjectNoMatchException
 
