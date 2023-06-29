@@ -22,8 +22,7 @@ from sedbackend.libs.formula_parser.parser import NumericStringParser
 from sedbackend.libs.formula_parser import expressions as expr
 from sedbackend.apps.cvs.simulation import models
 import sedbackend.apps.cvs.simulation.exceptions as e
-from sedbackend.apps.cvs.vcs import implementation as vcs_impl
-from sedbackend.apps.cvs.market_input import models as mi_models
+from sedbackend.apps.cvs.vcs import storage as vcs_storage
 
 SIM_SETTINGS_TABLE = "cvs_simulation_settings"
 SIM_SETTINGS_COLUMNS = ['project', 'time_unit', 'flow_process', 'flow_start_time', 'flow_time',
@@ -453,9 +452,9 @@ def edit_simulation_settings(db_connection: PooledMySQLConnection, project_id: i
 
     if sim_settings.flow_process is not None:
         flow_process_exists = False
-        vcss = vcs_impl.get_all_vcs(project_id).chunk
+        vcss = vcs_storage.get_all_vcs(db_connection, project_id).chunk
         for vcs in vcss:
-            rows = vcs_impl.get_vcs_table(project_id, vcs.id)
+            rows = vcs_storage.get_vcs_table(db_connection, project_id, vcs.id)
             for row in rows:
                 if (row.iso_process is not None and row.iso_process.name == sim_settings.flow_process) or \
                         (row.subprocess is not None and row.subprocess.name == sim_settings.flow_process):

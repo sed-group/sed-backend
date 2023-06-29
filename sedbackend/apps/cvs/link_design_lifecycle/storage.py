@@ -5,12 +5,9 @@ from mysql.connector.pooling import PooledMySQLConnection
 
 from sedbackend.apps.cvs.design.storage import get_design_group
 from sedbackend.apps.cvs.vcs.storage import get_vcs_row
-from sedbackend.apps.cvs.project.implementation import get_cvs_project
-from sedbackend.apps.cvs.vcs.implementation import get_vcs
+from sedbackend.apps.cvs.vcs.storage import get_vcs
 from sedbackend.apps.cvs.link_design_lifecycle import models, exceptions
 from mysqlsb import FetchType, MySQLStatementBuilder
-from sedbackend.apps.cvs.market_input import implementation as market_impl
-from sedbackend.apps.cvs.design import implementation as design_impl
 
 CVS_FORMULAS_TABLE = 'cvs_design_mi_formulas'
 CVS_FORMULAS_COLUMNS = ['vcs_row', 'design_group', 'time', 'time_unit', 'cost', 'revenue', 'rate']
@@ -83,7 +80,7 @@ def get_all_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_
     logger.debug(f'Fetching all formulas with vcs_id={vcs_id}')
 
     get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
-    get_vcs(project_id, vcs_id)
+    get_vcs(db_connection, project_id, vcs_id)
 
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement.select(CVS_FORMULAS_TABLE, CVS_FORMULAS_COLUMNS) \
