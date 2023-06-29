@@ -571,6 +571,30 @@ def create_subprocess(db_connection: PooledMySQLConnection, project_id: int, vcs
     return get_subprocess(db_connection, project_id, subprocess_id)
 
 
+def create_multiple_subprocesses(db_connection: PooledMySQLConnection, vcs_id: int,
+                                 subprocesses: List[Tuple[int, models.VCSSubprocessPost]]) -> List[Tuple[int, int]]:
+    logger.debug(f'Creating {len(subprocesses)} subprocesses.')
+
+    if len(subprocesses) == 0:
+        return []
+
+    values = ",".join([f'({vcs_id}, "{subprocess[1].name}", {subprocess[1].parent_process_id})'
+                       for subprocess in subprocesses])
+
+    try:
+        insert_statement = f'INSERT INTO {CVS_VCS_SUBPROCESS_TABLE} (vcs, name, iso_process) VALUES {values};'
+        logger.debug(f'Insert statement: {insert_statement}')
+        with db_connection.cursor(prepared=True) as cursor:
+            cursor.execute(insert_statement)
+            insert_id = cursor.lastrowid
+            row_count = cursor.rowcount
+    except Error as e:
+        logger.debug(f'Error msg: {e.msg}')
+        raise exceptions.SubprocessFailedCreationException
+
+    return [(subprocesses[i][0], insert_id + i) for i in range(row_count)]
+
+
 def edit_subprocess(db_connection: PooledMySQLConnection, project_id: int, subprocess_id: int,
                     new_subprocess: models.VCSSubprocessPut) -> bool:
     logger.debug(f'Editing subprocesses with id={subprocess_id}.')
@@ -836,7 +860,7 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, project_id: int, vcs_id
 
     get_vcs(db_connection, project_id, vcs_id)  # Check if VCS exists and belongs to project
 
-    updated_vcs_rows = remove_duplicate_names(db_connection, project_id, vcs_id, updated_vcs_rows)
+    updated_vcs_rows = remove_duplicate_names(db_connection, vcs_id, updated_vcs_rows)
 
     new_table_ids = []
 
@@ -915,33 +939,39 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, project_id: int, vcs_id
     return True
 
 
-def remove_duplicate_names(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
+def remove_duplicate_names(db_connection: PooledMySQLConnection, vcs_id: int,
                            rows: List[models.VcsRowPost]):
 
     new_subprocesses: List[Tuple[int, models.VCSSubprocessPost]] = []
+    done = []
     for i in range(0, len(rows)):
-        dups: List[Tuple[int, models.VCSSubprocessPost]] = []
+        dupes: List[Tuple[int, models.VCSSubprocessPost]] = []
+        if i in done:
+            continue
         for j in range(i + 1, len(rows)):
             if rows[i].iso_process is None:
                 break
             if rows[i].iso_process and rows[i].iso_process == rows[j].iso_process:
                 process = get_iso_process(rows[i].iso_process, db_connection)
-                sub = models.VCSSubprocessPost(name=process.name + " (" + str(len(dups) + 1) + ")",
+                sub = models.VCSSubprocessPost(name=process.name + " (" + str(len(dupes) + 1) + ")",
                                                parent_process_id=process.id)
-                dups.append((j, sub))
+                dupes.append((j, sub))
+                new_subprocesses.append((j, sub))
+                done.append(j)
 
-        for index, dup in dups:
-            subp = create_subprocess(db_connection, project_id, vcs_id, dup)
-            row_post = models.VcsRowPost(
-                id=rows[index].id,
-                index=rows[index].index,
-                stakeholder=rows[index].stakeholder,
-                stakeholder_needs=rows[index].stakeholder_needs,
-                stakeholder_expectations=rows[index].stakeholder_expectations,
-                iso_process=None,
-                subprocess=subp.id)
+    subprocesses = create_multiple_subprocesses(db_connection, vcs_id, new_subprocesses)
 
-            rows[index] = row_post
+    for index, subprocess_id in subprocesses:
+        row_post = models.VcsRowPost(
+            id=rows[index].id,
+            index=rows[index].index,
+            stakeholder=rows[index].stakeholder,
+            stakeholder_needs=rows[index].stakeholder_needs,
+            stakeholder_expectations=rows[index].stakeholder_expectations,
+            iso_process=None,
+            subprocess=subprocess_id)
+
+        rows[index] = row_post
 
     return rows
 
