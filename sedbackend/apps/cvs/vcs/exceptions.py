@@ -88,6 +88,10 @@ class SubprocessFailedDeletionException(Exception):
         self.subprocess_id = subprocess_id
 
 
+class SubprocessFailedCreationException(Exception):
+    pass
+
+
 # ======================================================================================================================
 # VCS Table
 # ======================================================================================================================

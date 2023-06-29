@@ -25,7 +25,7 @@ def test_create_design(client, std_headers, std_user):
 
     # Assert
     assert res.status_code == 200  # 200 OK
-    designs = impl_design.get_all_designs(project.id, design_group.id)
+    designs = impl_design.get_designs(project.id, design_group.id)
     assert designs[0].name == "new design"
     assert len(designs) == 1
     assert len(designs[0].vd_design_values) == len(design_group.vds)
@@ -54,7 +54,7 @@ def test_create_design_no_values(client, std_headers, std_user):
 
     # Assert
     assert res.status_code == 200  # 200 OK
-    designs = impl_design.get_all_designs(project.id, design_group.id)
+    designs = impl_design.get_designs(project.id, design_group.id)
     assert len(designs) == 1
 
     # Cleanup
@@ -86,7 +86,7 @@ def test_edit_designs(client, std_headers, std_user):
 
     # Assert
     assert res.status_code == 200  # 200 OK
-    designs = impl_design.get_all_designs(project.id, design_group.id)
+    designs = impl_design.get_designs(project.id, design_group.id)
     assert designs[0].name == "new design"
     assert len(designs) == 1
     assert len(designs[0].vd_design_values) == len(design_group.vds)
@@ -111,7 +111,7 @@ def test_delete_designs(client, std_headers, std_user):
 
     # Assert
     assert res.status_code == 200  # 200 OK
-    designs = impl_design.get_all_designs(project.id, design_group.id)
+    designs = impl_design.get_designs(project.id, design_group.id)
     assert len(designs) == 0
 
     # Cleanup
