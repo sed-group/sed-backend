@@ -4,8 +4,8 @@ from starlette import status
 from sedbackend.apps.core.db import get_connection
 from sedbackend.apps.cvs.link_design_lifecycle import models, storage
 from sedbackend.apps.cvs.link_design_lifecycle.exceptions import FormulasFailedDeletionException, \
-    FormulasFailedUpdateException, FormulasNotFoundException, TooManyFormulasUpdatedException, \
-    VCSNotFoundException, WrongTimeUnitException
+    FormulasFailedUpdateException, TooManyFormulasUpdatedException, \
+    WrongTimeUnitException
 from sedbackend.apps.cvs.project import exceptions as project_exceptions
 from sedbackend.apps.cvs.design import exceptions as design_exceptions
 from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
@@ -17,6 +17,11 @@ def edit_formulas(project_id: int, vcs_row_id: int, design_group_id: int, new_fo
             res = storage.edit_formulas(con, project_id, vcs_row_id, design_group_id, new_formulas)
             con.commit()
             return res
+        except vcs_exceptions.VCSNotFoundException:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f'Could not find vcs'
+            )
         except FormulasFailedUpdateException:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -49,15 +54,15 @@ def edit_formulas(project_id: int, vcs_row_id: int, design_group_id: int, new_fo
             )
 
 
-def get_all_formulas(project_id: int, vcs_id: int, design_group_id: int) -> List[models.FormulaRowGet]:
+def get_all_formulas(project_id: int, vcs_id: int, design_group_id: int) -> List[models.FormulaGet]:
     with get_connection() as con:
         try:
             res = storage.get_all_formulas(con, project_id, vcs_id, design_group_id)
             con.commit()
             return res
-        except VCSNotFoundException:
+        except vcs_exceptions.VCSNotFoundException:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=status.HTTP_404_NOT_FOUND,
                 detail=f'Could not find VCS with id {vcs_id}'
             )
         except WrongTimeUnitException as e:  # Where exactly does this fire????

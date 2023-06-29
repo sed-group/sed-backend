@@ -5,12 +5,10 @@ from mysql.connector.pooling import PooledMySQLConnection
 
 from sedbackend.apps.cvs.design.storage import get_design_group
 from sedbackend.apps.cvs.vcs.storage import get_vcs_row
-from sedbackend.apps.cvs.project.implementation import get_cvs_project
-from sedbackend.apps.cvs.vcs.implementation import get_vcs
+from sedbackend.apps.cvs.vcs.storage import get_vcs
+from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.link_design_lifecycle import models, exceptions
 from mysqlsb import FetchType, MySQLStatementBuilder
-from sedbackend.apps.cvs.market_input import implementation as market_impl
-from sedbackend.apps.cvs.design import implementation as design_impl
 
 CVS_FORMULAS_TABLE = 'cvs_design_mi_formulas'
 CVS_FORMULAS_COLUMNS = ['vcs_row', 'design_group', 'time', 'time_unit', 'cost', 'revenue', 'rate']
@@ -34,22 +32,6 @@ def create_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, desig
         .insert(table=CVS_FORMULAS_TABLE, columns=CVS_FORMULAS_COLUMNS) \
         .set_values(values=values) \
         .execute(fetch_type=FetchType.FETCH_ONE)
-
-    if formulas.value_driver_ids is not None:
-        for vd in formulas.value_driver_ids:
-            insert_statement = MySQLStatementBuilder(db_connection)
-            insert_statement \
-                .insert(table=CVS_FORMULAS_VALUE_DRIVERS_TABLE, columns=CVS_FORMULAS_VALUE_DRIVERS_COLUMNS) \
-                .set_values([vcs_row_id, vd]) \
-                .execute(fetch_type=FetchType.FETCH_NONE)
-
-    if formulas.market_input_ids is not None:
-        for mi_id in formulas.market_input_ids:
-            insert_statement = MySQLStatementBuilder(db_connection)
-            insert_statement \
-                .insert(table=CVS_FORMULAS_MARKET_INPUTS_TABLE, columns=CVS_FORMULAS_MARKET_INPUTS_COLUMNS) \
-                .set_values([vcs_row_id, mi_id]) \
-                .execute(fetch_type=FetchType.FETCH_NONE)
 
     if insert_statement is not None:  # TODO actually check for potential problems
         return True
@@ -95,12 +77,11 @@ def edit_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_row
 
 
 def get_all_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
-                     design_group_id: int) -> List[models.FormulaRowGet]:
+                     design_group_id: int) -> List[models.FormulaGet]:
     logger.debug(f'Fetching all formulas with vcs_id={vcs_id}')
 
     get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
-    get_cvs_project(project_id)
-    get_vcs(project_id, vcs_id)
+    get_vcs(db_connection, project_id, vcs_id)
 
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement.select(CVS_FORMULAS_TABLE, CVS_FORMULAS_COLUMNS) \
@@ -109,22 +90,20 @@ def get_all_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
     if res is None:
-        raise exceptions.VCSNotFoundException
+        raise vcs_exceptions.VCSNotFoundException
 
     return [populate_formula(r) for r in res]
 
 
-def populate_formula(db_result) -> models.FormulaRowGet:
-    return models.FormulaRowGet(
+def populate_formula(db_result) -> models.FormulaGet:
+    return models.FormulaGet(
         vcs_row_id=db_result['vcs_row'],
         design_group_id=db_result['design_group'],
         time=db_result['time'],
         time_unit=db_result['time_unit'],
         cost=db_result['cost'],
         revenue=db_result['revenue'],
-        rate=db_result['rate'],
-        market_inputs=market_impl.get_all_formula_market_inputs(db_result['vcs_row']),
-        value_drivers=design_impl.get_all_formula_value_drivers(db_result['vcs_row'])
+        rate=db_result['rate']
     )
 
 

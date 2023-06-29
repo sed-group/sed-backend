@@ -4,7 +4,6 @@ from sedbackend.apps.cvs.project.models import CVSProject
 from sedbackend.apps.cvs.simulation.models import SimSettings
 from sedbackend.apps.cvs.vcs.models import VCS
 import tests.apps.cvs.testutils as tu
-import sedbackend.apps.core.users.implementation as impl_users
 
 
 def setup_single_simulation(user_id) -> Tuple[CVSProject, VCS, DesignGroup, List[Design], SimSettings]:
