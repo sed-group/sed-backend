@@ -25,7 +25,7 @@ CVS_START_STOP_NODES_TABLE = 'cvs_start_stop_nodes'
 CVS_START_STOP_NODES_COLUMNS = CVS_NODES_COLUMNS + ['type']
 
 CVS_DSM_FILES_TABLE = 'cvs_dsm_files'
-CVS_DSM_FILES_COLUMNS = ['vcs_id', 'file_id']
+CVS_DSM_FILES_COLUMNS = ['vcs', 'file']
 
 MAX_FILE_SIZE = 100 * 10 ** 6  # 100MB
 
@@ -349,19 +349,19 @@ def get_dsm_file_id(db_connection: PooledMySQLConnection, project_id: int, vcs_i
     if file_res is None:
         raise file_ex.FileNotFoundException
 
-    return file_res['file_id']
+    return file_res['file']
 
 
-def get_multiple_dsm_file_id(db_connection: PooledMySQLConnection, vcs_ids: List[int]) -> int:
+def get_multiple_dsm_file_id(db_connection: PooledMySQLConnection, vcs_ids: List[int]) -> list[int]:
+    where_statement = "vcs IN ("+",".join(["%s" for _ in range(len(vcs_ids))])+")"
+    logger.debug(f'where_statement: {where_statement}')
+
     select_statement = MySQLStatementBuilder(db_connection)
     file_res = select_statement.select(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS) \
-        .where(",".join(["%s" for _ in range(len(vcs_ids))]), vcs_ids) \
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+        .where(where_statement, vcs_ids) \
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
-    if file_res is None:
-        raise file_ex.FileNotFoundException
-
-    return file_res['file_id']
+    return [file['file'] for file in file_res]
 
 
 def get_dsm_file_path(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id) -> StoredFilePath:
