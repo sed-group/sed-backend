@@ -23,6 +23,9 @@ from sedbackend.libs.formula_parser import expressions as expr
 from sedbackend.apps.cvs.simulation import models
 import sedbackend.apps.cvs.simulation.exceptions as e
 from sedbackend.apps.cvs.vcs import storage as vcs_storage
+from sedbackend.apps.cvs.design import storage as design_storage
+from sedbackend.apps.cvs.life_cycle import storage as life_cycle_storage
+from sedbackend.apps.core.files import storage as file_storage
 
 SIM_SETTINGS_TABLE = "cvs_simulation_settings"
 SIM_SETTINGS_COLUMNS = ['project', 'time_unit', 'flow_process', 'flow_start_time', 'flow_time',
@@ -62,7 +65,7 @@ def run_sim_dsm_file(db_connection: PooledMySQLConnection, user_id: int, project
             if not check_entity_rate(res, process):
                 raise e.RateWrongOrderException
 
-            design_ids = [design.id for design in design_impl.get_all_designs(project_id, design_group_id)]
+            design_ids = [design.id for design in design_storage.get_all_designs(db_connection, project_id, design_group_id)]
 
             if design_ids is None or []:
                 raise e.DesignIdsNotFoundException
@@ -208,7 +211,9 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
 
     all_vd_design_values = get_all_vd_design_values(db_connection, [design.id for design in all_designs])
 
-    for vcs_id in vcs_ids:
+    # all_dsm_ids = life_cycle_storage.get_multiple_dsm_file_id(db_connection, vcs_ids)
+
+    for i, vcs_id in enumerate(vcs_ids):
         market_values = [mi for mi in all_market_values if mi['vcs'] == vcs_id]
         for design_group_id in design_group_ids:
             sim_data = [sd for sd in all_sim_data if sd['vcs'] == vcs_id and sd['design_group'] == design_group_id]

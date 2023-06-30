@@ -39,7 +39,7 @@ def test_upload_dsm_file(client, std_headers, std_user):
   
 
   #Act
-  res = client.post(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/upload-dsm',
+  res = client.post(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/dsm',
                     headers=std_headers,
                     files=_file)
 
@@ -100,7 +100,7 @@ def test_upload_invalid_file_extension(client, std_headers, std_user):
   _file = {'file': ('input-example.xlsx', _test_upload_file.open('rb'), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')}
 
   #Act 
-  res = client.post(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/upload-dsm',
+  res = client.post(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/dsm',
                     headers=std_headers,
                     files=_file)
   
@@ -146,7 +146,7 @@ def test_upload_invalid_dsm_file(client, std_headers, std_user):
   
 
   #Act
-  res = client.post(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/upload-dsm',
+  res = client.post(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/dsm',
                     headers=std_headers,
                     files=_file)
 
@@ -190,11 +190,11 @@ def test_get_dsm_file_id(client, std_headers, std_user):
   
 
   #Act
-  client.post(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/upload-dsm',
+  client.post(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/dsm',
                     headers=std_headers,
                     files=_file)
 
-  res = client.get(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/get-dsm-id',
+  res = client.get(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/dsm/id',
                     headers=std_headers)
 
   #Assert
