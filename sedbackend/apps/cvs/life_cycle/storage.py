@@ -289,13 +289,21 @@ def save_dsm_file(db_connection: PooledMySQLConnection, application_sid, project
         if file_id is not None:
             file_storage.db_delete_file(db_connection, file_id, user_id)
     except exceptions.FileNotFoundException:
-        pass
+        pass  # File doesn't exist, so we don't need to delete it
+    except Exception:
+        try:
+            # File does not exist in persistent storage but exists in database
+            delete_statement = MySQLStatementBuilder(db_connection)
+            _, rows = delete_statement.delete(CVS_DSM_FILES_TABLE) \
+                .where('vcs_id = %s', [vcs_id]) \
+                .execute(return_affected_rows=True)
+        except:
+            pass
 
     with model_file.file_object as f:
         f.seek(0)
         tmp_file = f.read()
         mime = magic.from_buffer(tmp_file)
-        print(mime)
         logger.debug(mime)
         # TODO doesn't work with windows if we create the file in excel.
         if mime != "CSV text" and mime != "ASCII text":
@@ -306,12 +314,13 @@ def save_dsm_file(db_connection: PooledMySQLConnection, application_sid, project
 
         f.seek(0)
         dsm_file = pd.read_csv(f)
+        logger.debug(f'File content: {dsm_file}')
         vcs_table = vcs_storage.get_vcs_table(db_connection, project_id, vcs_id)
 
         vcs_processes = [row.iso_process.name if row.iso_process is not None else
                          row.subprocess.name for row in vcs_table]
 
-        for process in dsm_file['processes'].values:
+        for process in dsm_file['Processes'].values[1:-1]:
             if process not in vcs_processes:
                 raise exceptions.ProcessesVcsMatchException
 
