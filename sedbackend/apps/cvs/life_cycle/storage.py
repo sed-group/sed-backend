@@ -1,10 +1,12 @@
+from fastapi import UploadFile
 from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
 
 from mysqlsb import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.cvs.life_cycle import exceptions, models
-from sedbackend.apps.cvs.vcs import storage as vcs_storage, exceptions as vcs_exceptions, implementation as vcs_impl
+from sedbackend.apps.cvs.vcs import storage as vcs_storage, exceptions as vcs_exceptions
 from sedbackend.apps.core.files import models as file_models, storage as file_storage
+from sedbackend.apps.core.projects import storage as core_project_storage
 from mysql.connector import Error
 import magic
 import pandas as pd
@@ -272,10 +274,14 @@ def update_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: i
     return True
 
 
-def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int,
-                  vcs_id: int, file: file_models.StoredFilePost, user_id) -> bool:
+def save_dsm_file(db_connection: PooledMySQLConnection, application_sid, project_id: int,
+                  vcs_id: int, file: UploadFile, user_id) -> bool:
 
-    if file.extension != ".csv":
+    subproject = core_project_storage.db_get_subproject_native(db_connection, application_sid, project_id)
+
+    model_file = file_models.StoredFilePost.import_fastapi_file(file, user_id, subproject.id)
+
+    if model_file.extension != ".csv":
         raise exceptions.InvalidFileTypeException
 
     try:
@@ -285,7 +291,7 @@ def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int,
     except exceptions.FileNotFoundException:
         pass
 
-    with file.file_object as f:
+    with model_file.file_object as f:
         f.seek(0)
         tmp_file = f.read()
         mime = magic.from_buffer(tmp_file)
@@ -310,7 +316,7 @@ def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int,
                 raise exceptions.ProcessesVcsMatchException
 
         f.seek(0)
-        stored_file = file_storage.db_save_file(db_connection, file)
+        stored_file = file_storage.db_save_file(db_connection, model_file)
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement.insert(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS) \

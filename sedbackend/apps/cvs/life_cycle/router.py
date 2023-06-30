@@ -70,11 +70,9 @@ async def update_bpmn(native_project_id: int, vcs_id: int, bpmn: models.BPMNGet)
     response_model=bool,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def upload_dsm_file(native_project_id: int, vcs_id: int, file: UploadFile, user: User = Depends(get_current_active_user)) -> bool:
-    subproject = impl_get_subproject_native(CVS_APP_SID, native_project_id)
-    print(subproject)
-    model_file = file_models.StoredFilePost.import_fastapi_file(file, user.id, subproject.id)
-    return implementation.save_dsm_file(native_project_id, vcs_id, model_file, user.id)
+async def upload_dsm_file(native_project_id: int, vcs_id: int, file: UploadFile,
+                          user: User = Depends(get_current_active_user)) -> bool:
+    return implementation.save_dsm_file(CVS_APP_SID, native_project_id, vcs_id, file, user.id)
 
   
 @router.get(
