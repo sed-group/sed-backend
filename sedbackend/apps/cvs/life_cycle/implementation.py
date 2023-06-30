@@ -158,10 +158,10 @@ def update_bpmn(project_id: int, vcs_id: int, bpmn: models.BPMNGet) -> bool:
 
         
 def save_dsm_file(project_id: int, vcs_id: int,
-                  file: file_models.StoredFilePost) -> bool:
+                  file: file_models.StoredFilePost, user_id: int) -> bool:
     try:
         with get_connection() as con:
-            result = storage.save_dsm_file(con, project_id, vcs_id, file)
+            result = storage.save_dsm_file(con, project_id, vcs_id, file, user_id)
             con.commit()
             return result
     except exceptions.InvalidFileTypeException:
@@ -181,10 +181,10 @@ def save_dsm_file(project_id: int, vcs_id: int,
         )
 
 
-def get_dsm_file_id(project_id: int, vcs_id: int, user_id: int) -> int:
+def get_dsm_file_id(project_id: int, vcs_id: int) -> int:
     try:
         with get_connection() as con:
-            res = storage.get_dsm_file_id(con, project_id, vcs_id, user_id)
+            res = storage.get_dsm_file_id(con, project_id, vcs_id)
             con.commit()
             return res
     except exceptions.FileNotFoundException as e:

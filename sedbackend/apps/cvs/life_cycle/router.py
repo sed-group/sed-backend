@@ -63,6 +63,7 @@ async def update_bpmn(native_project_id: int, vcs_id: int, bpmn: models.BPMNGet)
     return implementation.update_bpmn(native_project_id, vcs_id, bpmn)
 
 
+# TODO only call one implementation function
 @router.post(
     '/project/{native_project_id}/vcs/{vcs_id}/upload-dsm',
     summary="Upload DSM file",
@@ -73,7 +74,7 @@ async def upload_dsm_file(native_project_id: int, vcs_id: int, file: UploadFile,
     subproject = impl_get_subproject_native(CVS_APP_SID, native_project_id)
     print(subproject)
     model_file = file_models.StoredFilePost.import_fastapi_file(file, user.id, subproject.id)
-    return implementation.save_dsm_file(native_project_id, vcs_id, model_file)
+    return implementation.save_dsm_file(native_project_id, vcs_id, model_file, user.id)
 
   
 @router.get(
@@ -82,6 +83,6 @@ async def upload_dsm_file(native_project_id: int, vcs_id: int, file: UploadFile,
     response_model=int,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
-async def get_dsm_file(native_project_id: int, vcs_id: int, user: User = Depends(get_current_active_user)) -> int:
-    return implementation.get_dsm_file_id(native_project_id, vcs_id, user.id)
+async def get_dsm_file(native_project_id: int, vcs_id: int) -> int:
+    return implementation.get_dsm_file_id(native_project_id, vcs_id)
 

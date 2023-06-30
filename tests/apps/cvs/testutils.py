@@ -349,7 +349,7 @@ def delete_multiple_bpmn_nodes(nodes, project_id, vcs_id, user_id):
 
 
 def delete_dsm_file_from_vcs_id(proj_id, vcs_id, user_id):
-    file_id = impl_life_cycle.get_dsm_file_id(proj_id, vcs_id, user_id)
+    file_id = impl_life_cycle.get_dsm_file_id(proj_id, vcs_id)
     impl_files.impl_delete_file(file_id, user_id)
 
 # ======================================================================================================================
