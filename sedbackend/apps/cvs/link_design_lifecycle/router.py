@@ -13,10 +13,10 @@ router = APIRouter()
 @router.get(
     '/project/{native_project_id}/vcs/{vcs_id}/design-group/{dg_id}/formulas/all',
     summary=f'Get all formulas for a single vcs and design group',
-    response_model=List[models.FormulaRowGet],
+    response_model=List[models.FormulaGet],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
-async def get_all_formulas(native_project_id: int, vcs_id: int, dg_id: int) -> List[models.FormulaRowGet]:
+async def get_all_formulas(native_project_id: int, vcs_id: int, dg_id: int) -> List[models.FormulaGet]:
     return implementation.get_all_formulas(native_project_id, vcs_id, dg_id)
 
 

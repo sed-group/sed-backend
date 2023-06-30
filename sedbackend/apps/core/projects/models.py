@@ -49,6 +49,7 @@ class ProjectEdit(BaseModel):
     name: Optional[constr(min_length=5)] = None
     participants_to_add: Optional[Dict[int, AccessLevel]] = {}
     participants_to_remove: Optional[List[int]] = []
+    participants_to_update: Optional[Dict[int, AccessLevel]] = {}
     subprojects_to_add: Optional[List[int]] = []
     subprojects_to_remove: Optional[List[int]] = []
 
