@@ -1,11 +1,15 @@
+from typing import List
+
 from fastapi import UploadFile
 from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
 
 from mysqlsb import MySQLStatementBuilder, FetchType, Sort
+
+from sedbackend.apps.core.files.models import StoredFilePath
 from sedbackend.apps.cvs.life_cycle import exceptions, models
 from sedbackend.apps.cvs.vcs import storage as vcs_storage, exceptions as vcs_exceptions
-from sedbackend.apps.core.files import models as file_models, storage as file_storage
+from sedbackend.apps.core.files import models as file_models, storage as file_storage, exceptions as file_ex
 from sedbackend.apps.core.projects import storage as core_project_storage
 from mysql.connector import Error
 import magic
@@ -23,7 +27,7 @@ CVS_START_STOP_NODES_COLUMNS = CVS_NODES_COLUMNS + ['type']
 CVS_DSM_FILES_TABLE = 'cvs_dsm_files'
 CVS_DSM_FILES_COLUMNS = ['vcs_id', 'file_id']
 
-MAX_FILE_SIZE = 100*10**6  # 100MB
+MAX_FILE_SIZE = 100 * 10 ** 6  # 100MB
 
 
 def populate_process_node(db_connection, project_id, result) -> models.ProcessNodeGet:
@@ -276,7 +280,6 @@ def update_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: i
 
 def save_dsm_file(db_connection: PooledMySQLConnection, application_sid, project_id: int,
                   vcs_id: int, file: UploadFile, user_id) -> bool:
-
     subproject = core_project_storage.db_get_subproject_native(db_connection, application_sid, project_id)
 
     model_file = file_models.StoredFilePost.import_fastapi_file(file, user_id, subproject.id)
@@ -288,7 +291,7 @@ def save_dsm_file(db_connection: PooledMySQLConnection, application_sid, project
         file_id = get_dsm_file_id(db_connection, project_id, vcs_id)
         if file_id is not None:
             file_storage.db_delete_file(db_connection, file_id, user_id)
-    except exceptions.FileNotFoundException:
+    except file_ex.FileNotFoundException:
         pass  # File doesn't exist, so we don't need to delete it
     except Exception:
         try:
@@ -329,14 +332,13 @@ def save_dsm_file(db_connection: PooledMySQLConnection, application_sid, project
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement.insert(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS) \
-        .set_values([vcs_id, stored_file.id])\
+        .set_values([vcs_id, stored_file.id]) \
         .execute(fetch_type=FetchType.FETCH_NONE)
 
     return True
 
 
 def get_dsm_file_id(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> int:
-
     vcs_storage.get_vcs(db_connection, project_id, vcs_id)  # Check if vcs exists and matches project id
 
     select_statement = MySQLStatementBuilder(db_connection)
@@ -344,7 +346,25 @@ def get_dsm_file_id(db_connection: PooledMySQLConnection, project_id: int, vcs_i
         .where('vcs_id = %s', [vcs_id]) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
-    if file_res == None:
-        raise exceptions.FileNotFoundException
+    if file_res is None:
+        raise file_ex.FileNotFoundException
 
     return file_res['file_id']
+
+
+def get_multiple_dsm_file_id(db_connection: PooledMySQLConnection, vcs_ids: List[int]) -> int:
+    select_statement = MySQLStatementBuilder(db_connection)
+    file_res = select_statement.select(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS) \
+        .where(",".join(["%s" for _ in range(len(vcs_ids))]), vcs_ids) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if file_res is None:
+        raise file_ex.FileNotFoundException
+
+    return file_res['file_id']
+
+
+def get_dsm_file_path(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id) -> StoredFilePath:
+    file_id = get_dsm_file_id(db_connection, project_id, vcs_id)
+    return file_storage.db_get_file_path(db_connection, file_id, user_id)
+
