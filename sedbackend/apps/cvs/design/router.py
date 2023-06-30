@@ -79,8 +79,8 @@ async def edit_design_group(native_project_id: int, design_group_id: int,
     response_model=List[models.Design],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
-async def get_all_designs(native_project_id: int, design_group_id: int) -> List[models.Design]:
-    return implementation.get_all_designs(native_project_id, design_group_id)
+async def get_designs(native_project_id: int, design_group_id: int) -> List[models.Design]:
+    return implementation.get_designs(native_project_id, design_group_id)
 
 
 @router.put(

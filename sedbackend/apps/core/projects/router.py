@@ -13,12 +13,14 @@ router = APIRouter()
 
 
 @router.get("",
-            summary="Lists all projects",
+            summary="Lists all accessible projects",
             description="Lists all projects in alphabetical order",
             response_model=List[models.ProjectListing])
-async def get_projects(segment_length: int = None, index: int = None, current_user: User = Depends(get_current_active_user)):
+async def get_projects(segment_length: Optional[int] = 0, index: Optional[int] = 0,
+                       current_user: User = Depends(get_current_active_user)):
     """
     Lists all projects that the current user has access to
+    :param current_user:
     :param segment_length:
     :param index:
     :return:
@@ -31,14 +33,16 @@ async def get_projects(segment_length: int = None, index: int = None, current_us
             description="Lists all projects that exist, and is only available to those who have the authority.",
             response_model=List[models.ProjectListing],
             dependencies=[Security(verify_scopes, scopes=['admin'])])
-async def get_all_projects(segment_length: Optional[int] = None, index: Optional[int] = None):
+async def get_all_projects(segment_length: Optional[int] = 0, index: Optional[int] = 0,
+                           current_user: User = Depends(get_current_active_user)):
     """
     Lists all projects that exists, and is only available to those who have the authority.
+    :param current_user:
     :param segment_length:
     :param index:
     :return:
     """
-    return impl.impl_get_projects(segment_length, index)
+    return impl.impl_get_projects(current_user.id, segment_length, index)
 
 
 @router.get("/{project_id}",
@@ -67,6 +71,15 @@ async def post_project(project: models.ProjectPost, current_user: User = Depends
                dependencies=[Depends(ProjectAccessChecker([models.AccessLevel.OWNER, models.AccessLevel.ADMIN]))])
 async def delete_project(project_id: int):
     return impl.impl_delete_project(project_id)
+
+
+@router.put("/{project_id}",
+            summary="Edit project",
+            description="Edit project",
+            response_model=models.Project,
+            dependencies=[Depends(ProjectAccessChecker(models.AccessLevel.list_are_admins()))])
+async def update_project(project_id: int, project_updated: models.ProjectEdit):
+    return impl.impl_update_project(project_id, project_updated)
 
 
 @router.post("/{project_id}/participants",
@@ -135,3 +148,12 @@ async def delete_subproject(project_id: int, subproject_id: int):
             response_model=models.SubProject)
 async def get_app_native_project(app_id, native_project_id):
     return impl.impl_get_subproject_native(app_id, native_project_id)
+
+
+@router.get("/apps/{app_id}/native-subprojects",
+            summary="List application specific native subprojects available to the user",
+            response_model=List[models.SubProject])
+async def get_user_subprojects_with_application_sid(app_id: str, current_user: User = Depends(get_current_active_user),
+                                                    no_project_association: Optional[bool] = False):
+    return impl.impl_get_user_subprojects_with_application_sid(current_user.id, current_user.id, app_id,
+                                                               no_project_association=no_project_association)

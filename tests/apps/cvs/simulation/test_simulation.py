@@ -1,9 +1,7 @@
-import pytest
 import tests.apps.cvs.testutils as tu
 import testutils as sim_tu
 import sedbackend.apps.core.users.implementation as impl_users
-from pathlib import Path
-import os
+
 
 def test_run_single_simulation(client, std_headers, std_user):
   #Setup 
@@ -16,7 +14,7 @@ def test_run_single_simulation(client, std_headers, std_user):
   #Act
   res = client.post(f'/api/cvs/project/{project.id}/simulation/run', 
                     headers=std_headers,
-                    json = {
+                    json={
                       "sim_settings": settings.dict(),
                       "vcs_ids": [vcs.id],
                       "design_group_ids": [design_group.id]
@@ -72,7 +70,6 @@ def test_run_sim_invalid_designs(client, std_headers, std_user):
   
   #Assert
   assert res.status_code == 400
-  # assert res.json() == {'detail': 'Could not find design'} #The error from get_design() in design.implementation
 
   #Cleanup
   tu.delete_VCS_with_ids(project.id, [vcs.id for vcs in vcss])
@@ -295,7 +292,7 @@ def test_run_sim_invalid_proj(client, std_headers, std_user):
   
   #Assert
   assert res.status_code == 404
-  assert res.json() == {'detail': 'Sub project not found'}
+  assert res.json() == {'detail': 'Sub-project not found.'}
   
   #Should probably assert some other stuff about the output to ensure that it is correct. 
   

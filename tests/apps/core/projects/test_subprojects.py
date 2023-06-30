@@ -162,3 +162,27 @@ def test_get_native_subproject(client, std_headers, std_user):
     assert subproj.project_id is None
     # Cleanup
     impl.impl_delete_subproject_native(app_id, rand_id)
+
+
+def test_delete_project_with_subprojects(client, std_headers, std_user):
+    # Setup
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    p = tu_projects.seed_random_project(current_user.id)
+    sp = tu_projects.seed_random_subproject(current_user.id, p.id)
+    # Act
+    res1 = client.get(f'/api/core/projects/{p.id}/subprojects/{sp.id}', headers=std_headers)
+    res2 = client.delete(f'/api/core/projects/{p.id}', headers=std_headers)
+    res3 = client.get(f'/api/core/projects/{p.id}/subprojects/{sp.id}', headers=std_headers)
+    retrieved_sp = impl.impl_get_subproject_by_id(sp.id)
+    # Assert
+    assert res1.status_code == 200
+    assert res1.json()['id'] == sp.id
+    assert res1.json()['project_id'] == p.id
+    assert res2.status_code == 200
+    assert res3.status_code == 404
+    assert retrieved_sp is not None
+    assert retrieved_sp.project_id is None
+    assert retrieved_sp.id == sp.id
+    # Cleanup
+    sp.project_id = None
+    tu_projects.delete_subprojects([sp])
