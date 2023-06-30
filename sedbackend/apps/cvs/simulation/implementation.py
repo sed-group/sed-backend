@@ -19,6 +19,7 @@ from sedbackend.apps.cvs.simulation.exceptions import BadlyFormattedSettingsExce
 
 from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.market_input import exceptions as market_input_exceptions
+from sedbackend.apps.core.files import exceptions as file_ex
 
 
 def run_simulation(sim_settings: models.EditSimSettings, vcs_ids: List[int],
@@ -102,6 +103,12 @@ def run_simulation(sim_settings: models.EditSimSettings, vcs_ids: List[int],
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'No technical processes found'
         )
+    except file_ex.FileNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Could not find DSM file'
+        )
+
 
 
 def run_dsm_file_simulation(user_id: int, project_id: int, sim_params: models.FileParams,

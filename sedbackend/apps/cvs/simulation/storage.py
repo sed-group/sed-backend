@@ -211,7 +211,7 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
 
     all_vd_design_values = get_all_vd_design_values(db_connection, [design.id for design in all_designs])
 
-    # all_dsm_ids = life_cycle_storage.get_multiple_dsm_file_id(db_connection, vcs_ids)
+    all_dsm_ids = life_cycle_storage.get_multiple_dsm_file_id(db_connection, vcs_ids)
 
     for i, vcs_id in enumerate(vcs_ids):
         market_values = [mi for mi in all_market_values if mi['vcs'] == vcs_id]
