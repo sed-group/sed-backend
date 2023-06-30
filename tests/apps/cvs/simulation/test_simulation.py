@@ -28,7 +28,7 @@ def test_run_single_simulation(client, std_headers, std_user):
 
   #Cleanup
   tu.delete_design_group(project.id, design_group.id)
-  tu.delete_VCS_with_ids(project.id, [vcs.id])
+  tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
   tu.delete_project_by_id(project.id, current_user.id)
 
 
@@ -72,7 +72,7 @@ def test_run_sim_invalid_designs(client, std_headers, std_user):
   assert res.status_code == 400
 
   #Cleanup
-  tu.delete_VCS_with_ids(project.id, [vcs.id for vcs in vcss])
+  tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id for vcs in vcss])
   tu.delete_project_by_id(project.id, current_user.id)
   tu.delete_vd_from_user(current_user.id)
 
@@ -122,7 +122,7 @@ def test_run_sim_invalid_vcss(client, std_headers, std_user):
   for dg in dgs:
     tu.delete_design_group(project.id, dg.id)
 
-  tu.delete_VCS_with_ids(project.id, [vcs.id for vcs in vcss])
+  tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id for vcs in vcss])
   tu.delete_project_by_id(project.id, current_user.id)
   tu.delete_vd_from_user(current_user.id)
 
@@ -151,7 +151,7 @@ def test_run_sim_end_time_before_start_time(client, std_headers, std_user):
   
   #Cleanup
   tu.delete_design_group(project.id, design_group.id)
-  tu.delete_VCS_with_ids(project.id, [vcs.id])
+  tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
   tu.delete_project_by_id(project.id, current_user.id)
   tu.delete_vd_from_user(current_user.id)
 
@@ -179,7 +179,7 @@ def test_run_sim_flow_time_above_total_time(client, std_headers, std_user):
   
   #Cleanup
   tu.delete_design_group(project.id, design_group.id)
-  tu.delete_VCS_with_ids(project.id, [vcs.id])
+  tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
   tu.delete_project_by_id(project.id, current_user.id)
   tu.delete_vd_from_user(current_user.id)
 
@@ -208,7 +208,7 @@ def test_run_sim_no_flows(client, std_headers, std_user):
   
   #Cleanup
   tu.delete_design_group(project.id, design_group.id)
-  tu.delete_VCS_with_ids(project.id,[vcs.id])
+  tu.delete_VCS_with_ids(current_user.id, project.id,[vcs.id])
   tu.delete_project_by_id(project.id, current_user.id)
   tu.delete_vd_from_user(current_user.id)
 
@@ -237,7 +237,7 @@ def test_run_sim_both_flows(client, std_headers, std_user):
   
   #Cleanup
   tu.delete_design_group(project.id, design_group.id)
-  tu.delete_VCS_with_ids(project.id, [vcs.id])
+  tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
   tu.delete_project_by_id(project.id, current_user.id)
   tu.delete_vd_from_user(current_user.id)
 
@@ -267,7 +267,7 @@ def test_run_sim_rate_invalid_order(client, std_headers, std_user):
 
   #Cleanup
   tu.delete_design_group(project.id, design_group.id)
-  tu.delete_VCS_with_ids(project.id, [vcs.id])
+  tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
   tu.delete_project_by_id(project.id, current_user.id)
   tu.delete_vd_from_user(current_user.id)
 
@@ -299,7 +299,7 @@ def test_run_sim_invalid_proj(client, std_headers, std_user):
 
   #Cleanup
   tu.delete_design_group(project.id, design_group.id)
-  tu.delete_VCS_with_ids(project.id, [vcs.id])
+  tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
   tu.delete_project_by_id(project.id, current_user.id)
   tu.delete_vd_from_user(current_user.id)
 
@@ -384,7 +384,7 @@ def test_run_single_xlsx_sim(client, std_headers, std_user):
 
   #Cleanup
   tu.delete_design_group(project.id, design_group.id)
-  tu.delete_VCS_with_ids(project.id, [vcs.id])
+  tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id]) 
   tu.delete_project_by_id(project.id, current_user.id)
   tu.delete_vd_from_user(current_user.id)
 
@@ -562,7 +562,7 @@ def test_run_single_csv_sim(client, std_headers, std_user):
 
   #Cleanup
   tu.delete_design_group(project.id, design_group.id)
-  tu.delete_VCS_with_ids(project.id, [vcs.id])
+  tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id]) 
   tu.delete_project_by_id(project.id, current_user.id)  
   tu.delete_vd_from_user(current_user.id)
 

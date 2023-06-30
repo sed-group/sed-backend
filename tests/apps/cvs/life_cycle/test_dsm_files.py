@@ -48,7 +48,7 @@ def test_upload_dsm_file(client, std_headers, std_user):
   
   #Cleanup
   tu.delete_dsm_file_from_vcs_id(project.id, vcs.id, current_user.id)
-  tu.delete_VCS_with_ids(project.id, [vcs.id])
+  tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
   tu.delete_project_by_id(project.id, current_user.id)
   
   
@@ -109,7 +109,7 @@ def test_upload_invalid_file_extension(client, std_headers, std_user):
   
 
   #Cleanup
-  tu.delete_VCS_with_ids(project.id, [vcs.id])
+  tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
   tu.delete_project_by_id(project.id, current_user.id)
   tu.delete_vd_from_user(current_user.id)
 
@@ -154,7 +154,7 @@ def test_upload_invalid_dsm_file(client, std_headers, std_user):
   assert res.status_code == 400 #Bad request, should throw ProcessesVcsMatchException
   
   #Cleanup
-  tu.delete_VCS_with_ids(project.id, [vcs.id])
+  tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
   tu.delete_project_by_id(project.id, current_user.id)
 
 
@@ -202,5 +202,5 @@ def test_get_dsm_file_id(client, std_headers, std_user):
   
   #Cleanup
   tu.delete_dsm_file_from_vcs_id(project.id, vcs.id, current_user.id)
-  tu.delete_VCS_with_ids(project.id, [vcs.id])
+  tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
   tu.delete_project_by_id(project.id, current_user.id)

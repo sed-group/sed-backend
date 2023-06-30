@@ -64,8 +64,8 @@ async def edit_vcs(native_project_id: int, vcs_id: int, vcs_post: models.VCSPost
     response_model=bool,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def delete_vcs(native_project_id: int, vcs_id: int) -> bool:
-    return implementation.delete_vcs(native_project_id, vcs_id)
+async def delete_vcs(native_project_id: int, vcs_id: int, user: User = Depends(get_current_active_user)) -> bool:
+    return implementation.delete_vcs(user.id, native_project_id, vcs_id)
 
 
 # ======================================================================================================================

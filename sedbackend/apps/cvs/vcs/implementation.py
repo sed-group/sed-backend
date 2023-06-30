@@ -9,6 +9,7 @@ from sedbackend.apps.core.db import get_connection
 import sedbackend.apps.cvs.project.exceptions as project_exceptions
 from sedbackend.apps.cvs.vcs import models, storage, exceptions
 from sedbackend.libs.datastructures.pagination import ListChunk
+from sedbackend.apps.core.files import exceptions as file_ex
 
 
 # ======================================================================================================================
@@ -108,10 +109,10 @@ def edit_vcs(project_id: int, vcs_id: int, vcs_post: models.VCSPost) -> models.V
         )
 
 
-def delete_vcs(project_id: int, vcs_id: int) -> bool:
+def delete_vcs(user_id: int, project_id: int, vcs_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.delete_vcs(con, project_id, vcs_id)
+            res = storage.delete_vcs(con, user_id, project_id, vcs_id)
             con.commit()
             return res
     except exceptions.VCSNotFoundException:
@@ -133,6 +134,16 @@ def delete_vcs(project_id: int, vcs_id: int) -> bool:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'VCS with id={vcs_id} does not belong to project with id={project_id}.',
+        )
+    except file_ex.FileNotDeletedException:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"File could not be deleted"
+        )
+    except file_ex.PathMismatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Path to file does not match internal path'
         )
 
 

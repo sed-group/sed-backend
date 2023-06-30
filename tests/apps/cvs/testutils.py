@@ -89,17 +89,9 @@ def seed_random_vcs(project_id):
     return new_vcs
 
 
-def delete_VCSs(project_id: int, vcs_list: List[sedbackend.apps.cvs.vcs.models.VCS]):
-    id_list = []
-    for vcs in vcs_list:
-        id_list.append(vcs.id)
-
-    delete_VCS_with_ids(project_id, id_list)
-
-
-def delete_VCS_with_ids(project_id: int, vcs_id_list: List[int]):
+def delete_VCS_with_ids(user_id: int, project_id: int, vcs_id_list: List[int]):
     for vcsid in vcs_id_list:
-        vcs_impl.delete_vcs(project_id, vcsid)
+        vcs_impl.delete_vcs(user_id, project_id, vcsid)
 
 
 def random_value_driver(name: str = None, unit: str = None):
