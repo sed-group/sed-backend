@@ -1,12 +1,14 @@
-from fastapi import HTTPException
+from fastapi import HTTPException, UploadFile
 from starlette import status
 
+from sedbackend.apps.core.applications.exceptions import ApplicationNotFoundException
 from sedbackend.apps.core.authentication import exceptions as auth_ex
 from sedbackend.apps.core.db import get_connection
 from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.life_cycle import exceptions, storage, models
 from sedbackend.apps.cvs.project import exceptions as project_exceptions
-
+from sedbackend.apps.core.files import models as file_models
+import sedbackend.apps.core.projects.exceptions as core_project_exceptions
 
 def create_process_node(project_id: int, vcs_id: int, node: models.ProcessNodePost) -> models.ProcessNodeGet:
     try:
@@ -155,3 +157,51 @@ def update_bpmn(project_id: int, vcs_id: int, bpmn: models.BPMNGet) -> bool:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Project with id={project_id} is not a part of vcs with id={vcs_id}.',
         )
+
+        
+def save_dsm_file(application_sid: str, project_id: int, vcs_id: int,
+                  file: UploadFile, user_id: int) -> bool:
+    try:
+        with get_connection() as con:
+            result = storage.save_dsm_file(con, application_sid, project_id, vcs_id, file, user_id)
+            con.commit()
+            return result
+    except exceptions.InvalidFileTypeException:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail='Wrong filetype'
+        )
+    except exceptions.FileSizeException:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail='File too large'
+        )
+    except exceptions.ProcessesVcsMatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Processes in DSM does not match processes in VCS'
+        )
+    except core_project_exceptions.SubProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sub-project not found."
+        )
+    except ApplicationNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No such application."
+        )
+
+
+def get_dsm_file_id(project_id: int, vcs_id: int) -> int:
+    try:
+        with get_connection() as con:
+            res = storage.get_dsm_file_id(con, project_id, vcs_id)
+            con.commit()
+            return res
+    except exceptions.FileNotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"File for vcs with id {e.vcs_id} could not be found"
+        )
+
