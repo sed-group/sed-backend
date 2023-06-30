@@ -38,6 +38,68 @@ TIME_FORMAT_DICT = dict({
     'minutes': TimeFormat.MINUTES
 })
 
+#TODO: Finish method. No checks on file this time since we won't be getting an uploaded file here, it will already be on the server. 
+def run_sim_dsm_file(db_connection: PooledMySQLConnection, user_id: int, project_id: int, sim_settings: models.EditSimSettings,
+                    vcs_ids: List[int], design_group_ids: List[int], normalized_npv: bool) -> List[models.Simulation]:
+    design_results = []
+
+    if not check_sim_settings(sim_settings):
+        raise e.BadlyFormattedSettingsException
+    interarrival = sim_settings.interarrival_time
+    flow_time = sim_settings.flow_time
+    runtime = sim_settings.end_time - sim_settings.start_time
+    non_tech_add = sim_settings.non_tech_add
+    discount_rate = sim_settings.discount_rate
+    process = sim_settings.flow_process
+    time_unit = TIME_FORMAT_DICT.get(sim_settings.time_unit)
+
+    for vcs_id in vcs_ids:
+        for design_group_id in design_group_ids:
+            res = get_sim_data(db_connection, vcs_id, design_group_id)
+            if res is None or res == []:
+                raise e.VcsFailedException
+
+            if not check_entity_rate(res, process):
+                raise e.RateWrongOrderException
+
+            design_ids = [design.id for design in design_impl.get_all_designs(project_id, design_group_id)]
+
+            if design_ids is None or []:
+                raise e.DesignIdsNotFoundException
+
+            for design_id in design_ids:
+                # get_design(design_id)
+                processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id,
+                                                                   design_id)  # BUG probably. Populate processes changes the order of the processes.
+
+                dsm = {} #TODO: Fetch DSM from file. Should be able to guess file based on vcs_id and proj_id
+
+                sim = des.Des()
+
+                try:
+                    results = sim.run_simulation(flow_time, interarrival, process, processes, non_tech_processes,
+                                                 non_tech_add, dsm, time_unit,
+                                                 discount_rate, runtime)
+
+                except Exception as exc:
+                    tb = sys.exc_info()[2]
+                    logger.debug(
+                        f'{exc.__class__}, {exc}, {exc.with_traceback(tb)}')
+                    print(f'{exc.__class__}, {exc}')
+                    raise e.SimulationFailedException
+
+                design_res = models.Simulation(
+                    time=results.timesteps[-1],
+                    mean_NPV=results.mean_npv(),
+                    max_NPVs=results.all_max_npv(),
+                    mean_payback_time=results.mean_npv_payback_time(),
+                    all_npvs=results.npvs
+                )
+
+                design_results.append(design_res)
+    logger.debug('Returning the results')
+    return design_results
+
 
 def run_sim_with_dsm_file(db_connection: PooledMySQLConnection, user_id: int, project_id: int,
                           sim_params: models.FileParams,
@@ -46,12 +108,9 @@ def run_sim_with_dsm_file(db_connection: PooledMySQLConnection, user_id: int, pr
 
     if file_extension == '.xlsx':
         try:
-            # Workaround because current python version doesn't support
-            tmp_xlsx = tempfile.TemporaryFile()
-            # readable() attribute on SpooledTemporaryFile which UploadFile
-            tmp_xlsx.write(dsm_file.file.read())
-            tmp_xlsx.seek(
-                0)  # is an alias for. PR is accepted for python v3.12, see https://github.com/python/cpython/pull/29560
+            tmp_xlsx = tempfile.TemporaryFile() # Workaround because current python version doesn't support
+            tmp_xlsx.write(dsm_file.file.read()) # readable() attribute on SpooledTemporaryFile which UploadFile
+            tmp_xlsx.seek(0)  # is an alias for. PR is accepted for python v3.12, see https://github.com/python/cpython/pull/29560
 
             dsm = get_dsm_from_excel(tmp_xlsx)
             if dsm is None:
@@ -62,12 +121,9 @@ def run_sim_with_dsm_file(db_connection: PooledMySQLConnection, user_id: int, pr
             tmp_xlsx.close()
     elif file_extension == '.csv':
         try:
-            # Workaround because current python version doesn't support
-            tmp_csv = tempfile.TemporaryFile()
-            # readable() attribute on SpooledTemporaryFile which UploadFile
-            tmp_csv.write(dsm_file.file.read())
-            tmp_csv.seek(
-                0)  # is an alias for. PR is accepted for python v3.12, see https://github.com/python/cpython/pull/29560
+            tmp_csv = tempfile.TemporaryFile() # Workaround because current python version doesn't support
+            tmp_csv.write(dsm_file.file.read()) # readable() attribute on SpooledTemporaryFile which UploadFile
+            tmp_csv.seek(0)  # is an alias for. PR is accepted for python v3.12, see https://github.com/python/cpython/pull/29560
 
             # This should hopefully open up the file for the processor.
             dsm = get_dsm_from_csv(tmp_csv)

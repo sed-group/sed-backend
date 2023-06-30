@@ -332,3 +332,4 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_formulas_value_drivers`
         REFERENCES `seddb`.`cvs_value_drivers`(`id`)
         ON DELETE CASCADE
 );
+

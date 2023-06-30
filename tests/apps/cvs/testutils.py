@@ -1,6 +1,7 @@
 from typing import List, Tuple, Optional
 import random
 
+from sedbackend.apps.core.files import implementation as impl_files
 import sedbackend.apps.cvs.simulation.implementation as sim_impl
 import sedbackend.apps.cvs.simulation.models as sim_model
 from sedbackend.apps.cvs.simulation.models import NonTechCost
@@ -8,7 +9,7 @@ import sedbackend.apps.cvs.design.implementation as design_impl
 import sedbackend.apps.cvs.design.models as design_model
 import sedbackend.apps.cvs.link_design_lifecycle.implementation as connect_impl
 import sedbackend.apps.cvs.link_design_lifecycle.models as connect_model
-import sedbackend.apps.cvs.life_cycle.implementation
+import sedbackend.apps.cvs.life_cycle.implementation as impl_life_cycle
 import sedbackend.apps.cvs.life_cycle.models
 import sedbackend.apps.cvs.project.implementation
 import sedbackend.apps.cvs.project.models
@@ -345,6 +346,10 @@ def delete_multiple_bpmn_nodes(nodes, project_id, vcs_id, user_id):
     for node in nodes:
         delete_bpmn_node(node.id, project_id, vcs_id, user_id)
 
+
+def delete_dsm_file_from_vcs_id(proj_id, vcs_id, user_id):
+    file_id = impl_life_cycle.get_dsm_file_id(proj_id, vcs_id)
+    impl_files.impl_delete_file(file_id, user_id)
 
 # ======================================================================================================================
 # Designs
