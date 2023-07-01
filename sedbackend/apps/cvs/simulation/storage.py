@@ -190,7 +190,7 @@ def run_sim_with_dsm_file(db_connection: PooledMySQLConnection, user_id: int, pr
 
 def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.EditSimSettings,
                    vcs_ids: List[int],
-                   design_group_ids: List[int]) -> List[models.Simulation]:
+                   design_group_ids: List[int], user_id) -> List[models.Simulation]:
     design_results = []
 
     if not check_sim_settings(sim_settings):
@@ -213,8 +213,12 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
 
     all_dsm_ids = life_cycle_storage.get_multiple_dsm_file_id(db_connection, vcs_ids)
 
-    for i, vcs_id in enumerate(vcs_ids):
+    for vcs_id in vcs_ids:
         market_values = [mi for mi in all_market_values if mi['vcs'] == vcs_id]
+        dsm_id = [dsm for dsm in all_dsm_ids if dsm[0] == vcs_id]
+        dsm = None
+        if len(dsm_id) > 0:
+            dsm = get_dsm_from_file_id(db_connection, dsm_id[0][1], user_id)
         for design_group_id in design_group_ids:
             sim_data = [sd for sd in all_sim_data if sd['vcs'] == vcs_id and sd['design_group'] == design_group_id]
             if sim_data is None or sim_data == []:
@@ -233,7 +237,10 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
                 processes, non_tech_processes = populate_processes(non_tech_add, sim_data, design, market_values,
                                                                    vd_values)
 
-                dsm = create_simple_dsm(processes)  # TODO Change to using BPMN
+                if dsm is None:
+                    dsm = create_simple_dsm(processes)
+
+                logger.debug(f'DSM: {dsm}')
 
                 sim = des.Des()
 
@@ -646,15 +653,19 @@ def check_sim_settings(settings: models.EditSimSettings) -> bool:
 
 
 # TODO Change dsm creation to follow BPMN and the nodes in the BPMN.
-# Currently the DSM only goes from one process to the other following the order of the index in the VCS
+# Create DSM that only goes from one process to the other following the order of the index in the VCS
 def create_simple_dsm(processes: List[Process]) -> dict:
-    l = len(processes)
-
-    index_list = list(range(0, l))
+    n = len(processes) + 2  # +2 for start and end
     dsm = dict()
-    for i, p in enumerate(processes):
-        dsm.update({p.name: [1 if i + 1 == j else 0 for j in index_list]})
+    for i in range(n):
+        if i == 0:
+            name = "Start"
+        elif i == n - 1:
+            name = "End"
+        else:
+            name = processes[i-1].name
 
+        dsm.update({name: [1 if i + 1 == j else "X" if i == j else 0 for j in range(n)]})
     return dsm
 
 
@@ -669,6 +680,11 @@ def get_dsm_from_csv(path):
         dsm.update({v[0]: v[1::].tolist()})
 
     return dsm
+
+
+def get_dsm_from_file_id(db_connection: PooledMySQLConnection, file_id: int, user_id: int) -> dict:
+    path = file_storage.db_get_file_path(db_connection, file_id, user_id)
+    return get_dsm_from_csv(path.path)
 
 
 def get_dsm_from_excel(path):

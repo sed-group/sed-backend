@@ -23,10 +23,10 @@ from sedbackend.apps.core.files import exceptions as file_ex
 
 
 def run_simulation(sim_settings: models.EditSimSettings, vcs_ids: List[int],
-                   design_group_ids: List[int]) -> List[models.Simulation]:
+                   design_group_ids: List[int], user_id: int) -> List[models.Simulation]:
     try:
         with get_connection() as con:
-            result = storage.run_simulation(con, sim_settings, vcs_ids, design_group_ids)
+            result = storage.run_simulation(con, sim_settings, vcs_ids, design_group_ids, user_id)
             return result
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
