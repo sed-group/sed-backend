@@ -87,7 +87,7 @@ async def get_dsm_file(native_project_id: int, vcs_id: int) -> int:
 
 @router.get(
     '/project/{native_project_id}/vcs/{vcs_id}/dsm/download',
-    summary="Fetch DSM file",
+    summary="Download DSM file",
     response_class=FileResponse,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )

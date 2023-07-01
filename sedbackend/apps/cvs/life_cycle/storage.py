@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple, Optional
 
 from fastapi import UploadFile
 from fastapi.logger import logger
@@ -290,7 +290,7 @@ def save_dsm_file(db_connection: PooledMySQLConnection, application_sid, project
     try:
         file_id = get_dsm_file_id(db_connection, project_id, vcs_id)
         if file_id is not None:
-            file_storage.db_delete_file(db_connection, file_id, user_id)
+            delete_dsm_file(db_connection, project_id, vcs_id, file_id, user_id)
     except file_ex.FileNotFoundException:
         pass  # File doesn't exist, so we don't need to delete it
     except Exception:
@@ -298,7 +298,7 @@ def save_dsm_file(db_connection: PooledMySQLConnection, application_sid, project
             # File does not exist in persistent storage but exists in database
             delete_statement = MySQLStatementBuilder(db_connection)
             _, rows = delete_statement.delete(CVS_DSM_FILES_TABLE) \
-                .where('vcs_id = %s', [vcs_id]) \
+                .where('vcs = %s', [vcs_id]) \
                 .execute(return_affected_rows=True)
         except:
             pass
@@ -343,7 +343,7 @@ def get_dsm_file_id(db_connection: PooledMySQLConnection, project_id: int, vcs_i
 
     select_statement = MySQLStatementBuilder(db_connection)
     file_res = select_statement.select(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS) \
-        .where('vcs_id = %s', [vcs_id]) \
+        .where('vcs = %s', [vcs_id]) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if file_res is None:
@@ -352,7 +352,7 @@ def get_dsm_file_id(db_connection: PooledMySQLConnection, project_id: int, vcs_i
     return file_res['file']
 
 
-def get_multiple_dsm_file_id(db_connection: PooledMySQLConnection, vcs_ids: List[int]) -> list[int]:
+def get_multiple_dsm_file_id(db_connection: PooledMySQLConnection, vcs_ids: List[int]) -> list[Tuple[int, int]]:
     where_statement = "vcs IN ("+",".join(["%s" for _ in range(len(vcs_ids))])+")"
     logger.debug(f'where_statement: {where_statement}')
 
@@ -361,10 +361,27 @@ def get_multiple_dsm_file_id(db_connection: PooledMySQLConnection, vcs_ids: List
         .where(where_statement, vcs_ids) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
-    return [file['file'] for file in file_res]
+    return [(file['vcs'], file['file']) for file in file_res]
 
 
 def get_dsm_file_path(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id) -> StoredFilePath:
     file_id = get_dsm_file_id(db_connection, project_id, vcs_id)
     return file_storage.db_get_file_path(db_connection, file_id, user_id)
 
+
+def delete_dsm_file(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
+                    file_id: Optional[int], user_id: int) -> bool:
+
+    if file_id is None:
+        file_id = get_dsm_file_id(db_connection, project_id, vcs_id)
+    file_storage.db_delete_file(db_connection, file_id, user_id)
+
+    delete_statement = MySQLStatementBuilder(db_connection)
+    _, rows = delete_statement.delete(CVS_DSM_FILES_TABLE) \
+        .where('vcs = %s', [vcs_id]) \
+        .execute(return_affected_rows=True)
+
+    if rows == 0:
+        raise exceptions.DSMFileFailedDeletionException
+
+    return True

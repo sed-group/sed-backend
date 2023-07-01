@@ -191,6 +191,11 @@ def save_dsm_file(application_sid: str, project_id: int, vcs_id: int,
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No such application."
         )
+    except exceptions.DSMFileFailedDeletionException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to replace old DSM file."
+        )
 
 
 def get_dsm_file_id(project_id: int, vcs_id: int) -> int:

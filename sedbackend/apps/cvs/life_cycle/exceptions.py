@@ -28,3 +28,7 @@ class FileSizeException(Exception):
 
 class ProcessesVcsMatchException(Exception):
     pass
+
+
+class DSMFileFailedDeletionException(Exception):
+    pass
