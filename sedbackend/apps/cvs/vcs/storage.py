@@ -5,10 +5,9 @@ from mysql.connector import Error
 from sedbackend.apps.cvs.project import exceptions as project_exceptions
 from sedbackend.apps.cvs.project.storage import get_cvs_project
 from sedbackend.apps.cvs.vcs import models, exceptions
-from sedbackend.apps.cvs.life_cycle import storage as life_cycle_storage, models as life_cycle_models, \
-    exceptions as life_cycle_exceptions
+from sedbackend.apps.cvs.life_cycle import storage as life_cycle_storage, models as life_cycle_models
 from sedbackend.libs.datastructures.pagination import ListChunk
-from sedbackend.apps.core.files import storage as file_storage
+from sedbackend.apps.core.files import storage as file_storage, exceptions as file_exceptions
 from mysqlsb import MySQLStatementBuilder, Sort, FetchType
 
 DEBUG_ERROR_HANDLING = True  # Set to false in production
@@ -138,7 +137,7 @@ def delete_vcs(db_connection: PooledMySQLConnection, user_id: int, project_id: i
     try:
         dsm_file_id = life_cycle_storage.get_dsm_file_id(db_connection, project_id, vcs_id)
         file_storage.db_delete_file(db_connection, dsm_file_id, user_id)
-    except life_cycle_exceptions.FileNotFoundException:  # DSM file does not exist
+    except file_exceptions.FileNotFoundException:  # DSM file does not exist
         pass
 
     delete_statement = MySQLStatementBuilder(db_connection)
