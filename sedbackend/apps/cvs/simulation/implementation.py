@@ -1,8 +1,7 @@
-from fastapi import HTTPException, UploadFile, Depends, Form
+from fastapi import HTTPException, UploadFile
 from starlette import status
-import tempfile
 
-from typing import List, Optional
+from typing import List
 
 from fastapi.logger import logger
 from sedbackend.apps.cvs.simulation import models, storage
@@ -10,7 +9,6 @@ from sedbackend.apps.cvs.simulation import models, storage
 from sedbackend.apps.core.authentication import exceptions as auth_ex
 from sedbackend.apps.core.db import get_connection
 from sedbackend.apps.cvs.project import exceptions as project_exceptions
-from sedbackend.apps.cvs.design import exceptions as design_exc
 from sedbackend.apps.cvs.simulation.exceptions import BadlyFormattedSettingsException, DSMFileNotFoundException, \
     DesignIdsNotFoundException, FormulaEvalException, NegativeTimeException, ProcessNotFoundException, \
     RateWrongOrderException, InvalidFlowSettingsException, VcsFailedException, FlowProcessNotFoundException, \
@@ -23,34 +21,31 @@ from sedbackend.apps.core.files import exceptions as file_ex
 
 
 def run_simulation(sim_settings: models.EditSimSettings, vcs_ids: List[int],
-                   design_group_ids: List[int], user_id: int) -> List[models.Simulation]:
+                   design_group_ids: List[int], user_id: int, is_monte_carlo: bool = False,
+                   normalized_npv: bool = False) -> List[models.Simulation]:
     try:
         with get_connection() as con:
-            result = storage.run_simulation(con, sim_settings, vcs_ids, design_group_ids, user_id)
+            result = storage.run_simulation(con, sim_settings, vcs_ids, design_group_ids, user_id, is_monte_carlo,
+                                            normalized_npv)
             return result
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
-    except vcs_exceptions.VCSNotFoundException:  # This exception will probably never fire
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs.',
-        )
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find project.',
         )
     except market_input_exceptions.MarketInputNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find market input',
         )
     except ProcessNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find process',
         )
     except FormulaEvalException as e:
@@ -166,69 +161,6 @@ def run_dsm_file_simulation(user_id: int, project_id: int, sim_params: models.Fi
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'No design ids or empty array supplied'
-        )
-
-
-def run_sim_monte_carlo(sim_settings: models.EditSimSettings, vcs_ids: List[int], design_group_ids: List[int],
-                        normalized_npv: bool) -> List[models.Simulation]:
-    try:
-        with get_connection() as con:
-            result = storage.run_sim_monte_carlo(con, sim_settings, vcs_ids, design_group_ids, normalized_npv)
-            return result
-    except vcs_exceptions.GenericDatabaseException:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Fel'
-        )
-    except FormulaEvalException as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'Could not evaluate formulas of process with id: {e.process_id}'
-        )
-    except RateWrongOrderException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Wrong order of rate of entities. Per project assigned after per product'
-        )
-    except NegativeTimeException as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Formula at process with id: {e.process_id} evaluated to negative time'
-        )
-    except DesignIdsNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'No design ids or empty array supplied'
-        )
-    except VcsFailedException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Invalid vcs ids'
-        )
-    except BadlyFormattedSettingsException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Settings are not correct'
-        )
-    except CouldNotFetchSimulationDataException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not fetch simulation data'
-        )
-    except CouldNotFetchMarketInputValuesException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not fetch market input values'
-        )
-    except CouldNotFetchValueDriverDesignValuesException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not fetch value driver design values'
-        )
-    except NoTechnicalProcessException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'No technical processes found'
         )
 
 
