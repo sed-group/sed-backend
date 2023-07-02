@@ -2,7 +2,6 @@ from typing import List
 from enum import Enum
 from pydantic import BaseModel
 from typing import Optional
-import json
 from fastapi import Form
 from sedbackend.apps.cvs.link_design_lifecycle import models as link_model
 from dataclasses import dataclass

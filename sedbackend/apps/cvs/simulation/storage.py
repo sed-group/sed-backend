@@ -23,7 +23,6 @@ from sedbackend.libs.formula_parser import expressions as expr
 from sedbackend.apps.cvs.simulation import models
 import sedbackend.apps.cvs.simulation.exceptions as e
 from sedbackend.apps.cvs.vcs import storage as vcs_storage
-from sedbackend.apps.cvs.design import storage as design_storage
 from sedbackend.apps.cvs.life_cycle import storage as life_cycle_storage
 from sedbackend.apps.core.files import storage as file_storage
 
@@ -42,75 +41,13 @@ TIME_FORMAT_DICT = dict({
 })
 
 
-# TODO: Finish method. No checks on file this time since we won't be getting an uploaded file here, it will already be on the server.
-def run_sim_dsm_file(db_connection: PooledMySQLConnection, user_id: int, project_id: int,
-                     sim_settings: models.EditSimSettings,
-                     vcs_ids: List[int], design_group_ids: List[int], normalized_npv: bool) -> List[models.Simulation]:
-    design_results = []
-
-    if not check_sim_settings(sim_settings):
-        raise e.BadlyFormattedSettingsException
-    interarrival = sim_settings.interarrival_time
-    flow_time = sim_settings.flow_time
-    runtime = sim_settings.end_time - sim_settings.start_time
-    non_tech_add = sim_settings.non_tech_add
-    discount_rate = sim_settings.discount_rate
-    process = sim_settings.flow_process
-    time_unit = TIME_FORMAT_DICT.get(sim_settings.time_unit)
-
-    for vcs_id in vcs_ids:
-        for design_group_id in design_group_ids:
-            res = get_sim_data(db_connection, vcs_id, design_group_id)
-            if res is None or res == []:
-                raise e.VcsFailedException
-
-            if not check_entity_rate(res, process):
-                raise e.RateWrongOrderException
-
-            design_ids = [design.id for design in
-                          design_storage.get_all_designs(db_connection, project_id, design_group_id)]
-
-            if design_ids is None or []:
-                raise e.DesignIdsNotFoundException
-
-            for design_id in design_ids:
-                # get_design(design_id)
-                processes, non_tech_processes = populate_processes(non_tech_add, res, db_connection, vcs_id,
-                                                                   design_id)  # BUG probably. Populate processes changes the order of the processes.
-
-                dsm = {}  # TODO: Fetch DSM from file. Should be able to guess file based on vcs_id and proj_id
-
-                sim = des.Des()
-
-                try:
-                    results = sim.run_simulation(flow_time, interarrival, process, processes, non_tech_processes,
-                                                 non_tech_add, dsm, time_unit,
-                                                 discount_rate, runtime)
-
-                except Exception as exc:
-                    tb = sys.exc_info()[2]
-                    logger.debug(
-                        f'{exc.__class__}, {exc}, {exc.with_traceback(tb)}')
-                    print(f'{exc.__class__}, {exc}')
-                    raise e.SimulationFailedException
-
-                design_res = models.Simulation(
-                    time=results.timesteps[-1],
-                    mean_NPV=results.mean_npv(),
-                    max_NPVs=results.all_max_npv(),
-                    mean_payback_time=results.mean_npv_payback_time(),
-                    all_npvs=results.npvs
-                )
-
-                design_results.append(design_res)
-    logger.debug('Returning the results')
-    return design_results
-
-
-def run_sim_with_dsm_file(db_connection: PooledMySQLConnection, user_id: int, project_id: int,
+# TODO: Run simulation on DSM file
+def get_dsm_from_file(db_connection: PooledMySQLConnection, user_id: int, project_id: int,
                           sim_params: models.FileParams,
-                          dsm_file: UploadFile) -> List[models.Simulation]:
+                          dsm_file: UploadFile) -> dict:
     _, file_extension = os.path.splitext(dsm_file.filename)
+
+    dsm = {}
 
     if file_extension == '.xlsx':
         try:
@@ -144,53 +81,7 @@ def run_sim_with_dsm_file(db_connection: PooledMySQLConnection, user_id: int, pr
     else:
         raise e.DSMFileNotFoundException
 
-    vcs_ids = [int(id) for id in sim_params.vcs_ids.split(',')]
-    design_ids = [int(id) for id in sim_params.design_ids.split(',')]
-
-    interarrival = sim_params.interarrival_time
-    flow_time = sim_params.flow_time
-    runtime = sim_params.end_time
-    non_tech_add = sim_params.non_tech_add
-    discount_rate = sim_params.discount_rate
-    process = sim_params.flow_process
-    time_unit = TIME_FORMAT_DICT.get(sim_params.time_unit)
-    process = sim_params.flow_process
-
-    design_results = []
-    for vcs_id in vcs_ids:
-        res = get_sim_data(db_connection, vcs_id)
-        if not check_entity_rate(res, process):
-            raise e.RateWrongOrderException
-
-        if sim_params.design_ids is None or []:
-            raise e.DesignIdsNotFoundException
-
-        for design_id in design_ids:
-            processes, non_tech_processes = populate_processes(
-                non_tech_add, res, db_connection, design_id)
-            sim = des.Des()
-
-            try:
-                results = sim.run_simulation(flow_time, interarrival, process, processes, non_tech_processes,
-                                             non_tech_add, dsm, time_unit,
-                                             discount_rate, runtime)
-
-            except Exception as exc:
-                logger.debug(f'{exc.__class__}, {exc}')
-                print(f'Sim failed {exc.__class__}, {exc}')
-                raise e.SimulationFailedException
-
-            design_res = models.Simulation(
-                time=results.timesteps[-1],
-                mean_NPV=results.mean_npv(),
-                max_NPVs=results.all_max_npv(),
-                mean_payback_time=results.mean_npv_payback_time(),
-                all_npvs=results.npvs
-            )
-
-            design_results.append(design_res)
-
-    return design_results
+    return dsm
 
 
 def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.EditSimSettings,
