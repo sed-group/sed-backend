@@ -1,4 +1,5 @@
-from typing import List, Tuple, Optional
+import csv
+from typing import List, Tuple, Optional, TextIO
 
 from fastapi import UploadFile
 from fastapi.logger import logger
@@ -8,6 +9,7 @@ from mysqlsb import MySQLStatementBuilder, FetchType, Sort
 
 from sedbackend.apps.core.files.models import StoredFilePath
 from sedbackend.apps.cvs.life_cycle import exceptions, models
+from sedbackend.apps.cvs.project.router import CVS_APP_SID
 from sedbackend.apps.cvs.vcs import storage as vcs_storage, exceptions as vcs_exceptions
 from sedbackend.apps.core.files import models as file_models, storage as file_storage, exceptions as file_ex
 from sedbackend.apps.core.projects import storage as core_project_storage
@@ -278,9 +280,9 @@ def update_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: i
     return True
 
 
-def save_dsm_file(db_connection: PooledMySQLConnection, application_sid, project_id: int,
+def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int,
                   vcs_id: int, file: UploadFile, user_id) -> bool:
-    subproject = core_project_storage.db_get_subproject_native(db_connection, application_sid, project_id)
+    subproject = core_project_storage.db_get_subproject_native(db_connection, CVS_APP_SID, project_id)
 
     model_file = file_models.StoredFilePost.import_fastapi_file(file, user_id, subproject.id)
 
@@ -369,6 +371,14 @@ def get_dsm_file_path(db_connection: PooledMySQLConnection, project_id: int, vcs
     return file_storage.db_get_file_path(db_connection, file_id, user_id)
 
 
+def get_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id) -> List[List[str or float]]:
+    path = get_dsm_file_path(db_connection, project_id, vcs_id, user_id).path
+    with open(path, newline='') as f:
+        reader = csv.reader(f)
+        data = list(reader)
+    return data
+
+
 def delete_dsm_file(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
                     file_id: Optional[int], user_id: int) -> bool:
 
@@ -385,3 +395,41 @@ def delete_dsm_file(db_connection: PooledMySQLConnection, project_id: int, vcs_i
         raise exceptions.DSMFileFailedDeletionException
 
     return True
+
+
+def get_dsm_from_file_id(db_connection: PooledMySQLConnection, file_id: int, user_id: int) -> dict:
+    try:
+        path = file_storage.db_get_file_path(db_connection, file_id, user_id)
+    except Exception:
+        raise file_ex.FileNotFoundException
+    return get_dsm_from_csv(path.path)
+
+
+def get_dsm_from_csv(path):
+    try:
+        df = pd.read_csv(path)
+    except Exception as e:
+        logger.debug(f'{e.__class__}, {e}')
+
+    dsm = dict()
+
+    for v in df.values:
+        dsm.update({v[0]: v[1::].tolist()})
+
+    return dsm
+
+
+def csv_from_matrix(matrix: List[List[str or float]]) -> TextIO:
+    with open("dsm.csv", "w+") as dsm_file:
+        csv_writer = csv.writer(dsm_file, delimiter=',')
+        csv_writer.writerows(matrix)
+
+    return dsm_file
+
+
+def save_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, dsm: List[List[str or float]],
+             user_id: int) -> bool:
+    csv_file = csv_from_matrix(dsm)
+    dsm_file = pd.read_csv(csv_file)
+
+    return save_dsm_file(db_connection, project_id, vcs_id, dsm_file, user_id)

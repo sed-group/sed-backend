@@ -18,13 +18,13 @@ from sedbackend.apps.cvs.design.storage import get_all_designs
 
 from mysqlsb import FetchType, MySQLStatementBuilder
 
+from sedbackend.apps.cvs.life_cycle.storage import get_dsm_from_file_id, get_dsm_from_csv
 from sedbackend.libs.formula_parser.parser import NumericStringParser
 from sedbackend.libs.formula_parser import expressions as expr
 from sedbackend.apps.cvs.simulation import models
 import sedbackend.apps.cvs.simulation.exceptions as e
 from sedbackend.apps.cvs.vcs import storage as vcs_storage
 from sedbackend.apps.cvs.life_cycle import storage as life_cycle_storage
-from sedbackend.apps.core.files import storage as file_storage
 
 SIM_SETTINGS_TABLE = "cvs_simulation_settings"
 SIM_SETTINGS_COLUMNS = ['project', 'time_unit', 'flow_process', 'flow_start_time', 'flow_time',
@@ -496,24 +496,6 @@ def create_simple_dsm(processes: List[Process]) -> dict:
 
         dsm.update({name: [1 if i + 1 == j else "X" if i == j else 0 for j in range(n)]})
     return dsm
-
-
-def get_dsm_from_csv(path):
-    try:
-        pf = pd.read_csv(path)
-    except Exception as e:
-        logger.debug(f'{e.__class__}, {e}')
-
-    dsm = dict()
-    for v in pf.values:
-        dsm.update({v[0]: v[1::].tolist()})
-
-    return dsm
-
-
-def get_dsm_from_file_id(db_connection: PooledMySQLConnection, file_id: int, user_id: int) -> dict:
-    path = file_storage.db_get_file_path(db_connection, file_id, user_id)
-    return get_dsm_from_csv(path.path)
 
 
 def get_dsm_from_excel(path):
