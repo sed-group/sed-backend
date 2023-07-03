@@ -1,3 +1,5 @@
+from typing import List
+
 from fastapi import APIRouter, Depends
 
 from fastapi import UploadFile
@@ -63,16 +65,37 @@ async def update_bpmn(native_project_id: int, vcs_id: int, bpmn: models.BPMNGet)
     return implementation.update_bpmn(native_project_id, vcs_id, bpmn)
 
 
-# TODO only call one implementation function
+@router.get(
+    '/project/{native_project_id}/vcs/{vcs_id}/dsm',
+    summary="Get DSM",
+    response_model=List[List[str or float]],
+    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
+)
+async def get_dsm(native_project_id: int, vcs_id: int,
+                  user: User = Depends(get_current_active_user)) -> List[List[str or float]]:
+    return implementation.get_dsm(native_project_id, vcs_id, user.id)
+
+
 @router.post(
     '/project/{native_project_id}/vcs/{vcs_id}/dsm',
+    summary="Save DSM",
+    response_model=bool,
+    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
+)
+async def save_dsm(native_project_id: int, vcs_id: int, dsm: List[List[str or float]],
+                   user: User = Depends(get_current_active_user)) -> bool:
+    return implementation.save_dsm(native_project_id, vcs_id, dsm, user.id)
+
+
+@router.post(
+    '/project/{native_project_id}/vcs/{vcs_id}/dsm/file',
     summary="Upload DSM file",
     response_model=bool,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
 async def upload_dsm_file(native_project_id: int, vcs_id: int, file: UploadFile,
                           user: User = Depends(get_current_active_user)) -> bool:
-    return implementation.save_dsm_file(CVS_APP_SID, native_project_id, vcs_id, file, user.id)
+    return implementation.save_dsm_file(native_project_id, vcs_id, file, user.id)
 
 
 @router.get(
@@ -83,19 +106,3 @@ async def upload_dsm_file(native_project_id: int, vcs_id: int, file: UploadFile,
 )
 async def get_dsm_file(native_project_id: int, vcs_id: int) -> int:
     return implementation.get_dsm_file_id(native_project_id, vcs_id)
-
-
-@router.get(
-    '/project/{native_project_id}/vcs/{vcs_id}/dsm/download',
-    summary="Download DSM file",
-    response_class=FileResponse,
-    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
-)
-async def download_dsm_file(native_project_id: int, vcs_id: int,
-                            user: User = Depends(get_current_active_user)) -> FileResponse:
-    stored_file_path = implementation.get_dsm_file_path(native_project_id, vcs_id, user.id)
-    resp = FileResponse(
-        path=stored_file_path.path,
-        filename=stored_file_path.filename
-    )
-    return resp
