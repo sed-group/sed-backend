@@ -205,7 +205,7 @@ def save_dsm(project_id: int, vcs_id: int,
              dsm: List[List[str or float]], user_id: int) -> bool:
     try:
         with get_connection() as con:
-            result = storage.save_dsm(con, project_id, vcs_id, dsm, user_id)
+            result = storage.save_dsm_matrix(con, project_id, vcs_id, dsm, user_id)
             con.commit()
             return result
     except exceptions.InvalidFileTypeException:

@@ -1,4 +1,6 @@
 import csv
+import io
+import tempfile
 from typing import List, Tuple, Optional, TextIO
 
 from fastapi import UploadFile
@@ -280,11 +282,18 @@ def update_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: i
     return True
 
 
+def save_dsm_matrix(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, dsm: List[List[str or float]],
+                    user_id: int) -> bool:
+    upload_file = csv_from_matrix(dsm)
+    return save_dsm_file(db_connection, project_id, vcs_id, upload_file, user_id)
+
+
 def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int,
                   vcs_id: int, file: UploadFile, user_id) -> bool:
     subproject = core_project_storage.db_get_subproject_native(db_connection, CVS_APP_SID, project_id)
-
     model_file = file_models.StoredFilePost.import_fastapi_file(file, user_id, subproject.id)
+
+    logger.debug(f'model file: {model_file}')
 
     if model_file.extension != ".csv":
         raise exceptions.InvalidFileTypeException
@@ -309,9 +318,9 @@ def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int,
         f.seek(0)
         tmp_file = f.read()
         mime = magic.from_buffer(tmp_file)
-        logger.debug(mime)
+        logger.debug(f'File mime: {mime}')
         # TODO doesn't work with windows if we create the file in excel.
-        if mime != "CSV text" and mime != "ASCII text":
+        if mime != "CSV text" and "ASCII text" not in mime:
             raise exceptions.InvalidFileTypeException
 
         if f.tell() > MAX_FILE_SIZE:
@@ -355,7 +364,7 @@ def get_dsm_file_id(db_connection: PooledMySQLConnection, project_id: int, vcs_i
 
 
 def get_multiple_dsm_file_id(db_connection: PooledMySQLConnection, vcs_ids: List[int]) -> list[Tuple[int, int]]:
-    where_statement = "vcs IN ("+",".join(["%s" for _ in range(len(vcs_ids))])+")"
+    where_statement = "vcs IN (" + ",".join(["%s" for _ in range(len(vcs_ids))]) + ")"
     logger.debug(f'where_statement: {where_statement}')
 
     select_statement = MySQLStatementBuilder(db_connection)
@@ -381,7 +390,6 @@ def get_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, 
 
 def delete_dsm_file(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
                     file_id: Optional[int], user_id: int) -> bool:
-
     if file_id is None:
         file_id = get_dsm_file_id(db_connection, project_id, vcs_id)
     file_storage.db_delete_file(db_connection, file_id, user_id)
@@ -419,17 +427,12 @@ def get_dsm_from_csv(path):
     return dsm
 
 
-def csv_from_matrix(matrix: List[List[str or float]]) -> TextIO:
-    with open("dsm.csv", "w+") as dsm_file:
+def csv_from_matrix(matrix: List[List[str or float]]) -> UploadFile:
+    temp_name = "dsm.csv"
+    with open(temp_name, "w+") as dsm_file:
         csv_writer = csv.writer(dsm_file, delimiter=',')
         csv_writer.writerows(matrix)
 
-    return dsm_file
+    dsm_file = open(temp_name, "r+b")
 
-
-def save_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, dsm: List[List[str or float]],
-             user_id: int) -> bool:
-    csv_file = csv_from_matrix(dsm)
-    dsm_file = pd.read_csv(csv_file)
-
-    return save_dsm_file(db_connection, project_id, vcs_id, dsm_file, user_id)
+    return UploadFile(filename=dsm_file.name, file=dsm_file)
