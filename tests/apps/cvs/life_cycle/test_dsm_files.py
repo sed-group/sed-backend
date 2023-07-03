@@ -173,7 +173,7 @@ def test_get_dsm_matrix(client, std_headers, std_user):
     vcs = tu.seed_random_vcs(project.id)
 
     rows = [std_rows[0], std_rows[1]]
-    table = tu.create_vcs_table(project.id, vcs.id, rows)
+    tu.create_vcs_table(project.id, vcs.id, rows)
 
     cwd = os.getcwd()
     _test_upload_file = Path(cwd + '/tests/apps/cvs/life_cycle/files/input.csv')
@@ -192,6 +192,11 @@ def test_get_dsm_matrix(client, std_headers, std_user):
     # Assert
     assert res.status_code == 200
     assert len(matrix) == 5
+
+    # Cleanup
+    tu.delete_dsm_file_from_vcs_id(project.id, vcs.id, current_user.id)
+    tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
+    tu.delete_project_by_id(project.id, current_user.id)
 
 
 def test_save_dsm(client, std_headers, std_user):
@@ -219,3 +224,8 @@ def test_save_dsm(client, std_headers, std_user):
     # Assert
     assert res.status_code == 200
     assert dsm == saved_dsm
+
+    # Cleanup
+    tu.delete_dsm_file_from_vcs_id(project.id, vcs.id, current_user.id)
+    tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
+    tu.delete_project_by_id(project.id, current_user.id)
