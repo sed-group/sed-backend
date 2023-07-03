@@ -381,10 +381,14 @@ def get_dsm_file_path(db_connection: PooledMySQLConnection, project_id: int, vcs
 
 
 def get_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id) -> List[List[str or float]]:
-    path = get_dsm_file_path(db_connection, project_id, vcs_id, user_id).path
-    with open(path, newline='') as f:
-        reader = csv.reader(f)
-        data = list(reader)
+    try:
+        path = get_dsm_file_path(db_connection, project_id, vcs_id, user_id).path
+        with open(path, newline='') as f:
+            reader = csv.reader(f)
+            data = list(reader)
+    except Exception:
+        return empty_dsm(db_connection, project_id, vcs_id)
+
     return data
 
 
@@ -436,3 +440,23 @@ def csv_from_matrix(matrix: List[List[str or float]]) -> UploadFile:
     dsm_file = open(temp_name, "r+b")
 
     return UploadFile(filename=dsm_file.name, file=dsm_file)
+
+
+def empty_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> List[List[str or float]]:
+    vcs_table = vcs_storage.get_vcs_table(db_connection, project_id, vcs_id)
+
+    processes = ["Start"]+[row.iso_process.name if row.iso_process is not None else
+                 row.subprocess.name for row in vcs_table]+["End"]
+
+    dsm = [["Processes"]+processes]
+    for i in range(1, len(processes)+1):
+        row = []
+        for j in range(len(processes)+1):
+            if j == 0:
+                row.append(processes[i-1])
+            elif i == j:
+                row.append("X")
+            else:
+                row.append("")
+        dsm.append(row)
+    return dsm
