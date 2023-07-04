@@ -1,5 +1,6 @@
 import csv
 import io
+import os
 import tempfile
 from typing import List, Tuple, Optional, TextIO
 
@@ -432,14 +433,18 @@ def get_dsm_from_csv(path):
 
 
 def csv_from_matrix(matrix: List[List[str or float]]) -> UploadFile:
-    temp_name = "dsm.csv"
-    with open(temp_name, "w+") as dsm_file:
-        csv_writer = csv.writer(dsm_file, delimiter=',')
-        csv_writer.writerows(matrix)
+    fd, path = tempfile.mkstemp()
+    try:
+        with open(path, "w+") as dsm_file:
+            csv_writer = csv.writer(dsm_file, delimiter=',')
+            csv_writer.writerows(matrix)
+    finally:
+        dsm_file = open(path, "r+b")
+        upload_file = UploadFile(filename=dsm_file.name+".csv", file=dsm_file)
+        os.close(fd)
+        os.remove(path)
 
-    dsm_file = open(temp_name, "r+b")
-
-    return UploadFile(filename=dsm_file.name, file=dsm_file)
+    return upload_file
 
 
 def empty_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> List[List[str or float]]:

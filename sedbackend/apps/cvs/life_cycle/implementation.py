@@ -251,6 +251,36 @@ def get_dsm_file_id(project_id: int, vcs_id: int) -> int:
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"File could not be found"
         )
+    except exceptions.InvalidFileTypeException:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail='Wrong filetype'
+        )
+    except exceptions.FileSizeException:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail='File too large'
+        )
+    except exceptions.ProcessesVcsMatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Processes in DSM does not match processes in VCS'
+        )
+    except core_project_exceptions.SubProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sub-project not found."
+        )
+    except ApplicationNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No such application."
+        )
+    except exceptions.DSMFileFailedDeletionException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to replace old DSM file."
+        )
 
 
 def get_dsm_file_path(project_id: int, vcs_id: int, user_id) -> file_models.StoredFilePath:
