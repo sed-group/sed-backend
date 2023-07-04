@@ -607,7 +607,7 @@ def seed_random_sim_settings(user_id: int, project_id: int) -> sim_model.SimSett
         rows = seed_vcs_table_rows(user_id, project_id, vcs.id, 3)
         for row in rows:
             if row.subprocess is not None:
-                flow_process = row.subprocess.name
+                flow_process = f'{row.subprocess.name} ({row.subprocess.parent_process.name})'
                 break
             elif row.iso_process is not None:
                 flow_process = row.iso_process.name
