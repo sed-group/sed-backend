@@ -333,7 +333,7 @@ def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int,
         vcs_table = vcs_storage.get_vcs_table(db_connection, project_id, vcs_id)
 
         vcs_processes = [row.iso_process.name if row.iso_process is not None else
-                         row.subprocess.name for row in vcs_table]
+                         f'{row.subprocess.name} ({row.subprocess.parent_process.name})' for row in vcs_table]
 
         for process in dsm_file['Processes'].values[1:-1]:
             if process not in vcs_processes:
@@ -418,18 +418,17 @@ def get_dsm_from_file_id(db_connection: PooledMySQLConnection, file_id: int, use
     return get_dsm_from_csv(path.path)
 
 
-def get_dsm_from_csv(path):
+def get_dsm_from_csv(path) -> dict:
     try:
         df = pd.read_csv(path)
+        dsm = dict()
+
+        for v in df.values:
+            dsm.update({v[0]: v[1::].tolist()})
+
+        return dsm
     except Exception as e:
-        logger.debug(f'{e.__class__}, {e}')
-
-    dsm = dict()
-
-    for v in df.values:
-        dsm.update({v[0]: v[1::].tolist()})
-
-    return dsm
+        raise file_ex.FileNotFoundException
 
 
 def csv_from_matrix(matrix: List[List[str or float]]) -> UploadFile:
@@ -440,7 +439,7 @@ def csv_from_matrix(matrix: List[List[str or float]]) -> UploadFile:
             csv_writer.writerows(matrix)
     finally:
         dsm_file = open(path, "r+b")
-        upload_file = UploadFile(filename=dsm_file.name+".csv", file=dsm_file)
+        upload_file = UploadFile(filename=dsm_file.name + ".csv", file=dsm_file)
         os.close(fd)
         os.remove(path)
 
@@ -450,15 +449,16 @@ def csv_from_matrix(matrix: List[List[str or float]]) -> UploadFile:
 def empty_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> List[List[str or float]]:
     vcs_table = vcs_storage.get_vcs_table(db_connection, project_id, vcs_id)
 
-    processes = ["Start"]+[row.iso_process.name if row.iso_process is not None else
-                 row.subprocess.name for row in vcs_table]+["End"]
+    processes = ["Start"] + [row.iso_process.name if row.iso_process is not None else
+                             f'{row.subprocess.name} ({row.subprocess.parent_process.name})' for row in vcs_table] + [
+                    "End"]
 
-    dsm = [["Processes"]+processes]
-    for i in range(1, len(processes)+1):
+    dsm = [["Processes"] + processes]
+    for i in range(1, len(processes) + 1):
         row = []
-        for j in range(len(processes)+1):
+        for j in range(len(processes) + 1):
             if j == 0:
-                row.append(processes[i-1])
+                row.append(processes[i - 1])
             elif i == j:
                 row.append("X")
             else:

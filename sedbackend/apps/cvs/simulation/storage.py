@@ -25,6 +25,7 @@ from sedbackend.apps.cvs.simulation import models
 import sedbackend.apps.cvs.simulation.exceptions as e
 from sedbackend.apps.cvs.vcs import storage as vcs_storage
 from sedbackend.apps.cvs.life_cycle import storage as life_cycle_storage
+from sedbackend.apps.core.files import exceptions as file_exceptions
 
 SIM_SETTINGS_TABLE = "cvs_simulation_settings"
 SIM_SETTINGS_COLUMNS = ['project', 'time_unit', 'flow_process', 'flow_start_time', 'flow_time',
@@ -116,7 +117,10 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
         dsm_id = [dsm for dsm in all_dsm_ids if dsm[0] == vcs_id]
         dsm = None
         if len(dsm_id) > 0:
-            dsm = get_dsm_from_file_id(db_connection, dsm_id[0][1], user_id)
+            try:
+                dsm = get_dsm_from_file_id(db_connection, dsm_id[0][1], user_id)
+            except file_exceptions.FileNotFoundException:
+                pass
         for design_group_id in design_group_ids:
             sim_data = [sd for sd in all_sim_data if sd['vcs'] == vcs_id and sd['design_group'] == design_group_id]
             if sim_data is None or sim_data == []:
@@ -139,6 +143,7 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
                     dsm = create_simple_dsm(processes)
 
                 logger.debug(f'DSM: {dsm}')
+                logger.debug(f'Processes: {[process.name for process in processes]}')
 
                 sim = des.Des()
 
@@ -220,6 +225,7 @@ def populate_processes(non_tech_add: NonTechCost, db_results, design: int,
                 raise e.FormulaEvalException(row['id'])
             technical_processes.append(p)
         elif row['sub_name'] is not None:
+            sub_name = f'{row["sub_name"]} ({row["iso_name"]})'
             try:
                 time = nsp.eval(parse_formula(
                     row['time'], vd_values, mi_values))
@@ -232,7 +238,7 @@ def populate_processes(non_tech_add: NonTechCost, db_results, design: int,
                                 'time', time, cost_formula)),
                             nsp.eval(expr.replace_all(
                                 'time', time, revenue_formula)),
-                            row['sub_name'], non_tech_add, TIME_FORMAT_DICT.get(
+                            sub_name, non_tech_add, TIME_FORMAT_DICT.get(
                         row['time_unit'].lower())
                             )
 
@@ -355,7 +361,8 @@ def edit_simulation_settings(db_connection: PooledMySQLConnection, project_id: i
             rows = vcs_storage.get_vcs_table(db_connection, project_id, vcs.id)
             for row in rows:
                 if (row.iso_process is not None and row.iso_process.name == sim_settings.flow_process) or \
-                        (row.subprocess is not None and row.subprocess.name == sim_settings.flow_process):
+                        (row.subprocess is not None and f'{row.subprocess.name} ({row.subprocess.parent_process.name})'
+                         == sim_settings.flow_process):
                     flow_process_exists = True
                     break
 
