@@ -388,7 +388,7 @@ def get_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, 
             reader = csv.reader(f)
             data = list(reader)
     except Exception:
-        return empty_dsm(db_connection, project_id, vcs_id)
+        return initial_dsm(db_connection, project_id, vcs_id)
 
     return data
 
@@ -446,7 +446,7 @@ def csv_from_matrix(matrix: List[List[str or float]]) -> UploadFile:
     return upload_file
 
 
-def empty_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> List[List[str or float]]:
+def initial_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> List[List[str or float]]:
     vcs_table = vcs_storage.get_vcs_table(db_connection, project_id, vcs_id)
 
     processes = ["Start"] + [row.iso_process.name if row.iso_process is not None else
@@ -461,6 +461,8 @@ def empty_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int
                 row.append(processes[i - 1])
             elif i == j:
                 row.append("X")
+            elif i == j - 1:
+                row.append("1")
             else:
                 row.append("")
         dsm.append(row)
