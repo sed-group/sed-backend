@@ -299,22 +299,6 @@ def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int,
     if model_file.extension != ".csv":
         raise exceptions.InvalidFileTypeException
 
-    try:
-        file_id = get_dsm_file_id(db_connection, project_id, vcs_id)
-        if file_id is not None:
-            delete_dsm_file(db_connection, project_id, vcs_id, file_id, user_id)
-    except file_ex.FileNotFoundException:
-        pass  # File doesn't exist, so we don't need to delete it
-    except Exception:
-        try:
-            # File does not exist in persistent storage but exists in database
-            delete_statement = MySQLStatementBuilder(db_connection)
-            _, rows = delete_statement.delete(CVS_DSM_FILES_TABLE) \
-                .where('vcs = %s', [vcs_id]) \
-                .execute(return_affected_rows=True)
-        except:
-            pass
-
     with model_file.file_object as f:
         f.seek(0)
         tmp_file = f.read()
@@ -338,6 +322,22 @@ def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int,
         for process in dsm_file['Processes'].values[1:-1]:
             if process not in vcs_processes:
                 raise exceptions.ProcessesVcsMatchException
+
+        try:
+            file_id = get_dsm_file_id(db_connection, project_id, vcs_id)
+            if file_id is not None:
+                delete_dsm_file(db_connection, project_id, vcs_id, file_id, user_id)
+        except file_ex.FileNotFoundException:
+            pass  # File doesn't exist, so we don't need to delete it
+        except Exception:
+            try:
+                # File does not exist in persistent storage but exists in database
+                delete_statement = MySQLStatementBuilder(db_connection)
+                _, rows = delete_statement.delete(CVS_DSM_FILES_TABLE) \
+                    .where('vcs = %s', [vcs_id]) \
+                    .execute(return_affected_rows=True)
+            except:
+                pass
 
         f.seek(0)
         stored_file = file_storage.db_save_file(db_connection, model_file)
