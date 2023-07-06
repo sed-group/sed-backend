@@ -1,5 +1,7 @@
 import sys
 import tempfile
+from math import isnan
+
 from fastapi import UploadFile
 from mysql.connector.pooling import PooledMySQLConnection
 import pandas as pd
@@ -119,6 +121,7 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
         if len(dsm_id) > 0:
             try:
                 dsm = get_dsm_from_file_id(db_connection, dsm_id[0][1], user_id)
+                dsm = fill_dsm_with_zeros(dsm)
             except file_exceptions.FileNotFoundException:
                 pass
         for design_group_id in design_group_ids:
@@ -141,9 +144,6 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
 
                 if dsm is None:
                     dsm = create_simple_dsm(processes)
-
-                logger.debug(f'DSM: {dsm}')
-                logger.debug(f'Processes: {[process.name for process in processes]}')
 
                 sim = des.Des()
 
@@ -511,6 +511,14 @@ def get_dsm_from_excel(path):
     dsm = dict()
     for v in pf.values:
         dsm.update({v[0]: v[1::].tolist()})
+    return dsm
+
+
+def fill_dsm_with_zeros(dsm: dict) -> dict:
+    for value in dsm.values():
+        for i in range(len(value)):
+            if value[i] == "" or (isinstance(value[i], float) and isnan(value[i])):
+                value[i] = 0
     return dsm
 
 

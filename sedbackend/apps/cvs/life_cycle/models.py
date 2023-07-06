@@ -35,3 +35,8 @@ class StartStopNodePost(NodePost):
 
 class BPMNGet(BaseModel):
     nodes: List[ProcessNodeGet]
+
+
+class DSMApplyAllResponse(BaseModel):
+    success_vcs: List[vcs_models.VCS]
+    failed_vcs: List[vcs_models.VCS]

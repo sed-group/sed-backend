@@ -319,6 +319,9 @@ def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int,
         vcs_processes = [row.iso_process.name if row.iso_process is not None else
                          f'{row.subprocess.name} ({row.subprocess.parent_process.name})' for row in vcs_table]
 
+        if len(dsm_file['Processes'].values[1:-1]) != len(vcs_processes):
+            raise exceptions.ProcessesVcsMatchException
+
         for process in dsm_file['Processes'].values[1:-1]:
             if process not in vcs_processes:
                 raise exceptions.ProcessesVcsMatchException
@@ -388,7 +391,7 @@ def get_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, 
             reader = csv.reader(f)
             data = list(reader)
     except Exception:
-        return empty_dsm(db_connection, project_id, vcs_id)
+        return initial_dsm(db_connection, project_id, vcs_id)
 
     return data
 
@@ -446,7 +449,7 @@ def csv_from_matrix(matrix: List[List[str or float]]) -> UploadFile:
     return upload_file
 
 
-def empty_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> List[List[str or float]]:
+def initial_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> List[List[str or float]]:
     vcs_table = vcs_storage.get_vcs_table(db_connection, project_id, vcs_id)
 
     processes = ["Start"] + [row.iso_process.name if row.iso_process is not None else
@@ -461,7 +464,31 @@ def empty_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int
                 row.append(processes[i - 1])
             elif i == j:
                 row.append("X")
+            elif i == j - 1:
+                row.append("1")
             else:
                 row.append("")
         dsm.append(row)
     return dsm
+
+
+def apply_dsm_to_all(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, dsm: List[List[str or float]],
+                     user_id: int) -> models.DSMApplyAllResponse:
+    vcss = vcs_storage.get_all_vcs(db_connection, project_id).chunk
+
+    save_dsm_matrix(db_connection, project_id, vcs_id, dsm, user_id)
+
+    success_vcs = [[vcs for vcs in vcss if vcs.id == vcs_id][0]]
+    failed_vcs = []
+
+    vcss = [vcs for vcs in vcs_storage.get_all_vcs(db_connection, project_id).chunk if vcs.id != vcs_id]
+
+    # Try to apply to other vcs. Will only pass if they have the same processes
+    for vcs in vcss:
+        try:
+            save_dsm_matrix(db_connection, project_id, vcs.id, dsm, user_id)
+            success_vcs.append(vcs)
+        except Exception:
+            failed_vcs.append(vcs)
+
+    return models.DSMApplyAllResponse(success_vcs=success_vcs, failed_vcs=failed_vcs)
