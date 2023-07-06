@@ -9,8 +9,6 @@ from sedbackend.apps.core.projects.dependencies import SubProjectAccessChecker
 from sedbackend.apps.core.projects.models import AccessLevel
 from sedbackend.apps.cvs.life_cycle import models, implementation
 from sedbackend.apps.cvs.project.router import CVS_APP_SID
-from sedbackend.apps.core.files import models as file_models
-from fastapi.responses import FileResponse
 
 router = APIRouter()
 
@@ -106,3 +104,14 @@ async def upload_dsm_file(native_project_id: int, vcs_id: int, file: UploadFile,
 )
 async def get_dsm_file(native_project_id: int, vcs_id: int) -> int:
     return implementation.get_dsm_file_id(native_project_id, vcs_id)
+
+
+@router.post(
+    '/project/{native_project_id}/vcs/{vcs_id}/dsm/all',
+    summary="Apply DSM to all VCS",
+    response_model=models.DSMApplyAllResponse,
+    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
+)
+async def apply_dsm_to_all(native_project_id: int, vcs_id: int, dsm: List[List[str or float]],
+                           user: User = Depends(get_current_active_user)) -> models.DSMApplyAllResponse:
+    return implementation.apply_dsm_to_all(native_project_id, vcs_id, dsm, user.id)

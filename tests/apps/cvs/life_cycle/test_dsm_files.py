@@ -229,3 +229,38 @@ def test_save_dsm(client, std_headers, std_user):
     tu.delete_dsm_file_from_vcs_id(project.id, vcs.id, current_user.id)
     tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
+
+
+def test_apply_dsm_to_all(client, std_headers, std_user):
+    # Setup
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    project = tu.seed_random_project(current_user.id)
+    vcss = [tu.seed_random_vcs(project.id) for _ in range(3)]
+
+    rows = [std_rows[0], std_rows[1]]
+    rows_alt = [std_rows[0], std_rows[1], std_rows[2]]
+
+    tu.create_vcs_table(project.id, vcss[0].id, rows)
+    tu.create_vcs_table(project.id, vcss[1].id, rows)
+    tu.create_vcs_table(project.id, vcss[2].id, rows_alt)
+
+    dsm = [["Processes", "Start", "Architectural design", "Verification", "End"],
+           ["Start", "X", "1", "0", "0"],
+           ["Architectural design", "0", "X", "1", "0"],
+           ["Verification", "0", "0", "X", "1"],
+           ["End", "0", "0", "0", "X"]]
+
+    # Act
+    res = client.post(f'/api/cvs/project/{project.id}/vcs/{vcss[0].id}/dsm/all',
+                      headers=std_headers,
+                      json=dsm)
+
+    # Assert
+    assert res.status_code == 200
+    assert [vcs["id"] for vcs in res.json()["success_vcs"]] == [vcss[0].id, vcss[1].id]
+    assert [vcs["id"] for vcs in res.json()["failed_vcs"]] == [vcss[2].id]
+
+    # Cleanup
+    [tu.delete_dsm_file_from_vcs_id(project.id, vcs["id"], current_user.id) for vcs in res.json()["success_vcs"]]
+    tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id for vcs in vcss])
+    tu.delete_project_by_id(project.id, current_user.id)

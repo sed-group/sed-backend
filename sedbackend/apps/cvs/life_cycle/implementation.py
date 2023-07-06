@@ -317,3 +317,42 @@ def get_dsm(project_id: int, vcs_id: int, user_id: int) -> List[List[str or floa
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"User does not have access to the file"
         )
+
+
+def apply_dsm_to_all(project_id: int, vcs_id: int, dsm: List[List[str or float]],
+                     user_id: int) -> models.DSMApplyAllResponse:
+    try:
+        with get_connection() as con:
+            res = storage.apply_dsm_to_all(con, project_id, vcs_id, dsm, user_id)
+            con.commit()
+            return res
+    except exceptions.InvalidFileTypeException:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail='Wrong filetype'
+        )
+    except exceptions.FileSizeException:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail='File too large'
+        )
+    except exceptions.ProcessesVcsMatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Processes in DSM does not match processes in VCS.'
+        )
+    except core_project_exceptions.SubProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sub-project not found."
+        )
+    except ApplicationNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No such application."
+        )
+    except exceptions.DSMFileFailedDeletionException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to replace old DSM file."
+        )
