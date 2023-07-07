@@ -4,7 +4,6 @@ from sedbackend.apps.core.authentication.utils import get_current_active_user
 from sedbackend.apps.core.projects.dependencies import SubProjectAccessChecker
 from sedbackend.apps.core.projects.models import AccessLevel
 from sedbackend.apps.core.users.models import User
-from sedbackend.apps.cvs.design.router import router
 from sedbackend.apps.cvs.project.router import CVS_APP_SID
 from sedbackend.apps.cvs.vcs.models import ValueDriver
 from sedbackend.libs.datastructures.pagination import ListChunk

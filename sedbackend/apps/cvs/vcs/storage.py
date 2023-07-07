@@ -557,6 +557,15 @@ def create_subprocess(db_connection: PooledMySQLConnection, project_id: int, vcs
     columns = ['vcs', 'name', 'iso_process']
     values = [vcs_id, subprocess_post.name, subprocess_post.parent_process_id]
 
+    count_statement = MySQLStatementBuilder(db_connection)
+    count_result = count_statement.count(CVS_VCS_SUBPROCESS_TABLE) \
+        .where(f'name = %s and vcs = %s', [subprocess_post.name, vcs_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+    count = count_result['count']
+
+    if count > 0:
+        raise exceptions.SubprocessNotUniqueException
+
     insert_statement = MySQLStatementBuilder(db_connection)
     try:
         insert_statement \

@@ -429,6 +429,11 @@ def create_subprocess(project_id: int, vcs_id: int, subprocess_post: models.VCSS
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=err.msg
         )
+    except exceptions.SubprocessNotUniqueException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Subprocess name must be unique.',
+        )
 
 
 def edit_subprocess(project_id: int, subprocess_id: int,
