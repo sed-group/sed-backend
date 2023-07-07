@@ -565,6 +565,11 @@ def edit_vcs_table(project_id: int, vcs_id: int, updated_vcs_rows: List[models.V
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not create subprocess'
         )
+    except exceptions.VCSTableProcessNotUniqueException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Process name must be unique'
+        )
 
 
 # ======================================================================================================================

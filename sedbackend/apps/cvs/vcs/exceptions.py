@@ -123,6 +123,10 @@ class VCSandVCSRowIDMismatchException(Exception):
     pass
 
 
+class VCSTableProcessNotUniqueException(Exception):
+    pass
+
+
 # ======================================================================================================================
 # VCS Stakeholder needs
 # ======================================================================================================================

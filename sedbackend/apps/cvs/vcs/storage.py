@@ -333,9 +333,10 @@ def add_vcs_need_driver(db_connection: PooledMySQLConnection, need_id: int, valu
 
     return True
 
+
 def add_vcs_multiple_needs_drivers(db_connection: PooledMySQLConnection, need_driver_ids: List[Tuple[int, int]]):
     logger.debug(f'Add value drivers to stakeholder needs')
-    
+
     prepared_list = []
     try:
         insert_statement = f'INSERT INTO {CVS_VCS_NEED_DRIVERS_TABLE} (stakeholder_need, value_driver) VALUES'
@@ -343,14 +344,15 @@ def add_vcs_multiple_needs_drivers(db_connection: PooledMySQLConnection, need_dr
             insert_statement += f'(%s, %s),'
             prepared_list.append(need)
             prepared_list.append(driver)
-        
+
         with db_connection.cursor(prepared=True) as cursor:
             cursor.execute(insert_statement[:-1], prepared_list)
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
         raise exceptions.GenericDatabaseException
-    
+
     return True
+
 
 def update_vcs_need_driver(db_connection: PooledMySQLConnection, need_id: int, value_drivers: List[int]) -> bool:
     logger.debug(f'Update value drivers in stakeholder need with id={need_id}.')
@@ -872,6 +874,16 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, project_id: int, vcs_id
 
     new_table_ids = []
 
+    process_names = get_process_names_from_table(db_connection, updated_vcs_rows)
+
+    set_process_names = set(process_names)
+
+    logger.debug(f'Process names: {process_names}')
+    logger.debug(f'Set process names: {set_process_names}')
+
+    if len(set_process_names) < len(process_names):
+        raise exceptions.VCSTableProcessNotUniqueException
+
     for row in updated_vcs_rows:
 
         if row.iso_process is None and row.subprocess is None:
@@ -949,7 +961,6 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, project_id: int, vcs_id
 
 def remove_duplicate_names(db_connection: PooledMySQLConnection, vcs_id: int,
                            rows: List[models.VcsRowPost]):
-
     new_subprocesses: List[Tuple[int, models.VCSSubprocessPost]] = []
     done = []
     for i in range(0, len(rows)):
@@ -1060,3 +1071,38 @@ def duplicate_whole_vcs(db_connection: PooledMySQLConnection, project_id: int, v
     [duplicate_vcs_table(db_connection, project_id, vcs.id, table) for vcs in vcs_list]
 
     return vcs_list
+
+
+def get_process_names_from_table(db_connection: PooledMySQLConnection,
+                                 table_rows: List[models.VcsRowPost]) -> List[str]:
+    subprocess_ids = [row.subprocess for row in table_rows if row.subprocess is not None]
+    iso_process_ids = [row.iso_process for row in table_rows if row.iso_process is not None]
+
+    if len(set(subprocess_ids)) < len(subprocess_ids) or len(set(iso_process_ids)) < len(iso_process_ids):
+        raise exceptions.VCSTableProcessNotUniqueException
+
+    sub_where_statement = "id IN (" + ",".join(["%s" for _ in range(len(subprocess_ids))]) + ")"
+    iso_where_statement = "id IN (" + ",".join(["%s" for _ in range(len(iso_process_ids))]) + ")"
+
+    sub_process_result = []
+    iso_process_result = []
+
+    if len(subprocess_ids) > 0:
+        try:
+            select_statement = MySQLStatementBuilder(db_connection)
+            sub_process_result = select_statement.select(CVS_VCS_SUBPROCESS_TABLE, ['name']) \
+                .where(sub_where_statement, subprocess_ids) \
+                .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+        except Error:
+            raise exceptions.SubprocessNotFoundException
+
+    if len(iso_process_ids) > 0:
+        try:
+            select_statement = MySQLStatementBuilder(db_connection)
+            iso_process_result = select_statement.select(CVS_ISO_PROCESS_TABLE, ['name']) \
+                .where(iso_where_statement, iso_process_ids) \
+                .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+        except Error:
+            raise exceptions.ISOProcessNotFoundException
+
+    return [process["name"] for process in sub_process_result + iso_process_result]
