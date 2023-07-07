@@ -142,7 +142,7 @@ def random_table_row(
         index = random.randint(1, 15)
 
     if random.randint(1, 8) == 2:
-        subprocess = random_subprocess(project_id, vcs_id)
+        subprocess = random_subprocess(project_id)
         subprocess_id = subprocess.id
     else:
         if random.randint(1, 5) == 1: #Give 1/5 chance to produce non-tech process
@@ -171,7 +171,7 @@ def random_table_row(
     return table_row
 
 
-def random_subprocess(project_id: int, vcs_id: int, name: str = None, parent_process_id: int = None):
+def random_subprocess(project_id: int, name: str = None, parent_process_id: int = None):
     if name is None:
         name = tu.random_str(5, 50)
     if parent_process_id is None:
@@ -181,14 +181,14 @@ def random_subprocess(project_id: int, vcs_id: int, name: str = None, parent_pro
         name=name,
         parent_process_id=parent_process_id
     )
-    subp = vcs_impl.create_subprocess(project_id, vcs_id, subprocess)
+    subp = vcs_impl.create_subprocess(project_id, subprocess)
     return subp
 
 
-def seed_random_subprocesses(project_id: int, vcs_id: int, amount=15):
+def seed_random_subprocesses(project_id: int, amount=15):
     subprocess_list = []
     for _ in range(amount):
-        subprocess_list.append(random_subprocess(project_id, vcs_id))
+        subprocess_list.append(random_subprocess(project_id))
 
     return subprocess_list
 
