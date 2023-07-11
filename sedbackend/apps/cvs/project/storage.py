@@ -67,7 +67,7 @@ def create_cvs_project(db_connection: PooledMySQLConnection, project: models.CVS
     cvs_project_id = insert_statement.last_insert_id
 
     # Insert corresponding subproject row
-    subproject = proj_models.SubProjectPost(application_sid=CVS_APPLICATION_SID, native_project_id=cvs_project_id)
+    subproject = proj_models.SubProjectPost(name=project.name, application_sid=CVS_APPLICATION_SID, native_project_id=cvs_project_id)
     proj_storage.db_post_subproject(db_connection, subproject, user_id)
 
     return get_cvs_project(db_connection, cvs_project_id)
