@@ -20,6 +20,9 @@ CVS_VALUE_DIMENSION_COLUMNS = ['id', 'name', 'priority', 'vcs_row']
 CVS_VALUE_DRIVER_TABLE = 'cvs_value_drivers'
 CVS_VALUE_DRIVER_COLUMNS = ['id', 'user', 'name', 'unit']
 
+CVS_PROJECT_VALUE_DRIVER_TABLE = 'cvs_project_value_drivers'
+CVS_PROJECT_VALUE_DRIVER_COLUMNS = ['project', 'value_driver']
+
 CVS_VCS_ROW_DRIVERS_TABLE = 'cvs_rowDrivers'
 CVS_VCS_ROW_DRIVERS_COLUMNS = ['vcs_row', 'value_driver']
 
@@ -328,9 +331,10 @@ def add_vcs_need_driver(db_connection: PooledMySQLConnection, need_id: int, valu
 
     return True
 
+
 def add_vcs_multiple_needs_drivers(db_connection: PooledMySQLConnection, need_driver_ids: List[Tuple[int, int]]):
     logger.debug(f'Add value drivers to stakeholder needs')
-    
+
     prepared_list = []
     try:
         insert_statement = f'INSERT INTO {CVS_VCS_NEED_DRIVERS_TABLE} (stakeholder_need, value_driver) VALUES'
@@ -338,14 +342,15 @@ def add_vcs_multiple_needs_drivers(db_connection: PooledMySQLConnection, need_dr
             insert_statement += f'(%s, %s),'
             prepared_list.append(need)
             prepared_list.append(driver)
-        
+
         with db_connection.cursor(prepared=True) as cursor:
             cursor.execute(insert_statement[:-1], prepared_list)
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
         raise exceptions.GenericDatabaseException
-    
+
     return True
+
 
 def update_vcs_need_driver(db_connection: PooledMySQLConnection, need_id: int, value_drivers: List[int]) -> bool:
     logger.debug(f'Update value drivers in stakeholder need with id={need_id}.')
@@ -357,6 +362,22 @@ def update_vcs_need_driver(db_connection: PooledMySQLConnection, need_id: int, v
 
     if value_drivers is not None:
         [add_vcs_need_driver(db_connection, need_id, value_driver_id) for value_driver_id in value_drivers]
+
+    return True
+
+
+def add_project_value_driver(db_connection: PooledMySQLConnection, project_id: int, value_driver_id: int) -> bool:
+    logger.debug(f'Adding relation between project_id={project_id} and value_driver_id={value_driver_id}')
+
+    try:
+        insert_statement = MySQLStatementBuilder(db_connection)
+        insert_statement \
+            .insert(table=CVS_PROJECT_VALUE_DRIVER_TABLE, columns=CVS_PROJECT_VALUE_DRIVER_COLUMNS) \
+            .set_values([project_id, value_driver_id]) \
+            .execute(fetch_type=FetchType.FETCH_NONE)
+    except Error as e:
+        logger.debug(f'Error msg: {e.msg}')
+        raise exceptions.GenericDatabaseException
 
     return True
 
@@ -390,6 +411,7 @@ def create_value_driver(db_connection: PooledMySQLConnection, user_id: int,
             .set_values([user_id, value_driver_post.name, value_driver_post.unit]) \
             .execute(fetch_type=FetchType.FETCH_NONE)
         value_driver_id = insert_statement.last_insert_id
+        add_project_value_driver(db_connection, value_driver_post.project_id, value_driver_id)
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
         raise exceptions.ValueDriverFailedToCreateException
@@ -944,7 +966,6 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, project_id: int, vcs_id
 
 def remove_duplicate_names(db_connection: PooledMySQLConnection, vcs_id: int,
                            rows: List[models.VcsRowPost]):
-
     new_subprocesses: List[Tuple[int, models.VCSSubprocessPost]] = []
     done = []
     for i in range(0, len(rows)):

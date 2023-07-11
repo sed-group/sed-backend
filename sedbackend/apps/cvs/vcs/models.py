@@ -89,6 +89,7 @@ class ValueDriver(BaseModel):
 class ValueDriverPost(BaseModel):
     name: str
     unit: Optional[str] = None
+    project_id: int
 
 
 # ======================================================================================================================
