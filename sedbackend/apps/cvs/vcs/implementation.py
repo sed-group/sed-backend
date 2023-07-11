@@ -361,10 +361,10 @@ def get_iso_process(iso_process_id: int) -> models.VCSISOProcess:
 # ======================================================================================================================
 
 
-def get_all_subprocess(project_id: int, vcs_id: int) -> List[models.VCSSubprocess]:
+def get_all_subprocess(project_id: int) -> List[models.VCSSubprocess]:
     try:
         with get_connection() as con:
-            return storage.get_all_subprocess(con, project_id, vcs_id)
+            return storage.get_all_subprocess(con, project_id)
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -385,7 +385,7 @@ def get_all_subprocess(project_id: int, vcs_id: int) -> List[models.VCSSubproces
 def get_subprocess(project_id: int, subprocess_id: int) -> models.VCSSubprocess:
     try:
         with get_connection() as con:
-            return storage.get_subprocess(con, project_id, subprocess_id)
+            return storage.get_subprocess(con, subprocess_id)
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -403,10 +403,10 @@ def get_subprocess(project_id: int, subprocess_id: int) -> models.VCSSubprocess:
         )
 
 
-def create_subprocess(project_id: int, vcs_id: int, subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
+def create_subprocess(project_id: int, subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
     try:
         with get_connection() as con:
-            result = storage.create_subprocess(con, project_id, vcs_id, subprocess_post)
+            result = storage.create_subprocess(con, project_id, subprocess_post)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
@@ -428,6 +428,11 @@ def create_subprocess(project_id: int, vcs_id: int, subprocess_post: models.VCSS
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=err.msg
+        )
+    except exceptions.SubprocessNotUniqueException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Subprocess name must be unique.',
         )
 
 
@@ -564,6 +569,11 @@ def edit_vcs_table(project_id: int, vcs_id: int, updated_vcs_rows: List[models.V
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not create subprocess'
+        )
+    except exceptions.VCSTableProcessNotUniqueException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Process name must be unique'
         )
 
 

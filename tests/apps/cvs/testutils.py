@@ -142,7 +142,7 @@ def random_table_row(
         index = random.randint(1, 15)
 
     if random.randint(1, 8) == 2:
-        subprocess = random_subprocess(project_id, vcs_id)
+        subprocess = random_subprocess(project_id)
         subprocess_id = subprocess.id
     else:
         if random.randint(1, 5) == 1: #Give 1/5 chance to produce non-tech process
@@ -171,7 +171,7 @@ def random_table_row(
     return table_row
 
 
-def random_subprocess(project_id: int, vcs_id: int, name: str = None, parent_process_id: int = None):
+def random_subprocess(project_id: int, name: str = None, parent_process_id: int = None):
     if name is None:
         name = tu.random_str(5, 50)
     if parent_process_id is None:
@@ -181,14 +181,14 @@ def random_subprocess(project_id: int, vcs_id: int, name: str = None, parent_pro
         name=name,
         parent_process_id=parent_process_id
     )
-    subp = vcs_impl.create_subprocess(project_id, vcs_id, subprocess)
+    subp = vcs_impl.create_subprocess(project_id, subprocess)
     return subp
 
 
-def seed_random_subprocesses(project_id: int, vcs_id: int, amount=15):
+def seed_random_subprocesses(project_id: int, amount=15):
     subprocess_list = []
     for _ in range(amount):
-        subprocess_list.append(random_subprocess(project_id, vcs_id))
+        subprocess_list.append(random_subprocess(project_id))
 
     return subprocess_list
 
@@ -453,63 +453,6 @@ def create_formulas(project_id: int, vcs_rows: List[vcs_model.VcsRow], dg_id: in
 def delete_formulas(project_id: int, vcsRow_Dg_ids: List[Tuple[int, int]]):
     for (vcs_row, dg) in vcsRow_Dg_ids:
         connect_impl.delete_formulas(project_id, vcs_row, dg)
-
-
-def seed_formulas_for_multiple_vcs(project_id: int, vcss: List[int], dgs: List[int], user_id: int):
-    tr = random_table_row(user_id, project_id, vcss[0])
-    while tr.subprocess != None:
-        tr = random_table_row(user_id, project_id,  vcss[0])
-
-    row_ids = []
-    for vcs_id in vcss:
-        orig_table = vcs_impl.get_vcs_table(project_id, vcs_id)
-        table = [
-            vcs_model.VcsRowPost(
-                id=tr.id,
-                index=tr.index,
-                stakeholder=tr.stakeholder,
-                stakeholder_needs=[
-                    vcs_model.StakeholderNeedPost(
-                        id=need.id,
-                        need=need.need,
-                        value_dimension=need.value_dimension,
-                        rank_weight=need.rank_weight,
-                        value_drivers=[vd.id for vd in need.value_drivers])
-                    for need in tr.stakeholder_needs],
-                stakeholder_expectations=tr.stakeholder_expectations,
-                iso_process=None if tr.iso_process is None else tr.iso_process.id,
-                subprocess=None if tr.subprocess is None else tr.subprocess.id)
-            for tr in orig_table]
-        table.append(tr)
-        vcs_impl.edit_vcs_table(project_id, vcs_id, table)
-        row = list(filter(lambda row: row not in orig_table,
-                   vcs_impl.get_vcs_table(project_id, vcs_id)))[0]
-        row_ids.append(row.id)
-
-    time = str(tu.random.randint(1, 200))
-    time_unit = random_time_unit()
-    cost = str(tu.random.randint(1, 2000))
-    revenue = str(tu.random.randint(1, 10000))
-    rate = Rate.PRODUCT.value
-
-    # TODO when value drivers and market inputs are connected to the
-    # formulas, add them here.
-    value_driver_ids = []
-    market_input_ids = []
-
-    formulaPost = connect_model.FormulaPost(
-        time=time,
-        time_unit=time_unit,
-        cost=cost,
-        revenue=revenue,
-        rate=rate,
-        value_driver_ids=value_driver_ids,
-        market_input_ids=market_input_ids
-    )
-
-    for row_id in row_ids:
-        for dg_id in dgs:
-            connect_impl.edit_formulas(project_id, row_id, dg_id, formulaPost)
 
 
 def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int) -> vcs_model.VcsRow:

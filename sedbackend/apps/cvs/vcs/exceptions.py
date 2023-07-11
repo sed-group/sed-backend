@@ -92,6 +92,10 @@ class SubprocessFailedCreationException(Exception):
     pass
 
 
+class SubprocessNotUniqueException(Exception):
+    pass
+
+
 # ======================================================================================================================
 # VCS Table
 # ======================================================================================================================
@@ -120,6 +124,10 @@ class VCSRowNotCorrectException(Exception):
 
 
 class VCSandVCSRowIDMismatchException(Exception):
+    pass
+
+
+class VCSTableProcessNotUniqueException(Exception):
     pass
 
 
