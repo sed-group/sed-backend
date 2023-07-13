@@ -13,7 +13,7 @@ from mysqlsb import MySQLStatementBuilder, FetchType, Sort
 from sedbackend.apps.core.files.models import StoredFilePath
 from sedbackend.apps.cvs.life_cycle import exceptions, models
 from sedbackend.apps.cvs.project.router import CVS_APP_SID
-from sedbackend.apps.cvs.vcs import storage as vcs_storage, exceptions as vcs_exceptions
+from sedbackend.apps.cvs.vcs import storage as vcs_storage, exceptions as vcs_exceptions, models as vcs_models
 from sedbackend.apps.core.files import models as file_models, storage as file_storage, exceptions as file_ex
 from sedbackend.apps.core.projects import storage as core_project_storage
 from mysql.connector import Error
@@ -316,8 +316,7 @@ def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int,
         logger.debug(f'File content: {dsm_file}')
         vcs_table = vcs_storage.get_vcs_table(db_connection, project_id, vcs_id)
 
-        vcs_processes = [row.iso_process.name if row.iso_process is not None else
-                         f'{row.subprocess.name} ({row.subprocess.parent_process.name})' for row in vcs_table]
+        vcs_processes = get_process_names_from_rows(vcs_table)
 
         if len(dsm_file['Processes'].values[1:-1]) != len(vcs_processes):
             raise exceptions.ProcessesVcsMatchException
@@ -449,12 +448,21 @@ def csv_from_matrix(matrix: List[List[str or float]]) -> UploadFile:
     return upload_file
 
 
+def get_process_names_from_rows(rows: List[vcs_models.VcsRow]) -> List[str]:
+    processes = []
+    for row in rows:
+        if row.iso_process is not None and row.iso_process.category == "Technical processes":
+            processes.append(row.iso_process.name)
+        elif row.subprocess is not None and row.subprocess.parent_process.category == "Technical processes":
+            processes.append(f'{row.subprocess.name} ({row.subprocess.parent_process.name})')
+
+    return processes
+
+
 def initial_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> List[List[str or float]]:
     vcs_table = vcs_storage.get_vcs_table(db_connection, project_id, vcs_id)
 
-    processes = ["Start"] + [row.iso_process.name if row.iso_process is not None else
-                             f'{row.subprocess.name} ({row.subprocess.parent_process.name})' for row in vcs_table] + [
-                    "End"]
+    processes = ["Start"] + get_process_names_from_rows(vcs_table) + ["End"]
 
     dsm = [["Processes"] + processes]
     for i in range(1, len(processes) + 1):
