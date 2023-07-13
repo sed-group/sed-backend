@@ -21,12 +21,12 @@ from sedbackend.apps.core.files import exceptions as file_ex
 
 
 def run_simulation(sim_settings: models.EditSimSettings, vcs_ids: List[int],
-                   design_group_ids: List[int], user_id: int, is_monte_carlo: bool = False,
-                   normalized_npv: bool = False) -> List[models.Simulation]:
+                   design_group_ids: List[int], user_id: int,
+                   normalized_npv: bool = False, is_multiprocessing: bool = False) -> List[models.Simulation]:
     try:
         with get_connection() as con:
-            result = storage.run_simulation(con, sim_settings, vcs_ids, design_group_ids, user_id, is_monte_carlo,
-                                            normalized_npv)
+            result = storage.run_simulation(con, sim_settings, vcs_ids, design_group_ids, user_id,
+                                            normalized_npv, is_multiprocessing)
             return result
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(

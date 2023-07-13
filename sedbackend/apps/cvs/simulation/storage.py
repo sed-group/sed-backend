@@ -46,8 +46,8 @@ TIME_FORMAT_DICT = dict({
 
 # TODO: Run simulation on DSM file
 def get_dsm_from_file(db_connection: PooledMySQLConnection, user_id: int, project_id: int,
-                          sim_params: models.FileParams,
-                          dsm_file: UploadFile) -> dict:
+                      sim_params: models.FileParams,
+                      dsm_file: UploadFile) -> dict:
     _, file_extension = os.path.splitext(dsm_file.filename)
 
     dsm = {}
@@ -89,7 +89,8 @@ def get_dsm_from_file(db_connection: PooledMySQLConnection, user_id: int, projec
 
 def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.EditSimSettings,
                    vcs_ids: List[int],
-                   design_group_ids: List[int], user_id, is_monte_carlo: bool = False, normalized_npv: bool = False
+                   design_group_ids: List[int], user_id, normalized_npv: bool = False,
+                   is_multiprocessing: bool = False
                    ) -> List[models.Simulation]:
     design_results = []
 
@@ -102,6 +103,7 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
     discount_rate = sim_settings.discount_rate
     process = sim_settings.flow_process
     time_unit = TIME_FORMAT_DICT.get(sim_settings.time_unit)
+    is_monte_carlo = sim_settings.monte_carlo
     runs = sim_settings.runs
 
     all_sim_data = get_all_sim_data(db_connection, vcs_ids, design_group_ids)
@@ -148,7 +150,12 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
                 sim = des.Des()
 
                 try:
-                    if is_monte_carlo:
+                    if is_monte_carlo and not is_multiprocessing:
+                        results = sim.run_monte_carlo_simulation(flow_time, interarrival, process, processes,
+                                                                 non_tech_processes,
+                                                                 non_tech_add, dsm, time_unit, discount_rate, runtime,
+                                                                 runs)
+                    elif is_monte_carlo and is_multiprocessing:
                         results = sim.run_parallell_simulations(flow_time, interarrival, process, processes,
                                                                 non_tech_processes,
                                                                 non_tech_add, dsm, time_unit, discount_rate, runtime,
