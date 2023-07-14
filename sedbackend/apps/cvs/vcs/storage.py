@@ -271,19 +271,18 @@ def get_all_value_driver_vcs(db_connection: PooledMySQLConnection, project_id: i
 def get_all_value_driver(db_connection: PooledMySQLConnection, user_id: int) -> List[models.ValueDriver]:
     logger.debug(f'Fetching all value drivers for user with id={user_id}.')
 
-    where_statement = f'user = %s'
-    where_values = [user_id]
-    try:
-        select_statement = MySQLStatementBuilder(db_connection)
-        results = select_statement \
-            .select(CVS_VALUE_DRIVER_TABLE, CVS_VALUE_DRIVER_COLUMNS) \
-            .where(where_statement, where_values) \
-            .order_by(['id'], Sort.ASCENDING) \
-            .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+    query = f'SELECT cvd.* \
+            FROM cvs_value_drivers cvd \
+            LEFT JOIN cvs_project_value_drivers cpvd ON cvd.id = cpvd.value_driver \
+            LEFT JOIN projects_participants pp ON cpvd.project = pp.project_id \
+            WHERE (pp.user_id = 1 OR (cpvd.project IS NULL AND cvd.user = 1))'
 
-    except Error as e:
-        logger.debug(f'Error msg: {e.msg}')
-        raise exceptions.ValueDriverNotFoundException
+    with db_connection.cursor(prepared=True) as cursor:
+        cursor.execute(query, [])
+        res = cursor.fetchone()
+        if res is None:
+            raise exceptions.SubprocessNotFoundException(subprocess_id)
+        res = dict(zip(cursor.column_names, res))
 
     return [populate_value_driver(result) for result in results]
 
