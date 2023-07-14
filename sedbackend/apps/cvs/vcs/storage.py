@@ -7,6 +7,7 @@ from sedbackend.apps.cvs.project.storage import get_cvs_project
 from sedbackend.apps.cvs.vcs import models, exceptions
 from sedbackend.apps.cvs.life_cycle import storage as life_cycle_storage, models as life_cycle_models
 from sedbackend.libs.datastructures.pagination import ListChunk
+from sedbackend.apps.core.files import storage as file_storage, exceptions as file_exceptions
 from mysqlsb import MySQLStatementBuilder, Sort, FetchType
 
 DEBUG_ERROR_HANDLING = True  # Set to false in production
@@ -133,10 +134,14 @@ def edit_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
     return get_vcs(db_connection, project_id, vcs_id)
 
 
-def delete_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> bool:
+def delete_vcs(db_connection: PooledMySQLConnection, user_id: int, project_id: int, vcs_id: int) -> bool:
     logger.debug(f'Deleting VCS with id={vcs_id}.')
 
-    get_vcs(db_connection, project_id, vcs_id)  # Perform checks for existing VCS and matching project
+    try:
+        dsm_file_id = life_cycle_storage.get_dsm_file_id(db_connection, project_id, vcs_id)
+        file_storage.db_delete_file(db_connection, dsm_file_id, user_id)
+    except file_exceptions.FileNotFoundException:  # DSM file does not exist
+        pass
 
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement.delete(CVS_VCS_TABLE) \
@@ -520,20 +525,16 @@ def populate_iso_process(db_result):
 # ======================================================================================================================
 
 
-def get_all_subprocess(db_connection: PooledMySQLConnection, project_id: int,
-                       vcs_id: int) -> List[models.VCSSubprocess]:
-    logger.debug(f'Fetching all subprocesses for vcs with id={vcs_id}.')
+def get_all_subprocess(db_connection: PooledMySQLConnection, project_id: int) -> List[models.VCSSubprocess]:
+    logger.debug(f'Fetching all subprocesses for project with id={project_id}.')
 
-    get_vcs(db_connection, project_id, vcs_id)  # Check if VCS exists and belongs to project
-
-    query = f'SELECT cvs_subprocesses.id, cvs_subprocesses.vcs, cvs_subprocesses.name, \
+    query = f'SELECT cvs_subprocesses.id, cvs_subprocesses.project, cvs_subprocesses.name, \
         cvs_subprocesses.iso_process, cvs_iso_processes.name as iso_process_name, category \
         FROM cvs_subprocesses INNER JOIN cvs_iso_processes ON cvs_subprocesses.iso_process = cvs_iso_processes.id \
-        WHERE cvs_subprocesses.vcs = %s'
+        WHERE cvs_subprocesses.project = %s'
 
-    # INNER JOIN cvs_vcs_rows ON subprocess = cvs_subprocesses.id
     with db_connection.cursor(prepared=True) as cursor:
-        cursor.execute(query, [vcs_id])
+        cursor.execute(query, [project_id])
         res = cursor.fetchall()
 
         if res is None:
@@ -546,10 +547,10 @@ def get_all_subprocess(db_connection: PooledMySQLConnection, project_id: int,
     return subprocess_list
 
 
-def get_subprocess(db_connection: PooledMySQLConnection, project_id: int, subprocess_id: int) -> models.VCSSubprocess:
+def get_subprocess(db_connection: PooledMySQLConnection, subprocess_id: int) -> models.VCSSubprocess:
     logger.debug(f'Fetching subprocess with id={subprocess_id}.')
 
-    query = f'SELECT cvs_subprocesses.id, cvs_subprocesses.vcs, cvs_subprocesses.name, \
+    query = f'SELECT cvs_subprocesses.id, cvs_subprocesses.project, cvs_subprocesses.name, \
         cvs_subprocesses.iso_process, cvs_iso_processes.name as iso_process_name, category \
         FROM cvs_subprocesses INNER JOIN cvs_iso_processes ON iso_process = cvs_iso_processes.id\
         WHERE cvs_subprocesses.id = %s'
@@ -560,17 +561,24 @@ def get_subprocess(db_connection: PooledMySQLConnection, project_id: int, subpro
             raise exceptions.SubprocessNotFoundException(subprocess_id)
         res = dict(zip(cursor.column_names, res))
 
-    get_vcs(db_connection, project_id, res['vcs'])  # Check if VCS exists and belongs to project
-
     return populate_subprocess(res)
 
 
-def create_subprocess(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
+def create_subprocess(db_connection: PooledMySQLConnection, project_id: int,
                       subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
     logger.debug(f'Creating a subprocesses.')
 
-    columns = ['vcs', 'name', 'iso_process']
-    values = [vcs_id, subprocess_post.name, subprocess_post.parent_process_id]
+    columns = ['project', 'name', 'iso_process']
+    values = [project_id, subprocess_post.name, subprocess_post.parent_process_id]
+
+    count_statement = MySQLStatementBuilder(db_connection)
+    count_result = count_statement.count(CVS_VCS_SUBPROCESS_TABLE) \
+        .where(f'name = %s and project = %s', [subprocess_post.name, project_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+    count = count_result['count']
+
+    if count > 0:
+        raise exceptions.SubprocessNotUniqueException
 
     insert_statement = MySQLStatementBuilder(db_connection)
     try:
@@ -590,10 +598,10 @@ def create_subprocess(db_connection: PooledMySQLConnection, project_id: int, vcs
 
     subprocess_id = insert_statement.last_insert_id
 
-    return get_subprocess(db_connection, project_id, subprocess_id)
+    return get_subprocess(db_connection, subprocess_id)
 
 
-def create_multiple_subprocesses(db_connection: PooledMySQLConnection, vcs_id: int,
+def create_multiple_subprocesses(db_connection: PooledMySQLConnection, project_id: int,
                                  subprocesses: List[Tuple[int, models.VCSSubprocessPost]]) -> List[Tuple[int, int]]:
     logger.debug(f'Creating {len(subprocesses)} subprocesses.')
 
@@ -603,10 +611,10 @@ def create_multiple_subprocesses(db_connection: PooledMySQLConnection, vcs_id: i
     prepared_list = []
 
     try:
-        insert_statement = f'INSERT INTO {CVS_VCS_SUBPROCESS_TABLE} (vcs, name, iso_process) VALUES '
+        insert_statement = f'INSERT INTO {CVS_VCS_SUBPROCESS_TABLE} (project, name, iso_process) VALUES '
         for subprocess in subprocesses:
             insert_statement += f'(%s,%s,%s),'
-            prepared_list.append(vcs_id)
+            prepared_list.append(project_id)
             prepared_list.append(subprocess[1].name)
             prepared_list.append(subprocess[1].parent_process_id)
         with db_connection.cursor(prepared=True) as cursor:
@@ -624,7 +632,7 @@ def edit_subprocess(db_connection: PooledMySQLConnection, project_id: int, subpr
                     new_subprocess: models.VCSSubprocessPut) -> bool:
     logger.debug(f'Editing subprocesses with id={subprocess_id}.')
 
-    get_subprocess(db_connection, project_id, subprocess_id)  # Check if subprocess exists and belongs to project
+    get_subprocess(db_connection, subprocess_id)  # Check if subprocess exists and belongs to project
 
     # Updating
     update_statement = MySQLStatementBuilder(db_connection)
@@ -642,7 +650,7 @@ def edit_subprocess(db_connection: PooledMySQLConnection, project_id: int, subpr
 def delete_subprocess(db_connection: PooledMySQLConnection, project_id: int, subprocess_id: int) -> bool:
     logger.debug(f'Deleting subprocesses with id={subprocess_id}.')
 
-    subprocess = get_subprocess(db_connection, project_id, subprocess_id)
+    subprocess = get_subprocess(db_connection, subprocess_id)
 
     select_statement = MySQLStatementBuilder(db_connection)
     result = select_statement \
@@ -668,7 +676,7 @@ def populate_subprocess(db_result) -> models.VCSSubprocess:
     logger.debug(f'Populating model for subprocess with id={db_result["id"]}.')
     return models.VCSSubprocess(
         id=db_result['id'],
-        vcs_id=db_result['vcs'],
+        project_id=db_result['project'],
         name=db_result['name'],
         parent_process=models.VCSISOProcess(
             id=db_result['iso_process'],
@@ -837,7 +845,7 @@ def populate_vcs_row(db_connection: PooledMySQLConnection, project_id: int, db_r
     if db_result['iso_process'] is not None:
         iso_process = get_iso_process(int(db_result['iso_process']), db_connection)
     elif db_result['subprocess'] is not None:
-        subprocess = get_subprocess(db_connection, project_id, db_result['subprocess'])
+        subprocess = get_subprocess(db_connection, db_result['subprocess'])
 
     return models.VcsRow(
         id=db_result['id'],
@@ -885,9 +893,19 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, project_id: int, vcs_id
 
     get_vcs(db_connection, project_id, vcs_id)  # Check if VCS exists and belongs to project
 
-    updated_vcs_rows = remove_duplicate_names(db_connection, vcs_id, updated_vcs_rows)
+    updated_vcs_rows = remove_duplicate_names(db_connection, project_id, updated_vcs_rows)
 
     new_table_ids = []
+
+    process_names = get_process_names_from_table(db_connection, updated_vcs_rows)
+
+    set_process_names = set(process_names)
+
+    logger.debug(f'Process names: {process_names}')
+    logger.debug(f'Set process names: {set_process_names}')
+
+    if len(set_process_names) < len(process_names):
+        raise exceptions.VCSTableProcessNotUniqueException
 
     for row in updated_vcs_rows:
 
@@ -964,7 +982,7 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, project_id: int, vcs_id
     return True
 
 
-def remove_duplicate_names(db_connection: PooledMySQLConnection, vcs_id: int,
+def remove_duplicate_names(db_connection: PooledMySQLConnection, project_id: int,
                            rows: List[models.VcsRowPost]):
     new_subprocesses: List[Tuple[int, models.VCSSubprocessPost]] = []
     done = []
@@ -983,7 +1001,7 @@ def remove_duplicate_names(db_connection: PooledMySQLConnection, vcs_id: int,
                 new_subprocesses.append((j, sub))
                 done.append(j)
 
-    subprocesses = create_multiple_subprocesses(db_connection, vcs_id, new_subprocesses)
+    subprocesses = create_multiple_subprocesses(db_connection, project_id, new_subprocesses)
 
     for index, subprocess_id in subprocesses:
         row_post = models.VcsRowPost(
@@ -1076,3 +1094,38 @@ def duplicate_whole_vcs(db_connection: PooledMySQLConnection, project_id: int, v
     [duplicate_vcs_table(db_connection, project_id, vcs.id, table) for vcs in vcs_list]
 
     return vcs_list
+
+
+def get_process_names_from_table(db_connection: PooledMySQLConnection,
+                                 table_rows: List[models.VcsRowPost]) -> List[str]:
+    subprocess_ids = [row.subprocess for row in table_rows if row.subprocess is not None]
+    iso_process_ids = [row.iso_process for row in table_rows if row.iso_process is not None]
+
+    if len(set(subprocess_ids)) < len(subprocess_ids) or len(set(iso_process_ids)) < len(iso_process_ids):
+        raise exceptions.VCSTableProcessNotUniqueException
+
+    sub_where_statement = "id IN (" + ",".join(["%s" for _ in range(len(subprocess_ids))]) + ")"
+    iso_where_statement = "id IN (" + ",".join(["%s" for _ in range(len(iso_process_ids))]) + ")"
+
+    sub_process_result = []
+    iso_process_result = []
+
+    if len(subprocess_ids) > 0:
+        try:
+            select_statement = MySQLStatementBuilder(db_connection)
+            sub_process_result = select_statement.select(CVS_VCS_SUBPROCESS_TABLE, ['name']) \
+                .where(sub_where_statement, subprocess_ids) \
+                .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+        except Error:
+            raise exceptions.SubprocessNotFoundException
+
+    if len(iso_process_ids) > 0:
+        try:
+            select_statement = MySQLStatementBuilder(db_connection)
+            iso_process_result = select_statement.select(CVS_ISO_PROCESS_TABLE, ['name']) \
+                .where(iso_where_statement, iso_process_ids) \
+                .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+        except Error:
+            raise exceptions.ISOProcessNotFoundException
+
+    return [process["name"] for process in sub_process_result + iso_process_result]

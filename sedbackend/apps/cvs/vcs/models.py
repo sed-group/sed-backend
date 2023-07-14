@@ -43,7 +43,7 @@ class VCSISOProcess(BaseModel):
 
 class VCSSubprocess(BaseModel):
     id: int
-    vcs_id: int
+    project_id: int
     name: str
     parent_process: VCSISOProcess
 

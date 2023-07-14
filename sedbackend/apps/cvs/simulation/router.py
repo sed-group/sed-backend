@@ -16,9 +16,10 @@ router = APIRouter()
     response_model=List[models.Simulation],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read, CVS_APP_SID))]
 )
-async def run_simulation(sim_settings: models.EditSimSettings, vcs_ids: List[int],
-                         design_group_ids: List[int]) -> List[models.Simulation]:
-    return implementation.run_simulation(sim_settings, vcs_ids, design_group_ids)
+async def run_simulation(sim_settings: models.EditSimSettings, vcs_ids: List[int], design_group_ids: List[int],
+                         normalized_npv: Optional[bool] = False,
+                         user: User = Depends(get_current_active_user)) -> List[models.Simulation]:
+    return implementation.run_simulation(sim_settings, vcs_ids, design_group_ids, user.id, normalized_npv)
 
 # Temporary disabled
 ''' 
@@ -45,10 +46,12 @@ async def run_dsm_file_simulation(native_project_id: int, sim_params: models.Fil
     response_model=List[models.Simulation],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read, CVS_APP_SID))]
 )
-async def run_sim_monte_carlo(sim_settings: models.EditSimSettings, vcs_ids: List[int],
+async def run_multiprocessing(sim_settings: models.EditSimSettings, vcs_ids: List[int],
                               design_group_ids: List[int],
-                              normalized_npv: Optional[bool] = False) -> List[models.Simulation]:
-    return implementation.run_sim_monte_carlo(sim_settings, vcs_ids, design_group_ids, normalized_npv)
+                              normalized_npv: Optional[bool] = False,
+                              user: User = Depends(get_current_active_user)) -> List[models.Simulation]:
+    return implementation.run_simulation(sim_settings, vcs_ids, design_group_ids, user.id, normalized_npv,
+                                         True)
 
 
 @router.get(

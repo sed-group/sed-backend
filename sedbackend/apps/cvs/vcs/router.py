@@ -4,7 +4,6 @@ from sedbackend.apps.core.authentication.utils import get_current_active_user
 from sedbackend.apps.core.projects.dependencies import SubProjectAccessChecker
 from sedbackend.apps.core.projects.models import AccessLevel
 from sedbackend.apps.core.users.models import User
-from sedbackend.apps.cvs.design.router import router
 from sedbackend.apps.cvs.project.router import CVS_APP_SID
 from sedbackend.apps.cvs.vcs.models import ValueDriver
 from sedbackend.libs.datastructures.pagination import ListChunk
@@ -64,8 +63,8 @@ async def edit_vcs(native_project_id: int, vcs_id: int, vcs_post: models.VCSPost
     response_model=bool,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def delete_vcs(native_project_id: int, vcs_id: int) -> bool:
-    return implementation.delete_vcs(native_project_id, vcs_id)
+async def delete_vcs(native_project_id: int, vcs_id: int, user: User = Depends(get_current_active_user)) -> bool:
+    return implementation.delete_vcs(user.id, native_project_id, vcs_id)
 
 
 # ======================================================================================================================
@@ -193,13 +192,13 @@ async def get_all_iso_process() -> List[models.VCSISOProcess]:
 
 
 @router.get(
-    '/project/{native_project_id}/vcs/{vcs_id}/subprocess/all',
+    '/project/{native_project_id}/subprocess/all',
     summary='Returns all subprocesses of a project',
     response_model=List[models.VCSSubprocess],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
-async def get_all_subprocess(native_project_id: int, vcs_id: int) -> List[models.VCSSubprocess]:
-    return implementation.get_all_subprocess(native_project_id, vcs_id)
+async def get_all_subprocess(native_project_id: int) -> List[models.VCSSubprocess]:
+    return implementation.get_all_subprocess(native_project_id)
 
 
 @router.get(
@@ -213,14 +212,14 @@ async def get_subprocess(native_project_id: int, subprocess_id: int) -> models.V
 
 
 @router.post(
-    '/project/{native_project_id}/vcs/{vcs_id}/subprocess',
+    '/project/{native_project_id}/subprocess',
     summary='Creates a new subprocess',
     response_model=models.VCSSubprocess,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def create_subprocess(native_project_id: int, vcs_id: int,
+async def create_subprocess(native_project_id: int,
                             subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
-    return implementation.create_subprocess(native_project_id, vcs_id, subprocess_post)
+    return implementation.create_subprocess(native_project_id, subprocess_post)
 
 
 @router.put(

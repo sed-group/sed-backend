@@ -47,7 +47,7 @@ def test_create_formulas(client, std_headers, std_user):
 
     # Cleanup
     tu.delete_design_group(project.id, design_group.id)
-    tu.delete_VCS_with_ids(project.id, [vcs.id])
+    tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
 
@@ -87,7 +87,7 @@ def test_create_formulas_no_optional(client, std_headers, std_user):
 
     # Cleanup
     tu.delete_design_group(project.id, design_group.id)
-    tu.delete_VCS_with_ids(project.id, [vcs.id])
+    tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
 
@@ -112,7 +112,7 @@ def test_get_all_formulas(client, std_headers, std_user):
     # Cleanup
     tu.delete_formulas(project.id, [(formula.vcs_row_id, formula.design_group_id) for formula in formulas])
     tu.delete_design_group(project.id, design_group.id)
-    tu.delete_VCS_with_ids(project.id, [vcs.id])
+    tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
 
@@ -229,7 +229,7 @@ def test_edit_formulas(client, std_headers, std_user):
     # Cleanup
     tu.delete_formulas(project.id, [(formula.vcs_row_id, formula.design_group_id) for formula in formulas])
     tu.delete_design_group(project.id, design_group.id)
-    tu.delete_VCS_with_ids(project.id, [vcs.id])
+    tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
 
@@ -269,7 +269,7 @@ def test_edit_formulas_no_optional(client, std_headers, std_user):
     # Cleanup
     tu.delete_formulas(project.id, [(formula.vcs_row_id, formula.design_group_id) for formula in formulas])
     tu.delete_design_group(project.id, design_group.id)
-    tu.delete_VCS_with_ids(project.id, [vcs.id])
+    tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
 
@@ -309,7 +309,7 @@ def test_edit_formulas_invalid_dg(client, std_headers, std_user):
 
     # Cleanup
     tu.delete_design_group(project.id, design_group.id)
-    tu.delete_VCS_with_ids(project.id, [vcs.id])
+    tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
 
@@ -348,7 +348,7 @@ def test_edit_formulas_invalid_vcs_row(client, std_headers, std_user):
 
     # Cleanup
     tu.delete_design_group(project.id, design_group.id)
-    tu.delete_VCS_with_ids(project.id, [vcs.id])
+    tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
 
@@ -388,7 +388,7 @@ def test_edit_formulas_invalid_project(client, std_headers, std_user):
 
     # Cleanup
     tu.delete_design_group(project.id, design_group.id)
-    tu.delete_VCS_with_ids(project.id, [vcs.id])
+    tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
 
@@ -413,7 +413,7 @@ def test_delete_formulas(client, std_headers, std_user):
 
     # Cleanup
     tu.delete_design_group(project.id, design_group.id)
-    tu.delete_VCS_with_ids(project.id, [vcs.id])
+    tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
 
@@ -513,7 +513,7 @@ def test_get_vcs_dg_pairs(client, std_headers, std_user):
     # Cleanup
     tu.delete_formulas(project.id, [(formula[0].vcs_row_id, formula[0].design_group_id) for formula in formulas])
     [tu.delete_design_group(project.id, design_group.id) for design_group in dgs]
-    tu.delete_VCS_with_ids(project.id, [vcs.id for vcs in vcss])
+    tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id for vcs in vcss])
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
 

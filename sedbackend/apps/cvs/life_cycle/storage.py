@@ -1,11 +1,20 @@
+import csv
+import io
+import os
+import tempfile
+from typing import List, Tuple, Optional, TextIO
+
 from fastapi import UploadFile
 from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
 
 from mysqlsb import MySQLStatementBuilder, FetchType, Sort
+
+from sedbackend.apps.core.files.models import StoredFilePath
 from sedbackend.apps.cvs.life_cycle import exceptions, models
-from sedbackend.apps.cvs.vcs import storage as vcs_storage, exceptions as vcs_exceptions
-from sedbackend.apps.core.files import models as file_models, storage as file_storage
+from sedbackend.apps.cvs.project.router import CVS_APP_SID
+from sedbackend.apps.cvs.vcs import storage as vcs_storage, exceptions as vcs_exceptions, models as vcs_models
+from sedbackend.apps.core.files import models as file_models, storage as file_storage, exceptions as file_ex
 from sedbackend.apps.core.projects import storage as core_project_storage
 from mysql.connector import Error
 import magic
@@ -21,9 +30,9 @@ CVS_START_STOP_NODES_TABLE = 'cvs_start_stop_nodes'
 CVS_START_STOP_NODES_COLUMNS = CVS_NODES_COLUMNS + ['type']
 
 CVS_DSM_FILES_TABLE = 'cvs_dsm_files'
-CVS_DSM_FILES_COLUMNS = ['vcs_id', 'file_id']
+CVS_DSM_FILES_COLUMNS = ['vcs', 'file']
 
-MAX_FILE_SIZE = 100*10**6  # 100MB
+MAX_FILE_SIZE = 100 * 10 ** 6  # 100MB
 
 
 def populate_process_node(db_connection, project_id, result) -> models.ProcessNodeGet:
@@ -274,39 +283,29 @@ def update_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: i
     return True
 
 
-def save_dsm_file(db_connection: PooledMySQLConnection, application_sid, project_id: int,
+def save_dsm_matrix(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, dsm: List[List[str or float]],
+                    user_id: int) -> bool:
+    upload_file = csv_from_matrix(dsm)
+    return save_dsm_file(db_connection, project_id, vcs_id, upload_file, user_id)
+
+
+def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int,
                   vcs_id: int, file: UploadFile, user_id) -> bool:
-
-    subproject = core_project_storage.db_get_subproject_native(db_connection, application_sid, project_id)
-
+    subproject = core_project_storage.db_get_subproject_native(db_connection, CVS_APP_SID, project_id)
     model_file = file_models.StoredFilePost.import_fastapi_file(file, user_id, subproject.id)
+
+    logger.debug(f'model file: {model_file}')
 
     if model_file.extension != ".csv":
         raise exceptions.InvalidFileTypeException
-
-    try:
-        file_id = get_dsm_file_id(db_connection, project_id, vcs_id)
-        if file_id is not None:
-            file_storage.db_delete_file(db_connection, file_id, user_id)
-    except exceptions.FileNotFoundException:
-        pass  # File doesn't exist, so we don't need to delete it
-    except Exception:
-        try:
-            # File does not exist in persistent storage but exists in database
-            delete_statement = MySQLStatementBuilder(db_connection)
-            _, rows = delete_statement.delete(CVS_DSM_FILES_TABLE) \
-                .where('vcs_id = %s', [vcs_id]) \
-                .execute(return_affected_rows=True)
-        except:
-            pass
 
     with model_file.file_object as f:
         f.seek(0)
         tmp_file = f.read()
         mime = magic.from_buffer(tmp_file)
-        logger.debug(mime)
+        logger.debug(f'File mime: {mime}')
         # TODO doesn't work with windows if we create the file in excel.
-        if mime != "CSV text" and mime != "ASCII text":
+        if mime != "CSV text" and "ASCII text" not in mime:
             raise exceptions.InvalidFileTypeException
 
         if f.tell() > MAX_FILE_SIZE:
@@ -317,34 +316,187 @@ def save_dsm_file(db_connection: PooledMySQLConnection, application_sid, project
         logger.debug(f'File content: {dsm_file}')
         vcs_table = vcs_storage.get_vcs_table(db_connection, project_id, vcs_id)
 
-        vcs_processes = [row.iso_process.name if row.iso_process is not None else
-                         row.subprocess.name for row in vcs_table]
+        vcs_processes = get_process_names_from_rows(vcs_table)
+
+        if len(dsm_file['Processes'].values[1:-1]) != len(vcs_processes):
+            raise exceptions.ProcessesVcsMatchException
 
         for process in dsm_file['Processes'].values[1:-1]:
             if process not in vcs_processes:
                 raise exceptions.ProcessesVcsMatchException
+
+        try:
+            file_id = get_dsm_file_id(db_connection, project_id, vcs_id)
+            if file_id is not None:
+                delete_dsm_file(db_connection, project_id, vcs_id, file_id, user_id)
+        except file_ex.FileNotFoundException:
+            pass  # File doesn't exist, so we don't need to delete it
+        except Exception:
+            try:
+                # File does not exist in persistent storage but exists in database
+                delete_statement = MySQLStatementBuilder(db_connection)
+                _, rows = delete_statement.delete(CVS_DSM_FILES_TABLE) \
+                    .where('vcs = %s', [vcs_id]) \
+                    .execute(return_affected_rows=True)
+            except:
+                pass
 
         f.seek(0)
         stored_file = file_storage.db_save_file(db_connection, model_file)
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement.insert(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS) \
-        .set_values([vcs_id, stored_file.id])\
+        .set_values([vcs_id, stored_file.id]) \
         .execute(fetch_type=FetchType.FETCH_NONE)
 
     return True
 
 
 def get_dsm_file_id(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> int:
-
     vcs_storage.get_vcs(db_connection, project_id, vcs_id)  # Check if vcs exists and matches project id
 
     select_statement = MySQLStatementBuilder(db_connection)
     file_res = select_statement.select(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS) \
-        .where('vcs_id = %s', [vcs_id]) \
+        .where('vcs = %s', [vcs_id]) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
-    if file_res == None:
-        raise exceptions.FileNotFoundException
+    if file_res is None:
+        raise file_ex.FileNotFoundException
 
-    return file_res['file_id']
+    return file_res['file']
+
+
+def get_multiple_dsm_file_id(db_connection: PooledMySQLConnection, vcs_ids: List[int]) -> list[Tuple[int, int]]:
+    where_statement = "vcs IN (" + ",".join(["%s" for _ in range(len(vcs_ids))]) + ")"
+    logger.debug(f'where_statement: {where_statement}')
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    file_res = select_statement.select(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS) \
+        .where(where_statement, vcs_ids) \
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    return [(file['vcs'], file['file']) for file in file_res]
+
+
+def get_dsm_file_path(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id) -> StoredFilePath:
+    file_id = get_dsm_file_id(db_connection, project_id, vcs_id)
+    return file_storage.db_get_file_path(db_connection, file_id, user_id)
+
+
+def get_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id) -> List[List[str or float]]:
+    try:
+        path = get_dsm_file_path(db_connection, project_id, vcs_id, user_id).path
+        with open(path, newline='') as f:
+            reader = csv.reader(f)
+            data = list(reader)
+    except Exception:
+        return initial_dsm(db_connection, project_id, vcs_id)
+
+    return data
+
+
+def delete_dsm_file(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
+                    file_id: Optional[int], user_id: int) -> bool:
+    if file_id is None:
+        file_id = get_dsm_file_id(db_connection, project_id, vcs_id)
+    file_storage.db_delete_file(db_connection, file_id, user_id)
+
+    delete_statement = MySQLStatementBuilder(db_connection)
+    _, rows = delete_statement.delete(CVS_DSM_FILES_TABLE) \
+        .where('vcs = %s', [vcs_id]) \
+        .execute(return_affected_rows=True)
+
+    if rows == 0:
+        raise exceptions.DSMFileFailedDeletionException
+
+    return True
+
+
+def get_dsm_from_file_id(db_connection: PooledMySQLConnection, file_id: int, user_id: int) -> dict:
+    try:
+        path = file_storage.db_get_file_path(db_connection, file_id, user_id)
+    except Exception:
+        raise file_ex.FileNotFoundException
+    return get_dsm_from_csv(path.path)
+
+
+def get_dsm_from_csv(path) -> dict:
+    try:
+        df = pd.read_csv(path)
+        dsm = dict()
+
+        for v in df.values:
+            dsm.update({v[0]: v[1::].tolist()})
+
+        return dsm
+    except Exception as e:
+        raise file_ex.FileNotFoundException
+
+
+def csv_from_matrix(matrix: List[List[str or float]]) -> UploadFile:
+    fd, path = tempfile.mkstemp()
+    try:
+        with open(path, "w+") as dsm_file:
+            csv_writer = csv.writer(dsm_file, delimiter=',')
+            csv_writer.writerows(matrix)
+    finally:
+        dsm_file = open(path, "r+b")
+        upload_file = UploadFile(filename=dsm_file.name + ".csv", file=dsm_file)
+        os.close(fd)
+        os.remove(path)
+
+    return upload_file
+
+
+def get_process_names_from_rows(rows: List[vcs_models.VcsRow]) -> List[str]:
+    processes = []
+    for row in rows:
+        if row.iso_process is not None and row.iso_process.category == "Technical processes":
+            processes.append(row.iso_process.name)
+        elif row.subprocess is not None and row.subprocess.parent_process.category == "Technical processes":
+            processes.append(f'{row.subprocess.name} ({row.subprocess.parent_process.name})')
+
+    return processes
+
+
+def initial_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> List[List[str or float]]:
+    vcs_table = vcs_storage.get_vcs_table(db_connection, project_id, vcs_id)
+
+    processes = ["Start"] + get_process_names_from_rows(vcs_table) + ["End"]
+
+    dsm = [["Processes"] + processes]
+    for i in range(1, len(processes) + 1):
+        row = []
+        for j in range(len(processes) + 1):
+            if j == 0:
+                row.append(processes[i - 1])
+            elif i == j:
+                row.append("X")
+            elif i == j - 1:
+                row.append("1")
+            else:
+                row.append("")
+        dsm.append(row)
+    return dsm
+
+
+def apply_dsm_to_all(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, dsm: List[List[str or float]],
+                     user_id: int) -> models.DSMApplyAllResponse:
+    vcss = vcs_storage.get_all_vcs(db_connection, project_id).chunk
+
+    save_dsm_matrix(db_connection, project_id, vcs_id, dsm, user_id)
+
+    success_vcs = [[vcs for vcs in vcss if vcs.id == vcs_id][0]]
+    failed_vcs = []
+
+    vcss = [vcs for vcs in vcs_storage.get_all_vcs(db_connection, project_id).chunk if vcs.id != vcs_id]
+
+    # Try to apply to other vcs. Will only pass if they have the same processes
+    for vcs in vcss:
+        try:
+            save_dsm_matrix(db_connection, project_id, vcs.id, dsm, user_id)
+            success_vcs.append(vcs)
+        except Exception:
+            failed_vcs.append(vcs)
+
+    return models.DSMApplyAllResponse(success_vcs=success_vcs, failed_vcs=failed_vcs)
