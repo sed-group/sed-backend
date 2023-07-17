@@ -271,20 +271,21 @@ def get_all_value_driver_vcs(db_connection: PooledMySQLConnection, project_id: i
 def get_all_value_driver(db_connection: PooledMySQLConnection, user_id: int) -> List[models.ValueDriver]:
     logger.debug(f'Fetching all value drivers for user with id={user_id}.')
 
-    query = f'SELECT cvd.* \
-            FROM cvs_value_drivers cvd \
-            LEFT JOIN cvs_project_value_drivers cpvd ON cvd.id = cpvd.value_driver \
-            LEFT JOIN projects_participants pp ON cpvd.project = pp.project_id \
-            WHERE (pp.user_id = 1 OR (cpvd.project IS NULL AND cvd.user = 1))'
+    try:
+        query = f'SELECT cvd.*, cpvd.project \
+                FROM cvs_value_drivers cvd \
+                LEFT JOIN cvs_project_value_drivers cpvd ON cvd.id = cpvd.value_driver \
+                LEFT JOIN projects_participants pp ON cpvd.project = pp.project_id \
+                WHERE (pp.user_id = %s OR (cpvd.project IS NULL AND cvd.user = %s))'
 
-    with db_connection.cursor(prepared=True) as cursor:
-        cursor.execute(query, [])
-        res = cursor.fetchone()
-        if res is None:
-            raise exceptions.SubprocessNotFoundException(subprocess_id)
-        res = dict(zip(cursor.column_names, res))
-
-    return [populate_value_driver(result) for result in results]
+        with db_connection.cursor(prepared=True, dictionary=True) as cursor:
+            cursor.execute(query, [user_id, user_id])
+            res = cursor.fetchall()
+    except Error as e:
+        logger.debug(f'Error msg: {e.msg}')
+        raise exceptions.ValueDriverNotFoundException
+    logger.debug(res)
+    return [populate_value_driver(result) for result in res]
 
 
 def get_all_value_drivers_vcs_row(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
@@ -468,10 +469,14 @@ def delete_all_value_drivers(db_connection: PooledMySQLConnection, user_id: int)
 
 
 def populate_value_driver(db_result) -> models.ValueDriver:
+    logger.debug(f'Populating value driver with: {db_result}')
+    project = None
+    if 'project' in db_result and db_result['project']: project = [db_result['project']]
     return models.ValueDriver(
         id=db_result['id'],
         name=db_result['name'],
-        unit=db_result['unit']
+        unit=db_result['unit'],
+        projects=project
     )
 
 

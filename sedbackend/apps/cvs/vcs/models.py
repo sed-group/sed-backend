@@ -84,7 +84,7 @@ class ValueDriver(BaseModel):
     id: int
     name: str
     unit: Optional[str] = None
-
+    projects: Optional[List[int]] = None
 
 class ValueDriverPost(BaseModel):
     name: str
