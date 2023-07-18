@@ -371,17 +371,18 @@ def update_vcs_need_driver(db_connection: PooledMySQLConnection, need_id: int, v
     return True
 
 
-def add_project_value_driver(db_connection: PooledMySQLConnection, project_id: int, value_driver_id: int) -> bool:
-    logger.debug(f'Adding relation between project_id={project_id} and value_driver_id={value_driver_id}')
+def add_project_value_drivers(db_connection: PooledMySQLConnection, project_id: int, value_driver_ids: List[int]) -> bool:
+    logger.debug(f'Adding relation between project_id={project_id} and value_driver_ids={value_driver_ids}')
 
     try:
-        insert_statement = MySQLStatementBuilder(db_connection)
-        insert_statement \
-            .insert(table=CVS_PROJECT_VALUE_DRIVER_TABLE, columns=CVS_PROJECT_VALUE_DRIVER_COLUMNS) \
-            .set_values([project_id, value_driver_id]) \
-            .execute(fetch_type=FetchType.FETCH_NONE)
+        insert_statement = f'INSERT INTO {CVS_PROJECT_VALUE_DRIVER_TABLE} (project, value_driver) VALUES (%s, %s) ON DUPLICATE KEY UPDATE `project`=`project`'
+        prepared_list = []
+        for index, value_driver_id in enumerate(value_driver_ids):
+            prepared_list.append((project_id, value_driver_id))
+        with db_connection.cursor(prepared=True) as cursor:
+            cursor.executemany(insert_statement, prepared_list)
     except Error as e:
-        logger.debug(f'Error msg: {e.msg}')
+        logger.debug(f'Error {e.errno} {e.msg}')
         raise exceptions.GenericDatabaseException
 
     return True
@@ -416,7 +417,7 @@ def create_value_driver(db_connection: PooledMySQLConnection, user_id: int,
             .set_values([user_id, value_driver_post.name, value_driver_post.unit]) \
             .execute(fetch_type=FetchType.FETCH_NONE)
         value_driver_id = insert_statement.last_insert_id
-        add_project_value_driver(db_connection, value_driver_post.project_id, value_driver_id)
+        add_project_value_drivers(db_connection, value_driver_post.project_id, [value_driver_id])
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
         raise exceptions.ValueDriverFailedToCreateException

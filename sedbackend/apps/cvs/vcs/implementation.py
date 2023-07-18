@@ -325,6 +325,20 @@ def add_vcs_multiple_needs_drivers(need_driver_ids: List[Tuple[int, int]]):
             detail=f'Badly formatted request'
         )
 
+
+def add_project_multiple_value_drivers(project_id: int, value_driver_ids: List[int]):
+    try:
+        with get_connection() as con:
+            res = storage.add_project_value_drivers(con, project_id, value_driver_ids)
+            con.commit()
+            return res
+    except exceptions.GenericDatabaseException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Badly formatted request'
+        )
+
+
 # ======================================================================================================================
 # VCS ISO Processes
 # ======================================================================================================================

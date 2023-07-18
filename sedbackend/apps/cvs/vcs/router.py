@@ -144,6 +144,14 @@ async def create_value_driver(value_driver_post: models.ValueDriverPost,
                               user: User = Depends(get_current_active_user)) -> models.ValueDriver:
     return implementation.create_value_driver(user.id, value_driver_post)
 
+@router.post(
+    '/project/{native_project_id}/value-driver',
+    summary=f'Add value drivers to project',
+    response_model=bool,
+    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
+)
+async def add_drivers_to_project(native_project_id: int, value_driver_ids: List[int]):
+    return implementation.add_project_multiple_value_drivers(native_project_id, value_driver_ids)
 
 @router.post(
     '/project/{native_project_id}/value-driver/need',
