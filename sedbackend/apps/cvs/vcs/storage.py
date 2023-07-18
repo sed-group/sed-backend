@@ -272,11 +272,12 @@ def get_all_value_driver(db_connection: PooledMySQLConnection, user_id: int) -> 
     logger.debug(f'Fetching all value drivers for user with id={user_id}.')
 
     try:
-        query = f'SELECT cvd.*, cpvd.project \
+        query = f'SELECT DISTINCT cvd.*, cpvd.project \
                 FROM cvs_value_drivers cvd \
                 LEFT JOIN cvs_project_value_drivers cpvd ON cvd.id = cpvd.value_driver \
                 LEFT JOIN projects_participants pp ON cpvd.project = pp.project_id \
-                WHERE (pp.user_id = %s OR (cpvd.project IS NULL AND cvd.user = %s))'
+                LEFT JOIN projects_subprojects ps ON cpvd.project = ps.native_project_id \
+                WHERE (pp.user_id = %s OR (cvd.user = %s))'
 
         with db_connection.cursor(prepared=True, dictionary=True) as cursor:
             cursor.execute(query, [user_id, user_id])
