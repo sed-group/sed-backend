@@ -12,7 +12,7 @@ user = 'rw'
 password = Environment.get_variable('MYSQL_PWD_RW')
 host = 'localhost' #'core-db'
 database = 'seddb'
-port = 3001 #3306
+port = 3001
 
 try:
     connection_pool = mysql.connector.pooling.MySQLConnectionPool(

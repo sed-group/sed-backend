@@ -267,10 +267,10 @@ def edit_value_driver(value_driver_id: int,
         )
 
 
-def delete_value_driver(value_driver_id: int) -> bool:
+def delete_value_driver(project_id: int, value_driver_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.delete_value_driver(con, value_driver_id)
+            res = storage.delete_project_value_driver(con, project_id, value_driver_id)
             con.commit()
             return res
     except exceptions.ValueDriverNotFoundException:

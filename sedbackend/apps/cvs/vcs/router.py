@@ -172,12 +172,12 @@ async def edit_value_driver(value_driver_id: int, value_driver_post: models.Valu
 
 
 @router.delete(
-    '/value-driver/{value_driver_id}',
+    '/project/{native_project_id}/value-driver/{value_driver_id}',
     summary='Deletes a value driver',
     response_model=bool,
 )
-async def delete_value_driver(value_driver_id: int) -> bool:
-    return implementation.delete_value_driver(value_driver_id)
+async def delete_value_driver(native_project_id: int, value_driver_id: int) -> bool:
+    return implementation.delete_value_driver(native_project_id, value_driver_id)
 
 
 # ======================================================================================================================

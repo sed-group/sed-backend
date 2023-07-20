@@ -372,7 +372,8 @@ def update_vcs_need_driver(db_connection: PooledMySQLConnection, need_id: int, v
     return True
 
 
-def add_project_value_drivers(db_connection: PooledMySQLConnection, project_id: int, value_driver_ids: List[int]) -> bool:
+def add_project_value_drivers(db_connection: PooledMySQLConnection, project_id: int,
+                              value_driver_ids: List[int]) -> bool:
     logger.debug(f'Adding relation between project_id={project_id} and value_driver_ids={value_driver_ids}')
 
     try:
@@ -445,7 +446,7 @@ def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int
     return get_value_driver(db_connection, value_driver_id)
 
 
-def delete_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int) -> bool:
+def delete_value_driver(db_connection: PooledMySQLConnection, value_driver_id) -> bool:
     logger.debug(f'Deleting value driver with id={value_driver_id}.')
 
     delete_statement = MySQLStatementBuilder(db_connection)
@@ -455,6 +456,28 @@ def delete_value_driver(db_connection: PooledMySQLConnection, value_driver_id: i
 
     if rows == 0:
         raise exceptions.ValueDriverNotFoundException(value_driver_id=value_driver_id)
+
+    return True
+
+
+def delete_project_value_driver(db_connection: PooledMySQLConnection, project_id: int, value_driver_id: int) -> bool:
+    logger.debug(f'Deleting relation with project={project_id} AND value_driver={value_driver_id}.')
+
+    delete_statement = MySQLStatementBuilder(db_connection)
+    _, rows = delete_statement.delete(CVS_PROJECT_VALUE_DRIVER_TABLE) \
+        .where('project = %s AND value_driver = %s', [project_id, value_driver_id]) \
+        .execute(return_affected_rows=True)
+
+    if rows == 0:
+        raise exceptions.ValueDriverNotFoundException(value_driver_id=value_driver_id)
+
+    count_statement = MySQLStatementBuilder(db_connection)
+    result = count_statement.count(CVS_PROJECT_VALUE_DRIVER_TABLE) \
+        .where('value_driver = %s', [value_driver_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if result['count'] == 0:
+        return delete_value_driver(db_connection, value_driver_id)
 
     return True
 
