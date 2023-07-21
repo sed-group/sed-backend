@@ -288,6 +288,11 @@ def delete_value_driver(project_id: int, value_driver_id: int) -> bool:
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
         )
+    except exceptions.ProjectValueDriverNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project={project_id} <-> value driver={value_driver_id} relation.'
+        )
 
 
 def delete_all_value_drivers(user_id: int) -> bool:
@@ -336,6 +341,11 @@ def add_project_multiple_value_drivers(project_id: int, value_driver_ids: List[i
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Badly formatted request'
+        )
+    except exceptions.ProjectValueDriverFailedToCreateException:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Failed to create project={project_id} and value driver={value_driver_ids} relation'
         )
 
 

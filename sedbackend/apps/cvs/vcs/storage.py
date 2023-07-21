@@ -285,7 +285,7 @@ def get_all_value_driver(db_connection: PooledMySQLConnection, user_id: int) -> 
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
         raise exceptions.ValueDriverNotFoundException
-    logger.debug(res)
+
     return [populate_value_driver(result) for result in res]
 
 
@@ -385,7 +385,7 @@ def add_project_value_drivers(db_connection: PooledMySQLConnection, project_id: 
             cursor.executemany(insert_statement, prepared_list)
     except Error as e:
         logger.debug(f'Error {e.errno} {e.msg}')
-        raise exceptions.GenericDatabaseException
+        raise exceptions.ProjectValueDriverFailedToCreateException
 
     return True
 
@@ -446,7 +446,7 @@ def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int
     return get_value_driver(db_connection, value_driver_id)
 
 
-def delete_value_driver(db_connection: PooledMySQLConnection, value_driver_id) -> bool:
+def delete_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int) -> bool:
     logger.debug(f'Deleting value driver with id={value_driver_id}.')
 
     delete_statement = MySQLStatementBuilder(db_connection)
@@ -469,7 +469,7 @@ def delete_project_value_driver(db_connection: PooledMySQLConnection, project_id
         .execute(return_affected_rows=True)
 
     if rows == 0:
-        raise exceptions.ValueDriverNotFoundException(value_driver_id=value_driver_id)
+        raise exceptions.ProjectValueDriverNotFoundException(project_id=project_id, value_driver_id=value_driver_id)
 
     count_statement = MySQLStatementBuilder(db_connection)
     result = count_statement.count(CVS_PROJECT_VALUE_DRIVER_TABLE) \
