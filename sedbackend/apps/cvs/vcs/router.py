@@ -167,8 +167,8 @@ async def add_drivers_to_needs(native_project_id: int, need_driver_ids: List[Tup
     summary='Edits a value driver',
     response_model=models.ValueDriver,
 )
-async def edit_value_driver(value_driver_id: int, value_driver_post: models.ValueDriverPost) -> models.ValueDriver:
-    return implementation.edit_value_driver(value_driver_id, value_driver_post)
+async def edit_value_driver(value_driver_id: int, value_driver: models.ValueDriverPut) -> models.ValueDriver:
+    return implementation.edit_value_driver(value_driver_id, value_driver)
 
 
 @router.delete(

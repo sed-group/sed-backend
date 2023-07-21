@@ -428,7 +428,7 @@ def create_value_driver(db_connection: PooledMySQLConnection, user_id: int,
 
 
 def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int,
-                      new_value_driver: models.ValueDriverPost) -> models.ValueDriver:
+                      new_value_driver: models.ValueDriverPut) -> models.ValueDriver:
     logger.debug(f'Editing value driver with id={value_driver_id}.')
 
     update_statement = MySQLStatementBuilder(db_connection)

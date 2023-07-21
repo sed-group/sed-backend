@@ -86,6 +86,12 @@ class ValueDriver(BaseModel):
     unit: Optional[str] = None
     projects: Optional[List[int]] = None
 
+
+class ValueDriverPut(BaseModel):
+    name: str
+    unit: Optional[str] = None
+
+
 class ValueDriverPost(BaseModel):
     name: str
     unit: Optional[str] = None

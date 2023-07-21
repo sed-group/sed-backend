@@ -244,10 +244,10 @@ def create_value_driver(user_id: int, value_driver_post: models.ValueDriverPost)
 
 
 def edit_value_driver(value_driver_id: int,
-                      value_driver_post: models.ValueDriverPost) -> models.ValueDriver:
+                      value_driver: models.ValueDriverPut) -> models.ValueDriver:
     try:
         with get_connection() as con:
-            result = storage.edit_value_driver(con, value_driver_id, value_driver_post)
+            result = storage.edit_value_driver(con, value_driver_id, value_driver)
             con.commit()
             return result
     except exceptions.ValueDriverNotFoundException:

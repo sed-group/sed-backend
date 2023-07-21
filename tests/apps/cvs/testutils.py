@@ -94,7 +94,7 @@ def delete_VCS_with_ids(user_id: int, project_id: int, vcs_id_list: List[int]):
         vcs_impl.delete_vcs(user_id, project_id, vcsid)
 
 
-def random_value_driver(name: str = None, unit: str = None):
+def random_value_driver_post(user_id: int, project_id: int, name: str = None, unit: str = None):
     if name is None:
         name = tu.random_str(5, 50)
     if unit is None:
@@ -102,15 +102,19 @@ def random_value_driver(name: str = None, unit: str = None):
 
     return sedbackend.apps.cvs.vcs.models.ValueDriverPost(
         name=name,
-        unit=unit
+        unit=unit,
+        project_id=project_id
     )
 
 
-def seed_random_value_driver(user_id) -> sedbackend.apps.cvs.vcs.models.ValueDriver:
-    value_driver = random_value_driver()
+def seed_random_value_driver(user_id: int, project_id: int = None) -> sedbackend.apps.cvs.vcs.models.ValueDriver:
+    if project_id is None:
+        project = seed_random_project(user_id)
+        project_id = project.id
+    value_driver_post = random_value_driver_post(user_id=user_id, project_id=project_id)
 
     new_value_driver = sedbackend.apps.cvs.vcs.implementation.create_value_driver(
-        user_id, value_driver)
+        user_id, value_driver_post)
 
     return new_value_driver
 
