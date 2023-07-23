@@ -107,7 +107,7 @@ def test_create_value_driver_missing_unit(client, std_headers, std_user):
     assert res.status_code == 200  # 200 OK
     # Cleanup
     tu.delete_vd_from_user(current_user.id)
-    tu.delete_project_by_id(project.id)
+    tu.delete_project_by_id(project.id, current_user.id)
 
 def test_edit_value_driver(client, std_headers, std_user):
     # Setup
