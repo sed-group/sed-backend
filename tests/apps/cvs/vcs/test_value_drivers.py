@@ -8,7 +8,7 @@ def test_get_all_value_drivers(client, std_headers, std_user):
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
     for _ in range(5):
-        tu.seed_random_value_driver(current_user.id)
+        tu.seed_random_value_driver(current_user.id, project.id)
     # Act
     res = client.get(f'/api/cvs/value-driver/all', headers=std_headers)
     # Assert
@@ -16,7 +16,7 @@ def test_get_all_value_drivers(client, std_headers, std_user):
     assert len(res.json()) == 5
     # Cleanup
     tu.delete_vd_from_user(current_user.id)
-    
+    tu.delete_project_by_id(project.id, current_user.id)
 
 
 def test_get_all_value_drivers_no_vds(client, std_headers, std_user):
@@ -34,7 +34,8 @@ def test_get_all_value_drivers_no_vds(client, std_headers, std_user):
 def test_get_value_driver(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
-    vd = tu.seed_random_value_driver(current_user.id)
+    project = tu.seed_random_project(current_user.id)
+    vd = tu.seed_random_value_driver(current_user.id, project.id)
     # Act
     res = client.get(f'/api/cvs/value-driver/{vd.id}', headers=std_headers)
     # Assert
@@ -43,7 +44,7 @@ def test_get_value_driver(client, std_headers, std_user):
     assert res.json()['unit'] == vd.unit
     # Cleanup
     tu.delete_vd_from_user(current_user.id)
-
+    tu.delete_project_by_id(project.id, current_user.id)
 
 def test_get_value_driver_not_found(client, std_headers, std_user):
     # Setup
@@ -90,7 +91,7 @@ def test_create_value_driver_missing_name(client, std_headers, std_user):
     assert res.status_code == 422  # 422 Unprocessable Entity
     # Cleanup
     tu.delete_vd_from_user(current_user.id)
-
+    tu.delete_project_by_id(project.id, current_user.id)
 
 def test_create_value_driver_missing_unit(client, std_headers, std_user):
     # Setup
@@ -106,12 +107,13 @@ def test_create_value_driver_missing_unit(client, std_headers, std_user):
     assert res.status_code == 200  # 200 OK
     # Cleanup
     tu.delete_vd_from_user(current_user.id)
-
+    tu.delete_project_by_id(project.id)
 
 def test_edit_value_driver(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
-    vd = tu.seed_random_value_driver(current_user.id)
+    project = tu.seed_random_project(current_user.id)
+    vd = tu.seed_random_value_driver(current_user.id, project.id)
     # Act
     res = client.put(f'/api/cvs/value-driver/{vd.id}', headers=std_headers, json={
         'name': "new name",
@@ -123,7 +125,7 @@ def test_edit_value_driver(client, std_headers, std_user):
     assert res.json()['unit'] == "new unit"
     # Cleanup
     tu.delete_vd_from_user(current_user.id)
-
+    tu.delete_project_by_id(project.id, current_user.id)
 
 def test_delete_value_driver(client, std_headers, std_user):
     # Setup
@@ -137,7 +139,7 @@ def test_delete_value_driver(client, std_headers, std_user):
     assert len(impl_vcs.get_all_value_driver(current_user.id)) == 0
     # Cleanup
     tu.delete_vd_from_user(current_user.id)
-
+    tu.delete_project_by_id(project.id, current_user.id)
 
 def test_get_all_value_drivers_from_vcs(client, std_headers, std_user):
     # Setup
@@ -166,7 +168,7 @@ def test_add_value_drivers_to_needs(client, std_headers, std_user):
     
     vds = []
     for _ in range(5):
-        new_vd = tu.seed_random_value_driver(current_user.id)
+        new_vd = tu.seed_random_value_driver(current_user.id, project.id)
         vds.append(new_vd)
     
     needs = []
@@ -201,7 +203,7 @@ def test_add_driver_needs_invalid_needs(client, std_headers, std_user):
     
     vds = []
     for _ in range(5):
-        new_vd = tu.seed_random_value_driver(current_user.id)
+        new_vd = tu.seed_random_value_driver(current_user.id, project.id)
         vds.append(new_vd)
     
     need_driver_ids = []
