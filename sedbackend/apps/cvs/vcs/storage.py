@@ -21,6 +21,9 @@ CVS_VALUE_DIMENSION_COLUMNS = ['id', 'name', 'priority', 'vcs_row']
 CVS_VALUE_DRIVER_TABLE = 'cvs_value_drivers'
 CVS_VALUE_DRIVER_COLUMNS = ['id', 'user', 'name', 'unit']
 
+CVS_PROJECT_VALUE_DRIVER_TABLE = 'cvs_project_value_drivers'
+CVS_PROJECT_VALUE_DRIVER_COLUMNS = ['project', 'value_driver']
+
 CVS_VCS_ROW_DRIVERS_TABLE = 'cvs_rowDrivers'
 CVS_VCS_ROW_DRIVERS_COLUMNS = ['vcs_row', 'value_driver']
 
@@ -268,21 +271,22 @@ def get_all_value_driver_vcs(db_connection: PooledMySQLConnection, project_id: i
 def get_all_value_driver(db_connection: PooledMySQLConnection, user_id: int) -> List[models.ValueDriver]:
     logger.debug(f'Fetching all value drivers for user with id={user_id}.')
 
-    where_statement = f'user = %s'
-    where_values = [user_id]
     try:
-        select_statement = MySQLStatementBuilder(db_connection)
-        results = select_statement \
-            .select(CVS_VALUE_DRIVER_TABLE, CVS_VALUE_DRIVER_COLUMNS) \
-            .where(where_statement, where_values) \
-            .order_by(['id'], Sort.ASCENDING) \
-            .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+        query = f'SELECT DISTINCT cvd.*, cpvd.project \
+                FROM cvs_value_drivers cvd \
+                LEFT JOIN cvs_project_value_drivers cpvd ON cvd.id = cpvd.value_driver \
+                LEFT JOIN projects_participants pp ON cpvd.project = pp.project_id \
+                LEFT JOIN projects_subprojects ps ON cpvd.project = ps.native_project_id \
+                WHERE (pp.user_id = %s OR (cvd.user = %s))'
 
+        with db_connection.cursor(prepared=True, dictionary=True) as cursor:
+            cursor.execute(query, [user_id, user_id])
+            res = cursor.fetchall()
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
         raise exceptions.ValueDriverNotFoundException
 
-    return [populate_value_driver(result) for result in results]
+    return [populate_value_driver(result) for result in res]
 
 
 def get_all_value_drivers_vcs_row(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
@@ -368,6 +372,24 @@ def update_vcs_need_driver(db_connection: PooledMySQLConnection, need_id: int, v
     return True
 
 
+def add_project_value_drivers(db_connection: PooledMySQLConnection, project_id: int,
+                              value_driver_ids: List[int]) -> bool:
+    logger.debug(f'Adding relation between project_id={project_id} and value_driver_ids={value_driver_ids}')
+
+    try:
+        insert_statement = f'INSERT INTO {CVS_PROJECT_VALUE_DRIVER_TABLE} (project, value_driver) VALUES (%s, %s) ON DUPLICATE KEY UPDATE `project`=`project`'
+        prepared_list = []
+        for index, value_driver_id in enumerate(value_driver_ids):
+            prepared_list.append((project_id, value_driver_id))
+        with db_connection.cursor(prepared=True) as cursor:
+            cursor.executemany(insert_statement, prepared_list)
+    except Error as e:
+        logger.debug(f'Error {e.errno} {e.msg}')
+        raise exceptions.ProjectValueDriverFailedToCreateException
+
+    return True
+
+
 def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int) -> models.ValueDriver:
     logger.debug(f'Fetching value driver with id={value_driver_id}.')
 
@@ -397,6 +419,7 @@ def create_value_driver(db_connection: PooledMySQLConnection, user_id: int,
             .set_values([user_id, value_driver_post.name, value_driver_post.unit]) \
             .execute(fetch_type=FetchType.FETCH_NONE)
         value_driver_id = insert_statement.last_insert_id
+        add_project_value_drivers(db_connection, value_driver_post.project_id, [value_driver_id])
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
         raise exceptions.ValueDriverFailedToCreateException
@@ -405,7 +428,7 @@ def create_value_driver(db_connection: PooledMySQLConnection, user_id: int,
 
 
 def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int,
-                      new_value_driver: models.ValueDriverPost) -> models.ValueDriver:
+                      new_value_driver: models.ValueDriverPut) -> models.ValueDriver:
     logger.debug(f'Editing value driver with id={value_driver_id}.')
 
     update_statement = MySQLStatementBuilder(db_connection)
@@ -437,6 +460,28 @@ def delete_value_driver(db_connection: PooledMySQLConnection, value_driver_id: i
     return True
 
 
+def delete_project_value_driver(db_connection: PooledMySQLConnection, project_id: int, value_driver_id: int) -> bool:
+    logger.debug(f'Deleting relation with project={project_id} AND value_driver={value_driver_id}.')
+
+    delete_statement = MySQLStatementBuilder(db_connection)
+    _, rows = delete_statement.delete(CVS_PROJECT_VALUE_DRIVER_TABLE) \
+        .where('project = %s AND value_driver = %s', [project_id, value_driver_id]) \
+        .execute(return_affected_rows=True)
+
+    if rows == 0:
+        raise exceptions.ProjectValueDriverNotFoundException(project_id=project_id, value_driver_id=value_driver_id)
+
+    count_statement = MySQLStatementBuilder(db_connection)
+    result = count_statement.count(CVS_PROJECT_VALUE_DRIVER_TABLE) \
+        .where('value_driver = %s', [value_driver_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if result['count'] == 0:
+        return delete_value_driver(db_connection, value_driver_id)
+
+    return True
+
+
 def delete_all_value_drivers(db_connection: PooledMySQLConnection, user_id: int) -> bool:
     logger.debug(f'Deleting all value drivers for user with id={user_id}.')
 
@@ -449,10 +494,14 @@ def delete_all_value_drivers(db_connection: PooledMySQLConnection, user_id: int)
 
 
 def populate_value_driver(db_result) -> models.ValueDriver:
+    logger.debug(f'Populating value driver with: {db_result}')
+    project = None
+    if 'project' in db_result and db_result['project']: project = [db_result['project']]
     return models.ValueDriver(
         id=db_result['id'],
         name=db_result['name'],
-        unit=db_result['unit']
+        unit=db_result['unit'],
+        projects=project
     )
 
 

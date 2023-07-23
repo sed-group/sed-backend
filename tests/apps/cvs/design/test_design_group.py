@@ -133,7 +133,7 @@ def test_add_value_driver_to_design_group(client, std_headers, std_user):
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
     dg = tu.seed_random_design_group(project.id)
-    vd = tu.seed_random_value_driver(current_user.id)
+    vd = tu.seed_random_value_driver(current_user.id, project.id)
     # Act
     res = client.put(f'/api/cvs/project/{project.id}/design-group/{dg.id}', headers=std_headers, json={
         'name': dg.name,
@@ -153,7 +153,7 @@ def test_remove_value_driver_from_design_group(client, std_headers, std_user):
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
     dg = tu.seed_random_design_group(project.id)
-    vd = tu.seed_random_value_driver(current_user.id)
+    vd = tu.seed_random_value_driver(current_user.id, project.id)
     dg.vds.append(vd)
     # Act
     res = client.put(f'/api/cvs/project/{project.id}/design-group/{dg.id}', headers=std_headers, json={

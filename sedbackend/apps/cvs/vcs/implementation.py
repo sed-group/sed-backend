@@ -244,10 +244,10 @@ def create_value_driver(user_id: int, value_driver_post: models.ValueDriverPost)
 
 
 def edit_value_driver(value_driver_id: int,
-                      value_driver_post: models.ValueDriverPost) -> models.ValueDriver:
+                      value_driver: models.ValueDriverPut) -> models.ValueDriver:
     try:
         with get_connection() as con:
-            result = storage.edit_value_driver(con, value_driver_id, value_driver_post)
+            result = storage.edit_value_driver(con, value_driver_id, value_driver)
             con.commit()
             return result
     except exceptions.ValueDriverNotFoundException:
@@ -267,10 +267,10 @@ def edit_value_driver(value_driver_id: int,
         )
 
 
-def delete_value_driver(value_driver_id: int) -> bool:
+def delete_value_driver(project_id: int, value_driver_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.delete_value_driver(con, value_driver_id)
+            res = storage.delete_project_value_driver(con, project_id, value_driver_id)
             con.commit()
             return res
     except exceptions.ValueDriverNotFoundException:
@@ -287,6 +287,11 @@ def delete_value_driver(value_driver_id: int) -> bool:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
+        )
+    except exceptions.ProjectValueDriverNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project={project_id} <-> value driver={value_driver_id} relation.'
         )
 
 
@@ -324,6 +329,25 @@ def add_vcs_multiple_needs_drivers(need_driver_ids: List[Tuple[int, int]]):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Badly formatted request'
         )
+
+
+def add_project_multiple_value_drivers(project_id: int, value_driver_ids: List[int]):
+    try:
+        with get_connection() as con:
+            res = storage.add_project_value_drivers(con, project_id, value_driver_ids)
+            con.commit()
+            return res
+    except exceptions.GenericDatabaseException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Badly formatted request'
+        )
+    except exceptions.ProjectValueDriverFailedToCreateException:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Failed to create project={project_id} and value driver={value_driver_ids} relation'
+        )
+
 
 # ======================================================================================================================
 # VCS ISO Processes

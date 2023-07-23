@@ -59,6 +59,14 @@ class ValueDriverFailedToCreateException(Exception):
     pass
 
 
+class ProjectValueDriverNotFoundException(Exception):
+    pass
+
+
+class ProjectValueDriverFailedToCreateException(Exception):
+    pass
+
+
 # ======================================================================================================================
 # VCS ISO Processes
 # ======================================================================================================================

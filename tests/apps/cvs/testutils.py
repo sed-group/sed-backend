@@ -94,7 +94,7 @@ def delete_VCS_with_ids(user_id: int, project_id: int, vcs_id_list: List[int]):
         vcs_impl.delete_vcs(user_id, project_id, vcsid)
 
 
-def random_value_driver(name: str = None, unit: str = None):
+def random_value_driver_post(user_id: int, project_id: int, name: str = None, unit: str = None):
     if name is None:
         name = tu.random_str(5, 50)
     if unit is None:
@@ -102,15 +102,16 @@ def random_value_driver(name: str = None, unit: str = None):
 
     return sedbackend.apps.cvs.vcs.models.ValueDriverPost(
         name=name,
-        unit=unit
+        unit=unit,
+        project_id=project_id
     )
 
 
-def seed_random_value_driver(user_id) -> sedbackend.apps.cvs.vcs.models.ValueDriver:
-    value_driver = random_value_driver()
+def seed_random_value_driver(user_id: int, project_id: int) -> sedbackend.apps.cvs.vcs.models.ValueDriver:
+    value_driver_post = random_value_driver_post(user_id=user_id, project_id=project_id)
 
     new_value_driver = sedbackend.apps.cvs.vcs.implementation.create_value_driver(
-        user_id, value_driver)
+        user_id, value_driver_post)
 
     return new_value_driver
 
@@ -157,7 +158,7 @@ def random_table_row(
         stakeholder_expectations = tu.random_str(5, 50)
 
     if stakeholder_needs is None:
-        stakeholder_needs = seed_stakeholder_needs(user_id)
+        stakeholder_needs = seed_stakeholder_needs(user_id, project_id)
 
     table_row = sedbackend.apps.cvs.vcs.models.VcsRowPost(
         index=index,
@@ -204,6 +205,7 @@ def delete_subprocesses(subprocesses, project_id):
 
 
 def random_stakeholder_need(user_id,
+                            project_id: int,
                             need: str = None,
                             rank_weight: float = None,
                             value_driver_ids: List[int] = None) -> sedbackend.apps.cvs.vcs.models.StakeholderNeedPost:
@@ -214,7 +216,7 @@ def random_stakeholder_need(user_id,
         rank_weight = round(random.random(), ndigits=4)
 
     if value_driver_ids is None:
-        vd = seed_random_value_driver(user_id)
+        vd = seed_random_value_driver(user_id, project_id)
         value_driver_ids = [vd.id]
 
     stakeholder_need = sedbackend.apps.cvs.vcs.models.StakeholderNeedPost(
@@ -225,10 +227,10 @@ def random_stakeholder_need(user_id,
     return stakeholder_need
 
 
-def seed_stakeholder_needs(user_id, amount=10) -> List[sedbackend.apps.cvs.vcs.models.StakeholderNeedPost]:
+def seed_stakeholder_needs(user_id, project_id, amount=10) -> List[sedbackend.apps.cvs.vcs.models.StakeholderNeedPost]:
     stakeholder_needs = []
     for _ in range(amount):
-        stakeholder_need = random_stakeholder_need(user_id)
+        stakeholder_need = random_stakeholder_need(user_id, project_id)
         stakeholder_needs.append(stakeholder_need)
 
     return stakeholder_needs

@@ -144,6 +144,14 @@ async def create_value_driver(value_driver_post: models.ValueDriverPost,
                               user: User = Depends(get_current_active_user)) -> models.ValueDriver:
     return implementation.create_value_driver(user.id, value_driver_post)
 
+@router.post(
+    '/project/{native_project_id}/value-driver',
+    summary=f'Add value drivers to project',
+    response_model=bool,
+    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
+)
+async def add_drivers_to_project(native_project_id: int, value_driver_ids: List[int]):
+    return implementation.add_project_multiple_value_drivers(native_project_id, value_driver_ids)
 
 @router.post(
     '/project/{native_project_id}/value-driver/need',
@@ -159,17 +167,17 @@ async def add_drivers_to_needs(native_project_id: int, need_driver_ids: List[Tup
     summary='Edits a value driver',
     response_model=models.ValueDriver,
 )
-async def edit_value_driver(value_driver_id: int, value_driver_post: models.ValueDriverPost) -> models.ValueDriver:
-    return implementation.edit_value_driver(value_driver_id, value_driver_post)
+async def edit_value_driver(value_driver_id: int, value_driver: models.ValueDriverPut) -> models.ValueDriver:
+    return implementation.edit_value_driver(value_driver_id, value_driver)
 
 
 @router.delete(
-    '/value-driver/{value_driver_id}',
+    '/project/{native_project_id}/value-driver/{value_driver_id}',
     summary='Deletes a value driver',
     response_model=bool,
 )
-async def delete_value_driver(value_driver_id: int) -> bool:
-    return implementation.delete_value_driver(value_driver_id)
+async def delete_value_driver(native_project_id: int, value_driver_id: int) -> bool:
+    return implementation.delete_value_driver(native_project_id, value_driver_id)
 
 
 # ======================================================================================================================
