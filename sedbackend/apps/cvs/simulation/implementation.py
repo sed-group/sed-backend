@@ -188,10 +188,10 @@ def get_sim_settings(project_id: int) -> models.SimSettings:
         )
 
 
-def edit_sim_settings(project_id: int, sim_settings: models.EditSimSettings) -> bool:
+def edit_sim_settings(project_id: int, sim_settings: models.EditSimSettings, user_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.edit_simulation_settings(con, project_id, sim_settings)
+            res = storage.edit_simulation_settings(con, project_id, sim_settings, user_id)
             con.commit()
             return res
     except InvalidFlowSettingsException:

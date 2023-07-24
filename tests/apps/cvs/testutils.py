@@ -586,7 +586,7 @@ def seed_random_sim_settings(user_id: int, project_id: int) -> sim_model.SimSett
         runs=runs
     )
 
-    sim_impl.edit_sim_settings(project_id, sim_settings)
+    sim_impl.edit_sim_settings(project_id, sim_settings, user_id)
     return sim_impl.get_sim_settings(project_id)
 
 

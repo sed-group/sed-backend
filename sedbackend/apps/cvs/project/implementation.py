@@ -13,10 +13,10 @@ def get_all_cvs_project(user_id: int) -> ListChunk[models.CVSProject]:
         return storage.get_all_cvs_project(con, user_id)
 
 
-def get_cvs_project(project_id: int) -> models.CVSProject:
+def get_cvs_project(project_id: int, user_id: int) -> models.CVSProject:
     try:
         with get_connection() as con:
-            return storage.get_cvs_project(con, project_id)
+            return storage.get_cvs_project(con, project_id, user_id)
     except exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

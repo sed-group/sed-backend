@@ -346,7 +346,7 @@ def get_simulation_settings(db_connection: PooledMySQLConnection, project_id: in
 
 
 def edit_simulation_settings(db_connection: PooledMySQLConnection, project_id: int,
-                             sim_settings: models.EditSimSettings):
+                             sim_settings: models.EditSimSettings, user_id: int):
     logger.debug(f'Editing simulation settings for project {project_id}')
 
     if (sim_settings.flow_process is None and sim_settings.flow_start_time is None) \
@@ -363,7 +363,7 @@ def edit_simulation_settings(db_connection: PooledMySQLConnection, project_id: i
 
     if sim_settings.flow_process is not None:
         flow_process_exists = False
-        vcss = vcs_storage.get_all_vcs(db_connection, project_id).chunk
+        vcss = vcs_storage.get_all_vcs(db_connection, project_id, user_id).chunk
         for vcs in vcss:
             rows = vcs_storage.get_vcs_table(db_connection, project_id, vcs.id)
             for row in rows:

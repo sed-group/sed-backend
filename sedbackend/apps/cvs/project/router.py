@@ -28,8 +28,8 @@ async def get_all_cvs_project(user: User = Depends(get_current_active_user)) \
     response_model=models.CVSProject,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
-async def get_csv_project(native_project_id: int) -> models.CVSProject:
-    return implementation.get_cvs_project(native_project_id)
+async def get_csv_project(native_project_id: int, user: User = Depends(get_current_active_user)) -> models.CVSProject:
+    return implementation.get_cvs_project(native_project_id, user.id)
 
 
 @router.post(

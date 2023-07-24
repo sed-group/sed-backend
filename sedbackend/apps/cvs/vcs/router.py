@@ -23,8 +23,8 @@ router = APIRouter()
     response_model=ListChunk[models.VCS],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
-async def get_all_vcs(native_project_id: int) -> ListChunk[models.VCS]:
-    return implementation.get_all_vcs(native_project_id)
+async def get_all_vcs(native_project_id: int, user: User = Depends(get_current_active_user)) -> ListChunk[models.VCS]:
+    return implementation.get_all_vcs(native_project_id, user.id)
 
 
 @router.get(
@@ -33,8 +33,8 @@ async def get_all_vcs(native_project_id: int) -> ListChunk[models.VCS]:
     response_model=models.VCS,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
-async def get_vcs(native_project_id: int, vcs_id: int) -> models.VCS:
-    return implementation.get_vcs(native_project_id, vcs_id)
+async def get_vcs(native_project_id: int, vcs_id: int, user: User = Depends(get_current_active_user)) -> models.VCS:
+    return implementation.get_vcs(native_project_id, vcs_id, user.id)
 
 
 @router.post(
@@ -263,5 +263,5 @@ async def delete_subprocess(native_project_id: int, subprocess_id: int) -> bool:
     response_model=List[models.VCS],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def duplicate_vcs(native_project_id: int, vcs_id: int, n: int) -> List[models.VCS]:
-    return implementation.duplicate_vcs(native_project_id, vcs_id, n)
+async def duplicate_vcs(native_project_id: int, vcs_id: int, n: int, user: User = Depends(get_current_active_user)) -> List[models.VCS]:
+    return implementation.duplicate_vcs(native_project_id, vcs_id, n, user.id)
