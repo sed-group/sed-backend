@@ -406,7 +406,7 @@ def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int)
         .where(where_statement, where_values) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
     logger.debug(results)
-    if results is None:
+    if results == 0:
         raise exceptions.ValueDriverNotFoundException(value_driver_id=value_driver_id)
 
     vds = combine_value_drivers([populate_value_driver(result) for result in results])
