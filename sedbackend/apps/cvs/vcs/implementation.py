@@ -191,7 +191,7 @@ def get_all_value_driver_vcs(project_id: int, vcs_id: int) -> List[models.ValueD
         )
 
 
-def get_all_value_drivers_vcs_row(project_id: int, vcs_id: int, row_id: int) -> List[models.ValueDriver]:
+def get_all_value_drivers_vcs_row(project_id: int, vcs_id: int, row_id: int, user_id: int) -> List[models.ValueDriver]:
     try:
         with get_connection() as con:
             res = storage.get_all_value_drivers_vcs_row(con, project_id, vcs_id, row_id, user_id)
