@@ -122,8 +122,9 @@ async def get_all_value_driver_vcs(native_project_id: int, vcs_id: int) -> List[
     response_model=List[ValueDriver],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
-async def get_value_drivers_vcs_row(native_project_id: int, vcs_id: int, vcs_row_id: int) -> List[ValueDriver]:
-    return vcs_impl.get_all_value_drivers_vcs_row(native_project_id, vcs_id, vcs_row_id)
+async def get_value_drivers_vcs_row(native_project_id: int, vcs_id: int, vcs_row_id: int,
+                                    user: User = Depends(get_current_active_user)) -> List[ValueDriver]:
+    return vcs_impl.get_all_value_drivers_vcs_row(native_project_id, vcs_id, vcs_row_id, user.id)
 
 
 @router.get(
@@ -131,8 +132,8 @@ async def get_value_drivers_vcs_row(native_project_id: int, vcs_id: int, vcs_row
     summary='Returns a value driver',
     response_model=models.ValueDriver,
 )
-async def get_value_driver(value_driver_id: int) -> models.ValueDriver:
-    return implementation.get_value_driver(value_driver_id)
+async def get_value_driver(value_driver_id: int, user: User = Depends(get_current_active_user)) -> models.ValueDriver:
+    return implementation.get_value_driver(value_driver_id, user.id)
 
 
 @router.post(
@@ -167,8 +168,9 @@ async def add_drivers_to_needs(native_project_id: int, need_driver_ids: List[Tup
     summary='Edits a value driver',
     response_model=models.ValueDriver,
 )
-async def edit_value_driver(value_driver_id: int, value_driver: models.ValueDriverPut) -> models.ValueDriver:
-    return implementation.edit_value_driver(value_driver_id, value_driver)
+async def edit_value_driver(value_driver_id: int, value_driver: models.ValueDriverPut,
+                            user: User = Depends(get_current_active_user)) -> models.ValueDriver:
+    return implementation.edit_value_driver(value_driver_id, value_driver, user.id)
 
 
 @router.delete(

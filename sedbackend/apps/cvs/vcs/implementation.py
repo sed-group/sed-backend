@@ -191,10 +191,10 @@ def get_all_value_driver_vcs(project_id: int, vcs_id: int) -> List[models.ValueD
         )
 
 
-def get_all_value_drivers_vcs_row(project_id: int, vcs_id: int, row_id: int) -> List[models.ValueDriver]:
+def get_all_value_drivers_vcs_row(project_id: int, vcs_id: int, row_id: int, user_id: int) -> List[models.ValueDriver]:
     try:
         with get_connection() as con:
-            res = storage.get_all_value_drivers_vcs_row(con, project_id, vcs_id, row_id)
+            res = storage.get_all_value_drivers_vcs_row(con, project_id, vcs_id, row_id, user_id)
             con.commit()
             return res
     except exceptions.VCSNotFoundException:
@@ -214,10 +214,10 @@ def get_all_value_drivers_vcs_row(project_id: int, vcs_id: int, row_id: int) -> 
         )
 
 
-def get_value_driver(value_driver_id: int) -> models.ValueDriver:
+def get_value_driver(value_driver_id: int, user_id: int) -> models.ValueDriver:
     try:
         with get_connection() as con:
-            return storage.get_value_driver(con, value_driver_id)
+            return storage.get_value_driver(con, value_driver_id, user_id)
     except exceptions.ValueDriverNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -244,10 +244,10 @@ def create_value_driver(user_id: int, value_driver_post: models.ValueDriverPost)
 
 
 def edit_value_driver(value_driver_id: int,
-                      value_driver: models.ValueDriverPut) -> models.ValueDriver:
+                      value_driver: models.ValueDriverPut, user_id: int) -> models.ValueDriver:
     try:
         with get_connection() as con:
-            result = storage.edit_value_driver(con, value_driver_id, value_driver)
+            result = storage.edit_value_driver(con, value_driver_id, value_driver, user_id)
             con.commit()
             return result
     except exceptions.ValueDriverNotFoundException:

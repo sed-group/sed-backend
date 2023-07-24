@@ -1,4 +1,5 @@
-from typing import List, Tuple
+from collections import defaultdict
+from typing import List, Tuple, Type
 from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
 from mysql.connector import Error
@@ -6,6 +7,7 @@ from sedbackend.apps.cvs.project import exceptions as project_exceptions
 from sedbackend.apps.cvs.project.storage import get_cvs_project
 from sedbackend.apps.cvs.vcs import models, exceptions
 from sedbackend.apps.cvs.life_cycle import storage as life_cycle_storage, models as life_cycle_models
+from sedbackend.apps.cvs.vcs.models import ValueDriver
 from sedbackend.libs.datastructures.pagination import ListChunk
 from sedbackend.apps.core.files import storage as file_storage, exceptions as file_exceptions
 from mysqlsb import MySQLStatementBuilder, Sort, FetchType
@@ -286,11 +288,11 @@ def get_all_value_driver(db_connection: PooledMySQLConnection, user_id: int) -> 
         logger.debug(f'Error msg: {e.msg}')
         raise exceptions.ValueDriverNotFoundException
 
-    return [populate_value_driver(result) for result in res]
+    return combine_value_drivers([populate_value_driver(result) for result in res])
 
 
 def get_all_value_drivers_vcs_row(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
-                                  vcs_row: int) -> List[models.ValueDriver]:
+                                  vcs_row: int, user_id: int) -> List[models.ValueDriver]:
     logger.debug(f'Fetching all value drivers for vcs with id={vcs_id} and vcs row with id={vcs_row}')
 
     get_vcs(db_connection, project_id, vcs_id)  # Perform checks for existing VCS and matching project
@@ -302,7 +304,7 @@ def get_all_value_drivers_vcs_row(db_connection: PooledMySQLConnection, project_
             value_drivers += [vd.id for vd in need.value_drivers]
 
     value_drivers = list(dict.fromkeys(value_drivers))
-    return [get_value_driver(db_connection, vd_id) for vd_id in value_drivers]
+    return [get_value_driver(db_connection, vd_id, user_id) for vd_id in value_drivers]
 
 
 def get_vcs_need_drivers(db_connection: PooledMySQLConnection, need_id: int) -> List[models.ValueDriver]:
@@ -390,22 +392,40 @@ def add_project_value_drivers(db_connection: PooledMySQLConnection, project_id: 
     return True
 
 
-def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int) -> models.ValueDriver:
-    logger.debug(f'Fetching value driver with id={value_driver_id}.')
+def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int, user_id: int) -> ValueDriver:
+    logger.debug(f'User={user_id} fetching value driver with id={value_driver_id}.')
 
-    where_statement = f'id = %s'
-    where_values = [value_driver_id]
+    query = f'SELECT cvd.*, cpvd.project \
+            FROM cvs_value_drivers cvd \
+            INNER JOIN cvs_project_value_drivers cpvd ON cpvd.value_driver = cvd.id \
+            INNER JOIN projects_subprojects ps ON cpvd.project = ps.native_project_id \
+            WHERE cvd.id = %s AND (ps.owner_id = %s OR ps.id IN (SELECT project_id FROM projects_participants WHERE user_id = %s));'
 
-    select_statement = MySQLStatementBuilder(db_connection)
-    result = select_statement \
-        .select(CVS_VALUE_DRIVER_TABLE, CVS_VALUE_DRIVER_COLUMNS) \
-        .where(where_statement, where_values) \
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+    with db_connection.cursor(prepared=True, dictionary=True) as cursor:
+        cursor.execute(query, [value_driver_id, user_id, user_id])
+        res = cursor.fetchall()
 
-    if result is None:
+    if len(res) == 0:
         raise exceptions.ValueDriverNotFoundException(value_driver_id=value_driver_id)
 
-    return populate_value_driver(result)
+    vds = combine_value_drivers([populate_value_driver(result) for result in res])
+
+    return vds[0]
+
+
+def combine_value_drivers(data: list[ValueDriver]) -> list[ValueDriver]:
+    combined_dict = {}
+
+    for entry in data:
+        key = (entry.id, entry.name)
+        if key not in combined_dict:
+            combined_dict[key] = ValueDriver(id=entry.id, name=entry.name, unit=None, projects=[])
+        combined_dict[key].unit = entry.unit if entry.unit is not None else combined_dict[key].unit
+        if entry.projects is not None:
+            combined_dict[key].projects.extend(entry.projects)
+
+    combined_data = list(combined_dict.values())
+    return combined_data
 
 
 def create_value_driver(db_connection: PooledMySQLConnection, user_id: int,
@@ -424,11 +444,11 @@ def create_value_driver(db_connection: PooledMySQLConnection, user_id: int,
         logger.debug(f'Error msg: {e.msg}')
         raise exceptions.ValueDriverFailedToCreateException
 
-    return get_value_driver(db_connection, value_driver_id)
+    return get_value_driver(db_connection, value_driver_id, user_id)
 
 
 def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int,
-                      new_value_driver: models.ValueDriverPut) -> models.ValueDriver:
+                      new_value_driver: models.ValueDriverPut, user_id: int) -> models.ValueDriver:
     logger.debug(f'Editing value driver with id={value_driver_id}.')
 
     update_statement = MySQLStatementBuilder(db_connection)
@@ -443,7 +463,7 @@ def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int
     if rows == 0:
         raise exceptions.ValueDriverFailedToUpdateException
 
-    return get_value_driver(db_connection, value_driver_id)
+    return get_value_driver(db_connection, value_driver_id, user_id)
 
 
 def delete_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int) -> bool:
