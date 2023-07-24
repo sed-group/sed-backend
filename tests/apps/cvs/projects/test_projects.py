@@ -13,7 +13,7 @@ import sedbackend.apps.core.users.implementation as impl_users
 
 def test_create_cvs_project(client, admin_headers):
     #Setup
-    name = testutils.random_str(3, 30)
+    name = testutils.random_str(5, 30)
     description = testutils.random_str(20, 200)
     currency = testutils.random_str(0, 10)
     
