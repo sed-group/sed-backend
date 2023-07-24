@@ -292,7 +292,7 @@ def get_all_value_driver(db_connection: PooledMySQLConnection, user_id: int) -> 
 
 
 def get_all_value_drivers_vcs_row(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
-                                  vcs_row: int) -> List[models.ValueDriver]:
+                                  vcs_row: int, user_id: int) -> List[models.ValueDriver]:
     logger.debug(f'Fetching all value drivers for vcs with id={vcs_id} and vcs row with id={vcs_row}')
 
     get_vcs(db_connection, project_id, vcs_id)  # Perform checks for existing VCS and matching project
@@ -304,7 +304,7 @@ def get_all_value_drivers_vcs_row(db_connection: PooledMySQLConnection, project_
             value_drivers += [vd.id for vd in need.value_drivers]
 
     value_drivers = list(dict.fromkeys(value_drivers))
-    return [get_value_driver(db_connection, vd_id) for vd_id in value_drivers]
+    return [get_value_driver(db_connection, vd_id, user_id) for vd_id in value_drivers]
 
 
 def get_vcs_need_drivers(db_connection: PooledMySQLConnection, need_id: int) -> List[models.ValueDriver]:
@@ -392,24 +392,23 @@ def add_project_value_drivers(db_connection: PooledMySQLConnection, project_id: 
     return True
 
 
-def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int) -> ValueDriver:
-    logger.debug(f'Fetching value driver with id={value_driver_id}.')
+def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int, user_id: int) -> ValueDriver:
+    logger.debug(f'User={user_id} fetching value driver with id={value_driver_id}.')
 
-    where_statement = f'cvs_value_drivers.id = %s'
-    where_values = [value_driver_id]
-    join_statement = f'cvs_project_value_drivers.value_driver = cvs_value_drivers.id'
+    query = f'SELECT cvd.*, cpvd.project \
+            FROM cvs_value_drivers cvd \
+            INNER JOIN cvs_project_value_drivers cpvd ON cpvd.value_driver = cvd.id \
+            INNER JOIN projects_subprojects ps ON cpvd.project = ps.native_project_id \
+            WHERE cvd.id = %s AND (ps.owner_id = %s OR ps.id IN (SELECT project_id FROM projects_participants WHERE user_id = %s));'
 
-    select_statement = MySQLStatementBuilder(db_connection)
-    results = select_statement \
-        .select(CVS_VALUE_DRIVER_TABLE, CVS_VALUE_DRIVER_COLUMNS + ['project']) \
-        .inner_join(CVS_PROJECT_VALUE_DRIVER_TABLE, join_statement) \
-        .where(where_statement, where_values) \
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-    logger.debug(results)
-    if len(results) == 0:
+    with db_connection.cursor(prepared=True, dictionary=True) as cursor:
+        cursor.execute(query, [value_driver_id, user_id, user_id])
+        res = cursor.fetchall()
+
+    if len(res) == 0:
         raise exceptions.ValueDriverNotFoundException(value_driver_id=value_driver_id)
 
-    vds = combine_value_drivers([populate_value_driver(result) for result in results])
+    vds = combine_value_drivers([populate_value_driver(result) for result in res])
 
     return vds[0]
 
@@ -445,11 +444,11 @@ def create_value_driver(db_connection: PooledMySQLConnection, user_id: int,
         logger.debug(f'Error msg: {e.msg}')
         raise exceptions.ValueDriverFailedToCreateException
 
-    return get_value_driver(db_connection, value_driver_id)
+    return get_value_driver(db_connection, value_driver_id, user_id)
 
 
 def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int,
-                      new_value_driver: models.ValueDriverPut) -> models.ValueDriver:
+                      new_value_driver: models.ValueDriverPut, user_id: int) -> models.ValueDriver:
     logger.debug(f'Editing value driver with id={value_driver_id}.')
 
     update_statement = MySQLStatementBuilder(db_connection)
@@ -464,7 +463,7 @@ def edit_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int
     if rows == 0:
         raise exceptions.ValueDriverFailedToUpdateException
 
-    return get_value_driver(db_connection, value_driver_id)
+    return get_value_driver(db_connection, value_driver_id, user_id)
 
 
 def delete_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int) -> bool:
