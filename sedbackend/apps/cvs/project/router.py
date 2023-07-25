@@ -49,8 +49,9 @@ async def create_csv_project(project_post: models.CVSProjectPost,
     response_model=models.CVSProject,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def edit_csv_project(native_project_id: int, project_post: models.CVSProjectPost) -> models.CVSProject:
-    return implementation.edit_cvs_project(project_id=native_project_id, project_post=project_post)
+async def edit_csv_project(native_project_id: int, project_post: models.CVSProjectPost,
+                           user: User = Depends(get_current_active_user)) -> models.CVSProject:
+    return implementation.edit_cvs_project(project_id=native_project_id, project_post=project_post, user_id=user.id)
 
 
 @router.delete(

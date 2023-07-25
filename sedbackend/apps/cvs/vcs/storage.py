@@ -95,6 +95,7 @@ def get_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, 
 
     return populate_vcs(db_connection, result, user_id)
 
+
 def check_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> models.VCS:
     logger.debug(f'CHECKING VCS with id={vcs_id}.')
 
@@ -113,10 +114,11 @@ def check_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int
     return result
 
 
-def create_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_post: models.VCSPost, user_id: int) -> models.VCS:
+def create_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_post: models.VCSPost,
+               user_id: int) -> models.VCS:
     logger.debug(f'Creating a VCS in project with id={project_id}.')
 
-    get_cvs_project(db_connection, project_id, user_id)  # Perform checks for existing project and correct user
+    check_cvs_project(db_connection, project_id, user_id)  # Perform checks for existing project and correct user
 
     if vcs_post.year_to < vcs_post.year_from:
         raise exceptions.VCSYearFromGreaterThanYearToException
@@ -128,7 +130,7 @@ def create_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_post: 
         .execute(fetch_type=FetchType.FETCH_NONE)
     vcs_id = insert_statement.last_insert_id
 
-    vcs = get_vcs(db_connection, project_id, vcs_id)
+    vcs = get_vcs(db_connection, project_id, vcs_id, user_id)
     return vcs
 
 

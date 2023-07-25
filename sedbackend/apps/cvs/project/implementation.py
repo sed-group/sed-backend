@@ -37,10 +37,10 @@ def create_cvs_project(project_post: models.CVSProjectPost, user_id: int) -> mod
         return result
 
 
-def edit_cvs_project(project_id: int, project_post: models.CVSProjectPost) -> models.CVSProject:
+def edit_cvs_project(project_id: int, project_post: models.CVSProjectPost, user_id) -> models.CVSProject:
     try:
         with get_connection() as con:
-            result = storage.edit_cvs_project(con, project_id, project_post)
+            result = storage.edit_cvs_project(con, project_id, project_post, user_id)
             con.commit()
             return result
     except exceptions.CVSProjectNotFoundException:

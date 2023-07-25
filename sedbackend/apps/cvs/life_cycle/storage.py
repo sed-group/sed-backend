@@ -271,7 +271,7 @@ def update_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: i
     logger.debug(f'Updating bpmn with vcs id={vcs_id}.')
 
     # Check if vcs exists and matches project id
-    vcs_storage.get_vcs(db_connection, project_id, vcs_id)
+    vcs_storage.check_vcs(db_connection, project_id, vcs_id)
 
     for node in bpmn.nodes:
         updated_node = models.NodePost(
