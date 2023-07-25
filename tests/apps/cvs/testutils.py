@@ -457,11 +457,11 @@ def delete_formulas(project_id: int, vcsRow_Dg_ids: List[Tuple[int, int]]):
         connect_impl.delete_formulas(project_id, vcs_row, dg)
 
 
-def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int) -> vcs_model.VcsRow:
+def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int, user_id: int) -> vcs_model.VcsRow:
     rows = list(sorted(vcs_impl.get_vcs_table(
         project_id, vcs_id), key=lambda row: row.index))
     formulas = connect_impl.get_all_formulas(
-        project_id, vcs_id, design_group_id)
+        project_id, vcs_id, design_group_id, user_id)
 
     rows.reverse()  # Reverse to find last technical process
     for row in rows:

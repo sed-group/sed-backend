@@ -182,7 +182,7 @@ def test_run_mc_sim_rate_invalid_order(client, std_headers, std_user):
     current_user = impl_users.impl_get_user_with_username(std_user.username)
 
     project, vcs, design_group, design, settings = sim_tu.setup_single_simulation(current_user.id)
-    first_tech_process = tu.edit_rate_order_formulas(project.id, vcs.id, design_group.id)
+    first_tech_process = tu.edit_rate_order_formulas(project.id, vcs.id, design_group.id, current_user.id)
     if first_tech_process is None:
         raise sim_exceptions.NoTechnicalProcessException
     settings.monte_carlo = False

@@ -1099,7 +1099,7 @@ def duplicate_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id:
             year_from=vcs.year_from,
             year_to=vcs.year_to
         )
-        new_vcs = create_vcs(db_connection, vcs.project.id, vcs_post)
+        new_vcs = create_vcs(db_connection, vcs.project.id, vcs_post, user_id)
         vcs_list.append(new_vcs)
     return vcs_list
 
