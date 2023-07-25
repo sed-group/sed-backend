@@ -1,10 +1,6 @@
-from fastapi import Depends
 from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
 
-from sedbackend.apps.core.authentication import exceptions as auth_exceptions
-from sedbackend.apps.core.authentication.utils import get_current_active_user
-from sedbackend.apps.core.users.models import User
 from sedbackend.apps.core.users.storage import db_get_user_safe_with_id
 from sedbackend.apps.cvs.project import models as models, exceptions as exceptions
 from sedbackend.libs.datastructures.pagination import ListChunk
@@ -111,6 +107,24 @@ def delete_cvs_project(db_connection: PooledMySQLConnection, project_id: int, us
 
     if subproject_rows == 0:
         raise exceptions.SubProjectFailedDeletionException
+
+    delete_value_drivers_without_project(db_connection)
+
+    return True
+
+
+# This function could be a mysql trigger instead
+def delete_value_drivers_without_project(db_connection: PooledMySQLConnection) -> bool:
+    logger.debug(f'Checking and deleting if there are any value drivers without project relations')
+
+    query = f'DELETE cvd FROM cvs_value_drivers cvd \
+        LEFT JOIN cvs_project_value_drivers cpvd ON cvd.id = cpvd.value_driver \
+        WHERE cpvd.value_driver IS NULL;'
+
+    with db_connection.cursor() as cursor:
+        cursor.execute(query)
+        rows = cursor.rowcount
+    logger.debug(f'Removed {rows} value drivers')
 
     return True
 
