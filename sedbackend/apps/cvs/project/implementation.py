@@ -71,6 +71,11 @@ def delete_cvs_project(project_id: int, user_id: int) -> bool:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Failed to remove project with id={project_id}.',
         )
+    except exceptions.SubProjectFailedDeletionException:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Failed to remove sub-project with CVS native_project_id={project_id}'
+        )
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
