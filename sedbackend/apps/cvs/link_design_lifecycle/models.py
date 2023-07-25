@@ -1,5 +1,10 @@
+from typing import List
+
 from pydantic import BaseModel
 from enum import Enum
+
+from sedbackend.apps.cvs.market_input.models import MarketInputGet
+from sedbackend.apps.cvs.vcs.models import ValueDriver
 
 
 class TimeFormat(str, Enum):
@@ -28,6 +33,8 @@ class FormulaGet(BaseModel):
     cost: str
     revenue: str
     rate: Rate
+    value_drivers: List[ValueDriver] = []
+    external_factors: List[MarketInputGet] = []
 
 
 class FormulaPost(BaseModel):
@@ -36,6 +43,8 @@ class FormulaPost(BaseModel):
     cost: str
     revenue: str
     rate: Rate
+    value_drivers: List[int] = []
+    external_factors: List[int] = []
 
 
 class VcsDgPairs(BaseModel):

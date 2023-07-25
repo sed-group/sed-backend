@@ -11,13 +11,13 @@ from sedbackend.apps.cvs.link_design_lifecycle import models, exceptions
 from mysqlsb import FetchType, MySQLStatementBuilder
 
 CVS_FORMULAS_TABLE = 'cvs_design_mi_formulas'
-CVS_FORMULAS_COLUMNS = ['vcs_row', 'design_group', 'time', 'time_unit', 'cost', 'revenue', 'rate']
+CVS_FORMULAS_COLUMNS = ['project', 'vcs_row', 'design_group', 'time', 'time_unit', 'cost', 'revenue', 'rate']
 
 CVS_FORMULAS_VALUE_DRIVERS_TABLE = 'cvs_formulas_value_drivers'
-CVS_FORMULAS_VALUE_DRIVERS_COLUMNS = ['formulas', 'value_driver']
+CVS_FORMULAS_VALUE_DRIVERS_COLUMNS = ['vcs_row', 'design_group', 'value_driver']
 
-CVS_FORMULAS_MARKET_INPUTS_TABLE = 'cvs_formulas_market_inputs'
-CVS_FORMULAS_MARKET_INPUTS_COLUMNS = ['formulas', 'market_input']
+CVS_FORMULAS_EXTERNAL_FACTORS_TABLE = 'cvs_formulas_external_factors'
+CVS_FORMULAS_EXTERNAL_FACTORS_COLUMNS = ['vcs_row', 'design_group', 'external_factor']
 
 
 def create_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_group_id: int,
@@ -27,16 +27,74 @@ def create_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, desig
     values = [vcs_row_id, design_group_id, formulas.time, formulas.time_unit.value, formulas.cost, formulas.revenue,
               formulas.rate.value]
 
-    insert_statement = MySQLStatementBuilder(db_connection)
-    insert_statement \
-        .insert(table=CVS_FORMULAS_TABLE, columns=CVS_FORMULAS_COLUMNS) \
-        .set_values(values=values) \
-        .execute(fetch_type=FetchType.FETCH_ONE)
+    try:
+        insert_statement = MySQLStatementBuilder(db_connection)
+        insert_statement \
+            .insert(table=CVS_FORMULAS_TABLE, columns=CVS_FORMULAS_COLUMNS) \
+            .set_values(values=values) \
+            .execute(fetch_type=FetchType.FETCH_NONE)
+    except Exception as e:
+        logger.error(f'Error while inserting formulas: {e}')
+        raise exceptions.FormulasFailedUpdateException
 
-    if insert_statement is not None:  # TODO actually check for potential problems
-        return True
+    add_value_driver_formulas(db_connection, vcs_row_id, design_group_id, formulas.value_drivers)
+    add_external_factor_formulas(db_connection, vcs_row_id, design_group_id, formulas.external_factors)
 
-    return False
+    return True
+
+
+def add_value_driver_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_group_id: int,
+                              value_drivers: List[int]):
+    try:
+        prepared_list = []
+        insert_statement = f'INSERT INTO {CVS_FORMULAS_VALUE_DRIVERS_TABLE} (vcs_row, design_group, value_driver) VALUES'
+        for value_driver_id in value_drivers:
+            insert_statement += f'(%s, %s, %s),'
+            prepared_list.append(vcs_row_id)
+            prepared_list.append(design_group_id)
+            prepared_list.append(value_driver_id)
+        with db_connection.cursor(prepared=True) as cursor:
+            cursor.execute(insert_statement[:-1], prepared_list)
+    except Exception as e:
+        logger.error(f'Error while inserting value drivers: {e}')
+        raise exceptions.FormulasFailedUpdateException
+
+
+def delete_value_driver_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_group_id: int,
+                                 value_drivers: List[int]):
+    delete_statement = MySQLStatementBuilder(db_connection)
+    _, rows = delete_statement \
+        .delete(CVS_FORMULAS_VALUE_DRIVERS_TABLE) \
+        .where('vcs_row = %s and design_group = %s and value_driver in %s',
+               [vcs_row_id, design_group_id, value_drivers]) \
+        .execute(return_affected_rows=True)
+
+
+def add_external_factor_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_group_id: int,
+                                 external_factors: List[int]):
+    try:
+        prepared_list = []
+        insert_statement = f'INSERT INTO {CVS_FORMULAS_EXTERNAL_FACTORS_TABLE} (vcs_row, design_group, market_input) VALUES'
+        for external_factor_id in external_factors:
+            insert_statement += f'(%s, %s, %s),'
+            prepared_list.append(vcs_row_id)
+            prepared_list.append(design_group_id)
+            prepared_list.append(external_factor_id)
+        with db_connection.cursor(prepared=True) as cursor:
+            cursor.execute(insert_statement[:-1], prepared_list)
+    except Exception as e:
+        logger.error(f'Error while inserting external factors: {e}')
+        raise exceptions.FormulasFailedUpdateException
+
+
+def delete_external_factor_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_group_id: int,
+                                    external_factors: List[int]):
+    delete_statement = MySQLStatementBuilder(db_connection)
+    _, rows = delete_statement \
+        .delete(CVS_FORMULAS_EXTERNAL_FACTORS_TABLE) \
+        .where('vcs_row = %s and design_group = %s and external_factors in %s',
+               [vcs_row_id, design_group_id, external_factors]) \
+        .execute(return_affected_rows=True)
 
 
 def edit_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_row_id: int, design_group_id: int,
@@ -56,20 +114,55 @@ def edit_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_row
         create_formulas(db_connection, vcs_row_id, design_group_id, formulas)
     elif count == 1:
         logger.debug(f'Editing formulas')
-        columns = CVS_FORMULAS_COLUMNS[2:]
+        columns = CVS_FORMULAS_COLUMNS[3:]
         set_statement = ', '.join([col + ' = %s' for col in columns])
 
         values = [formulas.time, formulas.time_unit.value, formulas.cost, formulas.revenue, formulas.rate.value]
 
-        # TODO update the connection with value drivers and mi also
         update_statement = MySQLStatementBuilder(db_connection)
         _, rows = update_statement \
             .update(table=CVS_FORMULAS_TABLE, set_statement=set_statement, values=values) \
             .where('vcs_row = %s and design_group = %s', [vcs_row_id, design_group_id]) \
             .execute(return_affected_rows=True)
 
-        if rows > 1:
-            raise exceptions.TooManyFormulasUpdatedException
+        where_statement = "vcs_row = %s and design_group = %s and " \
+                          "value_driver IN (" + ",".join(["%s" for _ in range(len(formulas.value_drivers))]) + ")"
+        select_statement = MySQLStatementBuilder(db_connection)
+        value_driver_res = select_statement.select(CVS_FORMULAS_VALUE_DRIVERS_TABLE, CVS_FORMULAS_VALUE_DRIVERS_COLUMNS) \
+            .where(where_statement, [vcs_row_id, design_group_id] + formulas.value_drivers) \
+            .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+        delete_value_drivers = [value_driver_id['id'] for value_driver_id in value_driver_res if value_driver_id not in
+                                formulas.value_drivers]
+        add_value_drivers = [value_driver_id for value_driver_id in formulas.value_drivers if value_driver_id not in
+                             [value_driver['id'] for value_driver in value_driver_res]]
+
+        if add_value_drivers:
+            add_value_driver_formulas(db_connection, vcs_row_id, design_group_id, add_value_drivers)
+        if delete_value_drivers:
+            delete_value_driver_formulas(db_connection, vcs_row_id, design_group_id, delete_value_drivers)
+
+        where_statement = "vcs_row = %s and design_group = %s and " \
+                          "external_factor IN (" + ",".join(["%s" for _ in range(len(formulas.external_factors))]) + ")"
+        select_statement = MySQLStatementBuilder(db_connection)
+        external_factor_res = select_statement.select(CVS_FORMULAS_EXTERNAL_FACTORS_TABLE,
+                                                      CVS_FORMULAS_EXTERNAL_FACTORS_COLUMNS) \
+            .where(where_statement, [vcs_row_id, design_group_id] + formulas.external_factors) \
+            .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+        delete_external_factors = [external_factor_id['id'] for external_factor_id in external_factor_res if
+                                   external_factor_id not in
+                                   formulas.external_factors]
+        add_external_factors = [external_factor_id for external_factor_id in formulas.value_drivers if
+                                external_factor_id not in
+                                [external_factor['id'] for external_factor in external_factor_res]]
+
+        if add_external_factors:
+            add_external_factor_formulas(db_connection, vcs_row_id, design_group_id, add_external_factors)
+        if delete_external_factors:
+            delete_external_factor_formulas(db_connection, vcs_row_id, design_group_id, delete_external_factors)
+
+
     else:
         raise exceptions.FormulasFailedUpdateException
 

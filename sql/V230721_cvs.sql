@@ -11,4 +11,4 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_project_value_drivers`
         REFERENCES `seddb`.`cvs_value_drivers`(`id`)
         ON DELETE CASCADE
 );
-CREATE UNIQUE INDEX `project_value_driver_index` ON `seddb`.`cvs_project_value_drivers`  (project, value_driver);
+CREATE UNIQUE INDEX IF NOT EXISTS `project_value_driver_index` ON `seddb`.`cvs_project_value_drivers`  (project, value_driver);
