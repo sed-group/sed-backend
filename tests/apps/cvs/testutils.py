@@ -429,7 +429,7 @@ def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, use
         connect_impl.edit_formulas(
             project_id, vcs_row.id, design_group_id, formula_post)
 
-    return connect_impl.get_all_formulas(project_id, vcs_id, design_group_id)
+    return connect_impl.get_all_formulas(project_id, vcs_id, design_group_id, user_id)
 
 
 def create_formulas(project_id: int, vcs_rows: List[vcs_model.VcsRow], dg_id: int) -> List[FormulaGet]:
@@ -548,7 +548,7 @@ def seed_random_sim_settings(user_id: int, project_id: int) -> sim_model.SimSett
     start_time = round(tu.random.uniform(1, 300), ndigits=5)
     end_time = round(tu.random.uniform(300, 1000), ndigits=5)
     if tu.random.getrandbits(1):
-        vcs = seed_random_vcs(project_id)
+        vcs = seed_random_vcs(project_id, user_id)
         rows = seed_vcs_table_rows(user_id, project_id, vcs.id, 3)
         for row in rows:
             if row.subprocess is not None:

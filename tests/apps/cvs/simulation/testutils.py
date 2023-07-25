@@ -8,7 +8,7 @@ import tests.apps.cvs.testutils as tu
 
 def setup_single_simulation(user_id) -> Tuple[CVSProject, VCS, DesignGroup, List[Design], SimSettings]:
   project = tu.seed_random_project(user_id)
-  vcs = tu.seed_random_vcs(project.id, current_user.id)
+  vcs = tu.seed_random_vcs(project.id, user_id)
   design_group = tu.seed_random_design_group(project.id)
   tu.seed_random_formulas(project.id, vcs.id, design_group.id, user_id, 15) #Also creates the vcs rows
   design = tu.seed_random_designs(project.id, design_group.id, 1)

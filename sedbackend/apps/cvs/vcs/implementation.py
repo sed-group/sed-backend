@@ -76,10 +76,10 @@ def create_vcs(project_id: int, vcs_post: models.VCSPost, user_id: int) -> model
         )
 
 
-def edit_vcs(project_id: int, vcs_id: int, vcs_post: models.VCSPost) -> models.VCS:
+def edit_vcs(project_id: int, vcs_id: int, vcs_post: models.VCSPost, user_id: int) -> models.VCS:
     try:
         with get_connection() as con:
-            result = storage.edit_vcs(con, project_id, vcs_id, vcs_post)
+            result = storage.edit_vcs(con, project_id, vcs_id, vcs_post, user_id)
             con.commit()
             return result
     except exceptions.VCSNotFoundException:

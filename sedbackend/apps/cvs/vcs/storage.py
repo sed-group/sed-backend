@@ -134,7 +134,8 @@ def create_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_post: 
     return vcs
 
 
-def edit_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, new_vcs: models.VCSPost) -> models.VCS:
+def edit_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
+             new_vcs: models.VCSPost, user_id: int) -> models.VCS:
     logger.debug(f'Editing VCS with id={vcs_id}.')
 
     check_vcs(db_connection, project_id, vcs_id)  # Perform checks for existing project and correct user
@@ -152,7 +153,7 @@ def edit_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
     update_statement.where('id = %s', [vcs_id])
     _, rows = update_statement.execute(return_affected_rows=True)
 
-    return get_vcs(db_connection, project_id, vcs_id)
+    return get_vcs(db_connection, project_id, vcs_id, user_id)
 
 
 def delete_vcs(db_connection: PooledMySQLConnection, user_id: int, project_id: int, vcs_id: int) -> bool:
