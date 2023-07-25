@@ -118,7 +118,7 @@ def create_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_post: 
                user_id: int) -> models.VCS:
     logger.debug(f'Creating a VCS in project with id={project_id}.')
 
-    check_cvs_project(db_connection, project_id, user_id)  # Perform checks for existing project and correct user
+    get_cvs_project(db_connection, project_id, user_id)  # Perform checks for existing project and correct user
 
     if vcs_post.year_to < vcs_post.year_from:
         raise exceptions.VCSYearFromGreaterThanYearToException
