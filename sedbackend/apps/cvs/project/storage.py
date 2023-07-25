@@ -16,6 +16,9 @@ CVS_APPLICATION_SID = "MOD.CVS"
 CVS_PROJECT_TABLE = 'cvs_projects'
 CVS_PROJECT_COLUMNS = ['id', 'name', 'description', 'currency', 'owner_id', 'datetime_created']
 
+PROJECTS_SUBPROJECTS_TABLE = 'projects_subprojects'
+PROJECTS_SUBPROJECTS_COLUMNS = ['id', 'name', 'application_sid', 'project_id', 'native_project_id',
+                                'owner_id', 'datetime_created']
 
 def get_all_cvs_project(db_connection: PooledMySQLConnection, user_id: int) -> ListChunk[models.CVSProject]:
     logger.debug(f'Fetching all CVS projects for user with id={user_id}.')
@@ -100,6 +103,14 @@ def delete_cvs_project(db_connection: PooledMySQLConnection, project_id: int, us
 
     if rows == 0:
         raise exceptions.CVSProjectFailedDeletionException
+
+    delete_subproject_statement = MySQLStatementBuilder(db_connection)
+    _, subproject_rows = delete_subproject_statement.delete(PROJECTS_SUBPROJECTS_TABLE) \
+        .where('application_sid = %s AND native_project_id = %s', ['MOD.CVS', project_id]) \
+        .execute(return_affected_rows=True)
+
+    if subproject_rows == 0:
+        raise exceptions.SubProjectFailedDeletionException
 
     return True
 
