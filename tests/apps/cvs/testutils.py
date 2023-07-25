@@ -81,10 +81,10 @@ def random_VCS(name: str = None, description: str = None, year_from: int = None,
     return vcs
 
 
-def seed_random_vcs(project_id):
+def seed_random_vcs(project_id: int, user_id: int):
     vcs = random_VCS()
 
-    new_vcs = vcs_impl.create_vcs(project_id, vcs)
+    new_vcs = vcs_impl.create_vcs(project_id, vcs, user_id)
 
     return new_vcs
 

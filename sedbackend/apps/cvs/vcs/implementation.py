@@ -53,10 +53,10 @@ def get_vcs(project_id: int, vcs_id: int, user_id: int) -> models.VCS:
         )
 
 
-def create_vcs(project_id: int, vcs_post: models.VCSPost) -> models.VCS:
+def create_vcs(project_id: int, vcs_post: models.VCSPost, user_id: int) -> models.VCS:
     try:
         with get_connection() as con:
-            result = storage.create_vcs(con, project_id, vcs_post)
+            result = storage.create_vcs(con, project_id, vcs_post, user_id)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:

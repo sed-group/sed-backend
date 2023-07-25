@@ -9,7 +9,7 @@ def test_create_market_input(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     market_input = tu.seed_random_market_input(project.id)
     value = random.random() * 100
     # Act
@@ -37,7 +37,7 @@ def test_create_market_input_invalid_vcs_id(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     market_input = tu.seed_random_market_input(project.id)
     value = random.random() * 100
     # Act
@@ -60,7 +60,7 @@ def test_edit_market_input_value(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     market_input = tu.seed_random_market_input(project.id)
     market_input_value = tu.seed_random_market_input_values(project.id, vcs.id, market_input.id)[0]
     new_value = random.random() * 100
@@ -89,7 +89,7 @@ def test_delete_market_input_value(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     market_input = tu.seed_random_market_input(project.id)
     tu.seed_random_market_input_values(project.id, vcs.id, market_input.id)
     # Act
@@ -108,7 +108,7 @@ def test_get_market_input_values(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     market_input = tu.seed_random_market_input(project.id)
     market_input_value = tu.seed_random_market_input_values(project.id, vcs.id, market_input.id)[0]
     # Act

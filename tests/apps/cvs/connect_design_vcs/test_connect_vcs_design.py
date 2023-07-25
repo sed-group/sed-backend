@@ -11,7 +11,7 @@ def test_create_formulas(client, std_headers, std_user):
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
 
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     vcs_rows = tu.seed_vcs_table_rows(current_user.id, project.id, vcs.id, 1)
     if vcs_rows is None:
         raise Exception
@@ -57,7 +57,7 @@ def test_create_formulas_no_optional(client, std_headers, std_user):
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
 
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     vcs_rows = tu.seed_vcs_table_rows(current_user.id, project.id, vcs.id, 1)
     if vcs_rows is None:
         raise Exception
@@ -96,7 +96,7 @@ def test_get_all_formulas(client, std_headers, std_user):
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
 
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     design_group = tu.seed_random_design_group(project.id)
 
     # Act
@@ -123,7 +123,7 @@ def test_get_all_formulas_invalid_project(client, std_headers, std_user):
     project = tu.seed_random_project(current_user.id)
     invalid_proj_id = project.id + 1
 
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     design_group = tu.seed_random_design_group(project.id)
 
     # Act
@@ -145,7 +145,7 @@ def test_get_all_formulas_invalid_vcs(client, std_headers, std_user):
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
 
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     invalid_vcs_id = vcs.id + 1
 
     design_group = tu.seed_random_design_group(project.id)
@@ -170,7 +170,7 @@ def get_all_formulas_invalid_design_group(client, std_headers, std_user):
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
 
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
 
     design_group = tu.seed_random_design_group(project.id)
     invalid_dg_id = design_group.id + 1
@@ -193,7 +193,7 @@ def test_edit_formulas(client, std_headers, std_user):
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
 
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     design_group = tu.seed_random_design_group(project.id)
 
     # Act
@@ -239,7 +239,7 @@ def test_edit_formulas_no_optional(client, std_headers, std_user):
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
 
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     design_group = tu.seed_random_design_group(project.id)
 
     # Act
@@ -279,7 +279,7 @@ def test_edit_formulas_invalid_dg(client, std_headers, std_user):
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
 
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     vcs_rows = tu.seed_vcs_table_rows(current_user.id, project.id, vcs.id, 1)
     if vcs_rows == None:
         raise Exception
@@ -319,7 +319,7 @@ def test_edit_formulas_invalid_vcs_row(client, std_headers, std_user):
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
 
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     vcs_rows = tu.seed_vcs_table_rows(current_user.id, project.id, vcs.id, 1)
     if vcs_rows == None:
         raise Exception
@@ -359,7 +359,7 @@ def test_edit_formulas_invalid_project(client, std_headers, std_user):
     project = tu.seed_random_project(current_user.id)
     invalid_proj_id = project.id + 1
 
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     vcs_rows = tu.seed_vcs_table_rows(current_user.id, project.id, vcs.id, 1)
     if vcs_rows is None:
         raise Exception
@@ -398,7 +398,7 @@ def test_delete_formulas(client, std_headers, std_user):
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
 
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     design_group = tu.seed_random_design_group(project.id)
 
     # Act
@@ -424,7 +424,7 @@ def test_delete_formulas_invalid_project(client, std_headers, std_user):
     project = tu.seed_random_project(current_user.id)
     invalid_proj_id = project.id + 1
 
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     design_group = tu.seed_random_design_group(project.id)
 
     # Act
@@ -447,7 +447,7 @@ def test_delete_formulas_invalid_vcs_row(client, std_headers, std_user):
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
 
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     design_group = tu.seed_random_design_group(project.id)
 
     # Act
@@ -471,7 +471,7 @@ def test_delete_formulas_invalid_design_group(client, std_headers, std_user):
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
 
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     design_group = tu.seed_random_design_group(project.id)
     invalid_dg_id = design_group.id + 1
 
@@ -495,7 +495,7 @@ def test_get_vcs_dg_pairs(client, std_headers, std_user):
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
 
-    vcss = [tu.seed_random_vcs(project.id) for _ in range(4)]
+    vcss = [tu.seed_random_vcs(project.id, current_user.id) for _ in range(4)]
     dgs = [tu.seed_random_design_group(project.id) for _ in range(4)]
 
     formulas = []
@@ -524,7 +524,7 @@ def test_get_vcs_dg_pairs_invalid_project(client, std_headers, std_user):
     project = tu.seed_random_project(current_user.id)
     invalid_proj_id = project.id + 1
 
-    vcss = [tu.seed_random_vcs(project.id) for _ in range(4)]
+    vcss = [tu.seed_random_vcs(project.id, current_user.id) for _ in range(4)]
     dgs = [tu.seed_random_design_group(project.id) for _ in range(4)]
 
     formulas = []

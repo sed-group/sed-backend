@@ -267,7 +267,7 @@ def test_run_single_xlsx_sim(client, std_headers, std_user):
   #Setup 
   current_user = impl_users.impl_get_user_with_username(std_user.username)
   project = tu.seed_random_project(current_user.id)
-  vcs = tu.seed_random_vcs(project.id)
+  vcs = tu.seed_random_vcs(project.id, current_user.id)
 
   row1 = tu.vcs_model.VcsRowPost(
     index=0,
@@ -393,7 +393,7 @@ def test_run_xlsx_sim(client, std_headers, std_user):
   vcss = []
   designs = []
   for _ in range(amount):
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     vcss.append(vcs.id)
     table = tu.create_vcs_table(project.id, vcs.id, rows)
     design_group = tu.seed_random_design_group(project.id)
@@ -444,7 +444,7 @@ def test_run_single_csv_sim(client, std_headers, std_user):
   #Setup 
   current_user = impl_users.impl_get_user_with_username(std_user.username)
   project = tu.seed_random_project(current_user.id)
-  vcs = tu.seed_random_vcs(project.id)
+  vcs = tu.seed_random_vcs(project.id, current_user.id)
 
   row1 = tu.vcs_model.VcsRowPost(
     index=0,
@@ -570,7 +570,7 @@ def test_run_csv_sim(client, std_headers, std_user):
   designs = tu.seed_random_designs(project.id, design_group.id, 3)
   vcss = []
   for _ in range(amount):
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     vcss.append(vcs.id)
     table = tu.create_vcs_table(project.id, vcs.id, rows)
     formulas = tu.create_formulas(project.id, table, design_group.id)

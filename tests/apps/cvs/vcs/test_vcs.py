@@ -11,7 +11,7 @@ def test_get_vcs(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     # Act
     res = client.get(f'/api/cvs/project/{project.id}/vcs/{vcs.id}', headers=std_headers)
     # Assert
@@ -40,7 +40,7 @@ def test_get_vcs_project_no_match(client, std_headers, std_user):
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
     project2 = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     # Act
     res = client.get(f'/api/cvs/project/{project2.id}/vcs/{vcs.id}', headers=std_headers)
     # Assert
@@ -58,7 +58,7 @@ def test_get_vcss(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    tu.seed_random_vcs(project.id)
+    tu.seed_random_vcs(project.id, current_user.id)
     # Act
     res = client.get(f'/api/cvs/project/{project.id}/vcs/all', headers=std_headers)
     # Assert
@@ -131,7 +131,7 @@ def test_edit_vcs(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     vcs.name = "new name"
     # Act
     res = client.put(f'/api/cvs/project/{project.id}/vcs/{vcs.id}', headers=std_headers,
@@ -155,7 +155,7 @@ def test_edit_vcs_year_from_greater_than_year_to(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     vcs.year_from = 2020
     vcs.year_to = 2019
     # Act
@@ -180,7 +180,7 @@ def test_delete_vcs(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     # Act
     res = client.delete(f'/api/cvs/project/{project.id}/vcs/{vcs.id}', headers=std_headers)
     # Assert
@@ -199,7 +199,7 @@ def test_duplicate_vcs(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     # Act
     res = client.post(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/duplicate/{2}', headers=std_headers)
     # Assert

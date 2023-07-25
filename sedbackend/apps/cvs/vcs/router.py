@@ -43,8 +43,9 @@ async def get_vcs(native_project_id: int, vcs_id: int, user: User = Depends(get_
     response_model=models.VCS,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def create_vcs(native_project_id: int, vcs_post: models.VCSPost) -> models.VCS:
-    return implementation.create_vcs(native_project_id, vcs_post)
+async def create_vcs(native_project_id: int, vcs_post: models.VCSPost,
+                     user: User = Depends(get_current_active_user)) -> models.VCS:
+    return implementation.create_vcs(native_project_id, vcs_post, user.id)
 
 
 @router.put(
