@@ -14,7 +14,7 @@ from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 def edit_formulas(project_id: int, vcs_row_id: int, design_group_id: int, new_formulas: models.FormulaPost) -> bool:
     with get_connection() as con:
         try:
-            res = storage.edit_formulas(con, project_id, vcs_row_id, design_group_id, new_formulas)
+            res = storage.update_formulas(con, project_id, vcs_row_id, design_group_id, new_formulas)
             con.commit()
             return res
         except vcs_exceptions.VCSNotFoundException:

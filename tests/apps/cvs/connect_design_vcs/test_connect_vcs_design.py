@@ -25,21 +25,15 @@ def test_create_formulas(client, std_headers, std_user):
     revenue = testutils.random_str(10, 200)
     rate = tu.random_rate_choice()
 
-    # TODO when value drivers and market inputs are connected to the
-    # formulas, add them here.
-    value_driver_ids = []
-    market_input_ids = []
-
     res = client.put(f'/api/cvs/project/{project.id}/vcs-row/{row_id}/design-group/{design_group.id}/formulas',
                      headers=std_headers,
                      json={
+                         "project": project.id,
                          "time": time,
                          "time_unit": time_unit,
                          "cost": cost,
                          "revenue": revenue,
-                         "rate": rate,
-                         "value_driver_ids": value_driver_ids,
-                         "market_input_ids": market_input_ids
+                         "rate": rate
                      })
 
     # Assert
@@ -74,6 +68,7 @@ def test_create_formulas_no_optional(client, std_headers, std_user):
     res = client.put(f'/api/cvs/project/{project.id}/vcs-row/{row_id}/design-group/{design_group.id}/formulas',
                      headers=std_headers,
                      json={
+                         "project": project.id,
                          "time": time,
                          "time_unit": time_unit,
                          "cost": cost,
@@ -90,6 +85,7 @@ def test_create_formulas_no_optional(client, std_headers, std_user):
     tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
+
 
 def test_get_all_formulas(client, std_headers, std_user):
     # Setup
@@ -135,7 +131,7 @@ def test_get_all_formulas_invalid_project(client, std_headers, std_user):
     # Assert
     assert res.status_code == 404
 
-    #Cleanup
+    # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
 
@@ -159,10 +155,9 @@ def test_get_all_formulas_invalid_vcs(client, std_headers, std_user):
     # Assert
     assert res.status_code == 404
 
-    #Cleanup
+    # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
-
 
 
 def get_all_formulas_invalid_design_group(client, std_headers, std_user):
@@ -184,9 +179,10 @@ def get_all_formulas_invalid_design_group(client, std_headers, std_user):
     # Assert
     assert res.status_code == 404
 
-    #Cleanup
+    # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
+
 
 def test_edit_formulas(client, std_headers, std_user):
     # Setup
@@ -205,11 +201,6 @@ def test_edit_formulas(client, std_headers, std_user):
     revenue = testutils.random_str(10, 200)
     rate = tu.random_rate_choice()
 
-    # TODO when value drivers and market inputs are connected to the
-    # formulas, add them here.
-    value_driver_ids = []
-    market_input_ids = []
-
     res = client.put(
         f'/api/cvs/project/{project.id}/vcs-row/{formulas[0].vcs_row_id}/design-group/{formulas[0].design_group_id}/formulas',
         headers=std_headers,
@@ -218,9 +209,7 @@ def test_edit_formulas(client, std_headers, std_user):
             "time_unit": time_unit,
             "cost": cost,
             "revenue": revenue,
-            "rate": rate,
-            "value_driver_ids": value_driver_ids,
-            "market_input_ids": market_input_ids
+            "rate": rate
         })
 
     # Assert
@@ -438,9 +427,10 @@ def test_delete_formulas_invalid_project(client, std_headers, std_user):
     # Assert
     assert res.status_code == 404
 
-    #Cleanup
+    # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
+
 
 def test_delete_formulas_invalid_vcs_row(client, std_headers, std_user):
     # Setup
@@ -461,7 +451,7 @@ def test_delete_formulas_invalid_vcs_row(client, std_headers, std_user):
     # Assert
     assert res.status_code == 404
 
-    #Cleanup
+    # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
 
@@ -485,7 +475,7 @@ def test_delete_formulas_invalid_design_group(client, std_headers, std_user):
     # Assert
     assert res.status_code == 400
 
-    #Cleanup
+    # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
 
@@ -538,6 +528,6 @@ def test_get_vcs_dg_pairs_invalid_project(client, std_headers, std_user):
     # Assert
     assert res.status_code == 404
 
-    #Cleanup
+    # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)

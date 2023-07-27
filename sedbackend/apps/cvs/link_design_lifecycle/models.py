@@ -43,8 +43,6 @@ class FormulaPost(BaseModel):
     cost: str
     revenue: str
     rate: Rate
-    value_drivers: List[int] = []
-    external_factors: List[int] = []
 
 
 class VcsDgPairs(BaseModel):
