@@ -80,7 +80,7 @@ def get_node(db_connection: PooledMySQLConnection, project_id: int, node_id: int
         raise exceptions.NodeNotFoundException
 
     # Check if vcs exists and matches project id
-    vcs_storage.get_vcs(db_connection, result['vcs'], project_id)
+    vcs_storage.check_vcs(db_connection, result['vcs'], project_id)
 
     return result
 
@@ -227,11 +227,11 @@ def update_node(db_connection: PooledMySQLConnection, project_id: int, node_id: 
     return True
 
 
-def get_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> models.BPMNGet:
+def get_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id: int) -> models.BPMNGet:
     logger.debug(f'Get BPMN for vcs with id={vcs_id}.')
 
     # Check if vcs exists and matches project id
-    vcs_storage.get_vcs(db_connection, project_id, vcs_id)
+    vcs_storage.get_vcs(db_connection, project_id, vcs_id, user_id)
 
     where_statement = f'vcs = %s'
     where_values = [vcs_id]
@@ -271,7 +271,7 @@ def update_bpmn(db_connection: PooledMySQLConnection, project_id: int, vcs_id: i
     logger.debug(f'Updating bpmn with vcs id={vcs_id}.')
 
     # Check if vcs exists and matches project id
-    vcs_storage.get_vcs(db_connection, project_id, vcs_id)
+    vcs_storage.check_vcs(db_connection, project_id, vcs_id)
 
     for node in bpmn.nodes:
         updated_node = models.NodePost(
@@ -353,7 +353,7 @@ def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int,
 
 
 def get_dsm_file_id(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> int:
-    vcs_storage.get_vcs(db_connection, project_id, vcs_id)  # Check if vcs exists and matches project id
+    vcs_storage.check_vcs(db_connection, project_id, vcs_id)  # Check if vcs exists and matches project id
 
     select_statement = MySQLStatementBuilder(db_connection)
     file_res = select_statement.select(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS) \
@@ -482,14 +482,14 @@ def initial_dsm(db_connection: PooledMySQLConnection, project_id: int, vcs_id: i
 
 def apply_dsm_to_all(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, dsm: List[List[str or float]],
                      user_id: int) -> models.DSMApplyAllResponse:
-    vcss = vcs_storage.get_all_vcs(db_connection, project_id).chunk
+    vcss = vcs_storage.get_all_vcs(db_connection, project_id, user_id).chunk
 
     save_dsm_matrix(db_connection, project_id, vcs_id, dsm, user_id)
 
     success_vcs = [[vcs for vcs in vcss if vcs.id == vcs_id][0]]
     failed_vcs = []
 
-    vcss = [vcs for vcs in vcs_storage.get_all_vcs(db_connection, project_id).chunk if vcs.id != vcs_id]
+    vcss = [vcs for vcs in vcs_storage.get_all_vcs(db_connection, project_id, user_id).chunk if vcs.id != vcs_id]
 
     # Try to apply to other vcs. Will only pass if they have the same processes
     for vcs in vcss:

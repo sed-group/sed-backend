@@ -51,10 +51,10 @@ CVS_VCS_NEED_DRIVERS_COLUMNS = ['stakeholder_need', 'value_driver']
 # ======================================================================================================================
 
 
-def get_all_vcs(db_connection: PooledMySQLConnection, project_id: int) -> ListChunk[models.VCS]:
+def get_all_vcs(db_connection: PooledMySQLConnection, project_id: int, user_id: int) -> ListChunk[models.VCS]:
     logger.debug(f'Fetching all VCSs for project with id={project_id}.')
 
-    get_cvs_project(db_connection, project_id)  # perform checks: project and user
+    get_cvs_project(db_connection, project_id, user_id)  # perform checks: project and user
 
     where_statement = f'project = %s'
     where_values = [project_id]
@@ -67,7 +67,7 @@ def get_all_vcs(db_connection: PooledMySQLConnection, project_id: int) -> ListCh
 
     vcs_list = []
     for result in results:
-        vcs_list.append(populate_vcs(db_connection, result))
+        vcs_list.append(populate_vcs(db_connection, result, user_id))
 
     count_statement = MySQLStatementBuilder(db_connection)
     result = count_statement.count(CVS_VCS_TABLE) \
@@ -78,7 +78,7 @@ def get_all_vcs(db_connection: PooledMySQLConnection, project_id: int) -> ListCh
     return chunk
 
 
-def get_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> models.VCS:
+def get_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id: int) -> models.VCS:
     logger.debug(f'Fetching VCS with id={vcs_id}.')
 
     select_statement = MySQLStatementBuilder(db_connection)
@@ -93,13 +93,32 @@ def get_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) 
     elif result['project'] != project_id:
         raise project_exceptions.CVSProjectNoMatchException
 
-    return populate_vcs(db_connection, result)
+    return populate_vcs(db_connection, result, user_id)
 
 
-def create_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_post: models.VCSPost) -> models.VCS:
+def check_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> models.VCS:
+    logger.debug(f'CHECKING VCS with id={vcs_id}.')
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    result = select_statement \
+        .select(CVS_VCS_TABLE, CVS_VCS_COLUMNS) \
+        .where('id = %s', [vcs_id]) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    if result is None:
+        raise exceptions.VCSNotFoundException
+
+    elif result['project'] != project_id:
+        raise project_exceptions.CVSProjectNoMatchException
+
+    return result
+
+
+def create_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_post: models.VCSPost,
+               user_id: int) -> models.VCS:
     logger.debug(f'Creating a VCS in project with id={project_id}.')
 
-    get_cvs_project(db_connection, project_id)  # Perform checks for existing project and correct user
+    get_cvs_project(db_connection, project_id, user_id)  # Perform checks for existing project and correct user
 
     if vcs_post.year_to < vcs_post.year_from:
         raise exceptions.VCSYearFromGreaterThanYearToException
@@ -111,14 +130,15 @@ def create_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_post: 
         .execute(fetch_type=FetchType.FETCH_NONE)
     vcs_id = insert_statement.last_insert_id
 
-    vcs = get_vcs(db_connection, project_id, vcs_id)
+    vcs = get_vcs(db_connection, project_id, vcs_id, user_id)
     return vcs
 
 
-def edit_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, new_vcs: models.VCSPost) -> models.VCS:
+def edit_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
+             new_vcs: models.VCSPost, user_id: int) -> models.VCS:
     logger.debug(f'Editing VCS with id={vcs_id}.')
 
-    get_vcs(db_connection, project_id, vcs_id)  # Perform checks for existing project and correct user
+    check_vcs(db_connection, project_id, vcs_id)  # Perform checks for existing project and correct user
 
     if new_vcs.year_to < new_vcs.year_from:
         raise exceptions.VCSYearFromGreaterThanYearToException
@@ -133,7 +153,7 @@ def edit_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
     update_statement.where('id = %s', [vcs_id])
     _, rows = update_statement.execute(return_affected_rows=True)
 
-    return get_vcs(db_connection, project_id, vcs_id)
+    return get_vcs(db_connection, project_id, vcs_id, user_id)
 
 
 def delete_vcs(db_connection: PooledMySQLConnection, user_id: int, project_id: int, vcs_id: int) -> bool:
@@ -156,12 +176,12 @@ def delete_vcs(db_connection: PooledMySQLConnection, user_id: int, project_id: i
     return True
 
 
-def populate_vcs(db_connection: PooledMySQLConnection, db_result) -> models.VCS:
+def populate_vcs(db_connection: PooledMySQLConnection, db_result, user_id: int) -> models.VCS:
     return models.VCS(
         id=db_result['id'],
         name=db_result['name'],
         description=db_result['description'],
-        project=get_cvs_project(db_connection, project_id=db_result['project']),
+        project=get_cvs_project(db_connection, project_id=db_result['project'], user_id=user_id),
         datetime_created=db_result['datetime_created'],
         year_from=db_result['year_from'],
         year_to=db_result['year_to'],
@@ -248,7 +268,7 @@ def get_all_value_driver_vcs(db_connection: PooledMySQLConnection, project_id: i
                              vcs_id: int) -> List[models.ValueDriver]:
     logger.debug(f'Fetching all value drivers for vcs with id={vcs_id}')
 
-    get_vcs(db_connection, project_id, vcs_id)  # Perform checks for existing VCS and matching project
+    check_vcs(db_connection, project_id, vcs_id)  # Perform checks for existing VCS and matching project
 
     try:
         select_statement = MySQLStatementBuilder(db_connection)
@@ -295,7 +315,7 @@ def get_all_value_drivers_vcs_row(db_connection: PooledMySQLConnection, project_
                                   vcs_row: int, user_id: int) -> List[models.ValueDriver]:
     logger.debug(f'Fetching all value drivers for vcs with id={vcs_id} and vcs row with id={vcs_row}')
 
-    get_vcs(db_connection, project_id, vcs_id)  # Perform checks for existing VCS and matching project
+    check_vcs(db_connection, project_id, vcs_id)  # Perform checks for existing VCS and matching project
     vcs_row = get_vcs_row(db_connection, project_id, vcs_row)
 
     value_drivers = []
@@ -860,7 +880,7 @@ def delete_stakeholder_need(db_connection: PooledMySQLConnection, need_id: int) 
 def get_vcs_table(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int) -> List[models.VcsRow]:
     logger.debug(f'Fetching all table for VCS with id={vcs_id}.')
 
-    get_vcs(db_connection, project_id, vcs_id)  # Check if VCS exists and belongs to project
+    check_vcs(db_connection, project_id, vcs_id)  # Check if VCS exists and belongs to project
 
     select_statement = MySQLStatementBuilder(db_connection)
     results = select_statement \
@@ -940,7 +960,7 @@ def edit_vcs_table(db_connection: PooledMySQLConnection, project_id: int, vcs_id
                    updated_vcs_rows: List[models.VcsRowPost]) -> bool:
     logger.debug(f'Editing vcs table')
 
-    get_vcs(db_connection, project_id, vcs_id)  # Check if VCS exists and belongs to project
+    check_vcs(db_connection, project_id, vcs_id)  # Check if VCS exists and belongs to project
 
     updated_vcs_rows = remove_duplicate_names(db_connection, project_id, updated_vcs_rows)
 
@@ -1068,8 +1088,9 @@ def remove_duplicate_names(db_connection: PooledMySQLConnection, project_id: int
 
 
 # Duplicate a vcs n times
-def duplicate_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, n: int) -> List[models.VCS]:
-    vcs = get_vcs(db_connection, project_id, vcs_id)
+def duplicate_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, n: int,
+                  user_id: int) -> List[models.VCS]:
+    vcs = get_vcs(db_connection, project_id, vcs_id, user_id)
     vcs_list = []
     for i in range(n):
         vcs_post = models.VCSPost(
@@ -1078,7 +1099,7 @@ def duplicate_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id:
             year_from=vcs.year_from,
             year_to=vcs.year_to
         )
-        new_vcs = create_vcs(db_connection, vcs.project.id, vcs_post)
+        new_vcs = create_vcs(db_connection, vcs.project.id, vcs_post, user_id)
         vcs_list.append(new_vcs)
     return vcs_list
 
@@ -1133,12 +1154,13 @@ def duplicate_vcs_table(db_connection: PooledMySQLConnection, project_id: int, v
     return True
 
 
-def duplicate_whole_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, n: int) -> List[models.VCS]:
+def duplicate_whole_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, n: int,
+                        user_id: int) -> List[models.VCS]:
     logger.debug(f'Duplicate vcs with id = {vcs_id}, {n} times')
 
     table = get_vcs_table(db_connection, project_id, vcs_id)
 
-    vcs_list = duplicate_vcs(db_connection, project_id, vcs_id, n)
+    vcs_list = duplicate_vcs(db_connection, project_id, vcs_id, n, user_id)
 
     [duplicate_vcs_table(db_connection, project_id, vcs.id, table) for vcs in vcs_list]
 

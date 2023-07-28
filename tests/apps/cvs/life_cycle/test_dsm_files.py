@@ -41,7 +41,7 @@ def test_upload_dsm_file(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
 
     rows = [std_rows[0], std_rows[1]]
     table = tu.create_vcs_table(project.id, vcs.id, rows)
@@ -68,7 +68,7 @@ def test_upload_invalid_file_extension(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
 
     rows = std_rows
 
@@ -97,7 +97,7 @@ def test_upload_invalid_dsm_file(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
 
     row1 = tu.vcs_model.VcsRowPost(
         index=0,
@@ -140,7 +140,7 @@ def test_get_dsm_file_id(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
 
     rows = [std_rows[0], std_rows[1]]
     table = tu.create_vcs_table(project.id, vcs.id, rows)
@@ -170,7 +170,7 @@ def test_get_dsm_matrix(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
 
     rows = [std_rows[0], std_rows[1]]
     tu.create_vcs_table(project.id, vcs.id, rows)
@@ -203,7 +203,7 @@ def test_save_dsm(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
 
     rows = [std_rows[0], std_rows[1]]
     tu.create_vcs_table(project.id, vcs.id, rows)
@@ -235,7 +235,7 @@ def test_apply_dsm_to_all(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcss = [tu.seed_random_vcs(project.id) for _ in range(3)]
+    vcss = [tu.seed_random_vcs(project.id, current_user.id) for _ in range(3)]
 
     rows = [std_rows[0], std_rows[1]]
     rows_alt = [std_rows[0], std_rows[1], std_rows[2]]

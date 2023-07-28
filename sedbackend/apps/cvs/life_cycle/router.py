@@ -49,8 +49,9 @@ async def update_bpmn_node(native_project_id: int, node_id: int, node: models.No
     response_model=models.BPMNGet,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
-async def get_bpmn(native_project_id: int, vcs_id: int) -> models.BPMNGet:
-    return implementation.get_bpmn(native_project_id, vcs_id)
+async def get_bpmn(native_project_id: int, vcs_id: int,
+                   user: User = Depends(get_current_active_user)) -> models.BPMNGet:
+    return implementation.get_bpmn(native_project_id, vcs_id, user.id)
 
 
 @router.put(

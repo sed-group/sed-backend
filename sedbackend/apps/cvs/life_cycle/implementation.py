@@ -106,10 +106,10 @@ def update_node(project_id: int, node_id: int, node: models.NodePost) -> bool:
         )
 
 
-def get_bpmn(project_id: int, vcs_id: int) -> models.BPMNGet:
+def get_bpmn(project_id: int, vcs_id: int, user_id: int) -> models.BPMNGet:
     try:
         with get_connection() as con:
-            result = storage.get_bpmn(con, project_id, vcs_id)
+            result = storage.get_bpmn(con, project_id, vcs_id, user_id)
             con.commit()
             return result
     except vcs_exceptions.VCSNotFoundException:

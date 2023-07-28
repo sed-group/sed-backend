@@ -81,10 +81,10 @@ def random_VCS(name: str = None, description: str = None, year_from: int = None,
     return vcs
 
 
-def seed_random_vcs(project_id):
+def seed_random_vcs(project_id: int, user_id: int):
     vcs = random_VCS()
 
-    new_vcs = vcs_impl.create_vcs(project_id, vcs)
+    new_vcs = vcs_impl.create_vcs(project_id, vcs, user_id)
 
     return new_vcs
 
@@ -429,7 +429,7 @@ def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, use
         connect_impl.edit_formulas(
             project_id, vcs_row.id, design_group_id, formula_post)
 
-    return connect_impl.get_all_formulas(project_id, vcs_id, design_group_id)
+    return connect_impl.get_all_formulas(project_id, vcs_id, design_group_id, user_id)
 
 
 def create_formulas(project_id: int, vcs_rows: List[vcs_model.VcsRow], dg_id: int) -> List[FormulaGet]:
@@ -457,11 +457,11 @@ def delete_formulas(project_id: int, vcsRow_Dg_ids: List[Tuple[int, int]]):
         connect_impl.delete_formulas(project_id, vcs_row, dg)
 
 
-def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int) -> vcs_model.VcsRow:
+def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int, user_id: int) -> vcs_model.VcsRow:
     rows = list(sorted(vcs_impl.get_vcs_table(
         project_id, vcs_id), key=lambda row: row.index))
     formulas = connect_impl.get_all_formulas(
-        project_id, vcs_id, design_group_id)
+        project_id, vcs_id, design_group_id, user_id)
 
     rows.reverse()  # Reverse to find last technical process
     for row in rows:
@@ -548,7 +548,7 @@ def seed_random_sim_settings(user_id: int, project_id: int) -> sim_model.SimSett
     start_time = round(tu.random.uniform(1, 300), ndigits=5)
     end_time = round(tu.random.uniform(300, 1000), ndigits=5)
     if tu.random.getrandbits(1):
-        vcs = seed_random_vcs(project_id)
+        vcs = seed_random_vcs(project_id, user_id)
         rows = seed_vcs_table_rows(user_id, project_id, vcs.id, 3)
         for row in rows:
             if row.subprocess is not None:
@@ -586,7 +586,7 @@ def seed_random_sim_settings(user_id: int, project_id: int) -> sim_model.SimSett
         runs=runs
     )
 
-    sim_impl.edit_sim_settings(project_id, sim_settings)
+    sim_impl.edit_sim_settings(project_id, sim_settings, user_id)
     return sim_impl.get_sim_settings(project_id)
 
 

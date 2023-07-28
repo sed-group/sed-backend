@@ -145,7 +145,7 @@ def test_get_all_value_drivers_from_vcs(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     tu.seed_vcs_table_rows(current_user.id, project.id, vcs.id)
     
     # Act
@@ -163,7 +163,7 @@ def test_add_value_drivers_to_needs(client, std_headers, std_user):
     #Setup 
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     table = tu.seed_vcs_table_rows(current_user.id, project.id, vcs.id)
     
     vds = []
@@ -198,7 +198,7 @@ def test_add_driver_needs_invalid_needs(client, std_headers, std_user):
         #Setup 
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     table = tu.seed_vcs_table_rows(current_user.id, project.id, vcs.id)
     
     vds = []
@@ -229,7 +229,7 @@ def test_add_driver_needs_invalid_drivers(client, std_headers, std_user):
     #Setup 
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     table = tu.seed_vcs_table_rows(current_user.id, project.id, vcs.id)
     
     needs = []
@@ -259,7 +259,7 @@ def test_get_all_value_drivers_vcs_row(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     vcs_row = tu.seed_vcs_table_rows(current_user.id, project.id, vcs.id, 1)[0]
     needs = vcs_row.stakeholder_needs
     value_drivers = []

@@ -40,7 +40,7 @@ def test_create_design_group_from_vcs(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     tu.seed_vcs_table_rows(current_user.id, project.id, vcs.id, 10)
     # Act
     res = client.post(f'/api/cvs/project/{project.id}/design-group', headers=std_headers, json={

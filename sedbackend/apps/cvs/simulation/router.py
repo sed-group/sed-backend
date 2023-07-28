@@ -70,5 +70,6 @@ async def get_sim_settings(native_project_id: int) -> models.SimSettings:
     response_model=bool,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit, CVS_APP_SID))]
 )
-async def put_sim_settings(native_project_id: int, sim_settings: models.EditSimSettings) -> bool:
-    return implementation.edit_sim_settings(native_project_id, sim_settings)
+async def put_sim_settings(native_project_id: int, sim_settings: models.EditSimSettings,
+                           user: User = Depends(get_current_active_user)) -> bool:
+    return implementation.edit_sim_settings(native_project_id, sim_settings, user.id)
