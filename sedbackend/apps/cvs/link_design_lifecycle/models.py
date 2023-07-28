@@ -33,8 +33,8 @@ class FormulaGet(BaseModel):
     cost: str
     revenue: str
     rate: Rate
-    value_drivers: List[ValueDriver] = []
-    external_factors: List[MarketInputGet] = []
+    used_value_drivers: List[int] = []
+    used_external_factors: List[int] = []
 
 
 class FormulaPost(BaseModel):
@@ -51,3 +51,10 @@ class VcsDgPairs(BaseModel):
     design_group: str
     design_group_id: int
     has_formulas: int
+
+
+class ValueDriverFormula(BaseModel):
+    vcs_row_id: int
+    design_group_id: int
+    value_driver_id: int
+    project_id: int

@@ -17,14 +17,20 @@ def test_create_formulas(client, std_headers, std_user):
         raise Exception
     row_id = vcs_rows[0].id
     design_group = tu.seed_random_design_group(project.id)
+    value_driver = tu.seed_random_value_driver(current_user.id, project.id)
+    external_factor = tu.seed_random_market_input(project.id)
 
     # Act
-    time = testutils.random_str(10, 200)
-    time_unit = tu.random_time_unit()
-    cost = testutils.random_str(10, 200)
-    revenue = testutils.random_str(10, 200)
+
+    time = '2+{vd:' + str(value_driver.id) + ',"' + str(value_driver.name) + '"}+{vd:' + str(
+        value_driver.id) + ',"' + str(value_driver.name) + '"}'
+    cost = '2+{ef:' + str(external_factor.id) + ',"' + str(external_factor.name) + '"}'
+    revenue = '20+{vd:' + str(value_driver.id) + ',"' + str(value_driver.name) + '"}+{ef:' + str(
+        external_factor.id) + ',"' + str(external_factor.name) + '"}'
+
     rate = tu.random_rate_choice()
 
+    time_unit = tu.random_time_unit()
     res = client.put(f'/api/cvs/project/{project.id}/vcs-row/{row_id}/design-group/{design_group.id}/formulas',
                      headers=std_headers,
                      json={
@@ -36,8 +42,13 @@ def test_create_formulas(client, std_headers, std_user):
                          "rate": rate
                      })
 
+    res_get = client.get(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas/all',
+                         headers=std_headers)
+
     # Assert
     assert res.status_code == 200
+    assert res_get.json()[0]['used_value_drivers'][0] == value_driver.id
+    assert res_get.json()[0]['used_external_factors'][0] == external_factor.id
 
     # Cleanup
     tu.delete_design_group(project.id, design_group.id)

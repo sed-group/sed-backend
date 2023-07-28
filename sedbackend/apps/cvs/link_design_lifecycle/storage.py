@@ -2,11 +2,10 @@ from typing import List
 
 from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
-
+import re
 from sedbackend.apps.cvs.design.storage import get_design_group
 from sedbackend.apps.cvs.vcs.storage import get_vcs_row
 from sedbackend.apps.cvs.vcs.storage import get_vcs
-from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.link_design_lifecycle import models, exceptions
 from mysqlsb import FetchType, MySQLStatementBuilder
 
@@ -24,9 +23,10 @@ def create_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_r
                     formulas: models.FormulaPost):
     logger.debug(f'Creating formulas')
 
-    # TODO extract from formula. For example with regex
-    value_drivers = []
-    external_factors = []
+    value_driver_ids, external_factor_ids = find_vd_and_ef([formulas.time, formulas.cost, formulas.revenue])
+
+    logger.debug(f'Value driver ids: {value_driver_ids}')
+    logger.debug(f'External factor ids: {external_factor_ids}')
 
     values = [project_id, vcs_row_id, design_group_id, formulas.time, formulas.time_unit.value, formulas.cost,
               formulas.revenue, formulas.rate.value]
@@ -41,10 +41,27 @@ def create_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_r
         logger.error(f'Error while inserting formulas: {e}')
         raise exceptions.FormulasFailedUpdateException
 
-    if value_drivers:
-        add_value_driver_formulas(db_connection, vcs_row_id, design_group_id, value_drivers, project_id)
-    if external_factors:
-        add_external_factor_formulas(db_connection, vcs_row_id, design_group_id, external_factors)
+    if value_driver_ids:
+        add_value_driver_formulas(db_connection, vcs_row_id, design_group_id, value_driver_ids, project_id)
+    if external_factor_ids:
+        add_external_factor_formulas(db_connection, vcs_row_id, design_group_id, external_factor_ids)
+
+
+def find_vd_and_ef(texts: List[str]) -> (List[str], List[int]):
+    value_driver_ids = []
+    external_factor_ids = []
+
+    pattern = r'\{(?P<tag>vd|ef):(?P<id>\d+),"([^"]+)"\}'
+
+    for text in texts:
+        matches = re.findall(pattern, text)
+        for tag, id_number, _ in matches:
+            if tag == "vd":
+                value_driver_ids.append(int(id_number))
+            elif tag == "ef":
+                external_factor_ids.append(int(id_number))
+
+    return value_driver_ids, external_factor_ids
 
 
 def edit_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_group_id: int, project_id: int,
@@ -79,10 +96,11 @@ def add_value_driver_formulas(db_connection: PooledMySQLConnection, vcs_row_id: 
         insert_statement = f'INSERT INTO {CVS_FORMULAS_VALUE_DRIVERS_TABLE} (vcs_row, design_group, value_driver, project) VALUES'
         for value_driver_id in value_drivers:
             insert_statement += f'(%s, %s, %s, %s),'
-            prepared_list.append(...[vcs_row_id, design_group_id, value_driver_id, project_id])
-        logger.debug(f'Insert_statement: {insert_statement}')
+            prepared_list += [vcs_row_id, design_group_id, value_driver_id, project_id]
+        insert_statement = insert_statement[:-1]
+        insert_statement += ' ON DUPLICATE KEY UPDATE vcs_row = vcs_row'  # On duplicate do nothing
         with db_connection.cursor(prepared=True) as cursor:
-            cursor.execute(insert_statement[:-1], prepared_list)
+            cursor.execute(insert_statement, prepared_list)
     except Exception as e:
         logger.error(f'Error while inserting value drivers: {e}')
         raise exceptions.FormulasFailedUpdateException
@@ -121,14 +139,14 @@ def add_external_factor_formulas(db_connection: PooledMySQLConnection, vcs_row_i
                                  external_factors: List[int]):
     try:
         prepared_list = []
-        insert_statement = f'INSERT INTO {CVS_FORMULAS_EXTERNAL_FACTORS_TABLE} (vcs_row, design_group, market_input) VALUES'
+        insert_statement = f'INSERT INTO {CVS_FORMULAS_EXTERNAL_FACTORS_TABLE} (vcs_row, design_group, external_factor) VALUES'
         for external_factor_id in external_factors:
             insert_statement += f'(%s, %s, %s),'
-            prepared_list.append(vcs_row_id)
-            prepared_list.append(design_group_id)
-            prepared_list.append(external_factor_id)
+            prepared_list += [vcs_row_id, design_group_id, external_factor_id]
+        insert_statement = insert_statement[:-1]
+        insert_statement += ' ON DUPLICATE KEY UPDATE vcs_row = vcs_row'  # On duplicate do nothing
         with db_connection.cursor(prepared=True) as cursor:
-            cursor.execute(insert_statement[:-1], prepared_list)
+            cursor.execute(insert_statement, prepared_list)
     except Exception as e:
         logger.error(f'Error while inserting external factors: {e}')
         raise exceptions.FormulasFailedUpdateException
@@ -201,9 +219,33 @@ def get_all_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
     if res is None:
-        raise vcs_exceptions.VCSNotFoundException
+        raise exceptions.FormulasNotFoundException
 
-    return [populate_formula(r) for r in res]
+    if len(res):
+        where_statement = "(vcs_row, design_group) IN (" + ",".join(["(%s, %s)" for _ in range(len(res))]) + ")"
+        prepared_list = []
+        for r in res:
+            prepared_list += [r['vcs_row'], r['design_group']]
+
+        with db_connection.cursor(prepared=True) as cursor:
+            cursor.execute(f"SELECT * FROM {CVS_FORMULAS_VALUE_DRIVERS_TABLE} WHERE {where_statement}",
+                           prepared_list)
+            all_vds = [dict(zip(cursor.column_names, row)) for row in cursor.fetchall()]
+
+        with db_connection.cursor(prepared=True) as cursor:
+            cursor.execute(f"SELECT * FROM {CVS_FORMULAS_EXTERNAL_FACTORS_TABLE} WHERE {where_statement}",
+                           prepared_list)
+            all_efs = [dict(zip(cursor.column_names, row)) for row in cursor.fetchall()]
+
+    formulas = []
+    for r in res:
+        r['value_drivers'] = [vd['value_driver'] for vd in all_vds if vd['vcs_row'] == r['vcs_row'] and
+                              vd['design_group'] == r['design_group']]
+        r['external_factors'] = [ef['external_factor'] for ef in all_efs if ef['vcs_row'] == r['vcs_row'] and
+                                 ef['design_group'] == r['design_group']]
+        formulas.append(populate_formula(r))
+
+    return formulas
 
 
 def populate_formula(db_result) -> models.FormulaGet:
@@ -214,7 +256,9 @@ def populate_formula(db_result) -> models.FormulaGet:
         time_unit=db_result['time_unit'],
         cost=db_result['cost'],
         revenue=db_result['revenue'],
-        rate=db_result['rate']
+        rate=db_result['rate'],
+        used_value_drivers=db_result['value_drivers'] if db_result['value_drivers'] is not None else [],
+        used_external_factors=db_result['external_factors'] if db_result['external_factors'] is not None else []
     )
 
 
