@@ -1,13 +1,15 @@
+from typing import Optional, List
+
 from pydantic import BaseModel
 
 
-class MarketInputGet(BaseModel):
+class ExternalFactor(BaseModel):
     id: int
     name: str
     unit: str
 
 
-class MarketInputPost(BaseModel):
+class ExternalFactorPost(BaseModel):
     name: str
     unit: str
 
@@ -16,8 +18,11 @@ class MarketInputPost(BaseModel):
 # Market Values
 ######################################################################################################################
 
-
-class MarketInputValue(BaseModel):
+class VcsEFValuePair(BaseModel):
     vcs_id: int
-    market_input_id: int
     value: float
+
+
+class ExternalFactorValue(BaseModel):
+    external_factor: ExternalFactor
+    external_factor_value: Optional[List[VcsEFValuePair]]

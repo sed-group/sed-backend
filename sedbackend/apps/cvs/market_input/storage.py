@@ -19,34 +19,34 @@ CVS_MARKET_VALUES_COLUMN = ['vcs', 'market_input', 'value']
 # Market Input
 ########################################################################################################################
 
-def populate_market_input(db_result) -> models.MarketInputGet:
-    return models.MarketInputGet(
+def populate_external_factor(db_result) -> models.ExternalFactor:
+    return models.ExternalFactor(
         id=db_result['id'],
         name=db_result['name'],
         unit=db_result['unit']
     )
 
 
-def get_market_input(db_connection: PooledMySQLConnection, project_id: int,
-                     market_input_id: int) -> models.MarketInputGet:
-    logger.debug(f'Fetching market input with id={market_input_id}.')
+def get_external_factor(db_connection: PooledMySQLConnection, project_id: int,
+                        external_factor_id: int) -> models.ExternalFactor:
+    logger.debug(f'Fetching external factor with id={external_factor_id}.')
 
     select_statement = MySQLStatementBuilder(db_connection)
     db_result = select_statement \
         .select(CVS_MARKET_INPUT_TABLE, CVS_MARKET_INPUT_COLUMN) \
-        .where('id = %s', [market_input_id]) \
+        .where('id = %s', [external_factor_id]) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     if db_result is None:
-        raise exceptions.MarketInputNotFoundException
+        raise exceptions.ExternalFactorNotFoundException
     if db_result['project'] != project_id:
         raise project_exceptions.CVSProjectNoMatchException
 
-    return populate_market_input(db_result)
+    return populate_external_factor(db_result)
 
 
-def get_all_market_input(db_connection: PooledMySQLConnection, project_id: int) -> List[models.MarketInputGet]:
-    logger.debug(f'Fetching all market inputs for project with id={project_id}.')
+def get_all_external_factors(db_connection: PooledMySQLConnection, project_id: int) -> List[models.ExternalFactor]:
+    logger.debug(f'Fetching all external factors for project with id={project_id}.')
 
     select_statement = MySQLStatementBuilder(db_connection)
     results = select_statement \
@@ -55,60 +55,60 @@ def get_all_market_input(db_connection: PooledMySQLConnection, project_id: int) 
         .order_by(['id'], Sort.ASCENDING) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
-    return [populate_market_input(db_result) for db_result in results]
+    return [populate_external_factor(db_result) for db_result in results]
 
 
-def create_market_input(db_connection: PooledMySQLConnection, project_id: int,
-                        market_input: models.MarketInputPost) -> models.MarketInputGet:
-    logger.debug(f'Create market input')
+def create_external_factor(db_connection: PooledMySQLConnection, project_id: int,
+                           external_factor: models.ExternalFactorPost) -> models.ExternalFactor:
+    logger.debug(f'Create external factor')
 
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement \
         .insert(table=CVS_MARKET_INPUT_TABLE, columns=CVS_MARKET_INPUT_COLUMN[1:]) \
-        .set_values([project_id, market_input.name, market_input.unit]) \
+        .set_values([project_id, external_factor.name, external_factor.unit]) \
         .execute(fetch_type=FetchType.FETCH_NONE)
 
-    return get_market_input(db_connection, project_id, insert_statement.last_insert_id)
+    return get_external_factor(db_connection, project_id, insert_statement.last_insert_id)
 
 
-def update_market_input(db_connection: PooledMySQLConnection, project_id: int, market_input_id: int,
-                        market_input: models.MarketInputPost) -> bool:
-    logger.debug(f'Update market input with vcs row id={market_input_id}')
+def update_external_factor(db_connection: PooledMySQLConnection, project_id: int,
+                           external_factor: models.ExternalFactor) -> bool:
+    logger.debug(f'Update external factor with id={external_factor.id}')
 
-    get_market_input(db_connection, project_id, market_input_id)  # check if market input exists and belongs to project
+    get_external_factor(db_connection, project_id, external_factor.id)  # check if external factor exists and belongs to project
 
     update_statement = MySQLStatementBuilder(db_connection)
     update_statement.update(
         table=CVS_MARKET_INPUT_TABLE,
         set_statement='name = %s, unit = %s',
-        values=[market_input.name, market_input.unit],
+        values=[external_factor.name, external_factor.unit],
     )
-    update_statement.where('id = %s', [market_input_id])
+    update_statement.where('id = %s', [external_factor.id])
     _, rows = update_statement.execute(return_affected_rows=True)
 
     return True
 
 
-def delete_market_input(db_connection: PooledMySQLConnection, project_id: int, mi_id: int) -> bool:
-    logger.debug(f'Deleting market input with id: {mi_id}')
+def delete_external_factor(db_connection: PooledMySQLConnection, project_id: int, external_factor_id: int) -> bool:
+    logger.debug(f'Deleting external factor with id: {external_factor_id}')
 
-    get_market_input(db_connection, project_id, mi_id)  # check if market input exists and belongs to project
+    get_external_factor(db_connection, project_id, external_factor_id)  # check if external factor exists and belongs to project
 
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement \
         .delete(CVS_MARKET_INPUT_TABLE) \
-        .where('id = %s', [mi_id]) \
+        .where('id = %s', [external_factor_id]) \
         .execute(return_affected_rows=True)
 
     if rows != 1:
-        raise exceptions.MarketInputFailedDeletionException
+        raise exceptions.ExternalFactorFailedDeletionException
 
     return True
 
 
-def get_all_formula_market_inputs(db_connection: PooledMySQLConnection,
-                                  formulas_id: int) -> List[models.MarketInputValue]:
-    logger.debug(f'Fetching all market inputs for formulas with vcs_row id: {formulas_id}')
+def get_all_formula_external_factors(db_connection: PooledMySQLConnection,
+                                     formulas_id: int) -> List[models.ExternalFactorValue]:
+    logger.debug(f'Fetching all external factors for formulas with vcs_row id: {formulas_id}')
 
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement \
@@ -118,17 +118,17 @@ def get_all_formula_market_inputs(db_connection: PooledMySQLConnection,
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
     if res is None:
-        raise exceptions.MarketInputFormulasNotFoundException
+        raise exceptions.ExternalFactorFormulasNotFoundException
 
-    return [populate_market_input(r) for r in res]
+    return [populate_external_factor(r) for r in res]
 
 
 ########################################################################################################################
-# Market Values
+# External Factor values
 ########################################################################################################################
 
-def populate_market_input_values(db_result) -> models.MarketInputValue:
-    return models.MarketInputValue(
+def populate_external_factor_values(db_result) -> models.ExternalFactorValue:
+    return models.ExternalFactorValue(
         vcs_id=db_result['vcs'],
         market_input_id=db_result['market_input'],
         value=db_result['value']
@@ -136,10 +136,10 @@ def populate_market_input_values(db_result) -> models.MarketInputValue:
 
 
 def update_market_input_value(db_connection: PooledMySQLConnection, project_id: int,
-                              mi_value: models.MarketInputValue) -> bool:
+                              external_factor_value: models.ExternalFactorValue) -> bool:
     logger.debug(f'Update market input value')
     vcs_storage.check_vcs(db_connection, project_id, mi_value.vcs_id)  # check if vcs exists
-    get_market_input(db_connection, project_id, mi_value.market_input_id)  # check if market input exists
+    get_external_factor(db_connection, project_id, mi_value.market_input_id)  # check if market input exists
 
     count_statement = MySQLStatementBuilder(db_connection)
     count_result = count_statement \
@@ -164,11 +164,12 @@ def update_market_input_value(db_connection: PooledMySQLConnection, project_id: 
     return True
 
 
-def update_market_input_values(db_connection: PooledMySQLConnection, project_id: int,
-                               mi_values: List[models.MarketInputValue]) -> bool:
+def update_external_factor_values(db_connection: PooledMySQLConnection, project_id: int,
+                                  mi_values: List[models.ExternalFactorValue]) -> bool:
     logger.debug(f'Update market input values')
 
-    curr_mi_values = get_all_market_input_values(db_connection, project_id)
+    curr_mi_values = get_all_external_factor_values(db_connection, project_id)
+
     # delete if no longer exists
     for value in curr_mi_values:
         if [value.vcs_id, value.market_input_id] not in [[v.vcs_id, v.market_input_id] for v in mi_values]:
@@ -180,7 +181,8 @@ def update_market_input_values(db_connection: PooledMySQLConnection, project_id:
     return True
 
 
-def get_all_market_input_values(db_connection: PooledMySQLConnection, project_id: int) -> List[models.MarketInputValue]:
+def get_all_external_factor_values(db_connection: PooledMySQLConnection,
+                                   project_id: int) -> List[models.ExternalFactorValue]:
     logger.debug(f'Fetching all market values for project with id: {project_id}')
 
     columns = CVS_MARKET_VALUES_COLUMN
@@ -192,13 +194,13 @@ def get_all_market_input_values(db_connection: PooledMySQLConnection, project_id
         .where('project = %s', [project_id]) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
-    return [populate_market_input_values(r) for r in res]
+    return [populate_external_factor_values(r) for r in res]
 
 
 def delete_market_value(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, mi_id: int) -> bool:
     logger.debug(f'Deleting market input value with vcs id: {vcs_id} and market input id: {mi_id}')
 
-    get_market_input(db_connection, project_id, mi_id)  # check if market input exists and belongs to project
+    get_external_factor(db_connection, project_id, mi_id)  # check if market input exists and belongs to project
 
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement \
@@ -207,6 +209,6 @@ def delete_market_value(db_connection: PooledMySQLConnection, project_id: int, v
         .execute(return_affected_rows=True)
 
     if rows != 1:
-        raise exceptions.MarketInputFailedDeletionException
+        raise exceptions.ExternalFactorFailedDeletionException
 
     return True

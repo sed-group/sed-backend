@@ -38,7 +38,7 @@ def run_simulation(sim_settings: models.EditSimSettings, vcs_ids: List[int],
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find project.',
         )
-    except market_input_exceptions.MarketInputNotFoundException:
+    except market_input_exceptions.ExternalFactorNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find market input',
@@ -127,7 +127,7 @@ def run_dsm_file_simulation(user_id: int, project_id: int, sim_params: models.Fi
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find project.',
         )
-    except market_input_exceptions.MarketInputNotFoundException:
+    except market_input_exceptions.ExternalFactorNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not find market input',
