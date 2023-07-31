@@ -16,7 +16,6 @@ from desim.simulation import Process
 import os
 
 from typing import List
-from sedbackend.apps.cvs.design.models import ValueDriverDesignValue
 from sedbackend.apps.cvs.design.storage import get_all_designs
 
 from mysqlsb import FetchType, MySQLStatementBuilder
@@ -299,28 +298,9 @@ def get_all_sim_data(db_connection: PooledMySQLConnection, vcs_ids: List[int], d
     return res
 
 
-def get_vd_design_values(db_connection: PooledMySQLConnection, vcs_row_id: int,
-                         design: int) -> List[ValueDriverDesignValue]:
-    select_statement = MySQLStatementBuilder(db_connection)
-    res = select_statement \
-        .select('cvs_vd_design_values', ['cvs_value_drivers.id', 'design', 'name', 'value', 'unit']) \
-        .inner_join('cvs_value_drivers', 'cvs_vd_design_values.value_driver = cvs_value_drivers.id') \
-        .inner_join('cvs_vcs_need_drivers', 'cvs_vcs_need_drivers.value_driver = cvs_value_drivers.id') \
-        .inner_join('cvs_stakeholder_needs', 'cvs_stakeholder_needs.id = cvs_vcs_need_drivers.stakeholder_need') \
-        .where('vcs_row = %s and design = %s', [vcs_row_id, design]) \
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-
-    logger.debug(f'Fetched {len(res)} value driver design values')
-    return res
-
-
 def get_all_vd_design_values(db_connection: PooledMySQLConnection, designs: List[int]):
     try:
-        query = f'SELECT cvs_value_drivers.id, design, name, value, unit, vcs_row \
-                        FROM cvs_vd_design_values \
-                        INNER JOIN cvs_value_drivers ON cvs_vd_design_values.value_driver = cvs_value_drivers.id \
-                        INNER JOIN cvs_vcs_need_drivers ON cvs_vcs_need_drivers.value_driver = cvs_value_drivers.id \
-                        INNER JOIN cvs_stakeholder_needs ON cvs_stakeholder_needs.id = cvs_vcs_need_drivers.stakeholder_need \
+        query = f'SELECT * FROM cvs_vd_design_values \
                         WHERE design IN ({",".join(["%s" for _ in range(len(designs))])})'
         with db_connection.cursor(prepared=True) as cursor:
             cursor.execute(query, designs)
@@ -360,7 +340,6 @@ def edit_simulation_settings(db_connection: PooledMySQLConnection, project_id: i
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     count = count['count']
-    logger.debug(count)
 
     if sim_settings.flow_process is not None:
         flow_process_exists = False
@@ -426,9 +405,7 @@ def get_market_values(db_connection: PooledMySQLConnection, vcs: int):
 
 def get_all_market_values(db_connection: PooledMySQLConnection, vcs_ids: List[int]):
     try:
-        query = f'SELECT id, name, value, unit, vcs \
-                FROM cvs_market_input_values \
-                INNER JOIN cvs_market_inputs ON cvs_market_input_values.market_input = cvs_market_inputs.id \
+        query = f'SELECT * FROM cvs_market_input_values \
                 WHERE cvs_market_input_values.vcs IN ({",".join(["%s" for _ in range(len(vcs_ids))])})'
         with db_connection.cursor(prepared=True) as cursor:
             cursor.execute(query, vcs_ids)
@@ -440,14 +417,7 @@ def get_all_market_values(db_connection: PooledMySQLConnection, vcs_ids: List[in
     return res
 
 
-def parse_formula(formula: str, vd_values, mi_values) -> str:
-    new_formula = replace_vd_ef(formula, vd_values, mi_values)
-    new_formula = expr.remove_strings_replace_zero(new_formula)
-
-    return new_formula
-
-
-def replace_vd_ef(formula, vd_values, ef_values):
+def parse_formula(formula: str, vd_values, ef_values):
     pattern = r'\{(?P<tag>vd|ef):(?P<id>\d+),"([^"]+)"\}'
 
     def replace(match):
@@ -464,6 +434,7 @@ def replace_vd_ef(formula, vd_values, ef_values):
         return match.group()
 
     replaced_text = re.sub(pattern, replace, formula)
+    replaced_text = re.sub(pattern, '0', replaced_text)  # If there are any tags left, replace them with 0
     return replaced_text
 
 
