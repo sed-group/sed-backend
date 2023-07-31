@@ -300,7 +300,10 @@ def get_all_sim_data(db_connection: PooledMySQLConnection, vcs_ids: List[int], d
 
 def get_all_vd_design_values(db_connection: PooledMySQLConnection, designs: List[int]):
     try:
-        query = f'SELECT * FROM cvs_vd_design_values \
+        query = f'SELECT cvs_vd_design_values.value_driver, design, value, vcs_row \
+                        FROM cvs_vd_design_values \
+                        INNER JOIN cvs_vcs_need_drivers ON cvs_vcs_need_drivers.value_driver = cvs_vd_design_values.value_driver \
+                        INNER JOIN cvs_stakeholder_needs ON cvs_stakeholder_needs.id = cvs_vcs_need_drivers.stakeholder_need \
                         WHERE design IN ({",".join(["%s" for _ in range(len(designs))])})'
         with db_connection.cursor(prepared=True) as cursor:
             cursor.execute(query, designs)
@@ -393,16 +396,6 @@ def create_sim_settings(db_connection: PooledMySQLConnection, project_id: int,
     return True
 
 
-def get_market_values(db_connection: PooledMySQLConnection, vcs: int):
-    select_statement = MySQLStatementBuilder(db_connection)
-    res = select_statement \
-        .select('cvs_market_input_values', ['id', 'name', 'value', 'unit']) \
-        .inner_join('cvs_market_inputs', 'cvs_market_input_values.market_input = cvs_market_inputs.id') \
-        .where('vcs = %s', [vcs]) \
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-    return res
-
-
 def get_all_market_values(db_connection: PooledMySQLConnection, vcs_ids: List[int]):
     try:
         query = f'SELECT * FROM cvs_market_input_values \
@@ -425,16 +418,18 @@ def parse_formula(formula: str, vd_values, ef_values):
         id_number = int(id_number)
         if tag == "vd":
             for vd in vd_values:
-                if vd["id"] == id_number:
+                if vd["value_driver"] == id_number:
                     return str(vd["value"])
         elif tag == "ef":
             for ef in ef_values:
-                if ef["id"] == id_number:
+                if ef["market_input"] == id_number:
                     return str(ef["value"])
         return match.group()
 
     replaced_text = re.sub(pattern, replace, formula)
     replaced_text = re.sub(pattern, '0', replaced_text)  # If there are any tags left, replace them with 0
+
+    logger.debug(f'Parsed formula: {replaced_text}')
     return replaced_text
 
 

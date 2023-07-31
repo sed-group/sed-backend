@@ -106,8 +106,9 @@ def delete_value_driver_formulas(db_connection: PooledMySQLConnection, vcs_row_i
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement \
         .delete(CVS_FORMULAS_VALUE_DRIVERS_TABLE) \
-        .where('vcs_row = %s and design_group = %s and value_driver in %s',
-               [vcs_row_id, design_group_id, value_drivers]) \
+        .where(
+        f'vcs_row = %s and design_group = %s and value_driver in ({",".join(["%s" for _ in range(len(value_drivers))])})',
+        [vcs_row_id, design_group_id] + value_drivers) \
         .execute(return_affected_rows=True)
 
 
@@ -119,10 +120,11 @@ def update_value_driver_formulas(db_connection: PooledMySQLConnection, vcs_row_i
         .where(where_statement, [vcs_row_id, design_group_id]) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
-    delete_value_drivers = [value_driver['id'] for value_driver in value_driver_res if value_driver['id'] not in
+    delete_value_drivers = [value_driver['value_driver'] for value_driver in value_driver_res if
+                            value_driver['value_driver'] not in
                             value_drivers]
     add_value_drivers = [value_driver_id for value_driver_id in value_drivers if value_driver_id not in
-                         [value_driver['id'] for value_driver in value_driver_res]]
+                         [value_driver['value_driver'] for value_driver in value_driver_res]]
 
     if len(add_value_drivers):
         add_value_driver_formulas(db_connection, vcs_row_id, design_group_id, add_value_drivers, project_id)
@@ -152,8 +154,9 @@ def delete_external_factor_formulas(db_connection: PooledMySQLConnection, vcs_ro
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement \
         .delete(CVS_FORMULAS_EXTERNAL_FACTORS_TABLE) \
-        .where('vcs_row = %s and design_group = %s and external_factors in %s',
-               [vcs_row_id, design_group_id, external_factors]) \
+        .where(
+        f'vcs_row = %s and design_group = %s and external_factors in ({",".join(["%s" for _ in range(len(external_factors))])})',
+        [vcs_row_id, design_group_id] + external_factors) \
         .execute(return_affected_rows=True)
 
 
