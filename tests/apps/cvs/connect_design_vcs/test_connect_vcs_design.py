@@ -203,13 +203,20 @@ def test_edit_formulas(client, std_headers, std_user):
     vcs = tu.seed_random_vcs(project.id)
     design_group = tu.seed_random_design_group(project.id)
 
-    # Act
     formulas = tu.seed_random_formulas(project.id, vcs.id, design_group.id, current_user.id, 1)
 
-    time = testutils.random_str(10, 200)
+    value_driver = tu.seed_random_value_driver(current_user.id, project.id)
+    external_factor = tu.seed_random_market_input(project.id)
+
+    # Act
+
+    time = '2+{vd:' + str(value_driver.id) + ',"' + str(value_driver.name) + '"}+{vd:' + str(
+        value_driver.id) + ',"' + str(value_driver.name) + '"}'
+    cost = '2+{ef:' + str(external_factor.id) + ',"' + str(external_factor.name) + '"}'
+    revenue = '20+{vd:' + str(value_driver.id) + ',"' + str(value_driver.name) + '"}+{ef:' + str(
+        external_factor.id) + ',"' + str(external_factor.name) + '"}'
+
     time_unit = tu.random_time_unit()
-    cost = testutils.random_str(10, 200)
-    revenue = testutils.random_str(10, 200)
     rate = tu.random_rate_choice()
 
     res = client.put(
@@ -223,13 +230,15 @@ def test_edit_formulas(client, std_headers, std_user):
             "rate": rate
         })
 
+    res_get = client.get(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas/all',
+                         headers=std_headers)
+
     # Assert
     assert res.status_code == 200
+    assert res_get.json()[0]['used_value_drivers'][0] == value_driver.id
+    assert res_get.json()[0]['used_external_factors'][0] == external_factor.id
 
     # Cleanup
-    tu.delete_formulas(project.id, [(formula.vcs_row_id, formula.design_group_id) for formula in formulas])
-    tu.delete_design_group(project.id, design_group.id)
-    tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
 

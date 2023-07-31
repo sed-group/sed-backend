@@ -25,9 +25,6 @@ def create_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_r
 
     value_driver_ids, external_factor_ids = find_vd_and_ef([formulas.time, formulas.cost, formulas.revenue])
 
-    logger.debug(f'Value driver ids: {value_driver_ids}')
-    logger.debug(f'External factor ids: {external_factor_ids}')
-
     values = [project_id, vcs_row_id, design_group_id, formulas.time, formulas.time_unit.value, formulas.cost,
               formulas.revenue, formulas.rate.value]
 
@@ -68,9 +65,7 @@ def edit_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_
                   formulas: models.FormulaPost):
     logger.debug(f'Editing formulas')
 
-    # TODO extract from formula. For example with regex
-    value_drivers = []
-    external_factors = []
+    value_driver_ids, external_factor_ids = find_vd_and_ef([formulas.time, formulas.cost, formulas.revenue])
 
     columns = CVS_FORMULAS_COLUMNS[3:]
     set_statement = ', '.join([col + ' = %s' for col in columns])
@@ -84,9 +79,9 @@ def edit_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_
         .where('vcs_row = %s and design_group = %s', [vcs_row_id, design_group_id]) \
         .execute(return_affected_rows=True)
 
-    update_value_driver_formulas(db_connection, vcs_row_id, design_group_id, value_drivers, project_id)
+    update_value_driver_formulas(db_connection, vcs_row_id, design_group_id, value_driver_ids, project_id)
 
-    update_external_factor_formulas(db_connection, vcs_row_id, design_group_id, external_factors)
+    update_external_factor_formulas(db_connection, vcs_row_id, design_group_id, external_factor_ids)
 
 
 def add_value_driver_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_group_id: int,
