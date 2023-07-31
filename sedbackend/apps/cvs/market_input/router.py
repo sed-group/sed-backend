@@ -21,7 +21,7 @@ router = APIRouter()
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
 async def get_all_market_input(native_project_id: int) -> List[models.ExternalFactor]:
-    return implementation.get_all_market_inputs(native_project_id)
+    return implementation.get_all_external_factors(native_project_id)
 
 
 @router.post(
@@ -31,7 +31,7 @@ async def get_all_market_input(native_project_id: int) -> List[models.ExternalFa
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
 async def create_market_input(native_project_id: int, market_input: models.ExternalFactorPost) -> models.ExternalFactor:
-    return implementation.create_market_input(native_project_id, market_input)
+    return implementation.create_external_factor(native_project_id, market_input)
 
 
 @router.put(
@@ -51,7 +51,7 @@ async def update_market_input(native_project_id: int, external_factor: models.Ex
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
 async def delete_market_input(native_project_id: int, market_input_id: int) -> bool:
-    return implementation.delete_market_input(native_project_id, market_input_id)
+    return implementation.delete_external_factor(native_project_id, market_input_id)
 
 
 ########################################################################################################################
@@ -63,7 +63,7 @@ async def delete_market_input(native_project_id: int, market_input_id: int) -> b
     response_model=bool
 )
 async def update_market_values(native_project_id: int, mi_values: List[models.ExternalFactorValue]) -> bool:
-    return implementation.update_market_input_values(native_project_id, mi_values)
+    return implementation.update_external_factor_values(native_project_id, mi_values)
 
 
 @router.get(
@@ -72,4 +72,4 @@ async def update_market_values(native_project_id: int, mi_values: List[models.Ex
     response_model=List[models.ExternalFactorValue]
 )
 async def get_all_market_values(native_project_id: int) -> List[models.ExternalFactorValue]:
-    return implementation.get_all_market_values(native_project_id)
+    return implementation.get_all_external_factor_values(native_project_id)

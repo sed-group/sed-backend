@@ -21,7 +21,7 @@ def test_create_market_input(client, std_headers, std_user):
         }
     ])
     # Assert
-    market_input_values = impl_market_input.get_all_market_values(project.id)
+    market_input_values = impl_market_input.get_all_external_factor_values(project.id)
     assert res.status_code == 200  # 200 OK
     assert len(market_input_values) == 1
     assert market_input_values[0].market_input_id == market_input.id
@@ -73,7 +73,7 @@ def test_edit_market_input_value(client, std_headers, std_user):
         }
     ])
     # Assert
-    market_input_values = impl_market_input.get_all_market_values(project.id)
+    market_input_values = impl_market_input.get_all_external_factor_values(project.id)
     assert res.status_code == 200  # 200 OK
     assert len(market_input_values) == 1
     assert market_input_values[0].market_input_id == market_input_value.market_input_id
@@ -95,7 +95,7 @@ def test_delete_market_input_value(client, std_headers, std_user):
     # Act
     res = client.put(f'/api/cvs/project/{project.id}/market-input-values', headers=std_headers, json=[])
     # Assert
-    market_input_values = impl_market_input.get_all_market_values(project.id)
+    market_input_values = impl_market_input.get_all_external_factor_values(project.id)
     assert res.status_code == 200  # 200 OK
     assert len(market_input_values) == 0
 

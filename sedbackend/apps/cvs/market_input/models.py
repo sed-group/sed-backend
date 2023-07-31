@@ -24,5 +24,7 @@ class VcsEFValuePair(BaseModel):
 
 
 class ExternalFactorValue(BaseModel):
-    external_factor: ExternalFactor
-    external_factor_value: Optional[List[VcsEFValuePair]]
+    id: int
+    name: str
+    unit: str
+    external_factor_values: Optional[List[VcsEFValuePair]]

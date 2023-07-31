@@ -601,16 +601,16 @@ def seed_random_market_input(project_id: int):
         name=name,
         unit=unit
     )
-    return market_input_impl.create_market_input(project_id, market_input_post)
+    return market_input_impl.create_external_factor(project_id, market_input_post)
 
 
 def seed_random_market_input_values(project_id: int, vcs_id: int, market_input_id: int):
-    market_input_impl.update_market_input_values(project_id, [market_input_model.ExternalFactorValue(
+    market_input_impl.update_external_factor_values(project_id, [market_input_model.ExternalFactorValue(
         vcs_id=vcs_id,
         market_input_id=market_input_id,
         value=random.random() * 100)])
 
-    return market_input_impl.get_all_market_values(project_id)
+    return market_input_impl.get_all_external_factor_values(project_id)
 
 
 # ======================================================================================================================

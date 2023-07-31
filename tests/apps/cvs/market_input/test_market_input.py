@@ -13,7 +13,7 @@ def test_create_market_input(client, std_headers, std_user):
         'unit': "new unit",
     })
     # Assert
-    market_inputs = impl_market_input.get_all_market_inputs(project.id)
+    market_inputs = impl_market_input.get_all_external_factors(project.id)
     assert res.status_code == 200  # 200 OK
     assert res.json()["name"] == "new market input"
     assert res.json()["unit"] == "new unit"
@@ -80,7 +80,7 @@ def test_edit_market_input(client, std_headers, std_user):
         'unit': "new unit",
     })
     # Assert
-    market_input_updated = impl_market_input.get_market_input(project.id, market_input.id)
+    market_input_updated = impl_market_input.get_external_factor(project.id, market_input.id)
     assert res.status_code == 200  # 200 OK
     assert market_input_updated.name == "new market input"
     assert market_input_updated.unit == "new unit"
@@ -100,7 +100,7 @@ def test_edit_market_input_no_changes(client, std_headers, std_user):
         'unit': market_input.unit,
     })
     # Assert
-    market_input_updated = impl_market_input.get_market_input(project.id, market_input.id)
+    market_input_updated = impl_market_input.get_external_factor(project.id, market_input.id)
     assert res.status_code == 200  # 200 OK
     assert market_input_updated.name == market_input.name
     assert market_input_updated.unit == market_input.unit
@@ -134,7 +134,7 @@ def test_delete_market_input(client, std_headers, std_user):
     # Act
     res = client.delete(f'/api/cvs/project/{project.id}/market-input/{market_input.id}', headers=std_headers)
     # Assert
-    market_inputs = impl_market_input.get_all_market_inputs(project.id)
+    market_inputs = impl_market_input.get_all_external_factors(project.id)
     assert res.status_code == 200  # 200 OK
     assert len(market_inputs) == 0
     # Cleanup

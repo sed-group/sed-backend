@@ -15,7 +15,7 @@ from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 ########################################################################################################################
 
 
-def get_all_market_inputs(project_id: int) -> List[models.ExternalFactor]:
+def get_all_external_factors(project_id: int) -> List[models.ExternalFactor]:
     try:
         with get_connection() as con:
             db_result = storage.get_all_external_factors(con, project_id)
@@ -38,10 +38,10 @@ def get_all_market_inputs(project_id: int) -> List[models.ExternalFactor]:
         )
 
 
-def get_market_input(project_id: int, market_input_id: int) -> models.ExternalFactor:
+def get_external_factor(project_id: int, external_factor_id: int) -> models.ExternalFactor:
     try:
         with get_connection() as con:
-            db_result = storage.get_external_factor(con, project_id, market_input_id)
+            db_result = storage.get_external_factor(con, project_id, external_factor_id)
             con.commit()
             return db_result
     except auth_ex.UnauthorizedOperationException:
@@ -61,10 +61,10 @@ def get_market_input(project_id: int, market_input_id: int) -> models.ExternalFa
         )
 
 
-def create_market_input(project_id: int, market_input: models.ExternalFactorPost) -> models.ExternalFactor:
+def create_external_factor(project_id: int, external_factor_post: models.ExternalFactorPost) -> models.ExternalFactor:
     try:
         with get_connection() as con:
-            db_result = storage.create_external_factor(con, project_id, market_input)
+            db_result = storage.create_external_factor(con, project_id, external_factor_post)
             con.commit()
             return db_result
     except auth_ex.UnauthorizedOperationException:
@@ -102,16 +102,16 @@ def update_external_factor(project_id: int, external_factor: models.ExternalFact
         )
 
 
-def delete_market_input(project_id: int, mi_id: int) -> bool:
+def delete_external_factor(project_id: int, external_factor_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.delete_external_factor(con, project_id, mi_id)
+            res = storage.delete_external_factor(con, project_id, external_factor_id)
             con.commit()
             return res
     except exceptions.ExternalFactorFailedDeletionException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not delete market input with id: {mi_id}'
+            detail=f'Could not delete market input with id: {external_factor_id}'
         )
     except proj_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
@@ -121,7 +121,7 @@ def delete_market_input(project_id: int, mi_id: int) -> bool:
     except proj_exceptions.CVSProjectNoMatchException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Market input with id={mi_id} is not a part from project with id={project_id}.',
+            detail=f'Market input with id={external_factor_id} is not a part from project with id={project_id}.',
         )
 
 
@@ -146,7 +146,7 @@ def get_all_formula_market_inputs(formulas_id: int) -> List[models.ExternalFacto
 def update_market_input_value(project_id: int, mi_value: models.ExternalFactorValue) -> bool:
     try:
         with get_connection() as con:
-            res = storage.update_market_input_value(con, project_id, mi_value)
+            res = storage.update_external_factor_value(con, project_id, mi_value)
             con.commit()
             return res
     except exceptions.ExternalFactorNotFoundException:
@@ -171,10 +171,10 @@ def update_market_input_value(project_id: int, mi_value: models.ExternalFactorVa
         )
 
 
-def update_market_input_values(project_id: int, mi_values: List[models.ExternalFactorValue]) -> bool:
+def update_external_factor_values(project_id: int, external_factor_values: List[models.ExternalFactorValue]) -> bool:
     try:
         with get_connection() as con:
-            res = storage.update_external_factor_values(con, project_id, mi_values)
+            res = storage.update_external_factor_values(con, project_id, external_factor_values)
             con.commit()
             return res
     except exceptions.ExternalFactorNotFoundException:
@@ -194,7 +194,7 @@ def update_market_input_values(project_id: int, mi_values: List[models.ExternalF
         )
 
 
-def get_all_market_values(project_id: int) -> List[models.ExternalFactorValue]:
+def get_all_external_factor_values(project_id: int) -> List[models.ExternalFactorValue]:
     try:
         with get_connection() as con:
             res = storage.get_all_external_factor_values(con, project_id)
@@ -207,16 +207,16 @@ def get_all_market_values(project_id: int) -> List[models.ExternalFactorValue]:
         )
 
 
-def delete_market_value(project_id: int, vcs_id: int, mi_id: int) -> bool:
+def delete_external_factor_value(project_id: int, vcs_id: int, external_factor_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.delete_market_value(con, project_id, vcs_id, mi_id)
+            res = storage.delete_market_value(con, project_id, vcs_id, external_factor_id)
             con.commit()
             return res
     except exceptions.ExternalFactorFailedDeletionException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Could not delete market input value with market input id: {mi_id} and vcs id: {vcs_id}'
+            detail=f'Could not delete external factor value with external factor id: {external_factor_id} and vcs id: {vcs_id}'
         )
     except proj_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
@@ -226,5 +226,5 @@ def delete_market_value(project_id: int, vcs_id: int, mi_id: int) -> bool:
     except proj_exceptions.CVSProjectNoMatchException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Market input with id={mi_id} is not a part from project with id={project_id}.',
+            detail=f'External factor with id={external_factor_id} is not a part from project with id={project_id}.',
         )
