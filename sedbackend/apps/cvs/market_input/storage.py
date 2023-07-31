@@ -138,7 +138,7 @@ def populate_market_input_values(db_result) -> models.MarketInputValue:
 def update_market_input_value(db_connection: PooledMySQLConnection, project_id: int,
                               mi_value: models.MarketInputValue) -> bool:
     logger.debug(f'Update market input value')
-    vcs_storage.get_vcs(db_connection, project_id, mi_value.vcs_id)  # check if vcs exists
+    vcs_storage.check_vcs(db_connection, project_id, mi_value.vcs_id)  # check if vcs exists
     get_market_input(db_connection, project_id, mi_value.market_input_id)  # check if market input exists
 
     count_statement = MySQLStatementBuilder(db_connection)

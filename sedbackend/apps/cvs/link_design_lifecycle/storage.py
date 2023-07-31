@@ -201,11 +201,11 @@ def update_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_r
 
 
 def get_all_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
-                     design_group_id: int) -> List[models.FormulaGet]:
+                     design_group_id: int, user_id: int) -> List[models.FormulaGet]:
     logger.debug(f'Fetching all formulas with vcs_id={vcs_id}')
 
     get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
-    get_vcs(db_connection, project_id, vcs_id)
+    get_vcs(db_connection, project_id, vcs_id, user_id)
 
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement.select(CVS_FORMULAS_TABLE, CVS_FORMULAS_COLUMNS) \

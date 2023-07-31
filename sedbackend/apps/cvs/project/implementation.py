@@ -13,10 +13,10 @@ def get_all_cvs_project(user_id: int) -> ListChunk[models.CVSProject]:
         return storage.get_all_cvs_project(con, user_id)
 
 
-def get_cvs_project(project_id: int) -> models.CVSProject:
+def get_cvs_project(project_id: int, user_id: int) -> models.CVSProject:
     try:
         with get_connection() as con:
-            return storage.get_cvs_project(con, project_id)
+            return storage.get_cvs_project(con, project_id, user_id)
     except exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -37,10 +37,10 @@ def create_cvs_project(project_post: models.CVSProjectPost, user_id: int) -> mod
         return result
 
 
-def edit_cvs_project(project_id: int, project_post: models.CVSProjectPost) -> models.CVSProject:
+def edit_cvs_project(project_id: int, project_post: models.CVSProjectPost, user_id) -> models.CVSProject:
     try:
         with get_connection() as con:
-            result = storage.edit_cvs_project(con, project_id, project_post)
+            result = storage.edit_cvs_project(con, project_id, project_post, user_id)
             con.commit()
             return result
     except exceptions.CVSProjectNotFoundException:
@@ -70,6 +70,11 @@ def delete_cvs_project(project_id: int, user_id: int) -> bool:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Failed to remove project with id={project_id}.',
+        )
+    except exceptions.SubProjectFailedDeletionException:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Failed to remove sub-project with CVS native_project_id={project_id}'
         )
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(

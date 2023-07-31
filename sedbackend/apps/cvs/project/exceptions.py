@@ -12,3 +12,7 @@ class CVSProjectFailedDeletionException(Exception):
 
 class CVSProjectNoMatchException(Exception):
     pass
+
+
+class SubProjectFailedDeletionException(Exception):
+    pass

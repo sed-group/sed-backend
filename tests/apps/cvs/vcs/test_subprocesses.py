@@ -85,7 +85,7 @@ def test_edit_subprocess(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     subprocess = tu.seed_random_subprocesses(project.id, 1)[0]
     # Act
     res = client.put(f'/api/cvs/project/{project.id}/subprocess/{subprocess.id}', headers=std_headers, json={
@@ -107,7 +107,7 @@ def test_delete_subprocess(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
     subprocess = tu.seed_random_subprocesses(project.id, 1)[0]
     # Act
     res = client.delete(f'/api/cvs/project/{project.id}/subprocess/{subprocess.id}', headers=std_headers)

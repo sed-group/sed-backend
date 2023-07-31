@@ -16,10 +16,10 @@ from sedbackend.apps.core.files import exceptions as file_ex
 # VCS
 # ======================================================================================================================
 
-def get_all_vcs(project_id: int) -> ListChunk[models.VCS]:
+def get_all_vcs(project_id: int, user_id: int) -> ListChunk[models.VCS]:
     try:
         with get_connection() as con:
-            return storage.get_all_vcs(con, project_id)
+            return storage.get_all_vcs(con, project_id, user_id)
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -27,10 +27,10 @@ def get_all_vcs(project_id: int) -> ListChunk[models.VCS]:
         )
 
 
-def get_vcs(project_id: int, vcs_id: int) -> models.VCS:
+def get_vcs(project_id: int, vcs_id: int, user_id: int) -> models.VCS:
     try:
         with get_connection() as con:
-            return storage.get_vcs(con, project_id, vcs_id)
+            return storage.get_vcs(con, project_id, vcs_id, user_id)
     except exceptions.VCSNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -53,10 +53,10 @@ def get_vcs(project_id: int, vcs_id: int) -> models.VCS:
         )
 
 
-def create_vcs(project_id: int, vcs_post: models.VCSPost) -> models.VCS:
+def create_vcs(project_id: int, vcs_post: models.VCSPost, user_id: int) -> models.VCS:
     try:
         with get_connection() as con:
-            result = storage.create_vcs(con, project_id, vcs_post)
+            result = storage.create_vcs(con, project_id, vcs_post, user_id)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
@@ -76,10 +76,10 @@ def create_vcs(project_id: int, vcs_post: models.VCSPost) -> models.VCS:
         )
 
 
-def edit_vcs(project_id: int, vcs_id: int, vcs_post: models.VCSPost) -> models.VCS:
+def edit_vcs(project_id: int, vcs_id: int, vcs_post: models.VCSPost, user_id: int) -> models.VCS:
     try:
         with get_connection() as con:
-            result = storage.edit_vcs(con, project_id, vcs_id, vcs_post)
+            result = storage.edit_vcs(con, project_id, vcs_id, vcs_post, user_id)
             con.commit()
             return result
     except exceptions.VCSNotFoundException:
@@ -605,10 +605,10 @@ def edit_vcs_table(project_id: int, vcs_id: int, updated_vcs_rows: List[models.V
 # VCS Duplicate
 # ======================================================================================================================
 
-def duplicate_vcs(project_id: int, vcs_id: int, n: int) -> List[models.VCS]:
+def duplicate_vcs(project_id: int, vcs_id: int, n: int, user_id: int) -> List[models.VCS]:
     try:
         with get_connection() as con:
-            res = storage.duplicate_whole_vcs(con, project_id, vcs_id, n)
+            res = storage.duplicate_whole_vcs(con, project_id, vcs_id, n, user_id)
             con.commit()
             return res
     except exceptions.VCSNotFoundException:

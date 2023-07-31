@@ -2,8 +2,10 @@ from typing import List
 
 from fastapi import Depends, APIRouter
 
+from sedbackend.apps.core.authentication.utils import get_current_active_user
 from sedbackend.apps.core.projects.dependencies import SubProjectAccessChecker
 from sedbackend.apps.core.projects.models import AccessLevel
+from sedbackend.apps.core.users.models import User
 from sedbackend.apps.cvs.link_design_lifecycle import models, implementation
 from sedbackend.apps.cvs.project.router import CVS_APP_SID
 
@@ -16,8 +18,9 @@ router = APIRouter()
     response_model=List[models.FormulaGet],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
-async def get_all_formulas(native_project_id: int, vcs_id: int, dg_id: int) -> List[models.FormulaGet]:
-    return implementation.get_all_formulas(native_project_id, vcs_id, dg_id)
+async def get_all_formulas(native_project_id: int, vcs_id: int, dg_id: int,
+                           user: User = Depends(get_current_active_user)) -> List[models.FormulaGet]:
+    return implementation.get_all_formulas(native_project_id, vcs_id, dg_id, user.id)
 
 
 @router.put(
