@@ -19,8 +19,8 @@ def test_parse_formula_simple():
 
 def test_parse_formula_values():
     # Setup
-    vd_values = [{"id": 47241, "name": "Speed", "unit": "0-1", "value": 10}]
-    mi_values = [{"id": 114, "name": "Fuel Cost", "unit": "k€/liter", "value": 5}]
+    vd_values = [{"value_driver": 47241, "name": "Speed", "unit": "0-1", "value": 10}]
+    mi_values = [{"market_input": 114, "name": "Fuel Cost", "unit": "k€/liter", "value": 5}]
     formula = '2+{vd:47241,"Design Similarity [0-1]"}/{ef:114,"Fuel Cost [k€/liter]"}'
     nsp = NumericStringParser()
 
