@@ -1,3 +1,4 @@
+import re
 import sys
 import tempfile
 from math import isnan
@@ -440,23 +441,30 @@ def get_all_market_values(db_connection: PooledMySQLConnection, vcs_ids: List[in
 
 
 def parse_formula(formula: str, vd_values, mi_values) -> str:
-    new_formula = formula
-    vd_names = expr.get_prefix_variables('VD', new_formula)
-    mi_names = expr.get_prefix_variables('EF', new_formula)
-
-    for vd in vd_values:
-        for name in vd_names:
-            unit = vd["unit"] if vd["unit"] is not None and vd["unit"] != "" else "N/A"
-            if name == f'{vd["name"]} [{unit}]':
-                new_formula = expr.replace_prefix_variables("VD", name, str(vd["value"]), new_formula)
-    for mi in mi_values:
-        for name in mi_names:
-            unit = mi["unit"] if mi["unit"] is not None and mi["unit"] != "" else "N/A"
-            if name == f'{mi["name"]} [{unit}]':
-                new_formula = expr.replace_prefix_variables("EF", name, str(mi["value"]), new_formula)
+    new_formula = replace_vd_ef(formula, vd_values, mi_values)
     new_formula = expr.remove_strings_replace_zero(new_formula)
 
     return new_formula
+
+
+def replace_vd_ef(formula, vd_values, ef_values):
+    pattern = r'\{(?P<tag>vd|ef):(?P<id>\d+),"([^"]+)"\}'
+
+    def replace(match):
+        tag, id_number, _ = match.groups()
+        id_number = int(id_number)
+        if tag == "vd":
+            for vd in vd_values:
+                if vd["id"] == id_number:
+                    return str(vd["value"])
+        elif tag == "ef":
+            for ef in ef_values:
+                if ef["id"] == id_number:
+                    return str(ef["value"])
+        return match.group()
+
+    replaced_text = re.sub(pattern, replace, formula)
+    return replaced_text
 
 
 def check_entity_rate(db_results, flow_process_name: str):
