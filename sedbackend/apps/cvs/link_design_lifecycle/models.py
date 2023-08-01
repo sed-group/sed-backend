@@ -33,8 +33,8 @@ class FormulaGet(BaseModel):
     cost: str
     revenue: str
     rate: Rate
-    used_value_drivers: List[int] = []
-    used_external_factors: List[int] = []
+    used_value_drivers: List[ValueDriver] = []
+    used_external_factors: List[MarketInputGet] = []
 
 
 class FormulaPost(BaseModel):

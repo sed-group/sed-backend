@@ -4,13 +4,17 @@ from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
 import re
 from sedbackend.apps.cvs.design.storage import get_design_group
-from sedbackend.apps.cvs.vcs.storage import get_vcs_row
+from sedbackend.apps.cvs.market_input.storage import populate_market_input
+from sedbackend.apps.cvs.vcs.storage import get_vcs_row, populate_value_driver
 from sedbackend.apps.cvs.vcs.storage import get_vcs
 from sedbackend.apps.cvs.link_design_lifecycle import models, exceptions
 from mysqlsb import FetchType, MySQLStatementBuilder
 
 CVS_FORMULAS_TABLE = 'cvs_design_mi_formulas'
 CVS_FORMULAS_COLUMNS = ['project', 'vcs_row', 'design_group', 'time', 'time_unit', 'cost', 'revenue', 'rate']
+
+CVS_VALUE_DRIVERS_TABLE = 'cvs_value_drivers'
+CVS_VALUE_DRIVERS_COLUMNS = ['id', 'user', 'name', 'unit']
 
 CVS_FORMULAS_VALUE_DRIVERS_TABLE = 'cvs_formulas_value_drivers'
 CVS_FORMULAS_VALUE_DRIVERS_COLUMNS = ['vcs_row', 'design_group', 'value_driver', 'project']
@@ -226,20 +230,24 @@ def get_all_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_
             prepared_list += [r['vcs_row'], r['design_group']]
 
         with db_connection.cursor(prepared=True) as cursor:
-            cursor.execute(f"SELECT * FROM {CVS_FORMULAS_VALUE_DRIVERS_TABLE} WHERE {where_statement}",
-                           prepared_list)
+            cursor.execute(
+                f"SELECT id, name, unit, vcs_row, design_group FROM cvs_formulas_value_drivers "
+                f"INNER JOIN cvs_value_drivers ON cvs_formulas_value_drivers.value_driver = cvs_value_drivers.id WHERE {where_statement}",
+                prepared_list)
             all_vds = [dict(zip(cursor.column_names, row)) for row in cursor.fetchall()]
 
         with db_connection.cursor(prepared=True) as cursor:
-            cursor.execute(f"SELECT * FROM {CVS_FORMULAS_EXTERNAL_FACTORS_TABLE} WHERE {where_statement}",
-                           prepared_list)
+            cursor.execute(
+                f"SELECT id, name, unit, vcs_row, design_group FROM {CVS_FORMULAS_EXTERNAL_FACTORS_TABLE} "
+                f"INNER JOIN cvs_market_inputs ON {CVS_FORMULAS_EXTERNAL_FACTORS_TABLE}.external_factor = cvs_market_inputs.id WHERE {where_statement}",
+                prepared_list)
             all_efs = [dict(zip(cursor.column_names, row)) for row in cursor.fetchall()]
 
     formulas = []
     for r in res:
-        r['value_drivers'] = [vd['value_driver'] for vd in all_vds if vd['vcs_row'] == r['vcs_row'] and
+        r['value_drivers'] = [vd for vd in all_vds if vd['vcs_row'] == r['vcs_row'] and
                               vd['design_group'] == r['design_group']]
-        r['external_factors'] = [ef['external_factor'] for ef in all_efs if ef['vcs_row'] == r['vcs_row'] and
+        r['external_factors'] = [ef for ef in all_efs if ef['vcs_row'] == r['vcs_row'] and
                                  ef['design_group'] == r['design_group']]
         formulas.append(populate_formula(r))
 
@@ -255,8 +263,11 @@ def populate_formula(db_result) -> models.FormulaGet:
         cost=db_result['cost'],
         revenue=db_result['revenue'],
         rate=db_result['rate'],
-        used_value_drivers=db_result['value_drivers'] if db_result['value_drivers'] is not None else [],
-        used_external_factors=db_result['external_factors'] if db_result['external_factors'] is not None else []
+        used_value_drivers=[populate_value_driver(valueDriver) for valueDriver in db_result['value_drivers']] if
+        db_result['value_drivers'] is not None else [],
+        used_external_factors=[populate_market_input(externalFactor) for externalFactor in
+                               db_result['external_factors']] if
+        db_result['external_factors'] is not None else [],
     )
 
 

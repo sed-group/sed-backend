@@ -47,8 +47,8 @@ def test_create_formulas(client, std_headers, std_user):
 
     # Assert
     assert res.status_code == 200
-    assert res_get.json()[0]['used_value_drivers'][0] == value_driver.id
-    assert res_get.json()[0]['used_external_factors'][0] == external_factor.id
+    assert res_get.json()[0]['used_value_drivers'][0]['id'] == value_driver.id
+    assert res_get.json()[0]['used_external_factors'][0]['id'] == external_factor.id
 
     # Cleanup
     tu.delete_design_group(project.id, design_group.id)
@@ -235,8 +235,8 @@ def test_edit_formulas(client, std_headers, std_user):
 
     # Assert
     assert res.status_code == 200
-    assert res_get.json()[0]['used_value_drivers'][0] == value_driver.id
-    assert res_get.json()[0]['used_external_factors'][0] == external_factor.id
+    assert res_get.json()[0]['used_value_drivers'][0]['id'] == value_driver.id
+    assert res_get.json()[0]['used_external_factors'][0]['id'] == external_factor.id
 
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
