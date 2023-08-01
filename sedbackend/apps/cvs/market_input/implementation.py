@@ -210,7 +210,7 @@ def get_all_external_factor_values(project_id: int) -> List[models.ExternalFacto
 def delete_external_factor_value(project_id: int, vcs_id: int, external_factor_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.delete_market_value(con, project_id, vcs_id, external_factor_id)
+            res = storage.delete_external_factor_value(con, project_id, vcs_id, external_factor_id)
             con.commit()
             return res
     except exceptions.ExternalFactorFailedDeletionException:
