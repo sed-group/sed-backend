@@ -5,7 +5,7 @@ import sedbackend.apps.core.users.implementation as impl_users
 import sedbackend.apps.cvs.market_input.implementation as impl_market_input
 
 
-def test_create_market_input(client, std_headers, std_user):
+def test_create_market_input_value(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)

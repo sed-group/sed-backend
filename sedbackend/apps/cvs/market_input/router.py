@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from sedbackend.apps.core.projects.dependencies import SubProjectAccessChecker
 from sedbackend.apps.core.projects.models import AccessLevel
 from sedbackend.apps.cvs.market_input import models, implementation
+from sedbackend.apps.cvs.market_input.models import ExternalFactor
 from sedbackend.apps.cvs.project.router import CVS_APP_SID
 
 router = APIRouter()
@@ -40,8 +41,11 @@ async def create_market_input(native_project_id: int, market_input: models.Exter
     response_model=bool,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def update_market_input(native_project_id: int, external_factor: models.ExternalFactor) -> bool:
-    return implementation.update_external_factor(native_project_id, external_factor)
+async def update_market_input(native_project_id: int, market_input_id: int,
+                              external_factor: models.ExternalFactorPost) -> bool:
+    return implementation.update_external_factor(native_project_id,
+                                                 ExternalFactor(id=market_input_id, name=external_factor.name,
+                                                                unit=external_factor.unit))
 
 
 @router.delete(
