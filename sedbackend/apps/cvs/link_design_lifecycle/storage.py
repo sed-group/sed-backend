@@ -11,7 +11,8 @@ from sedbackend.apps.cvs.link_design_lifecycle import models, exceptions
 from mysqlsb import FetchType, MySQLStatementBuilder
 
 CVS_FORMULAS_TABLE = 'cvs_design_mi_formulas'
-CVS_FORMULAS_COLUMNS = ['project', 'vcs_row', 'design_group', 'time', 'time_unit', 'cost', 'revenue', 'rate']
+CVS_FORMULAS_COLUMNS = ['project', 'vcs_row', 'design_group', 'time', 'time_comment', 'time_unit', 'cost',
+                        'cost_comment', 'revenue', 'revenue_comment', 'rate']
 
 CVS_VALUE_DRIVERS_TABLE = 'cvs_value_drivers'
 CVS_VALUE_DRIVERS_COLUMNS = ['id', 'user', 'name', 'unit']
@@ -24,13 +25,16 @@ CVS_FORMULAS_EXTERNAL_FACTORS_COLUMNS = ['vcs_row', 'design_group', 'external_fa
 
 
 def create_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_row_id: int, design_group_id: int,
-                    formulas: models.FormulaPost):
+                    formula_row: models.FormulaRowPost):
     logger.debug(f'Creating formulas')
 
-    value_driver_ids, external_factor_ids = find_vd_and_ef([formulas.time, formulas.cost, formulas.revenue])
+    value_driver_ids, external_factor_ids = find_vd_and_ef(
+        [formula_row.time.formula, formula_row.cost.formula, formula_row.revenue.formula])
 
-    values = [project_id, vcs_row_id, design_group_id, formulas.time, formulas.time_unit.value, formulas.cost,
-              formulas.revenue, formulas.rate.value]
+    values = [project_id, vcs_row_id, design_group_id, formula_row.time.formula, formula_row.time.comment,
+              formula_row.time_unit.value,
+              formula_row.cost.formula, formula_row.cost.comment,
+              formula_row.revenue.formula, formula_row.revenue.comment, formula_row.rate.value]
 
     try:
         insert_statement = MySQLStatementBuilder(db_connection)
@@ -66,15 +70,18 @@ def find_vd_and_ef(texts: List[str]) -> (List[str], List[int]):
 
 
 def edit_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_group_id: int, project_id: int,
-                  formulas: models.FormulaPost):
+                  formula_row: models.FormulaRowPost):
     logger.debug(f'Editing formulas')
 
-    value_driver_ids, external_factor_ids = find_vd_and_ef([formulas.time, formulas.cost, formulas.revenue])
+    value_driver_ids, external_factor_ids = find_vd_and_ef(
+        [formula_row.time.formula, formula_row.cost.formula, formula_row.revenue.formula])
 
     columns = CVS_FORMULAS_COLUMNS[3:]
     set_statement = ', '.join([col + ' = %s' for col in columns])
 
-    values = [formulas.time, formulas.time_unit.value, formulas.cost, formulas.revenue, formulas.rate.value]
+    values = [formula_row.time.formula, formula_row.time.comment, formula_row.time_unit.value, formula_row.cost.formula,
+              formula_row.cost.comment, formula_row.revenue.formula, formula_row.revenue.comment,
+              formula_row.rate.value]
 
     # Update formula row
     update_statement = MySQLStatementBuilder(db_connection)
@@ -187,7 +194,7 @@ def update_external_factor_formulas(db_connection: PooledMySQLConnection, vcs_ro
 
 
 def update_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_row_id: int, design_group_id: int,
-                    formulas: models.FormulaPost) -> bool:
+                    formula_row: models.FormulaRowPost) -> bool:
     get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
     get_vcs_row(db_connection, project_id, vcs_row_id)
 
@@ -198,9 +205,9 @@ def update_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_r
     count = count['count']
 
     if count == 0:
-        create_formulas(db_connection, project_id, vcs_row_id, design_group_id, formulas)
+        create_formulas(db_connection, project_id, vcs_row_id, design_group_id, formula_row)
     elif count == 1:
-        edit_formulas(db_connection, vcs_row_id, design_group_id, project_id, formulas)
+        edit_formulas(db_connection, vcs_row_id, design_group_id, project_id, formula_row)
     else:
         raise exceptions.FormulasFailedUpdateException
 
@@ -208,7 +215,7 @@ def update_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_r
 
 
 def get_all_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
-                     design_group_id: int, user_id: int) -> List[models.FormulaGet]:
+                     design_group_id: int, user_id: int) -> List[models.FormulaRowGet]:
     logger.debug(f'Fetching all formulas with vcs_id={vcs_id}')
 
     get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
@@ -254,14 +261,14 @@ def get_all_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_
     return formulas
 
 
-def populate_formula(db_result) -> models.FormulaGet:
-    return models.FormulaGet(
+def populate_formula(db_result) -> models.FormulaRowGet:
+    return models.FormulaRowGet(
         vcs_row_id=db_result['vcs_row'],
         design_group_id=db_result['design_group'],
-        time=db_result['time'],
+        time=models.Formula(formula=db_result['time'], comment=db_result['time_comment']),
         time_unit=db_result['time_unit'],
-        cost=db_result['cost'],
-        revenue=db_result['revenue'],
+        cost=models.Formula(formula=db_result['cost'], comment=db_result['cost_comment']),
+        revenue=models.Formula(formula=db_result['revenue'], comment=db_result['revenue_comment']),
         rate=db_result['rate'],
         used_value_drivers=[populate_value_driver(valueDriver) for valueDriver in db_result['value_drivers']] if
         db_result['value_drivers'] is not None else [],

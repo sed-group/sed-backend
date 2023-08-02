@@ -4,6 +4,7 @@ import tests.testutils as testutils
 import tests.apps.cvs.testutils as tu
 
 import sedbackend.apps.core.users.implementation as impl_users
+from sedbackend.apps.cvs.link_design_lifecycle.models import Formula
 
 
 def test_create_formulas(client, std_headers, std_user):
@@ -27,6 +28,9 @@ def test_create_formulas(client, std_headers, std_user):
     cost = '2+{ef:' + str(external_factor.id) + ',"' + str(external_factor.name) + '"}'
     revenue = '20+{vd:' + str(value_driver.id) + ',"' + str(value_driver.name) + '"}+{ef:' + str(
         external_factor.id) + ',"' + str(external_factor.name) + '"}'
+    time_comment = testutils.random_str(10, 200)
+    cost_comment = testutils.random_str(10, 200)
+    revenue_comment = testutils.random_str(10, 200)
 
     rate = tu.random_rate_choice()
 
@@ -35,10 +39,10 @@ def test_create_formulas(client, std_headers, std_user):
                      headers=std_headers,
                      json={
                          "project": project.id,
-                         "time": time,
+                         "time": {"formula": time, "comment": time_comment},
                          "time_unit": time_unit,
-                         "cost": cost,
-                         "revenue": revenue,
+                         "cost": {"formula": cost, "comment": cost_comment},
+                         "revenue": {"formula": revenue, "comment": revenue_comment},
                          "rate": rate
                      })
 
@@ -80,10 +84,10 @@ def test_create_formulas_no_optional(client, std_headers, std_user):
                      headers=std_headers,
                      json={
                          "project": project.id,
-                         "time": time,
+                         "time": {"formula": time, "comment": ""},
                          "time_unit": time_unit,
-                         "cost": cost,
-                         "revenue": revenue,
+                         "cost": {"formula": cost, "comment": ""},
+                         "revenue": {"formula": revenue, "comment": ""},
                          "rate": rate
                      })
 
@@ -223,10 +227,11 @@ def test_edit_formulas(client, std_headers, std_user):
         f'/api/cvs/project/{project.id}/vcs-row/{formulas[0].vcs_row_id}/design-group/{formulas[0].design_group_id}/formulas',
         headers=std_headers,
         json={
-            "time": time,
+            "project": project.id,
+            "time": {"formula": time, "comment": ""},
             "time_unit": time_unit,
-            "cost": cost,
-            "revenue": revenue,
+            "cost": {"formula": cost, "comment": ""},
+            "revenue": {"formula": revenue, "comment": ""},
             "rate": rate
         })
 
@@ -264,10 +269,11 @@ def test_edit_formulas_no_optional(client, std_headers, std_user):
         f'/api/cvs/project/{project.id}/vcs-row/{formulas[0].vcs_row_id}/design-group/{formulas[0].design_group_id}/formulas',
         headers=std_headers,
         json={
-            "time": time,
+            "project": project.id,
+            "time": {"formula": time, "comment": ""},
             "time_unit": time_unit,
-            "cost": cost,
-            "revenue": revenue,
+            "cost": {"formula": cost, "comment": ""},
+            "revenue": {"formula": revenue, "comment": ""},
             "rate": rate
         })
 
@@ -306,10 +312,11 @@ def test_edit_formulas_invalid_dg(client, std_headers, std_user):
     res = client.put(f'/api/cvs/project/{project.id}/vcs-row/{row_id}/design-group/{dg_invalid_id}/formulas',
                      headers=std_headers,
                      json={
-                         "time": time,
+                         "project": project.id,
+                         "time": {"formula": time, "comment": ""},
                          "time_unit": time_unit,
-                         "cost": cost,
-                         "revenue": revenue,
+                         "cost": {"formula": cost, "comment": ""},
+                         "revenue": {"formula": revenue, "comment": ""},
                          "rate": rate
                      })
 
@@ -345,10 +352,11 @@ def test_edit_formulas_invalid_vcs_row(client, std_headers, std_user):
     res = client.put(f'/api/cvs/project/{project.id}/vcs-row/{row_id}/design-group/{design_group.id}/formulas',
                      headers=std_headers,
                      json={
-                         "time": time,
+                         "project": project.id,
+                         "time": {"formula": time, "comment": ""},
                          "time_unit": time_unit,
-                         "cost": cost,
-                         "revenue": revenue,
+                         "cost": {"formula": cost, "comment": ""},
+                         "revenue": {"formula": revenue, "comment": ""},
                          "rate": rate
                      })
 
@@ -385,10 +393,11 @@ def test_edit_formulas_invalid_project(client, std_headers, std_user):
     res = client.put(f'/api/cvs/project/{invalid_proj_id}/vcs-row/{row_id}/design-group/{design_group.id}/formulas',
                      headers=std_headers,
                      json={
-                         "time": time,
+                         "project": project.id,
+                         "time": {"formula": time, "comment": ""},
                          "time_unit": time_unit,
-                         "cost": cost,
-                         "revenue": revenue,
+                         "cost": {"formula": cost, "comment": ""},
+                         "revenue": {"formula": revenue, "comment": ""},
                          "rate": rate
                      })
 

@@ -25,23 +25,28 @@ class Rate(Enum):
     PROJECT = 'per_project'
 
 
-class FormulaGet(BaseModel):
+class Formula(BaseModel):
+    formula: str
+    comment: str
+
+
+class FormulaRowGet(BaseModel):
     vcs_row_id: int
     design_group_id: int
-    time: str
+    time: Formula
     time_unit: TimeFormat
-    cost: str
-    revenue: str
+    cost: Formula
+    revenue: Formula
     rate: Rate
     used_value_drivers: List[ValueDriver] = []
     used_external_factors: List[MarketInputGet] = []
 
 
-class FormulaPost(BaseModel):
-    time: str
+class FormulaRowPost(BaseModel):
+    time: Formula
     time_unit: TimeFormat
-    cost: str
-    revenue: str
+    cost: Formula
+    revenue: Formula
     rate: Rate
 
 

@@ -15,7 +15,7 @@ import sedbackend.apps.cvs.project.implementation
 import sedbackend.apps.cvs.project.models
 import sedbackend.apps.cvs.vcs.implementation as vcs_impl
 import sedbackend.apps.cvs.vcs.models as vcs_model
-from sedbackend.apps.cvs.link_design_lifecycle.models import FormulaGet, TimeFormat, Rate
+from sedbackend.apps.cvs.link_design_lifecycle.models import FormulaRowGet, TimeFormat, Rate
 from sedbackend.apps.cvs.market_input import models as market_input_model, implementation as market_input_impl
 import tests.testutils as tu
 
@@ -404,7 +404,7 @@ def seed_random_designs(project_id: int, dg_id: int, amount: int = 10):
 # ======================================================================================================================
 
 def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, user_id: int,
-                         amount: int = 10) -> List[connect_model.FormulaGet]:
+                         amount: int = 10) -> List[connect_model.FormulaRowGet]:
     vcs_rows = seed_vcs_table_rows(user_id,  project_id, vcs_id, amount)
 
     for i, vcs_row in enumerate(vcs_rows):
@@ -418,11 +418,11 @@ def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, use
         else:
             rate = Rate.PRODUCT
 
-        formula_post = connect_model.FormulaPost(
-            time=time,
+        formula_post = connect_model.FormulaRowPost(
+            time=connect_model.Formula(formula=time, comment=""),
             time_unit=time_unit,
-            cost=cost,
-            revenue=revenue,
+            cost=connect_model.Formula(formula=cost, comment=""),
+            revenue=connect_model.Formula(formula=revenue, comment=""),
             rate=rate
         )
 
@@ -432,7 +432,7 @@ def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, use
     return connect_impl.get_all_formulas(project_id, vcs_id, design_group_id, user_id)
 
 
-def create_formulas(project_id: int, vcs_rows: List[vcs_model.VcsRow], dg_id: int) -> List[FormulaGet]:
+def create_formulas(project_id: int, vcs_rows: List[vcs_model.VcsRow], dg_id: int) -> List[FormulaRowGet]:
     for row in vcs_rows:
         time = str(tu.random.randint(1, 200))
         time_unit = random_time_unit()
@@ -440,11 +440,11 @@ def create_formulas(project_id: int, vcs_rows: List[vcs_model.VcsRow], dg_id: in
         revenue = str(tu.random.randint(1, 10000))
         rate = Rate.PRODUCT.value
 
-        formula_post = connect_model.FormulaPost(
-            time=time,
+        formula_post = connect_model.FormulaRowPost(
+            time=connect_model.Formula(formula=time, comment=""),
             time_unit=time_unit,
-            cost=cost,
-            revenue=revenue,
+            cost=connect_model.Formula(formula=cost, comment=""),
+            revenue=connect_model.Formula(formula=revenue, comment=""),
             rate=rate
         )
         connect_impl.edit_formulas(project_id, row.id, dg_id, formula_post)
@@ -476,12 +476,12 @@ def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int,
 
     last = next(filter(lambda x: x.vcs_row_id == last_id, formulas))
 
-    new_last = connect_model.FormulaPost(
-        time=last.time,
+    new_last = connect_model.FormulaRowPost(
+        time=connect_model.Formula(formula=last.time, comment=""),
         time_unit=last.time_unit,
-        cost=last.cost,
-        revenue=last.revenue,
-        rate=Rate.PROJECT.value
+        cost=connect_model.Formula(formula=last.cost, comment=""),
+        revenue=connect_model.Formula(formula=last.revenue, comment=""),
+        rate=last.rate
     )
 
     connect_impl.edit_formulas(project_id, last_id, design_group_id, new_last)

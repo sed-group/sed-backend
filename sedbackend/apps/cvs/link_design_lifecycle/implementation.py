@@ -11,7 +11,7 @@ from sedbackend.apps.cvs.design import exceptions as design_exceptions
 from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 
 
-def edit_formulas(project_id: int, vcs_row_id: int, design_group_id: int, new_formulas: models.FormulaPost) -> bool:
+def edit_formulas(project_id: int, vcs_row_id: int, design_group_id: int, new_formulas: models.FormulaRowPost) -> bool:
     with get_connection() as con:
         try:
             res = storage.update_formulas(con, project_id, vcs_row_id, design_group_id, new_formulas)
@@ -54,7 +54,7 @@ def edit_formulas(project_id: int, vcs_row_id: int, design_group_id: int, new_fo
             )
 
 
-def get_all_formulas(project_id: int, vcs_id: int, design_group_id: int, user_id: int) -> List[models.FormulaGet]:
+def get_all_formulas(project_id: int, vcs_id: int, design_group_id: int, user_id: int) -> List[models.FormulaRowGet]:
     with get_connection() as con:
         try:
             res = storage.get_all_formulas(con, project_id, vcs_id, design_group_id, user_id)
