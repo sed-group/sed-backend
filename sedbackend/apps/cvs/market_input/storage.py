@@ -153,6 +153,7 @@ def populate_external_factor_values(db_result) -> list[ExternalFactorValue]:
 def update_external_factor_value(db_connection: PooledMySQLConnection, project_id: int,
                                  external_factor_value: models.ExternalFactorValue) -> bool:
     logger.debug(f'Update external factor value')
+    get_external_factor(db_connection, project_id, external_factor_value.id)
 
     if len(external_factor_value.external_factor_values) == 0:
         return True

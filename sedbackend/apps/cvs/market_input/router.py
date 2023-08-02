@@ -66,8 +66,8 @@ async def delete_market_input(native_project_id: int, market_input_id: int) -> b
     summary='Create or update values for market inputs',
     response_model=bool
 )
-async def update_market_values(native_project_id: int, mi_values: List[models.ExternalFactorValue]) -> bool:
-    return implementation.update_external_factor_values(native_project_id, mi_values)
+async def update_market_values(native_project_id: int, ef_values: List[models.ExternalFactorValue]) -> bool:
+    return implementation.update_external_factor_values(native_project_id, ef_values)
 
 
 @router.get(

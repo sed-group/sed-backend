@@ -43,7 +43,7 @@ def test_get_all_market_inputs(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    market_input = tu.seed_random_market_input(project.id)
+    market_input = tu.seed_random_external_factor(project.id)
     # Act
     res = client.get(f'/api/cvs/project/{project.id}/market-input/all', headers=std_headers)
     # Assert
@@ -73,7 +73,7 @@ def test_edit_market_input(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    market_input = tu.seed_random_market_input(project.id)
+    market_input = tu.seed_random_external_factor(project.id)
     # Act
     res = client.put(f'/api/cvs/project/{project.id}/market-input/{market_input.id}', headers=std_headers, json={
         'name': "new market input",
@@ -93,7 +93,7 @@ def test_edit_market_input_no_changes(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    market_input = tu.seed_random_market_input(project.id)
+    market_input = tu.seed_random_external_factor(project.id)
     # Act
     res = client.put(f'/api/cvs/project/{project.id}/market-input/{market_input.id}', headers=std_headers, json={
         'name': market_input.name,
@@ -113,7 +113,7 @@ def test_edit_market_input_no_name(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    market_input = tu.seed_random_market_input(project.id)
+    market_input = tu.seed_random_external_factor(project.id)
     # Act
     res = client.put(f'/api/cvs/project/{project.id}/market-input/{market_input.id}', headers=std_headers, json={
         'name': None,
@@ -130,7 +130,7 @@ def test_delete_market_input(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    market_input = tu.seed_random_market_input(project.id)
+    market_input = tu.seed_random_external_factor(project.id)
     # Act
     res = client.delete(f'/api/cvs/project/{project.id}/market-input/{market_input.id}', headers=std_headers)
     # Assert

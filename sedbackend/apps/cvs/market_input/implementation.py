@@ -143,21 +143,21 @@ def get_all_formula_market_inputs(formulas_id: int) -> List[models.ExternalFacto
 ########################################################################################################################
 
 
-def update_market_input_value(project_id: int, mi_value: models.ExternalFactorValue) -> bool:
+def update_exterrnal_factor_value(project_id: int, ef_value: models.ExternalFactorValue) -> bool:
     try:
         with get_connection() as con:
-            res = storage.update_external_factor_value(con, project_id, mi_value)
+            res = storage.update_external_factor_value(con, project_id, ef_value)
             con.commit()
             return res
     except exceptions.ExternalFactorNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find market input with id={mi_value.market_input_id}.',
+            detail=f'Could not find external factor with id={ef_value.id}.',
         )
     except vcs_exceptions.VCSNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Could not find vcs with id={mi_value.vcs_id}.',
+            detail=f'Could not find vcs with id={ef_value.external_factor_values[0].vcs_id}.',
         )
     except proj_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
@@ -167,7 +167,7 @@ def update_market_input_value(project_id: int, mi_value: models.ExternalFactorVa
     except proj_exceptions.CVSProjectNoMatchException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Market input with id={mi_value.market_input_id} is not a part from project with id={project_id}.',
+            detail=f'External factor with id={ef_value.id} is not a part from project with id={project_id}.',
         )
 
 
@@ -180,7 +180,7 @@ def update_external_factor_values(project_id: int, external_factor_values: List[
     except exceptions.ExternalFactorNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Could not find market input',
+            detail=f'Could not find external factor',
         )
     except vcs_exceptions.VCSNotFoundException:
         raise HTTPException(
