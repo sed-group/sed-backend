@@ -23,6 +23,7 @@ class VcsEFValuePair(BaseModel):
     value: float
 
 
+# Combined External Factor and the connected value pairs of vcs and value
 class ExternalFactorValue(BaseModel):
     id: int
     name: str

@@ -148,10 +148,11 @@ def populate_external_factor_values(db_result) -> list[ExternalFactorValue]:
             data_dict[external_factor].external_factor_values.append(
                 VcsEFValuePair(vcs_id=item["vcs"], value=item["value"])
             )
-    result = list(data_dict.values())
-    return result
+
+    return list(data_dict.values())
 
 
+# Updates all value pairs to match input external_factor_value.external_factor_values
 def update_external_factor_value(db_connection: PooledMySQLConnection, project_id: int,
                                  external_factor_value: models.ExternalFactorValue) -> bool:
     logger.debug(f'Update external factor value')
@@ -178,6 +179,8 @@ def update_external_factor_value(db_connection: PooledMySQLConnection, project_i
     return True
 
 
+# Compare previously stored list of ExternalFactorValues with an updated version and
+# deletes any values that don't appear in the new one
 def compare_and_delete_external_factor_values(db_connection: PooledMySQLConnection, project_id: int,
                                               prev_ef_values: List[models.ExternalFactorValue],
                                               new_ef_values: List[models.ExternalFactorValue]):
@@ -194,6 +197,8 @@ def compare_and_delete_external_factor_values(db_connection: PooledMySQLConnecti
     return True
 
 
+# Removes, updates or adds ExternalFactors based on differences between stored and new
+# so everything matches the new list
 def sync_new_external_factors(db_connection: PooledMySQLConnection, project_id: int,
                               prev_ef_values: List[models.ExternalFactorValue],
                               new_ef_values: List[models.ExternalFactorValue]):
@@ -223,7 +228,8 @@ def update_external_factor_values(db_connection: PooledMySQLConnection, project_
                                   ef_values: List[models.ExternalFactorValue]) -> bool:
     logger.debug(f'Update external factor values for project={project_id}')
 
-    old_ef_values = get_all_external_factor_values(db_connection, project_id)
+    old_ef_values = get_all_external_factor_values(db_connection, project_id) # get stored values for comparisons
+
     # Delete external factor values that have been removed
     if len(old_ef_values) > 0:
         compare_and_delete_external_factor_values(db_connection, project_id, old_ef_values, ef_values)
