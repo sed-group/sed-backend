@@ -132,8 +132,9 @@ def get_all_formula_external_factors(db_connection: PooledMySQLConnection,
 ########################################################################################################################
 
 def populate_external_factor_values(db_result) -> list[ExternalFactorValue]:
-    data_dict = {}
+    logger.debug(f'Populating external factor values')
 
+    data_dict = {}
     for item in db_result:
         external_factor = item["market_input"]
         if external_factor not in data_dict:
@@ -147,12 +148,14 @@ def populate_external_factor_values(db_result) -> list[ExternalFactorValue]:
             data_dict[external_factor].external_factor_values.append(
                 VcsEFValuePair(vcs_id=item["vcs"], value=item["value"])
             )
-    return list(data_dict.values())
+    result = list(data_dict.values())
+    return result
 
 
 def update_external_factor_value(db_connection: PooledMySQLConnection, project_id: int,
                                  external_factor_value: models.ExternalFactorValue) -> bool:
     logger.debug(f'Update external factor value')
+
     get_external_factor(db_connection, project_id, external_factor_value.id)
 
     if len(external_factor_value.external_factor_values) == 0:
@@ -170,8 +173,7 @@ def update_external_factor_value(db_connection: PooledMySQLConnection, project_i
     VALUES ' + prepared_statement + ' ON DUPLICATE KEY UPDATE value = VALUES(value);'
 
     with db_connection.cursor(prepared=True) as cursor:
-        res = cursor.execute(query, prepared_values)
-        logger.debug(res)
+        cursor.execute(query, prepared_values)
 
     return True
 
@@ -181,7 +183,6 @@ def compare_and_delete_external_factor_values(db_connection: PooledMySQLConnecti
                                               new_ef_values: List[models.ExternalFactorValue]):
     # Delete external factor values that does not exist in the new table but did in the previous one
     efv_dict2 = {efv.id: {vcs_pair.vcs_id for vcs_pair in efv.external_factor_values} for efv in new_ef_values}
-    logger.debug(efv_dict2)
     for efv in prev_ef_values:
         parent_id = efv.id
         if parent_id in efv_dict2:
@@ -196,22 +197,25 @@ def compare_and_delete_external_factor_values(db_connection: PooledMySQLConnecti
 def sync_new_external_factors(db_connection: PooledMySQLConnection, project_id: int,
                               prev_ef_values: List[models.ExternalFactorValue],
                               new_ef_values: List[models.ExternalFactorValue]):
+
     ef_ids_to_remove = {efv.id for efv in prev_ef_values} - {efv.id for efv in new_ef_values}
     for ef_remove_id in ef_ids_to_remove:
         delete_external_factor(db_connection, project_id, ef_remove_id)
     updated_ef_values = [efv for efv in prev_ef_values if efv.id not in ef_ids_to_remove]
 
-    for new_efv in new_ef_values:
+    for index, new_efv in enumerate(new_ef_values):
         matching_efv = next((efv for efv in updated_ef_values if efv.id == new_efv.id), None)
         if matching_efv:
             if matching_efv.name != new_efv.name or matching_efv.unit != new_efv.unit:
                 update_external_factor(db_connection, project_id,
                                        ExternalFactor(id=new_efv.id, name=new_efv.name, unit=new_efv.unit))
+            updated_ef_values[index] = new_efv
         else:
             new_ef = create_external_factor(db_connection, project_id,
                                             ExternalFactorPost(name=new_efv.name, unit=new_efv.unit))
             updated_ef_values.append(ExternalFactorValue(id=new_ef.id, name=new_ef.name, unit=new_ef.unit,
                                                          external_factor_values=new_efv.external_factor_values))
+
     return updated_ef_values
 
 
@@ -220,8 +224,9 @@ def update_external_factor_values(db_connection: PooledMySQLConnection, project_
     logger.debug(f'Update external factor values for project={project_id}')
 
     old_ef_values = get_all_external_factor_values(db_connection, project_id)
-
-    compare_and_delete_external_factor_values(db_connection, project_id, old_ef_values, ef_values)
+    # Delete external factor values that have been removed
+    if len(old_ef_values) > 0:
+        compare_and_delete_external_factor_values(db_connection, project_id, old_ef_values, ef_values)
 
     # Add, update or remove External Factors that has changed since previously
     ef_values_new_ids = sync_new_external_factors(db_connection, project_id, old_ef_values, ef_values)
@@ -245,7 +250,7 @@ def get_all_external_factor_values(db_connection: PooledMySQLConnection,
     with db_connection.cursor(prepared=True, dictionary=True) as cursor:
         cursor.execute(query, [project_id])
         res = cursor.fetchall()
-    logger.debug(res)
+
     return populate_external_factor_values(res)
 
 

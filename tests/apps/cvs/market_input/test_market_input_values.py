@@ -123,16 +123,18 @@ def test_get_market_input_values(client, std_headers, std_user):
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
     vcs = tu.seed_random_vcs(project.id, current_user.id)
-    market_input = tu.seed_random_external_factor(project.id)
-    market_input_value = tu.seed_random_external_factor_values(project.id, vcs.id, market_input.id)[0]
+    external_factor = tu.seed_random_external_factor(project.id)
+    efv = tu.seed_random_external_factor_values(project.id, vcs.id, external_factor.id)[0]
     # Act
     res = client.get(f'/api/cvs/project/{project.id}/market-input-values', headers=std_headers)
     # Assert
     assert res.status_code == 200  # 200 OK
     assert len(res.json()) == 1
-    assert res.json()[0]['market_input_id'] == market_input_value.market_input_id
-    assert res.json()[0]['vcs_id'] == market_input_value.vcs_id
-    assert abs(res.json()[0]['value']-market_input_value.value) < 0.0001
+    assert res.json()[0]['id'] == efv.id
+    assert res.json()[0]['name'] == efv.name
+    assert res.json()[0]['unit'] == efv.unit
+    assert res.json()[0]['external_factor_values'][0]['vcs_id'] == efv.external_factor_values[0].vcs_id
+    assert abs(res.json()[0]['external_factor_values'][0]['value'] - efv.external_factor_values[0].value) < 0.0001
 
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
