@@ -477,11 +477,11 @@ def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int,
     last = next(filter(lambda x: x.vcs_row_id == last_id, formulas))
 
     new_last = connect_model.FormulaRowPost(
-        time=connect_model.Formula(formula=last.time, comment=""),
+        time=last.time,
         time_unit=last.time_unit,
-        cost=connect_model.Formula(formula=last.cost, comment=""),
-        revenue=connect_model.Formula(formula=last.revenue, comment=""),
-        rate=last.rate
+        cost=last.cost,
+        revenue=last.revenue,
+        rate=Rate.PROJECT.value
     )
 
     connect_impl.edit_formulas(project_id, last_id, design_group_id, new_last)

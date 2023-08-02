@@ -5,6 +5,7 @@ from sedbackend.env import Environment
 
 from contextlib import contextmanager
 
+
 connection_pool = None
 
 user = 'rw'
@@ -21,10 +22,10 @@ try:
         database=database,
         port=port,
         autocommit=False,
-        get_warnings=True,  # Change for production environments (True in dev)
-        raise_on_warnings=True,  # Change for production environments (True in dev)
-        pool_size=4,  # Change for production environments (as few as possible in dev)
-        connection_timeout=10  # Might want to increase this for production
+        get_warnings=True,                      # Change for production environments (True in dev)
+        raise_on_warnings=True,                 # Change for production environments (True in dev)
+        pool_size=4,                            # Change for production environments (as few as possible in dev)
+        connection_timeout=10                   # Might want to increase this for production
     )
 except mysql.connector.Error as err:
     if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
