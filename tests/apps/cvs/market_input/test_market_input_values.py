@@ -10,23 +10,28 @@ def test_create_external_factor_value(client, std_headers, std_user):
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
     vcs = tu.seed_random_vcs(project.id, current_user.id)
-    market_input = tu.seed_random_external_factor(project.id)
+    external_factor = tu.seed_random_external_factor(project.id)
     value = random.random() * 100
     # Act
     res = client.put(f'/api/cvs/project/{project.id}/market-input-values', headers=std_headers, json=[
         {
-            'market_input_id': market_input.id,
-            'vcs_id': vcs.id,
-            'value': value
+            'id': external_factor.id,
+            'name': external_factor.name,
+            'unit': external_factor.unit,
+            'external_factor_values': [
+                {'vcs_id': vcs.id, 'value': value}
+            ]
         }
     ])
     # Assert
-    market_input_values = impl_market_input.get_all_external_factor_values(project.id)
+    efvs = impl_market_input.get_all_external_factor_values(project.id)
     assert res.status_code == 200  # 200 OK
-    assert len(market_input_values) == 1
-    assert market_input_values[0].id == market_input.id
-    assert market_input_values[0].external_factor_values[0].vcs_id == vcs.id
-    assert abs(market_input_values[0].external_factor_values[0].value-value) < 0.0001
+    assert len(efvs) == 1
+    assert efvs[0].id == external_factor.id
+    assert efvs[0].name == external_factor.name
+    assert efvs[0].unit == external_factor.unit
+    assert efvs[0].external_factor_values[0].vcs_id == vcs.id
+    assert abs(efvs[0].external_factor_values[0].value - value) < 0.0001
 
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
@@ -80,12 +85,14 @@ def test_edit_external_factor_value(client, std_headers, std_user):
         }
     ])
     # Assert
-    external_factor_values = impl_market_input.get_all_external_factor_values(project.id)
+    efvs = impl_market_input.get_all_external_factor_values(project.id)
     assert res.status_code == 200  # 200 OK
-    assert len(external_factor_values) == 1
-    assert external_factor_values[0].id == external_factor_value.id
-    assert external_factor_values[0].external_factor_values[0].vcs_id == external_factor_value.external_factor_values[0].vcs_id
-    assert abs(external_factor_values[0].external_factor_values[0].value-new_value) < 0.0001
+    assert len(efvs) == 1
+    assert efvs[0].id == external_factor_value.id
+    assert efvs[0].name == external_factor_value.name
+    assert efvs[0].unit == external_factor_value.unit
+    assert efvs[0].external_factor_values[0].vcs_id == external_factor_value.external_factor_values[0].vcs_id
+    assert abs(efvs[0].external_factor_values[0].value-new_value) < 0.0001
 
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)

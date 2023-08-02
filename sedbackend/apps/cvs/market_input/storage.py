@@ -245,7 +245,7 @@ def get_all_external_factor_values(db_connection: PooledMySQLConnection,
     with db_connection.cursor(prepared=True, dictionary=True) as cursor:
         cursor.execute(query, [project_id])
         res = cursor.fetchall()
-
+    logger.debug(res)
     return populate_external_factor_values(res)
 
 
