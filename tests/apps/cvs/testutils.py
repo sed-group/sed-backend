@@ -4,6 +4,7 @@ import random
 from sedbackend.apps.core.files import implementation as impl_files
 import sedbackend.apps.cvs.simulation.implementation as sim_impl
 import sedbackend.apps.cvs.simulation.models as sim_model
+from sedbackend.apps.cvs.market_input.models import ExternalFactorValue, VcsEFValuePair
 from sedbackend.apps.cvs.simulation.models import NonTechCost
 import sedbackend.apps.cvs.design.implementation as design_impl
 import sedbackend.apps.cvs.design.models as design_model
@@ -591,26 +592,35 @@ def seed_random_sim_settings(user_id: int, project_id: int) -> sim_model.SimSett
 
 
 # ======================================================================================================================
-# Market Input
+# External factors
 # ======================================================================================================================
 
-def seed_random_market_input(project_id: int):
+def seed_random_external_factor(project_id: int):
     name = tu.random_str(5, 50)
     unit = tu.random_str(5, 50)
-    market_input_post = market_input_model.MarketInputPost(
+    market_input_post = market_input_model.ExternalFactorPost(
         name=name,
         unit=unit
     )
-    return market_input_impl.create_market_input(project_id, market_input_post)
+    return market_input_impl.create_external_factor(project_id, market_input_post)
 
 
-def seed_random_market_input_values(project_id: int, vcs_id: int, market_input_id: int):
-    market_input_impl.update_market_input_values(project_id, [market_input_model.MarketInputValue(
-        vcs_id=vcs_id,
-        market_input_id=market_input_id,
-        value=random.random() * 100)])
+def seed_random_external_factor_values(project_id: int, vcs_id: int, ef_id: int):
+    name = tu.random_str(5, 50)
+    unit = tu.random_str(5, 50)
+    value = random.random() * 100
+    market_input_impl.update_external_factor_values(project_id, [
+        ExternalFactorValue(
+            id=ef_id,
+            name=name,
+            unit=unit,
+            external_factor_values=[
+                VcsEFValuePair(vcs_id=vcs_id, value=value)
+            ]
+        )
+    ])
 
-    return market_input_impl.get_all_market_values(project_id)
+    return market_input_impl.get_all_external_factor_values(project_id)
 
 
 # ======================================================================================================================

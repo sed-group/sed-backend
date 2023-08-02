@@ -1,8 +1,8 @@
-class MarketInputNotFoundException(Exception):
+class ExternalFactorNotFoundException(Exception):
     pass
 
 
-class MarketInputAlreadyExistException(Exception):
+class ExternalFactorAlreadyExistException(Exception):
     pass
 
 
@@ -11,9 +11,9 @@ class WrongTimeUnitException(Exception):
         self.time_unit = time_unit
 
 
-class MarketInputFailedDeletionException(Exception):
+class ExternalFactorFailedDeletionException(Exception):
     pass
 
 
-class MarketInputFormulasNotFoundException(Exception):
+class ExternalFactorFormulasNotFoundException(Exception):
     pass
