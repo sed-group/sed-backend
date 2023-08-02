@@ -15,7 +15,7 @@ def test_create_formulas(client, std_headers, std_user):
     row_id = vcs_rows[0].id
     design_group = tu.seed_random_design_group(project.id)
     value_driver = tu.seed_random_value_driver(current_user.id, project.id)
-    external_factor = tu.seed_random_market_input(project.id)
+    external_factor = tu.seed_random_external_factor(project.id)
 
     # Act
 
@@ -206,7 +206,7 @@ def test_edit_formulas(client, std_headers, std_user):
     formulas = tu.seed_random_formulas(project.id, vcs.id, design_group.id, current_user.id, 1)
 
     value_driver = tu.seed_random_value_driver(current_user.id, project.id)
-    external_factor = tu.seed_random_market_input(project.id)
+    external_factor = tu.seed_random_external_factor(project.id)
 
     # Act
 

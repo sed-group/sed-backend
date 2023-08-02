@@ -4,7 +4,7 @@ from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
 import re
 from sedbackend.apps.cvs.design.storage import get_design_group
-from sedbackend.apps.cvs.market_input.storage import populate_market_input
+from sedbackend.apps.cvs.market_input.storage import populate_external_factor
 from sedbackend.apps.cvs.vcs.storage import get_vcs_row, populate_value_driver
 from sedbackend.apps.cvs.vcs.storage import get_vcs
 from sedbackend.apps.cvs.link_design_lifecycle import models, exceptions
@@ -272,7 +272,7 @@ def populate_formula(db_result) -> models.FormulaRowGet:
         rate=db_result['rate'],
         used_value_drivers=[populate_value_driver(valueDriver) for valueDriver in db_result['value_drivers']] if
         db_result['value_drivers'] is not None else [],
-        used_external_factors=[populate_market_input(externalFactor) for externalFactor in
+        used_external_factors=[populate_external_factor(externalFactor) for externalFactor in
                                db_result['external_factors']] if
         db_result['external_factors'] is not None else [],
     )

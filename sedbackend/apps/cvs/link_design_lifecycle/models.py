@@ -3,7 +3,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 from enum import Enum
 
-from sedbackend.apps.cvs.market_input.models import MarketInputGet
+from sedbackend.apps.cvs.market_input.models import ExternalFactor
 from sedbackend.apps.cvs.vcs.models import ValueDriver
 
 
@@ -39,7 +39,7 @@ class FormulaRowGet(BaseModel):
     revenue: Formula
     rate: Rate
     used_value_drivers: List[ValueDriver] = []
-    used_external_factors: List[MarketInputGet] = []
+    used_external_factors: List[ExternalFactor] = []
 
 
 class FormulaRowPost(BaseModel):
