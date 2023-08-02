@@ -410,8 +410,25 @@ def get_all_market_values(db_connection: PooledMySQLConnection, vcs_ids: List[in
     return res
 
 
+def add_multiplication_signs(formula: str) -> str:
+    # Define a regular expression pattern to find the positions where the multiplication sign is missing
+    pattern = r'(\d)([a-zA-Z({\[<])|([}\])>]|})([a-zA-Z({\[<])|([}\])>]|{)(\d)'
+
+    # Use the re.sub() function to replace the matches with the correct format
+    def replace(match):
+        if match.group(2):
+            return f"{match.group(1)}*{match.group(2)}"
+        elif match.group(3) and match.group(4):
+            return f"{match.group(3)}*{match.group(4)}"
+
+    result = re.sub(pattern, replace, formula)
+    return result
+
+
 def parse_formula(formula: str, vd_values, ef_values):
     pattern = r'\{(?P<tag>vd|ef):(?P<id>\d+),"([^"]+)"\}'
+
+    formula = add_multiplication_signs(formula)
 
     def replace(match):
         tag, id_number, _ = match.groups()
