@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel
 from enum import Enum
@@ -27,7 +27,7 @@ class Rate(Enum):
 
 class Formula(BaseModel):
     formula: str
-    comment: str
+    comment: Optional[str] = None
 
 
 class FormulaRowGet(BaseModel):

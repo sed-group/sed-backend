@@ -1,10 +1,6 @@
-import pytest
-
 import tests.testutils as testutils
 import tests.apps.cvs.testutils as tu
-
 import sedbackend.apps.core.users.implementation as impl_users
-from sedbackend.apps.cvs.link_design_lifecycle.models import Formula
 
 
 def test_create_formulas(client, std_headers, std_user):
@@ -30,7 +26,7 @@ def test_create_formulas(client, std_headers, std_user):
         external_factor.id) + ',"' + str(external_factor.name) + '"}'
     time_comment = testutils.random_str(10, 200)
     cost_comment = testutils.random_str(10, 200)
-    revenue_comment = testutils.random_str(10, 200)
+    revenue_comment = None
 
     rate = tu.random_rate_choice()
 
