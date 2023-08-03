@@ -41,6 +41,7 @@ class Simulation(BaseModel):
     mean_payback_time: float
     all_npvs: List[List[float]]
     payback_time: float
+    surplus_value_end_result: float
     design_id: int
     vcs_id: int
 

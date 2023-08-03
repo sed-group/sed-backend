@@ -125,7 +125,7 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
     all_designs_with_values = []
     for dg_id in design_group_ids:
         all_designs_with_values += get_designs(db_connection, project_id, dg_id)
-    logger.debug(all_designs_with_values)
+
     unique_vd_ids = {vd.vd_id for design in all_designs_with_values for vd in design.vd_design_values}
     unique_vd_ids_list = list(unique_vd_ids)
     all_vds = []
@@ -197,6 +197,7 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
                     mean_payback_time=results.mean_npv_payback_time(),
                     all_npvs=results.npvs,
                     payback_time=0,
+                    surplus_value_end_result=0,
                     design_id=design,
                     vcs_id=vcs_id,
                 )
