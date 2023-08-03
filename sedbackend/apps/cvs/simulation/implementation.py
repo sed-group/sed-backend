@@ -14,6 +14,7 @@ from sedbackend.apps.cvs.simulation.exceptions import BadlyFormattedSettingsExce
     RateWrongOrderException, InvalidFlowSettingsException, VcsFailedException, FlowProcessNotFoundException, \
     SimSettingsNotFoundException, CouldNotFetchSimulationDataException, CouldNotFetchMarketInputValuesException, \
     CouldNotFetchValueDriverDesignValuesException, NoTechnicalProcessException
+from sedbackend.apps.cvs.simulation.models import SimulationResult
 
 from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.market_input import exceptions as market_input_exceptions
@@ -21,12 +22,13 @@ from sedbackend.apps.core.files import exceptions as file_ex
 
 
 def run_simulation(sim_settings: models.EditSimSettings, vcs_ids: List[int],
-                   design_group_ids: List[int], user_id: int,
-                   normalized_npv: bool = False, is_multiprocessing: bool = False) -> List[models.Simulation]:
+                   design_group_ids: List[int], user_id: int, project_id: int,
+                   normalized_npv: bool = False, is_multiprocessing: bool = False) -> SimulationResult:
     try:
         with get_connection() as con:
-            result = storage.run_simulation(con, sim_settings, vcs_ids, design_group_ids, user_id,
+            result = storage.run_simulation(con, sim_settings, vcs_ids, project_id, design_group_ids, user_id,
                                             normalized_npv, is_multiprocessing)
+            logger.debug(result)
             return result
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
@@ -103,7 +105,6 @@ def run_simulation(sim_settings: models.EditSimSettings, vcs_ids: List[int],
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Could not find DSM file'
         )
-
 
 
 def run_dsm_file_simulation(user_id: int, project_id: int, sim_params: models.FileParams,

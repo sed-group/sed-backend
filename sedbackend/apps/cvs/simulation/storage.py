@@ -16,11 +16,13 @@ import os
 
 from typing import List
 from sedbackend.apps.cvs.design.models import ValueDriverDesignValue
-from sedbackend.apps.cvs.design.storage import get_all_designs
+from sedbackend.apps.cvs.design.storage import get_all_designs, get_designs
 
 from mysqlsb import FetchType, MySQLStatementBuilder
 
 from sedbackend.apps.cvs.life_cycle.storage import get_dsm_from_file_id, get_dsm_from_csv
+from sedbackend.apps.cvs.simulation.models import SimulationResult
+from sedbackend.apps.cvs.vcs.storage import get_vcs, get_value_driver
 from sedbackend.libs.formula_parser.parser import NumericStringParser
 from sedbackend.libs.formula_parser import expressions as expr
 from sedbackend.apps.cvs.simulation import models
@@ -88,14 +90,14 @@ def get_dsm_from_file(db_connection: PooledMySQLConnection, user_id: int, projec
 
 
 def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.EditSimSettings,
-                   vcs_ids: List[int],
+                   vcs_ids: List[int], project_id: int,
                    design_group_ids: List[int], user_id, normalized_npv: bool = False,
-                   is_multiprocessing: bool = False
-                   ) -> List[models.Simulation]:
-    design_results = []
+                   is_multiprocessing: bool = False,
+                   ) -> SimulationResult:
 
     if not check_sim_settings(sim_settings):
         raise e.BadlyFormattedSettingsException
+
     interarrival = sim_settings.interarrival_time
     flow_time = sim_settings.flow_time
     runtime = sim_settings.end_time - sim_settings.start_time
@@ -115,6 +117,22 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
     all_vd_design_values = get_all_vd_design_values(db_connection, [design.id for design in all_designs])
 
     all_dsm_ids = life_cycle_storage.get_multiple_dsm_file_id(db_connection, vcs_ids)
+
+    all_vcss = []
+    for vcs_id in vcs_ids:
+        all_vcss.append(get_vcs(db_connection, project_id, vcs_id, user_id))
+
+    all_designs_with_values = []
+    for dg_id in design_group_ids:
+        all_designs_with_values += get_designs(db_connection, project_id, dg_id)
+    logger.debug(all_designs_with_values)
+    unique_vd_ids = {vd.vd_id for design in all_designs_with_values for vd in design.vd_design_values}
+    unique_vd_ids_list = list(unique_vd_ids)
+    all_vds = []
+    for vd_id in unique_vd_ids_list:
+        all_vds.append(get_value_driver(db_connection, vd_id, user_id))
+
+    sim_result = SimulationResult(designs=all_designs_with_values, vcss=all_vcss, vds=all_vds, runs=[])
 
     for vcs_id in vcs_ids:
         market_values = [mi for mi in all_market_values if mi['vcs'] == vcs_id]
@@ -172,17 +190,20 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
                     print(f'{exc.__class__}, {exc}')
                     raise e.SimulationFailedException
 
-                sim_res = models.Simulation(
+                sim_run_res = models.Simulation(
                     time=results.timesteps[-1],
                     mean_NPV=results.normalize_npv() if normalized_npv else results.mean_npv(),
                     max_NPVs=results.all_max_npv(),
                     mean_payback_time=results.mean_npv_payback_time(),
-                    all_npvs=results.npvs
+                    all_npvs=results.npvs,
+                    payback_time=0,
+                    design_id=design,
+                    vcs_id=vcs_id,
                 )
 
-                design_results.append(sim_res)
+                sim_result.runs.append(sim_run_res)
     logger.debug('Returning the results')
-    return design_results
+    return sim_result
 
 
 def populate_processes(non_tech_add: NonTechCost, db_results, design: int,
