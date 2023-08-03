@@ -3,9 +3,7 @@ from fastapi import HTTPException
 from starlette import status
 from sedbackend.apps.core.db import get_connection
 from sedbackend.apps.cvs.link_design_lifecycle import models, storage
-from sedbackend.apps.cvs.link_design_lifecycle.exceptions import FormulasFailedDeletionException, \
-    FormulasFailedUpdateException, TooManyFormulasUpdatedException, \
-    WrongTimeUnitException
+from sedbackend.apps.cvs.link_design_lifecycle import exceptions
 from sedbackend.apps.cvs.project import exceptions as project_exceptions
 from sedbackend.apps.cvs.design import exceptions as design_exceptions
 from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
@@ -22,12 +20,12 @@ def edit_formulas(project_id: int, vcs_row_id: int, design_group_id: int, new_fo
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f'Could not find vcs'
             )
-        except FormulasFailedUpdateException:
+        except exceptions.FormulasFailedUpdateException:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f'No formulas updated. Are the formulas changed?'
             )
-        except TooManyFormulasUpdatedException:
+        except exceptions.TooManyFormulasUpdatedException:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f'Too many formulas tried to be updated.'
@@ -52,6 +50,11 @@ def edit_formulas(project_id: int, vcs_row_id: int, design_group_id: int, new_fo
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f'Could not find vcs row with id={vcs_row_id}.',
             )
+        except exceptions.CouldNotAddValueDriverToProjectException:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f'Failed to add value driver from another project'
+            )
 
 
 def get_all_formulas(project_id: int, vcs_id: int, design_group_id: int, user_id: int) -> List[models.FormulaRowGet]:
@@ -65,7 +68,7 @@ def get_all_formulas(project_id: int, vcs_id: int, design_group_id: int, user_id
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f'Could not find VCS with id {vcs_id}'
             )
-        except WrongTimeUnitException as e:  # Where exactly does this fire????
+        except exceptions.WrongTimeUnitException as e:  # Where exactly does this fire????
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f'Wrong time unit. Given unit: {e.time_unit}'
@@ -88,7 +91,7 @@ def delete_formulas(project_id: int, vcs_row_id: int, design_group_id: int) -> b
             res = storage.delete_formulas(con, project_id, vcs_row_id, design_group_id)
             con.commit()
             return res
-        except FormulasFailedDeletionException:
+        except exceptions.FormulasFailedDeletionException:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f'Could not delete formulas with row id: {vcs_row_id}'

@@ -23,6 +23,9 @@ CVS_FORMULAS_VALUE_DRIVERS_COLUMNS = ['vcs_row', 'design_group', 'value_driver',
 CVS_FORMULAS_EXTERNAL_FACTORS_TABLE = 'cvs_formulas_external_factors'
 CVS_FORMULAS_EXTERNAL_FACTORS_COLUMNS = ['vcs_row', 'design_group', 'external_factor']
 
+CVS_PROJECT_VALUE_DRIVERS_TABLE = 'cvs_project_value_drivers'
+CVS_PROJECT_VALUE_DRIVERS_COLUMNS = ['project', 'value_driver']
+
 
 def create_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_row_id: int, design_group_id: int,
                     formula_row: models.FormulaRowPost):
@@ -97,6 +100,33 @@ def edit_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_
 
 def add_value_driver_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_group_id: int,
                               value_drivers: List[int], project_id: int):
+
+    # Add value driver to project if not already added
+    select_statement = MySQLStatementBuilder(db_connection)
+    project_value_driver_res = select_statement \
+        .select(CVS_PROJECT_VALUE_DRIVERS_TABLE, CVS_PROJECT_VALUE_DRIVERS_COLUMNS) \
+        .where(f'project = %s and value_driver in ({",".join(["%s" for _ in range(len(value_drivers))])})',
+               [project_id] + value_drivers) \
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    value_drivers_outside_project = [vd_id for vd_id in value_drivers if
+                                     vd_id not in [res['value_driver'] for res in project_value_driver_res]]
+
+    if value_drivers_outside_project:
+        try:
+            prepared_list = []
+            insert_statement = f'INSERT INTO {CVS_PROJECT_VALUE_DRIVERS_TABLE} (project, value_driver) VALUES'
+            for value_driver_id in value_drivers_outside_project:
+                insert_statement += f'(%s, %s),'
+                prepared_list += [project_id, value_driver_id]
+            insert_statement = insert_statement[:-1]
+            with db_connection.cursor(prepared=True) as cursor:
+                cursor.execute(insert_statement, prepared_list)
+        except Exception as e:
+            logger.error(f'Error adding value driver to project: {e}')
+            raise exceptions.CouldNotAddValueDriverToProjectException
+
+    # Add value driver to formulas
     try:
         prepared_list = []
         insert_statement = f'INSERT INTO {CVS_FORMULAS_VALUE_DRIVERS_TABLE} (vcs_row, design_group, value_driver, project) VALUES'
@@ -180,12 +210,12 @@ def update_external_factor_formulas(db_connection: PooledMySQLConnection, vcs_ro
         .where(where_statement, [vcs_row_id, design_group_id]) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
-    delete_external_factors = [external_factor['id'] for external_factor in external_factor_res if
-                               external_factor['id'] not in
+    delete_external_factors = [external_factor['external_factor'] for external_factor in external_factor_res if
+                               external_factor['external_factor'] not in
                                external_factors]
     add_external_factors = [external_factor_id for external_factor_id in external_factors if
                             external_factor_id not in
-                            [external_factor['id'] for external_factor in external_factor_res]]
+                            [external_factor['external_factor'] for external_factor in external_factor_res]]
 
     if len(add_external_factors):
         add_external_factor_formulas(db_connection, vcs_row_id, design_group_id, add_external_factors)
