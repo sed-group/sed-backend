@@ -196,7 +196,7 @@ def delete_external_factor_formulas(db_connection: PooledMySQLConnection, vcs_ro
     _, rows = delete_statement \
         .delete(CVS_FORMULAS_EXTERNAL_FACTORS_TABLE) \
         .where(
-        f'vcs_row = %s and design_group = %s and external_factors in ({",".join(["%s" for _ in range(len(external_factors))])})',
+        f'vcs_row = %s and design_group = %s and external_factor in ({",".join(["%s" for _ in range(len(external_factors))])})',
         [vcs_row_id, design_group_id] + external_factors) \
         .execute(return_affected_rows=True)
 
