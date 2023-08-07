@@ -32,6 +32,30 @@ def test_parse_formula_values():
     assert nsp.eval(new_formula) == 4
 
 
+def test_parse_formula_process_variable():
+    # Setup
+    vd_values = [{"value_driver": 47241, "name": "Speed", "unit": "0-1", "value": 10}]
+    mi_values = [{"market_input": 114, "name": "Fuel Cost", "unit": "k€/liter", "value": 5}]
+
+    formula = '{vd:47241,"Design Similarity [0-1]"}*{process:COST,"COST"}'
+    time = 5
+    cost = '2+{vd:47241,"Design Similarity [0-1]"}/{ef:114,"Fuel Cost [k€/liter]"}'
+    revenue = 10
+    formula_row = {
+        "time": time,
+        "cost": cost,
+        "revenue": revenue,
+    }
+    nsp = NumericStringParser()
+
+    # Act
+    new_formula = parse_formula(formula, vd_values, mi_values, formula_row)
+
+    # Assert
+    assert new_formula == "10*(2+10/5)"
+    assert nsp.eval(new_formula) == 40
+
+
 def test_parse_formula_vd_no_exist():
     # Setup
     vd_values = [{"value_driver": 47241, "name": "Speed", "unit": "0-1", "value": 10}]

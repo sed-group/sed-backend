@@ -200,9 +200,9 @@ def populate_processes(non_tech_add: NonTechCost, db_results, design: int,
         if row['category'] != 'Technical processes':
             try:
                 non_tech = models.NonTechnicalProcess(
-                    cost=nsp.eval(parse_formula(row['cost'], vd_values_row, mi_values)),
+                    cost=nsp.eval(parse_formula(row['cost'], vd_values_row, mi_values, row)),
                     revenue=nsp.eval(
-                        parse_formula(row['revenue'], vd_values_row, mi_values)),
+                        parse_formula(row['revenue'], vd_values_row, mi_values, row)),
                     name=row['iso_name'])
             except Exception as exc:
                 logger.debug(f'{exc.__class__}, {exc}')
@@ -212,10 +212,10 @@ def populate_processes(non_tech_add: NonTechCost, db_results, design: int,
         elif row['iso_name'] is not None and row['sub_name'] is None:
             try:
                 time = nsp.eval(parse_formula(
-                    row['time'], vd_values, mi_values))
-                cost_formula = parse_formula(row['cost'], vd_values, mi_values)
+                    row['time'], vd_values, mi_values, row))
+                cost_formula = parse_formula(row['cost'], vd_values, mi_values, row)
                 revenue_formula = parse_formula(
-                    row['revenue'], vd_values, mi_values)
+                    row['revenue'], vd_values, mi_values, row)
                 p = Process(row['id'],
                             time,
                             nsp.eval(expr.replace_all(
@@ -235,10 +235,10 @@ def populate_processes(non_tech_add: NonTechCost, db_results, design: int,
             sub_name = f'{row["sub_name"]} ({row["iso_name"]})'
             try:
                 time = nsp.eval(parse_formula(
-                    row['time'], vd_values, mi_values))
-                cost_formula = parse_formula(row['cost'], vd_values, mi_values)
+                    row['time'], vd_values, mi_values, row))
+                cost_formula = parse_formula(row['cost'], vd_values, mi_values, row)
                 revenue_formula = parse_formula(
-                    row['revenue'], vd_values, mi_values)
+                    row['revenue'], vd_values, mi_values, row)
                 p = Process(row['id'],
                             time,
                             nsp.eval(expr.replace_all(
@@ -425,28 +425,32 @@ def add_multiplication_signs(formula: str) -> str:
     return result
 
 
-def parse_formula(formula: str, vd_values, ef_values):
-    pattern = r'\{(?P<tag>vd|ef):(?P<id>\d+),"([^"]+)"\}'
+def parse_formula(formula: str, vd_values, ef_values, formula_row: dict = None) -> str:
+    pattern = r'\{(?P<tag>vd|ef|process):(?P<value>[a-zA-Z0-9_]+),"([^"]+)"\}'
 
     formula = add_multiplication_signs(formula)
 
     def replace(match):
-        tag, id_number, _ = match.groups()
-        id_number = int(id_number)
+        tag, value, _ = match.groups()
         if tag == "vd":
+            id_number = int(value)
             for vd in vd_values:
                 if vd["value_driver"] == id_number:
                     return str(vd["value"])
         elif tag == "ef":
             for ef in ef_values:
+                id_number = int(value)
                 if ef["market_input"] == id_number:
                     return str(ef["value"])
+        elif formula_row and tag == "process":
+            return f'({formula_row[value.lower()]})'
+
         return match.group()
 
     replaced_text = re.sub(pattern, replace, formula)
+    replaced_text = re.sub(pattern, replace, replaced_text)
     replaced_text = re.sub(pattern, '0', replaced_text)  # If there are any tags left, replace them with 0
 
-    logger.debug(f'Parsed formula: {replaced_text}')
     return replaced_text
 
 
