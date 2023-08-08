@@ -28,7 +28,6 @@ def run_simulation(sim_settings: models.EditSimSettings, vcs_ids: List[int],
         with get_connection() as con:
             result = storage.run_simulation(con, sim_settings, vcs_ids, project_id, design_group_ids, user_id,
                                             normalized_npv, is_multiprocessing)
-            logger.debug(result)
             return result
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
