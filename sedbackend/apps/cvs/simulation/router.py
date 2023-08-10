@@ -50,7 +50,7 @@ async def run_dsm_file_simulation(native_project_id: int, sim_params: models.Fil
 async def run_multiprocessing(sim_settings: models.EditSimSettings, native_project_id: int, vcs_ids: List[int],
                               design_group_ids: List[int], normalized_npv: Optional[bool] = False,
                               user: User = Depends(get_current_active_user)) -> SimulationResult:
-    return implementation.run_simulation(sim_settings, vcs_ids, design_group_ids, user.id, native_project_id,
+    return implementation.run_simulation(sim_settings, native_project_id, vcs_ids, design_group_ids, user.id,
                                          normalized_npv, True)
 
 
