@@ -90,11 +90,10 @@ def get_dsm_from_file(db_connection: PooledMySQLConnection, user_id: int, projec
 
 
 def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.EditSimSettings,
-                   vcs_ids: List[int], project_id: int,
+                   project_id: int, vcs_ids: List[int],
                    design_group_ids: List[int], user_id, normalized_npv: bool = False,
                    is_multiprocessing: bool = False,
                    ) -> SimulationResult:
-
     if not check_sim_settings(sim_settings):
         raise e.BadlyFormattedSettingsException
 
@@ -185,7 +184,6 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
                     print(f'{exc.__class__}, {exc}')
                     raise e.SimulationFailedException
 
-                # TODO: payback_time and mean_payback_time is the same checks for first time it goes above 0, or should something be different?
                 sim_run_res = models.Simulation(
                     time=results.timesteps[-1],
                     mean_NPV=results.normalize_npv() if normalized_npv else results.mean_npv(),

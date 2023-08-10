@@ -21,12 +21,12 @@ from sedbackend.apps.cvs.market_input import exceptions as market_input_exceptio
 from sedbackend.apps.core.files import exceptions as file_ex
 
 
-def run_simulation(sim_settings: models.EditSimSettings, vcs_ids: List[int],
-                   design_group_ids: List[int], user_id: int, project_id: int,
+def run_simulation(sim_settings: models.EditSimSettings, project_id: int, vcs_ids: List[int],
+                   design_group_ids: List[int], user_id: int,
                    normalized_npv: bool = False, is_multiprocessing: bool = False) -> SimulationResult:
     try:
         with get_connection() as con:
-            result = storage.run_simulation(con, sim_settings, vcs_ids, project_id, design_group_ids, user_id,
+            result = storage.run_simulation(con, sim_settings, project_id, vcs_ids, design_group_ids, user_id,
                                             normalized_npv, is_multiprocessing)
             return result
     except auth_ex.UnauthorizedOperationException:
