@@ -16,11 +16,13 @@ import os
 
 from typing import List
 from sedbackend.apps.cvs.design.models import ValueDriverDesignValue
-from sedbackend.apps.cvs.design.storage import get_all_designs
+from sedbackend.apps.cvs.design.storage import get_all_designs, get_designs
 
 from mysqlsb import FetchType, MySQLStatementBuilder
 
 from sedbackend.apps.cvs.life_cycle.storage import get_dsm_from_file_id, get_dsm_from_csv
+from sedbackend.apps.cvs.simulation.models import SimulationResult
+from sedbackend.apps.cvs.vcs.storage import get_vcs, get_value_driver, get_vcss
 from sedbackend.libs.formula_parser.parser import NumericStringParser
 from sedbackend.libs.formula_parser import expressions as expr
 from sedbackend.apps.cvs.simulation import models
@@ -88,14 +90,13 @@ def get_dsm_from_file(db_connection: PooledMySQLConnection, user_id: int, projec
 
 
 def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.EditSimSettings,
-                   vcs_ids: List[int],
+                   project_id: int, vcs_ids: List[int],
                    design_group_ids: List[int], user_id, normalized_npv: bool = False,
-                   is_multiprocessing: bool = False
-                   ) -> List[models.Simulation]:
-    design_results = []
-
+                   is_multiprocessing: bool = False,
+                   ) -> SimulationResult:
     if not check_sim_settings(sim_settings):
         raise e.BadlyFormattedSettingsException
+
     interarrival = sim_settings.interarrival_time
     flow_time = sim_settings.flow_time
     runtime = sim_settings.end_time - sim_settings.start_time
@@ -114,7 +115,18 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
 
     all_vd_design_values = get_all_vd_design_values(db_connection, [design.id for design in all_designs])
 
+    unique_vds = {}
+    for vd in all_vd_design_values:
+        element_id = vd["id"]
+        if element_id not in unique_vds:
+            unique_vds[element_id] = {"id": vd["id"], "name": vd["name"], "unit": vd["unit"]}
+    all_vds = list(unique_vds.values())
+
     all_dsm_ids = life_cycle_storage.get_multiple_dsm_file_id(db_connection, vcs_ids)
+
+    all_vcss = get_vcss(db_connection, project_id, vcs_ids, user_id)
+
+    sim_result = SimulationResult(designs=all_designs, vcss=all_vcss, vds=all_vds, runs=[])
 
     for vcs_id in vcs_ids:
         market_values = [mi for mi in all_market_values if mi['vcs'] == vcs_id]
@@ -172,17 +184,21 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
                     print(f'{exc.__class__}, {exc}')
                     raise e.SimulationFailedException
 
-                sim_res = models.Simulation(
+                sim_run_res = models.Simulation(
                     time=results.timesteps[-1],
                     mean_NPV=results.normalize_npv() if normalized_npv else results.mean_npv(),
                     max_NPVs=results.all_max_npv(),
                     mean_payback_time=results.mean_npv_payback_time(),
-                    all_npvs=results.npvs
+                    all_npvs=results.npvs,
+                    payback_time=results.mean_npv_payback_time(),
+                    surplus_value_end_result=results.npvs[0][-1],
+                    design_id=design,
+                    vcs_id=vcs_id,
                 )
 
-                design_results.append(sim_res)
+                sim_result.runs.append(sim_run_res)
     logger.debug('Returning the results')
-    return design_results
+    return sim_result
 
 
 def populate_processes(non_tech_add: NonTechCost, db_results, design: int,
@@ -315,12 +331,12 @@ def get_vd_design_values(db_connection: PooledMySQLConnection, vcs_row_id: int,
 
 def get_all_vd_design_values(db_connection: PooledMySQLConnection, designs: List[int]):
     try:
-        query = f'SELECT cvs_value_drivers.id, design, name, value, unit, vcs_row \
-                        FROM cvs_vd_design_values \
-                        INNER JOIN cvs_value_drivers ON cvs_vd_design_values.value_driver = cvs_value_drivers.id \
-                        INNER JOIN cvs_vcs_need_drivers ON cvs_vcs_need_drivers.value_driver = cvs_value_drivers.id \
-                        INNER JOIN cvs_stakeholder_needs ON cvs_stakeholder_needs.id = cvs_vcs_need_drivers.stakeholder_need \
-                        WHERE design IN ({",".join(["%s" for _ in range(len(designs))])})'
+        query = f'SELECT design, value, vcs_row, cvd.name, cvd.unit, cvd.id \
+                FROM cvs_vd_design_values cvdv \
+                INNER JOIN cvs_value_drivers cvd ON cvdv.value_driver = cvd.id \
+                INNER JOIN cvs_vcs_need_drivers cvnd ON cvnd.value_driver = cvd.id \
+                INNER JOIN cvs_stakeholder_needs csn ON csn.id = cvnd.stakeholder_need \
+                WHERE design IN ({",".join(["%s" for _ in range(len(designs))])})'
         with db_connection.cursor(prepared=True) as cursor:
             cursor.execute(query, designs)
             res = cursor.fetchall()

@@ -78,6 +78,27 @@ def get_all_vcs(db_connection: PooledMySQLConnection, project_id: int, user_id: 
     return chunk
 
 
+def get_vcss(db_connection: PooledMySQLConnection, project_id: int, vcs_ids: List[int], user_id: int) -> List[models.VCS]:
+    logger.debug(f'Fetching vcss with ids={vcs_ids}')
+
+    get_cvs_project(db_connection, project_id, user_id)  # perform checks: project and user
+
+    where_statement = "id IN (" + ",".join(["%s" for _ in range(len(vcs_ids))]) + ")"
+    where_values = vcs_ids
+
+    select_statement = MySQLStatementBuilder(db_connection)
+    results = select_statement.select(CVS_VCS_TABLE, CVS_VCS_COLUMNS) \
+        .where(where_statement, where_values) \
+        .order_by(['id'], Sort.ASCENDING) \
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+
+    vcs_list = []
+    for result in results:
+        vcs_list.append(populate_vcs(db_connection, result, user_id))
+
+    return vcs_list
+
+
 def get_vcs(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, user_id: int) -> models.VCS:
     logger.debug(f'Fetching VCS with id={vcs_id}.')
 
