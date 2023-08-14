@@ -468,7 +468,7 @@ def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int,
         rate=Rate.PROJECT.value
     )
 
-    connect_impl.edit_formulas(project_id, last_id, design_group_id, [new_last])
+    connect_impl.edit_formulas(project_id, vcs_id, design_group_id, [new_last])
 
     rows.reverse()  # reverse back to find first technical process
     for row in rows:
