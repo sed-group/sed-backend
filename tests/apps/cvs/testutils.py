@@ -147,7 +147,7 @@ def random_table_row(
         subprocess = random_subprocess(project_id)
         subprocess_id = subprocess.id
     else:
-        if random.randint(1, 5) == 1: #Give 1/5 chance to produce non-tech process
+        if random.randint(1, 5) == 1:  # Give 1/5 chance to produce non-tech process
             iso_process_id = random.randint(1, 14)
         else:
             iso_process_id = random.randint(15, 25)
@@ -253,6 +253,7 @@ def create_vcs_table(project_id, vcs_id, rows: List[vcs_model.VcsRowPost]) -> Li
     vcs_impl.edit_vcs_table(project_id, vcs_id, rows)
     return vcs_impl.get_vcs_table(project_id, vcs_id)
 
+
 # ======================================================================================================================
 # BPMN Table
 # ======================================================================================================================
@@ -346,6 +347,7 @@ def delete_dsm_file_from_vcs_id(proj_id, vcs_id, user_id):
     file_id = impl_life_cycle.get_dsm_file_id(proj_id, vcs_id)
     impl_files.impl_delete_file(file_id, user_id)
 
+
 # ======================================================================================================================
 # Designs
 # ======================================================================================================================
@@ -393,7 +395,6 @@ def random_design(value_driver_ids: int = None):
 
 
 def seed_random_designs(project_id: int, dg_id: int, amount: int = 10):
-
     design_impl.edit_designs(project_id, dg_id, [design_model.DesignPut(name=tu.random_str(5, 50))
                                                  for _ in range(amount)])
 
@@ -406,7 +407,7 @@ def seed_random_designs(project_id: int, dg_id: int, amount: int = 10):
 
 def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, user_id: int,
                          amount: int = 10) -> List[connect_model.FormulaRowGet]:
-    vcs_rows = seed_vcs_table_rows(user_id,  project_id, vcs_id, amount)
+    vcs_rows = seed_vcs_table_rows(user_id, project_id, vcs_id, amount)
 
     for i, vcs_row in enumerate(vcs_rows):
 
@@ -420,6 +421,7 @@ def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, use
             rate = Rate.PRODUCT
 
         formula_post = connect_model.FormulaRowPost(
+            vcs_row_id=vcs_row.id,
             time=connect_model.Formula(formula=time, comment=""),
             time_unit=time_unit,
             cost=connect_model.Formula(formula=cost, comment=""),
@@ -428,29 +430,9 @@ def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, use
         )
 
         connect_impl.edit_formulas(
-            project_id, vcs_row.id, design_group_id, formula_post)
+            project_id, vcs_row.id, design_group_id, [formula_post])
 
     return connect_impl.get_all_formulas(project_id, vcs_id, design_group_id, user_id)
-
-
-def create_formulas(project_id: int, vcs_rows: List[vcs_model.VcsRow], dg_id: int) -> List[FormulaRowGet]:
-    for row in vcs_rows:
-        time = str(tu.random.randint(1, 200))
-        time_unit = random_time_unit()
-        cost = str(tu.random.randint(1, 2000))
-        revenue = str(tu.random.randint(1, 10000))
-        rate = Rate.PRODUCT.value
-
-        formula_post = connect_model.FormulaRowPost(
-            time=connect_model.Formula(formula=time, comment=""),
-            time_unit=time_unit,
-            cost=connect_model.Formula(formula=cost, comment=""),
-            revenue=connect_model.Formula(formula=revenue, comment=""),
-            rate=rate
-        )
-        connect_impl.edit_formulas(project_id, row.id, dg_id, formula_post)
-
-    return connect_impl.get_all_formulas(project_id, vcs_rows[0].vcs_id, dg_id)
 
 
 def delete_formulas(project_id: int, vcsRow_Dg_ids: List[Tuple[int, int]]):
@@ -463,7 +445,7 @@ def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int,
         project_id, vcs_id), key=lambda row: row.index))
     formulas = connect_impl.get_all_formulas(
         project_id, vcs_id, design_group_id, user_id)
-
+    last_id = -1
     rows.reverse()  # Reverse to find last technical process
     for row in rows:
         if row.iso_process is not None:
@@ -478,6 +460,7 @@ def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int,
     last = next(filter(lambda x: x.vcs_row_id == last_id, formulas))
 
     new_last = connect_model.FormulaRowPost(
+        vcs_row_id=last.vcs_row_id,
         time=last.time,
         time_unit=last.time_unit,
         cost=last.cost,
@@ -485,7 +468,7 @@ def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int,
         rate=Rate.PROJECT.value
     )
 
-    connect_impl.edit_formulas(project_id, last_id, design_group_id, new_last)
+    connect_impl.edit_formulas(project_id, last_id, design_group_id, [new_last])
 
     rows.reverse()  # reverse back to find first technical process
     for row in rows:
@@ -502,12 +485,14 @@ def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int,
 # ======================================================================================================================
 
 def seed_simulation_settings(project_id: int, vcs_ids: List[int], design_ids: List[int]) -> sim_model.SimSettings:
-    rows = [row.iso_process.name if row.iso_process is not None else row.subprocess.name for row in vcs_impl.get_vcs_table(
-        project_id, vcs_ids[0])]
+    rows = [row.iso_process.name if row.iso_process is not None else row.subprocess.name for row in
+            vcs_impl.get_vcs_table(
+                project_id, vcs_ids[0])]
     print("Seed settings vcs rows", rows)
     for vcs_id in vcs_ids:
-        new_rows = [row.iso_process.name if row.iso_process is not None else row.subprocess.name for row in vcs_impl.get_vcs_table(
-            project_id, vcs_id)]
+        new_rows = [row.iso_process.name if row.iso_process is not None else row.subprocess.name for row in
+                    vcs_impl.get_vcs_table(
+                        project_id, vcs_id)]
         print("New rows", new_rows)
         rows = list(filter(lambda x: x in rows, new_rows))
         print("Common elements", rows)

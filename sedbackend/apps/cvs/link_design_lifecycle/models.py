@@ -44,6 +44,7 @@ class FormulaRowGet(BaseModel):
 
 
 class FormulaRowPost(BaseModel):
+    vcs_row_id: int
     time: Formula
     time_unit: TimeFormat
     cost: Formula

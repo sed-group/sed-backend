@@ -5,8 +5,7 @@ from mysql.connector.pooling import PooledMySQLConnection
 import re
 from sedbackend.apps.cvs.design.storage import get_design_group
 from sedbackend.apps.cvs.market_input.storage import populate_external_factor
-from sedbackend.apps.cvs.vcs.storage import get_vcs_row, populate_value_driver, get_all_value_drivers_vcs_row
-from sedbackend.apps.cvs.vcs.storage import get_vcs
+from sedbackend.apps.cvs.vcs import storage as vcs_storage
 from sedbackend.apps.cvs.link_design_lifecycle import models, exceptions
 from mysqlsb import FetchType, MySQLStatementBuilder
 
@@ -77,7 +76,7 @@ def find_vd_and_ef(texts: List[str]) -> (List[str], List[int]):
     return value_driver_ids, external_factor_ids
 
 
-def edit_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_group_id: int, project_id: int,
+def edit_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_row_id: int, design_group_id: int,
                   formula_row: models.FormulaRowPost):
     logger.debug(f'Editing formulas')
 
@@ -227,23 +226,26 @@ def update_external_factor_formulas(db_connection: PooledMySQLConnection, vcs_ro
         delete_external_factor_formulas(db_connection, vcs_row_id, design_group_id, delete_external_factors)
 
 
-def update_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_row_id: int, design_group_id: int,
-                    formula_row: models.FormulaRowPost) -> bool:
+def update_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int, design_group_id: int,
+                    formula_rows: List[models.FormulaRowPost]) -> bool:
+    vcs_storage.check_vcs(db_connection, project_id, vcs_id)  # Check if vcs exists and matches project
     get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
-    get_vcs_row(db_connection, project_id, vcs_row_id)
 
-    count_statement = MySQLStatementBuilder(db_connection)
-    count = count_statement.count(CVS_FORMULAS_TABLE) \
-        .where('vcs_row = %s and design_group = %s', [vcs_row_id, design_group_id]) \
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-    count = count['count']
+    for formula_row in formula_rows:
+        vcs_storage.get_vcs_row(db_connection, project_id, formula_row.vcs_row_id)  # Check if vcs row exists
 
-    if count == 0:
-        create_formulas(db_connection, project_id, vcs_row_id, design_group_id, formula_row)
-    elif count == 1:
-        edit_formulas(db_connection, vcs_row_id, design_group_id, project_id, formula_row)
-    else:
-        raise exceptions.FormulasFailedUpdateException
+        count_statement = MySQLStatementBuilder(db_connection)
+        count = count_statement.count(CVS_FORMULAS_TABLE) \
+            .where('vcs_row = %s and design_group = %s', [formula_row.vcs_row_id, design_group_id]) \
+            .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+        count = count['count']
+
+        if count == 0:
+            create_formulas(db_connection, project_id, formula_row.vcs_row_id, design_group_id, formula_row)
+        elif count == 1:
+            edit_formulas(db_connection, project_id, formula_row.vcs_row_id, design_group_id, formula_row)
+        else:
+            raise exceptions.FormulasFailedUpdateException
 
     return True
 
@@ -253,7 +255,7 @@ def get_all_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_
     logger.debug(f'Fetching all formulas with vcs_id={vcs_id}')
 
     get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
-    get_vcs(db_connection, project_id, vcs_id, user_id)
+    vcs_storage.get_vcs(db_connection, project_id, vcs_id, user_id)
 
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement.select(CVS_FORMULAS_TABLE, CVS_FORMULAS_COLUMNS) \
@@ -316,9 +318,11 @@ def populate_formula(db_result) -> models.FormulaRowGet:
         cost=models.Formula(formula=db_result['cost'], comment=db_result['cost_comment']),
         revenue=models.Formula(formula=db_result['revenue'], comment=db_result['revenue_comment']),
         rate=db_result['rate'],
-        row_value_drivers=[populate_value_driver(valueDriver) for valueDriver in db_result['row_value_drivers']] if
+        row_value_drivers=[vcs_storage.populate_value_driver(valueDriver) for valueDriver in
+                           db_result['row_value_drivers']] if
         db_result['row_value_drivers'] is not None else [],
-        used_value_drivers=[populate_value_driver(valueDriver) for valueDriver in db_result['used_value_drivers']] if
+        used_value_drivers=[vcs_storage.populate_value_driver(valueDriver) for valueDriver in
+                            db_result['used_value_drivers']] if
         db_result['used_value_drivers'] is not None else [],
         used_external_factors=[populate_external_factor(externalFactor) for externalFactor in
                                db_result['used_external_factors']] if
@@ -331,7 +335,7 @@ def delete_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_r
     logger.debug(f'Deleting formulas with vcs_row_id: {vcs_row_id}')
 
     get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
-    get_vcs_row(db_connection, project_id, vcs_row_id)
+    vcs_storage.get_vcs_row(db_connection, project_id, vcs_row_id)
 
     delete_statement = MySQLStatementBuilder(db_connection)
     _, rows = delete_statement \

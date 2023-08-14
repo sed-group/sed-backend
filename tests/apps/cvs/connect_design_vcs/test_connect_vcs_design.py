@@ -12,7 +12,6 @@ def test_create_formulas(client, std_headers, std_user):
     vcs_rows = tu.seed_vcs_table_rows(current_user.id, project.id, vcs.id, 1)
     if vcs_rows is None:
         raise Exception
-    row_id = vcs_rows[0].id
     design_group = tu.seed_random_design_group(project.id)
     value_driver = tu.seed_random_value_driver(current_user.id, project.id)
     external_factor = tu.seed_random_external_factor(project.id)
@@ -31,16 +30,16 @@ def test_create_formulas(client, std_headers, std_user):
     rate = tu.random_rate_choice()
 
     time_unit = tu.random_time_unit()
-    res = client.put(f'/api/cvs/project/{project.id}/vcs-row/{row_id}/design-group/{design_group.id}/formulas',
+    res = client.put(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas',
                      headers=std_headers,
-                     json={
-                         "project": project.id,
+                     json=[{
+                         "vcs_row_id": vcs_rows[0].id,
                          "time": {"formula": time, "comment": time_comment},
                          "time_unit": time_unit,
                          "cost": {"formula": cost, "comment": cost_comment},
                          "revenue": {"formula": revenue, "comment": revenue_comment},
                          "rate": rate
-                     })
+                     }])
 
     res_get = client.get(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas/all',
                          headers=std_headers)
@@ -66,7 +65,6 @@ def test_create_formulas_no_optional(client, std_headers, std_user):
     vcs_rows = tu.seed_vcs_table_rows(current_user.id, project.id, vcs.id, 1)
     if vcs_rows is None:
         raise Exception
-    row_id = vcs_rows[0].id
     design_group = tu.seed_random_design_group(project.id)
 
     # Act
@@ -76,16 +74,16 @@ def test_create_formulas_no_optional(client, std_headers, std_user):
     revenue = testutils.random_str(10, 200)
     rate = tu.random_rate_choice()
 
-    res = client.put(f'/api/cvs/project/{project.id}/vcs-row/{row_id}/design-group/{design_group.id}/formulas',
+    res = client.put(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas',
                      headers=std_headers,
-                     json={
-                         "project": project.id,
+                     json=[{
+                         "vcs_row_id": vcs_rows[0].id,
                          "time": {"formula": time, "comment": ""},
                          "time_unit": time_unit,
                          "cost": {"formula": cost, "comment": ""},
                          "revenue": {"formula": revenue, "comment": ""},
                          "rate": rate
-                     })
+                     }])
 
     # Assert
     assert res.status_code == 200
@@ -220,16 +218,16 @@ def test_edit_formulas(client, std_headers, std_user):
     rate = tu.random_rate_choice()
 
     res = client.put(
-        f'/api/cvs/project/{project.id}/vcs-row/{formulas[0].vcs_row_id}/design-group/{formulas[0].design_group_id}/formulas',
+        f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{formulas[0].design_group_id}/formulas',
         headers=std_headers,
-        json={
-            "project": project.id,
+        json=[{
+            "vcs_row_id": formulas[0].vcs_row_id,
             "time": {"formula": time, "comment": ""},
             "time_unit": time_unit,
             "cost": {"formula": cost, "comment": ""},
             "revenue": {"formula": revenue, "comment": ""},
             "rate": rate
-        })
+        }])
 
     res_get = client.get(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas/all',
                          headers=std_headers)
@@ -262,16 +260,16 @@ def test_edit_formulas_no_optional(client, std_headers, std_user):
     rate = tu.random_rate_choice()
 
     res = client.put(
-        f'/api/cvs/project/{project.id}/vcs-row/{formulas[0].vcs_row_id}/design-group/{formulas[0].design_group_id}/formulas',
+        f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{formulas[0].design_group_id}/formulas',
         headers=std_headers,
-        json={
-            "project": project.id,
+        json=[{
+            "vcs_row_id": formulas[0].vcs_row_id,
             "time": {"formula": time, "comment": ""},
             "time_unit": time_unit,
             "cost": {"formula": cost, "comment": ""},
             "revenue": {"formula": revenue, "comment": ""},
             "rate": rate
-        })
+        }])
 
     # Assert
     assert res.status_code == 200
@@ -305,16 +303,16 @@ def test_edit_formulas_invalid_dg(client, std_headers, std_user):
     revenue = testutils.random_str(10, 200)
     rate = tu.random_rate_choice()
 
-    res = client.put(f'/api/cvs/project/{project.id}/vcs-row/{row_id}/design-group/{dg_invalid_id}/formulas',
+    res = client.put(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{dg_invalid_id}/formulas',
                      headers=std_headers,
-                     json={
-                         "project": project.id,
+                     json=[{
+                         "vcs_row_id": row_id,
                          "time": {"formula": time, "comment": ""},
                          "time_unit": time_unit,
                          "cost": {"formula": cost, "comment": ""},
                          "revenue": {"formula": revenue, "comment": ""},
                          "rate": rate
-                     })
+                     }])
 
     # Assert
     assert res.status_code == 404
@@ -345,16 +343,16 @@ def test_edit_formulas_invalid_vcs_row(client, std_headers, std_user):
     revenue = testutils.random_str(10, 200)
     rate = tu.random_rate_choice()
 
-    res = client.put(f'/api/cvs/project/{project.id}/vcs-row/{row_id}/design-group/{design_group.id}/formulas',
+    res = client.put(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas',
                      headers=std_headers,
-                     json={
-                         "project": project.id,
+                     json=[{
+                         "vcs_row_id": row_id,
                          "time": {"formula": time, "comment": ""},
                          "time_unit": time_unit,
                          "cost": {"formula": cost, "comment": ""},
                          "revenue": {"formula": revenue, "comment": ""},
                          "rate": rate
-                     })
+                     }])
 
     # Assert
     assert res.status_code == 404
@@ -386,16 +384,16 @@ def test_edit_formulas_invalid_project(client, std_headers, std_user):
     revenue = testutils.random_str(10, 200)
     rate = tu.random_rate_choice()
 
-    res = client.put(f'/api/cvs/project/{invalid_proj_id}/vcs-row/{row_id}/design-group/{design_group.id}/formulas',
+    res = client.put(f'/api/cvs/project/{invalid_proj_id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas',
                      headers=std_headers,
-                     json={
-                         "project": project.id,
+                     json=[{
+                         "vcs_row_id": row_id,
                          "time": {"formula": time, "comment": ""},
                          "time_unit": time_unit,
                          "cost": {"formula": cost, "comment": ""},
                          "revenue": {"formula": revenue, "comment": ""},
                          "rate": rate
-                     })
+                     }])
 
     # Assert
     assert res.status_code == 404

@@ -9,10 +9,10 @@ from sedbackend.apps.cvs.design import exceptions as design_exceptions
 from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 
 
-def edit_formulas(project_id: int, vcs_row_id: int, design_group_id: int, new_formulas: models.FormulaRowPost) -> bool:
+def edit_formulas(project_id: int, vcs_id: int, design_group_id: int, formulas: List[models.FormulaRowPost]) -> bool:
     with get_connection() as con:
         try:
-            res = storage.update_formulas(con, project_id, vcs_row_id, design_group_id, new_formulas)
+            res = storage.update_formulas(con, project_id, vcs_id, design_group_id, formulas)
             con.commit()
             return res
         except vcs_exceptions.VCSNotFoundException:
@@ -33,7 +33,7 @@ def edit_formulas(project_id: int, vcs_row_id: int, design_group_id: int, new_fo
         except design_exceptions.DesignGroupNotFoundException:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f'Could not find designgroup with id {design_group_id}'
+                detail=f'Could not find design group with id {design_group_id}'
             )
         except project_exceptions.CVSProjectNotFoundException:
             raise HTTPException(
@@ -48,7 +48,7 @@ def edit_formulas(project_id: int, vcs_row_id: int, design_group_id: int, new_fo
         except vcs_exceptions.VCSTableRowNotFoundException:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f'Could not find vcs row with id={vcs_row_id}.',
+                detail=f'Could not find vcs row.',
             )
         except exceptions.CouldNotAddValueDriverToProjectException:
             raise HTTPException(
