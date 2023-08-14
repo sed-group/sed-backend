@@ -230,7 +230,13 @@ def get_all_designs(db_connection: PooledMySQLConnection, design_group_ids: List
         logger.debug(f'Error msg: {e.msg}')
         raise exceptions.DesignGroupNotFoundException
 
-    return [populate_design(result) for result in res]
+    designs = []
+    for result in res:
+        vd_design_values = get_all_vd_design_values(db_connection, result['id'])
+        result.update({'vd_values': vd_design_values})
+        designs.append(populate_design_with_values(result))
+
+    return designs
 
 
 def create_design(db_connection: PooledMySQLConnection, design_group_id: int,

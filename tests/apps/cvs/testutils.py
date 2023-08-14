@@ -430,7 +430,7 @@ def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, use
         )
 
         connect_impl.edit_formulas(
-            project_id, vcs_row.id, design_group_id, [formula_post])
+            project_id, vcs_id, design_group_id, [formula_post])
 
     return connect_impl.get_all_formulas(project_id, vcs_id, design_group_id, user_id)
 
