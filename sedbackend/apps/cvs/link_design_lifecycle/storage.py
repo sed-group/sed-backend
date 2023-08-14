@@ -5,7 +5,7 @@ from mysql.connector.pooling import PooledMySQLConnection
 import re
 from sedbackend.apps.cvs.design.storage import get_design_group
 from sedbackend.apps.cvs.market_input.storage import populate_external_factor
-from sedbackend.apps.cvs.vcs.storage import get_vcs_row, populate_value_driver
+from sedbackend.apps.cvs.vcs.storage import get_vcs_row, populate_value_driver, get_all_value_drivers_vcs_row
 from sedbackend.apps.cvs.vcs.storage import get_vcs
 from sedbackend.apps.cvs.link_design_lifecycle import models, exceptions
 from mysqlsb import FetchType, MySQLStatementBuilder
@@ -25,6 +25,11 @@ CVS_FORMULAS_EXTERNAL_FACTORS_COLUMNS = ['vcs_row', 'design_group', 'external_fa
 
 CVS_PROJECT_VALUE_DRIVERS_TABLE = 'cvs_project_value_drivers'
 CVS_PROJECT_VALUE_DRIVERS_COLUMNS = ['project', 'value_driver']
+
+CVS_EXTERNAL_FACTORS_TABLE = 'cvs_market_inputs'
+CVS_STAKEHOLDER_NEEDS_TABLE = 'cvs_stakeholder_needs'
+CVS_VCS_ROWS_TABLE = 'cvs_vcs_rows'
+CVS_VCS_NEED_DRIVERS_TABLE = 'cvs_vcs_need_drivers'
 
 
 def create_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_row_id: int, design_group_id: int,
@@ -100,7 +105,6 @@ def edit_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_
 
 def add_value_driver_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_group_id: int,
                               value_drivers: List[int], project_id: int):
-
     # Add value driver to project if not already added
     select_statement = MySQLStatementBuilder(db_connection)
     project_value_driver_res = select_statement \
@@ -268,24 +272,36 @@ def get_all_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_
 
         with db_connection.cursor(prepared=True) as cursor:
             cursor.execute(
-                f"SELECT id, name, unit, vcs_row, design_group FROM cvs_formulas_value_drivers "
-                f"INNER JOIN cvs_value_drivers ON cvs_formulas_value_drivers.value_driver = cvs_value_drivers.id WHERE {where_statement}",
+                f"SELECT id, name, unit, vcs_row, design_group FROM {CVS_FORMULAS_VALUE_DRIVERS_TABLE} "
+                f"INNER JOIN {CVS_VALUE_DRIVERS_TABLE} ON {CVS_FORMULAS_VALUE_DRIVERS_TABLE}.value_driver = cvs_value_drivers.id WHERE {where_statement}",
                 prepared_list)
-            all_vds = [dict(zip(cursor.column_names, row)) for row in cursor.fetchall()]
+            all_used_vds = [dict(zip(cursor.column_names, row)) for row in cursor.fetchall()]
 
         with db_connection.cursor(prepared=True) as cursor:
             cursor.execute(
                 f"SELECT id, name, unit, vcs_row, design_group FROM {CVS_FORMULAS_EXTERNAL_FACTORS_TABLE} "
-                f"INNER JOIN cvs_market_inputs ON {CVS_FORMULAS_EXTERNAL_FACTORS_TABLE}.external_factor = cvs_market_inputs.id WHERE {where_statement}",
+                f"INNER JOIN {CVS_EXTERNAL_FACTORS_TABLE} ON {CVS_FORMULAS_EXTERNAL_FACTORS_TABLE}.external_factor = cvs_market_inputs.id WHERE {where_statement}",
                 prepared_list)
-            all_efs = [dict(zip(cursor.column_names, row)) for row in cursor.fetchall()]
+            all_used_efs = [dict(zip(cursor.column_names, row)) for row in cursor.fetchall()]
+
+        # TODO - get all value drivers from all vcs rows
+        with db_connection.cursor(prepared=True) as cursor:
+            cursor.execute(
+                f"SELECT {CVS_VALUE_DRIVERS_TABLE}.id, {CVS_VALUE_DRIVERS_TABLE}.name, {CVS_VALUE_DRIVERS_TABLE}.unit, {CVS_VCS_ROWS_TABLE}.id AS vcs_row FROM {CVS_VCS_ROWS_TABLE} "
+                f"INNER JOIN {CVS_STAKEHOLDER_NEEDS_TABLE} ON {CVS_STAKEHOLDER_NEEDS_TABLE}.vcs_row = {CVS_VCS_ROWS_TABLE}.id "
+                f"INNER JOIN {CVS_VCS_NEED_DRIVERS_TABLE} ON {CVS_VCS_NEED_DRIVERS_TABLE}.stakeholder_need = {CVS_STAKEHOLDER_NEEDS_TABLE}.id "
+                f"INNER JOIN {CVS_VALUE_DRIVERS_TABLE} ON {CVS_VALUE_DRIVERS_TABLE}.id = {CVS_VCS_NEED_DRIVERS_TABLE}.value_driver "
+                f"WHERE {CVS_VCS_ROWS_TABLE}.id IN ({','.join(['%s' for _ in range(len(res))])})",
+                [r['vcs_row'] for r in res])
+            all_row_vds = [dict(zip(cursor.column_names, row)) for row in cursor.fetchall()]
 
     formulas = []
     for r in res:
-        r['value_drivers'] = [vd for vd in all_vds if vd['vcs_row'] == r['vcs_row'] and
-                              vd['design_group'] == r['design_group']]
-        r['external_factors'] = [ef for ef in all_efs if ef['vcs_row'] == r['vcs_row'] and
-                                 ef['design_group'] == r['design_group']]
+        r['row_value_drivers'] = [vd for vd in all_row_vds if vd['vcs_row'] == r['vcs_row']]
+        r['used_value_drivers'] = [vd for vd in all_used_vds if vd['vcs_row'] == r['vcs_row'] and
+                                   vd['design_group'] == r['design_group']]
+        r['used_external_factors'] = [ef for ef in all_used_efs if ef['vcs_row'] == r['vcs_row'] and
+                                      ef['design_group'] == r['design_group']]
         formulas.append(populate_formula(r))
 
     return formulas
@@ -300,11 +316,13 @@ def populate_formula(db_result) -> models.FormulaRowGet:
         cost=models.Formula(formula=db_result['cost'], comment=db_result['cost_comment']),
         revenue=models.Formula(formula=db_result['revenue'], comment=db_result['revenue_comment']),
         rate=db_result['rate'],
-        used_value_drivers=[populate_value_driver(valueDriver) for valueDriver in db_result['value_drivers']] if
-        db_result['value_drivers'] is not None else [],
+        row_value_drivers=[populate_value_driver(valueDriver) for valueDriver in db_result['row_value_drivers']] if
+        db_result['row_value_drivers'] is not None else [],
+        used_value_drivers=[populate_value_driver(valueDriver) for valueDriver in db_result['used_value_drivers']] if
+        db_result['used_value_drivers'] is not None else [],
         used_external_factors=[populate_external_factor(externalFactor) for externalFactor in
-                               db_result['external_factors']] if
-        db_result['external_factors'] is not None else [],
+                               db_result['used_external_factors']] if
+        db_result['used_external_factors'] is not None else [],
     )
 
 

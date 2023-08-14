@@ -38,6 +38,7 @@ class FormulaRowGet(BaseModel):
     cost: Formula
     revenue: Formula
     rate: Rate
+    row_value_drivers: List[ValueDriver] = []
     used_value_drivers: List[ValueDriver] = []
     used_external_factors: List[ExternalFactor] = []
 
