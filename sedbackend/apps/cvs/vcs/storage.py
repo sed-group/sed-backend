@@ -291,7 +291,7 @@ def get_all_value_driver_vcs(db_connection: PooledMySQLConnection, project_id: i
     try:
         select_statement = MySQLStatementBuilder(db_connection)
         results = select_statement \
-            .select(CVS_VALUE_DRIVER_TABLE, CVS_VALUE_DRIVER_COLUMNS) \
+            .select(CVS_VALUE_DRIVER_TABLE, ['cvs_value_drivers.id', 'user', 'name', 'unit', 'project_id']) \
             .inner_join('cvs_vcs_need_drivers', 'value_driver = cvs_value_drivers.id') \
             .inner_join('cvs_stakeholder_needs', 'stakeholder_need = cvs_stakeholder_needs.id') \
             .inner_join('cvs_vcs_rows', 'vcs_row = cvs_vcs_rows.id') \
@@ -302,9 +302,8 @@ def get_all_value_driver_vcs(db_connection: PooledMySQLConnection, project_id: i
         raise exceptions.ValueDriverNotFoundException
 
     value_drivers = []
-    [value_drivers.append(populate_value_driver(res)) for res in results if res['id'] not in
-     [vd.id for vd in value_drivers]]
-
+    [value_drivers.append(populate_value_driver(res)) for res in results]
+    logger.debug(value_drivers)
     return value_drivers
 
 
