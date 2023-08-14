@@ -291,7 +291,7 @@ def get_all_value_driver_vcs(db_connection: PooledMySQLConnection, project_id: i
     try:
         select_statement = MySQLStatementBuilder(db_connection)
         results = select_statement \
-            .select(CVS_VALUE_DRIVER_TABLE, ['cvs_value_drivers.id'] + CVS_VALUE_DRIVER_COLUMNS[1:]) \
+            .select(CVS_VALUE_DRIVER_TABLE, CVS_VALUE_DRIVER_COLUMNS) \
             .inner_join('cvs_vcs_need_drivers', 'value_driver = cvs_value_drivers.id') \
             .inner_join('cvs_stakeholder_needs', 'stakeholder_need = cvs_stakeholder_needs.id') \
             .inner_join('cvs_vcs_rows', 'vcs_row = cvs_vcs_rows.id') \
