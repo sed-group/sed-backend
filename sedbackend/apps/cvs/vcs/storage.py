@@ -7,7 +7,7 @@ from sedbackend.apps.cvs.project import exceptions as project_exceptions
 from sedbackend.apps.cvs.project.storage import get_cvs_project
 from sedbackend.apps.cvs.vcs import models, exceptions
 from sedbackend.apps.cvs.life_cycle import storage as life_cycle_storage, models as life_cycle_models
-from sedbackend.apps.cvs.vcs.models import ValueDriver
+from sedbackend.apps.cvs.vcs.models import ValueDriver, ValueDriverPost
 from sedbackend.libs.datastructures.pagination import ListChunk
 from sedbackend.apps.core.files import storage as file_storage, exceptions as file_exceptions
 from mysqlsb import MySQLStatementBuilder, Sort, FetchType
@@ -21,10 +21,7 @@ CVS_VALUE_DIMENSION_TABLE = 'cvs_value_dimensions'
 CVS_VALUE_DIMENSION_COLUMNS = ['id', 'name', 'priority', 'vcs_row']
 
 CVS_VALUE_DRIVER_TABLE = 'cvs_value_drivers'
-CVS_VALUE_DRIVER_COLUMNS = ['id', 'user', 'name', 'unit']
-
-CVS_PROJECT_VALUE_DRIVER_TABLE = 'cvs_project_value_drivers'
-CVS_PROJECT_VALUE_DRIVER_COLUMNS = ['project', 'value_driver']
+CVS_VALUE_DRIVER_COLUMNS = ['id', 'user', 'name', 'unit', 'project_id']
 
 CVS_VCS_ROW_DRIVERS_TABLE = 'cvs_rowDrivers'
 CVS_VCS_ROW_DRIVERS_COLUMNS = ['vcs_row', 'value_driver']
@@ -315,12 +312,12 @@ def get_all_value_driver(db_connection: PooledMySQLConnection, user_id: int) -> 
     logger.debug(f'Fetching all value drivers for user with id={user_id}.')
 
     try:
-        query = f'SELECT DISTINCT cvd.*, cpvd.project \
+        query = f'SELECT DISTINCT cvd.*\
                 FROM cvs_value_drivers cvd \
-                LEFT JOIN cvs_project_value_drivers cpvd ON cvd.id = cpvd.value_driver \
-                LEFT JOIN projects_participants pp ON cpvd.project = pp.project_id \
-                LEFT JOIN projects_subprojects ps ON cpvd.project = ps.native_project_id \
-                WHERE (pp.user_id = %s OR (cvd.user = %s))'
+                LEFT JOIN cvs_projects p ON cvd.project_id = p.id \
+                LEFT JOIN projects_participants pp ON p.id = pp.project_id \
+                LEFT JOIN projects_subprojects ps ON p.id = ps.native_project_id \
+                WHERE (pp.user_id = %s OR p.owner_id = %s)'
 
         with db_connection.cursor(prepared=True, dictionary=True) as cursor:
             cursor.execute(query, [user_id, user_id])
@@ -329,7 +326,7 @@ def get_all_value_driver(db_connection: PooledMySQLConnection, user_id: int) -> 
         logger.debug(f'Error msg: {e.msg}')
         raise exceptions.ValueDriverNotFoundException
 
-    return combine_value_drivers([populate_value_driver(result) for result in res])
+    return [populate_value_driver(result) for result in res]
 
 
 def get_all_value_drivers_vcs_row(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
@@ -415,58 +412,21 @@ def update_vcs_need_driver(db_connection: PooledMySQLConnection, need_id: int, v
     return True
 
 
-def add_project_value_drivers(db_connection: PooledMySQLConnection, project_id: int,
-                              value_driver_ids: List[int]) -> bool:
-    logger.debug(f'Adding relation between project_id={project_id} and value_driver_ids={value_driver_ids}')
-
-    try:
-        insert_statement = f'INSERT INTO {CVS_PROJECT_VALUE_DRIVER_TABLE} (project, value_driver) VALUES (%s, %s) ON DUPLICATE KEY UPDATE `project`=`project`'
-        prepared_list = []
-        for index, value_driver_id in enumerate(value_driver_ids):
-            prepared_list.append((project_id, value_driver_id))
-        with db_connection.cursor(prepared=True) as cursor:
-            cursor.executemany(insert_statement, prepared_list)
-    except Error as e:
-        logger.debug(f'Error {e.errno} {e.msg}')
-        raise exceptions.ProjectValueDriverFailedToCreateException
-
-    return True
-
-
 def get_value_driver(db_connection: PooledMySQLConnection, value_driver_id: int, user_id: int) -> ValueDriver:
     logger.debug(f'User={user_id} fetching value driver with id={value_driver_id}.')
 
-    query = f'SELECT cvd.*, cpvd.project \
+    query = f'SELECT cvd.* \
             FROM cvs_value_drivers cvd \
-            INNER JOIN cvs_project_value_drivers cpvd ON cpvd.value_driver = cvd.id \
-            INNER JOIN projects_subprojects ps ON cpvd.project = ps.native_project_id \
-            WHERE cvd.id = %s AND (ps.owner_id = %s OR ps.id IN (SELECT project_id FROM projects_participants WHERE user_id = %s));'
+            WHERE cvd.id = %s;'
 
     with db_connection.cursor(prepared=True, dictionary=True) as cursor:
-        cursor.execute(query, [value_driver_id, user_id, user_id])
-        res = cursor.fetchall()
+        cursor.execute(query, [value_driver_id])
+        res = cursor.fetchone()
 
-    if len(res) == 0:
+    if res is None:
         raise exceptions.ValueDriverNotFoundException(value_driver_id=value_driver_id)
 
-    vds = combine_value_drivers([populate_value_driver(result) for result in res])
-
-    return vds[0]
-
-
-def combine_value_drivers(data: list[ValueDriver]) -> list[ValueDriver]:
-    combined_dict = {}
-
-    for entry in data:
-        key = (entry.id, entry.name)
-        if key not in combined_dict:
-            combined_dict[key] = ValueDriver(id=entry.id, name=entry.name, unit=None, projects=[])
-        combined_dict[key].unit = entry.unit if entry.unit is not None else combined_dict[key].unit
-        if entry.projects is not None:
-            combined_dict[key].projects.extend(entry.projects)
-
-    combined_data = list(combined_dict.values())
-    return combined_data
+    return populate_value_driver(res)
 
 
 def create_value_driver(db_connection: PooledMySQLConnection, user_id: int,
@@ -476,11 +436,11 @@ def create_value_driver(db_connection: PooledMySQLConnection, user_id: int,
     try:
         insert_statement = MySQLStatementBuilder(db_connection)
         insert_statement \
-            .insert(table=CVS_VALUE_DRIVER_TABLE, columns=['user', 'name', 'unit']) \
-            .set_values([user_id, value_driver_post.name, value_driver_post.unit]) \
+            .insert(table=CVS_VALUE_DRIVER_TABLE, columns=['user', 'name', 'unit', 'project_id']) \
+            .set_values([user_id, value_driver_post.name, value_driver_post.unit, value_driver_post.project_id]) \
             .execute(fetch_type=FetchType.FETCH_NONE)
         value_driver_id = insert_statement.last_insert_id
-        add_project_value_drivers(db_connection, value_driver_post.project_id, [value_driver_id])
+
     except Error as e:
         logger.debug(f'Error msg: {e.msg}')
         raise exceptions.ValueDriverFailedToCreateException
@@ -521,28 +481,6 @@ def delete_value_driver(db_connection: PooledMySQLConnection, value_driver_id: i
     return True
 
 
-def delete_project_value_driver(db_connection: PooledMySQLConnection, project_id: int, value_driver_id: int) -> bool:
-    logger.debug(f'Deleting relation with project={project_id} AND value_driver={value_driver_id}.')
-
-    delete_statement = MySQLStatementBuilder(db_connection)
-    _, rows = delete_statement.delete(CVS_PROJECT_VALUE_DRIVER_TABLE) \
-        .where('project = %s AND value_driver = %s', [project_id, value_driver_id]) \
-        .execute(return_affected_rows=True)
-
-    if rows == 0:
-        raise exceptions.ProjectValueDriverNotFoundException(project_id=project_id, value_driver_id=value_driver_id)
-
-    count_statement = MySQLStatementBuilder(db_connection)
-    result = count_statement.count(CVS_PROJECT_VALUE_DRIVER_TABLE) \
-        .where('value_driver = %s', [value_driver_id]) \
-        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
-
-    if result['count'] == 0:
-        return delete_value_driver(db_connection, value_driver_id)
-
-    return True
-
-
 def delete_all_value_drivers(db_connection: PooledMySQLConnection, user_id: int) -> bool:
     logger.debug(f'Deleting all value drivers for user with id={user_id}.')
 
@@ -556,13 +494,11 @@ def delete_all_value_drivers(db_connection: PooledMySQLConnection, user_id: int)
 
 def populate_value_driver(db_result) -> models.ValueDriver:
     logger.debug(f'Populating value driver with: {db_result}')
-    project = None
-    if 'project' in db_result and db_result['project']: project = [db_result['project']]
     return models.ValueDriver(
         id=db_result['id'],
         name=db_result['name'],
         unit=db_result['unit'],
-        projects=project
+        project_id=db_result['project_id']
     )
 
 

@@ -8,6 +8,7 @@ from sedbackend.apps.core.users import exceptions as user_ex
 from sedbackend.apps.core.db import get_connection
 import sedbackend.apps.cvs.project.exceptions as project_exceptions
 from sedbackend.apps.cvs.vcs import models, storage, exceptions
+from sedbackend.apps.cvs.vcs.models import ValueDriverPost
 from sedbackend.libs.datastructures.pagination import ListChunk
 from sedbackend.apps.core.files import exceptions as file_ex
 
@@ -270,7 +271,7 @@ def edit_value_driver(value_driver_id: int,
 def delete_value_driver(project_id: int, value_driver_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.delete_project_value_driver(con, project_id, value_driver_id)
+            res = storage.delete_value_driver(con, value_driver_id)
             con.commit()
             return res
     except exceptions.ValueDriverNotFoundException:
@@ -328,24 +329,6 @@ def add_vcs_multiple_needs_drivers(need_driver_ids: List[Tuple[int, int]]):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Badly formatted request'
-        )
-
-
-def add_project_multiple_value_drivers(project_id: int, value_driver_ids: List[int]):
-    try:
-        with get_connection() as con:
-            res = storage.add_project_value_drivers(con, project_id, value_driver_ids)
-            con.commit()
-            return res
-    except exceptions.GenericDatabaseException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Badly formatted request'
-        )
-    except exceptions.ProjectValueDriverFailedToCreateException:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'Failed to create project={project_id} and value driver={value_driver_ids} relation'
         )
 
 
