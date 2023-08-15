@@ -368,7 +368,6 @@ def get_dsm_file_id(db_connection: PooledMySQLConnection, project_id: int, vcs_i
 
 def get_multiple_dsm_file_id(db_connection: PooledMySQLConnection, vcs_ids: List[int]) -> list[Tuple[int, int]]:
     where_statement = "vcs IN (" + ",".join(["%s" for _ in range(len(vcs_ids))]) + ")"
-    logger.debug(f'where_statement: {where_statement}')
 
     select_statement = MySQLStatementBuilder(db_connection)
     file_res = select_statement.select(CVS_DSM_FILES_TABLE, CVS_DSM_FILES_COLUMNS) \

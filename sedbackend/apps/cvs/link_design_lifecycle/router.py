@@ -15,22 +15,23 @@ router = APIRouter()
 @router.get(
     '/project/{native_project_id}/vcs/{vcs_id}/design-group/{dg_id}/formulas/all',
     summary=f'Get all formulas for a single vcs and design group',
-    response_model=List[models.FormulaGet],
+    response_model=List[models.FormulaRowGet],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
 async def get_all_formulas(native_project_id: int, vcs_id: int, dg_id: int,
-                           user: User = Depends(get_current_active_user)) -> List[models.FormulaGet]:
+                           user: User = Depends(get_current_active_user)) -> List[models.FormulaRowGet]:
     return implementation.get_all_formulas(native_project_id, vcs_id, dg_id, user.id)
 
 
 @router.put(
-    '/project/{native_project_id}/vcs-row/{vcs_row_id}/design-group/{dg_id}/formulas',
+    '/project/{native_project_id}/vcs/{vcs_id}/design-group/{dg_id}/formulas',
     summary='Edit or create the formulas for time, cost, and revenue',
     response_model=bool,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def edit_formulas(native_project_id: int, vcs_row_id: int, dg_id: int, new_formulas: models.FormulaPost) -> bool:
-    return implementation.edit_formulas(native_project_id, vcs_row_id, dg_id, new_formulas)
+async def edit_formula_table(native_project_id: int, vcs_id: int, dg_id: int,
+                             formulas: List[models.FormulaRowPost]) -> bool:
+    return implementation.edit_formulas(native_project_id, vcs_id, dg_id, formulas)
 
 
 @router.delete(

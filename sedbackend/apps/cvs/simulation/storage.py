@@ -1,3 +1,4 @@
+import re
 import sys
 import tempfile
 from math import isnan
@@ -15,14 +16,13 @@ from desim.simulation import Process
 import os
 
 from typing import List
-from sedbackend.apps.cvs.design.models import ValueDriverDesignValue
-from sedbackend.apps.cvs.design.storage import get_all_designs, get_designs
+from sedbackend.apps.cvs.design.storage import get_all_designs
 
 from mysqlsb import FetchType, MySQLStatementBuilder
 
 from sedbackend.apps.cvs.life_cycle.storage import get_dsm_from_file_id, get_dsm_from_csv
 from sedbackend.apps.cvs.simulation.models import SimulationResult
-from sedbackend.apps.cvs.vcs.storage import get_vcs, get_value_driver, get_vcss
+from sedbackend.apps.cvs.vcs.storage import get_vcss
 from sedbackend.libs.formula_parser.parser import NumericStringParser
 from sedbackend.libs.formula_parser import expressions as expr
 from sedbackend.apps.cvs.simulation import models
@@ -44,49 +44,6 @@ TIME_FORMAT_DICT = dict({
     'hour': TimeFormat.HOUR,
     'minutes': TimeFormat.MINUTES
 })
-
-
-# TODO: Run simulation on DSM file
-def get_dsm_from_file(db_connection: PooledMySQLConnection, user_id: int, project_id: int,
-                      sim_params: models.FileParams,
-                      dsm_file: UploadFile) -> dict:
-    _, file_extension = os.path.splitext(dsm_file.filename)
-
-    dsm = {}
-
-    if file_extension == '.xlsx':
-        try:
-            tmp_xlsx = tempfile.TemporaryFile()  # Workaround because current python version doesn't support
-            tmp_xlsx.write(dsm_file.file.read())  # readable() attribute on SpooledTemporaryFile which UploadFile
-            tmp_xlsx.seek(
-                0)  # is an alias for. PR is accepted for python v3.12, see https://github.com/python/cpython/pull/29560
-
-            dsm = get_dsm_from_excel(tmp_xlsx)
-            if dsm is None:
-                raise e.DSMFileNotFoundException
-        except Exception as exc:
-            logger.debug(exc)
-        finally:
-            tmp_xlsx.close()
-    elif file_extension == '.csv':
-        try:
-            tmp_csv = tempfile.TemporaryFile()  # Workaround because current python version doesn't support
-            tmp_csv.write(dsm_file.file.read())  # readable() attribute on SpooledTemporaryFile which UploadFile
-            tmp_csv.seek(
-                0)  # is an alias for. PR is accepted for python v3.12, see https://github.com/python/cpython/pull/29560
-
-            # This should hopefully open up the file for the processor.
-            dsm = get_dsm_from_csv(tmp_csv)
-            if dsm is None:
-                raise e.DSMFileNotFoundException
-        except Exception as exc:
-            logger.debug(exc)
-        finally:
-            tmp_csv.close()
-    else:
-        raise e.DSMFileNotFoundException
-
-    return dsm
 
 
 def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.EditSimSettings,
@@ -216,9 +173,9 @@ def populate_processes(non_tech_add: NonTechCost, db_results, design: int,
         if row['category'] != 'Technical processes':
             try:
                 non_tech = models.NonTechnicalProcess(
-                    cost=nsp.eval(parse_formula(row['cost'], vd_values_row, mi_values)),
+                    cost=nsp.eval(parse_formula(row['cost'], vd_values_row, mi_values, row)),
                     revenue=nsp.eval(
-                        parse_formula(row['revenue'], vd_values_row, mi_values)),
+                        parse_formula(row['revenue'], vd_values_row, mi_values, row)),
                     name=row['iso_name'])
             except Exception as exc:
                 logger.debug(f'{exc.__class__}, {exc}')
@@ -228,10 +185,10 @@ def populate_processes(non_tech_add: NonTechCost, db_results, design: int,
         elif row['iso_name'] is not None and row['sub_name'] is None:
             try:
                 time = nsp.eval(parse_formula(
-                    row['time'], vd_values, mi_values))
-                cost_formula = parse_formula(row['cost'], vd_values, mi_values)
+                    row['time'], vd_values, mi_values, row))
+                cost_formula = parse_formula(row['cost'], vd_values, mi_values, row)
                 revenue_formula = parse_formula(
-                    row['revenue'], vd_values, mi_values)
+                    row['revenue'], vd_values, mi_values, row)
                 p = Process(row['id'],
                             time,
                             nsp.eval(expr.replace_all(
@@ -251,10 +208,10 @@ def populate_processes(non_tech_add: NonTechCost, db_results, design: int,
             sub_name = f'{row["sub_name"]} ({row["iso_name"]})'
             try:
                 time = nsp.eval(parse_formula(
-                    row['time'], vd_values, mi_values))
-                cost_formula = parse_formula(row['cost'], vd_values, mi_values)
+                    row['time'], vd_values, mi_values, row))
+                cost_formula = parse_formula(row['cost'], vd_values, mi_values, row)
                 revenue_formula = parse_formula(
-                    row['revenue'], vd_values, mi_values)
+                    row['revenue'], vd_values, mi_values, row)
                 p = Process(row['id'],
                             time,
                             nsp.eval(expr.replace_all(
@@ -314,21 +271,6 @@ def get_all_sim_data(db_connection: PooledMySQLConnection, vcs_ids: List[int], d
     return res
 
 
-def get_vd_design_values(db_connection: PooledMySQLConnection, vcs_row_id: int,
-                         design: int) -> List[ValueDriverDesignValue]:
-    select_statement = MySQLStatementBuilder(db_connection)
-    res = select_statement \
-        .select('cvs_vd_design_values', ['cvs_value_drivers.id', 'design', 'name', 'value', 'unit']) \
-        .inner_join('cvs_value_drivers', 'cvs_vd_design_values.value_driver = cvs_value_drivers.id') \
-        .inner_join('cvs_vcs_need_drivers', 'cvs_vcs_need_drivers.value_driver = cvs_value_drivers.id') \
-        .inner_join('cvs_stakeholder_needs', 'cvs_stakeholder_needs.id = cvs_vcs_need_drivers.stakeholder_need') \
-        .where('vcs_row = %s and design = %s', [vcs_row_id, design]) \
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-
-    logger.debug(f'Fetched {len(res)} value driver design values')
-    return res
-
-
 def get_all_vd_design_values(db_connection: PooledMySQLConnection, designs: List[int]):
     try:
         query = f'SELECT design, value, vcs_row, cvd.name, cvd.unit, cvd.id \
@@ -375,7 +317,6 @@ def edit_simulation_settings(db_connection: PooledMySQLConnection, project_id: i
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
 
     count = count['count']
-    logger.debug(count)
 
     if sim_settings.flow_process is not None:
         flow_process_exists = False
@@ -429,21 +370,9 @@ def create_sim_settings(db_connection: PooledMySQLConnection, project_id: int,
     return True
 
 
-def get_market_values(db_connection: PooledMySQLConnection, vcs: int):
-    select_statement = MySQLStatementBuilder(db_connection)
-    res = select_statement \
-        .select('cvs_market_input_values', ['id', 'name', 'value', 'unit']) \
-        .inner_join('cvs_market_inputs', 'cvs_market_input_values.market_input = cvs_market_inputs.id') \
-        .where('vcs = %s', [vcs]) \
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-    return res
-
-
 def get_all_market_values(db_connection: PooledMySQLConnection, vcs_ids: List[int]):
     try:
-        query = f'SELECT id, name, value, unit, vcs \
-                FROM cvs_market_input_values \
-                INNER JOIN cvs_market_inputs ON cvs_market_input_values.market_input = cvs_market_inputs.id \
+        query = f'SELECT * FROM cvs_market_input_values \
                 WHERE cvs_market_input_values.vcs IN ({",".join(["%s" for _ in range(len(vcs_ids))])})'
         with db_connection.cursor(prepared=True) as cursor:
             cursor.execute(query, vcs_ids)
@@ -455,24 +384,48 @@ def get_all_market_values(db_connection: PooledMySQLConnection, vcs_ids: List[in
     return res
 
 
-def parse_formula(formula: str, vd_values, mi_values) -> str:
-    new_formula = formula
-    vd_names = expr.get_prefix_variables('VD', new_formula)
-    mi_names = expr.get_prefix_variables('EF', new_formula)
+def add_multiplication_signs(formula: str) -> str:
+    # Define a regular expression pattern to find the positions where the multiplication sign is missing
+    pattern = r'(\d)([a-zA-Z({\[<])|([}\])>]|})([a-zA-Z({\[<])|([}\])>]|{)(\d)'
 
-    for vd in vd_values:
-        for name in vd_names:
-            unit = vd["unit"] if vd["unit"] is not None and vd["unit"] != "" else "N/A"
-            if name == f'{vd["name"]} [{unit}]':
-                new_formula = expr.replace_prefix_variables("VD", name, str(vd["value"]), new_formula)
-    for mi in mi_values:
-        for name in mi_names:
-            unit = mi["unit"] if mi["unit"] is not None and mi["unit"] != "" else "N/A"
-            if name == f'{mi["name"]} [{unit}]':
-                new_formula = expr.replace_prefix_variables("EF", name, str(mi["value"]), new_formula)
-    new_formula = expr.remove_strings_replace_zero(new_formula)
+    # Use the re.sub() function to replace the matches with the correct format
+    def replace(match):
+        if match.group(2):
+            return f"{match.group(1)}*{match.group(2)}"
+        elif match.group(3) and match.group(4):
+            return f"{match.group(3)}*{match.group(4)}"
 
-    return new_formula
+    result = re.sub(pattern, replace, formula)
+    return result
+
+
+def parse_formula(formula: str, vd_values, ef_values, formula_row: dict = None) -> str:
+    pattern = r'\{(?P<tag>vd|ef|process):(?P<value>[a-zA-Z0-9_]+),"([^"]+)"\}'
+
+    formula = add_multiplication_signs(formula)
+
+    def replace(match):
+        tag, value, _ = match.groups()
+        if tag == "vd":
+            id_number = int(value)
+            for vd in vd_values:
+                if vd["value_driver"] == id_number:
+                    return str(vd["value"])
+        elif tag == "ef":
+            for ef in ef_values:
+                id_number = int(value)
+                if ef["market_input"] == id_number:
+                    return str(ef["value"])
+        elif formula_row and tag == "process":
+            return f'({formula_row[value.lower()]})'
+
+        return match.group()
+
+    replaced_text = re.sub(pattern, replace, formula)
+    replaced_text = re.sub(pattern, replace, replaced_text)
+    replaced_text = re.sub(pattern, '0', replaced_text)  # If there are any tags left, replace them with 0
+
+    return replaced_text
 
 
 def check_entity_rate(db_results, flow_process_name: str):

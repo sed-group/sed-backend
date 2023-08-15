@@ -21,3 +21,7 @@ class FormulasFailedDeletionException(Exception):
 
 class TooManyFormulasUpdatedException(Exception):
     pass
+
+
+class CouldNotAddValueDriverToProjectException(Exception):
+    pass
