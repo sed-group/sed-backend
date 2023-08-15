@@ -6,13 +6,13 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_value_drivers`
     `user`              INT UNSIGNED NOT NULL,
     `name`              TEXT NOT NULL,
     `unit`              VARCHAR(10) NULL,
-    `project_id`        INT
+    `project_id`        INT,
     FOREIGN KEY(`user`)
         REFERENCES  `seddb`.`users`(`id`)
         ON DELETE CASCADE,
     FOREIGN KEY(`project_id`)
         REFERENCES `seddb`.`cvs_projects` (`id`)
-        ON DELETE CASCADE;
+        ON DELETE CASCADE
 );
 
 SET FOREIGN_KEY_CHECKS = 0;
