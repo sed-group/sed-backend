@@ -1,6 +1,6 @@
 # Value driver to project relation
 ALTER TABLE `seddb`.`cvs_value_drivers`
-    ADD COLUMN `project_id` INT
+    ADD COLUMN `project_id` INT;
 
 
 SET FOREIGN_KEY_CHECKS = 0;

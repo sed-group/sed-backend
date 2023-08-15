@@ -289,7 +289,7 @@ def get_all_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_
         # TODO - get all value drivers from all vcs rows
         with db_connection.cursor(prepared=True) as cursor:
             cursor.execute(
-                f"SELECT {CVS_VALUE_DRIVERS_TABLE}.id, {CVS_VALUE_DRIVERS_TABLE}.name, {CVS_VALUE_DRIVERS_TABLE}.unit, {CVS_VCS_ROWS_TABLE}.id AS vcs_row FROM {CVS_VCS_ROWS_TABLE} "
+                f"SELECT {CVS_VALUE_DRIVERS_TABLE}.id, {CVS_VALUE_DRIVERS_TABLE}.name, {CVS_VALUE_DRIVERS_TABLE}.unit, {CVS_VALUE_DRIVERS_TABLE}.project_id, {CVS_VCS_ROWS_TABLE}.id AS vcs_row FROM {CVS_VCS_ROWS_TABLE} "
                 f"INNER JOIN {CVS_STAKEHOLDER_NEEDS_TABLE} ON {CVS_STAKEHOLDER_NEEDS_TABLE}.vcs_row = {CVS_VCS_ROWS_TABLE}.id "
                 f"INNER JOIN {CVS_VCS_NEED_DRIVERS_TABLE} ON {CVS_VCS_NEED_DRIVERS_TABLE}.stakeholder_need = {CVS_STAKEHOLDER_NEEDS_TABLE}.id "
                 f"INNER JOIN {CVS_VALUE_DRIVERS_TABLE} ON {CVS_VALUE_DRIVERS_TABLE}.id = {CVS_VCS_NEED_DRIVERS_TABLE}.value_driver "
