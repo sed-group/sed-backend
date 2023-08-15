@@ -1,12 +1,14 @@
 # Value driver to project relation
+SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS `seddb`.`cvs_value_drivers`;
+SET FOREIGN_KEY_CHECKS = 1;
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_value_drivers`
 (
     `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `user`              INT UNSIGNED NOT NULL,
     `name`              TEXT NOT NULL,
     `unit`              VARCHAR(10) NULL,
-    `project_id`        INT,
+    `project_id`        INT UNSIGNED NOT NULL,
     FOREIGN KEY(`user`)
         REFERENCES  `seddb`.`users`(`id`)
         ON DELETE CASCADE,
