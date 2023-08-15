@@ -56,9 +56,6 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_formulas_value_drivers`
     FOREIGN KEY (`value_driver`)
         REFERENCES `seddb`.`cvs_value_drivers` (`id`)
         ON DELETE CASCADE,
-    FOREIGN KEY (`project`, `value_driver`)
-        REFERENCES `seddb`.`cvs_project_value_drivers` (`project`, `value_driver`)
-        ON DELETE CASCADE
 );
 
 ALTER TABLE `seddb`.`cvs_design_mi_formulas`

@@ -22,9 +22,6 @@ CVS_FORMULAS_VALUE_DRIVERS_COLUMNS = ['vcs_row', 'design_group', 'value_driver',
 CVS_FORMULAS_EXTERNAL_FACTORS_TABLE = 'cvs_formulas_external_factors'
 CVS_FORMULAS_EXTERNAL_FACTORS_COLUMNS = ['vcs_row', 'design_group', 'external_factor']
 
-CVS_PROJECT_VALUE_DRIVERS_TABLE = 'cvs_project_value_drivers'
-CVS_PROJECT_VALUE_DRIVERS_COLUMNS = ['project', 'value_driver']
-
 CVS_EXTERNAL_FACTORS_TABLE = 'cvs_market_inputs'
 CVS_STAKEHOLDER_NEEDS_TABLE = 'cvs_stakeholder_needs'
 CVS_VCS_ROWS_TABLE = 'cvs_vcs_rows'
@@ -104,30 +101,6 @@ def edit_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_row
 
 def add_value_driver_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_group_id: int,
                               value_drivers: List[int], project_id: int):
-    # Add value driver to project if not already added
-    select_statement = MySQLStatementBuilder(db_connection)
-    project_value_driver_res = select_statement \
-        .select(CVS_PROJECT_VALUE_DRIVERS_TABLE, CVS_PROJECT_VALUE_DRIVERS_COLUMNS) \
-        .where(f'project = %s and value_driver in ({",".join(["%s" for _ in range(len(value_drivers))])})',
-               [project_id] + value_drivers) \
-        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
-
-    value_drivers_outside_project = [vd_id for vd_id in value_drivers if
-                                     vd_id not in [res['value_driver'] for res in project_value_driver_res]]
-
-    if value_drivers_outside_project:
-        try:
-            prepared_list = []
-            insert_statement = f'INSERT INTO {CVS_PROJECT_VALUE_DRIVERS_TABLE} (project, value_driver) VALUES'
-            for value_driver_id in value_drivers_outside_project:
-                insert_statement += f'(%s, %s),'
-                prepared_list += [project_id, value_driver_id]
-            insert_statement = insert_statement[:-1]
-            with db_connection.cursor(prepared=True) as cursor:
-                cursor.execute(insert_statement, prepared_list)
-        except Exception as e:
-            logger.error(f'Error adding value driver to project: {e}')
-            raise exceptions.CouldNotAddValueDriverToProjectException
 
     # Add value driver to formulas
     try:
@@ -274,7 +247,7 @@ def get_all_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_
 
         with db_connection.cursor(prepared=True) as cursor:
             cursor.execute(
-                f"SELECT id, name, unit, vcs_row, design_group FROM {CVS_FORMULAS_VALUE_DRIVERS_TABLE} "
+                f"SELECT id, name, unit, project_id, vcs_row, design_group FROM {CVS_FORMULAS_VALUE_DRIVERS_TABLE} "
                 f"INNER JOIN {CVS_VALUE_DRIVERS_TABLE} ON {CVS_FORMULAS_VALUE_DRIVERS_TABLE}.value_driver = cvs_value_drivers.id WHERE {where_statement}",
                 prepared_list)
             all_used_vds = [dict(zip(cursor.column_names, row)) for row in cursor.fetchall()]
