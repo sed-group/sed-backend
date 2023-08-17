@@ -20,7 +20,7 @@ router = APIRouter()
 )
 async def get_all_formulas(native_project_id: int, vcs_id: int, dg_id: int,
                            user: User = Depends(get_current_active_user)) -> List[models.FormulaRowGet]:
-    return implementation.get_all_formulas(native_project_id, vcs_id, dg_id, user.id)
+    return implementation.get_all_formulas(native_project_id, vcs_id, dg_id)
 
 
 @router.put(

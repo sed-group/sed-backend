@@ -4,6 +4,7 @@ from fastapi.logger import logger
 from mysql.connector.pooling import PooledMySQLConnection
 import re
 from sedbackend.apps.cvs.design.storage import get_design_group
+from sedbackend.apps.cvs.link_design_lifecycle.models import Rate, TimeFormat
 from sedbackend.apps.cvs.market_input.storage import populate_external_factor
 from sedbackend.apps.cvs.vcs import storage as vcs_storage
 from sedbackend.apps.cvs.link_design_lifecycle import models, exceptions
@@ -101,7 +102,6 @@ def edit_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_row
 
 def add_value_driver_formulas(db_connection: PooledMySQLConnection, vcs_row_id: int, design_group_id: int,
                               value_drivers: List[int], project_id: int):
-
     # Add value driver to formulas
     try:
         prepared_list = []
@@ -224,11 +224,11 @@ def update_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_i
 
 
 def get_all_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_id: int,
-                     design_group_id: int, user_id: int) -> List[models.FormulaRowGet]:
+                     design_group_id: int) -> List[models.FormulaRowGet]:
     logger.debug(f'Fetching all formulas with vcs_id={vcs_id}')
 
     get_design_group(db_connection, project_id, design_group_id)  # Check if design group exists and matches project
-    vcs_storage.get_vcs(db_connection, project_id, vcs_id, user_id)
+    vcs_rows = vcs_storage.get_vcs_table(db_connection, project_id, vcs_id)  # Check if vcs exists and matches project
 
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement.select(CVS_FORMULAS_TABLE, CVS_FORMULAS_COLUMNS) \
@@ -238,6 +238,8 @@ def get_all_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_
 
     if res is None:
         raise exceptions.FormulasNotFoundException
+
+    all_used_vds, all_used_efs, all_row_vds = [], [], []
 
     if len(res):
         where_statement = "(vcs_row, design_group) IN (" + ",".join(["(%s, %s)" for _ in range(len(res))]) + ")"
@@ -259,23 +261,40 @@ def get_all_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_
                 prepared_list)
             all_used_efs = [dict(zip(cursor.column_names, row)) for row in cursor.fetchall()]
 
-        # TODO - get all value drivers from all vcs rows
+    if vcs_rows:
         with db_connection.cursor(prepared=True) as cursor:
+            logger.debug(f'Running')
             cursor.execute(
                 f"SELECT {CVS_VALUE_DRIVERS_TABLE}.id, {CVS_VALUE_DRIVERS_TABLE}.name, {CVS_VALUE_DRIVERS_TABLE}.unit, {CVS_VALUE_DRIVERS_TABLE}.project_id, {CVS_VCS_ROWS_TABLE}.id AS vcs_row FROM {CVS_VCS_ROWS_TABLE} "
                 f"INNER JOIN {CVS_STAKEHOLDER_NEEDS_TABLE} ON {CVS_STAKEHOLDER_NEEDS_TABLE}.vcs_row = {CVS_VCS_ROWS_TABLE}.id "
                 f"INNER JOIN {CVS_VCS_NEED_DRIVERS_TABLE} ON {CVS_VCS_NEED_DRIVERS_TABLE}.stakeholder_need = {CVS_STAKEHOLDER_NEEDS_TABLE}.id "
                 f"INNER JOIN {CVS_VALUE_DRIVERS_TABLE} ON {CVS_VALUE_DRIVERS_TABLE}.id = {CVS_VCS_NEED_DRIVERS_TABLE}.value_driver "
-                f"WHERE {CVS_VCS_ROWS_TABLE}.id IN ({','.join(['%s' for _ in range(len(res))])})",
-                [r['vcs_row'] for r in res])
+                f"WHERE {CVS_VCS_ROWS_TABLE}.id IN ({','.join(['%s' for _ in range(len(vcs_rows))])})",
+                [row.id for row in vcs_rows])
             all_row_vds = [dict(zip(cursor.column_names, row)) for row in cursor.fetchall()]
+            logger.debug(f'All row vds: {all_row_vds}')
 
     formulas = []
-    for r in res:
-        r['row_value_drivers'] = [vd for vd in all_row_vds if vd['vcs_row'] == r['vcs_row']]
-        r['used_value_drivers'] = [vd for vd in all_used_vds if vd['vcs_row'] == r['vcs_row'] and
+    for row in vcs_rows:
+        row_res = [r for r in res if r['vcs_row'] == row.id]
+        r = {}
+        if row_res:
+            r = row_res[0]
+        else:
+            r['vcs_row'] = row.id
+            r['design_group'] = design_group_id
+            r['time'] = '0'
+            r['time_comment'] = ''
+            r['cost'] = '0'
+            r['cost_comment'] = ''
+            r['revenue'] = '0'
+            r['revenue_comment'] = ''
+            r['time_unit'] = TimeFormat.YEAR
+            r['rate'] = Rate.PRODUCT
+        r['row_value_drivers'] = [vd for vd in all_row_vds if vd['vcs_row'] == row.id]
+        r['used_value_drivers'] = [vd for vd in all_used_vds if vd['vcs_row'] == row.id and
                                    vd['design_group'] == r['design_group']]
-        r['used_external_factors'] = [ef for ef in all_used_efs if ef['vcs_row'] == r['vcs_row'] and
+        r['used_external_factors'] = [ef for ef in all_used_efs if ef['vcs_row'] == row.id and
                                       ef['design_group'] == r['design_group']]
         formulas.append(populate_formula(r))
 
@@ -286,10 +305,13 @@ def populate_formula(db_result) -> models.FormulaRowGet:
     return models.FormulaRowGet(
         vcs_row_id=db_result['vcs_row'],
         design_group_id=db_result['design_group'],
-        time=models.Formula(formula=db_result['time'], comment=db_result['time_comment']),
+        time=models.Formula(formula=db_result['time'],
+                            comment=db_result['time_comment']),
         time_unit=db_result['time_unit'],
-        cost=models.Formula(formula=db_result['cost'], comment=db_result['cost_comment']),
-        revenue=models.Formula(formula=db_result['revenue'], comment=db_result['revenue_comment']),
+        cost=models.Formula(formula=db_result['cost'],
+                            comment=db_result['cost_comment']),
+        revenue=models.Formula(formula=db_result['revenue'],
+                               comment=db_result['revenue_comment']),
         rate=db_result['rate'],
         row_value_drivers=[vcs_storage.populate_value_driver(valueDriver) for valueDriver in
                            db_result['row_value_drivers']] if

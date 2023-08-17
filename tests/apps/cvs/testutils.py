@@ -432,7 +432,7 @@ def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, use
         connect_impl.edit_formulas(
             project_id, vcs_id, design_group_id, [formula_post])
 
-    return connect_impl.get_all_formulas(project_id, vcs_id, design_group_id, user_id)
+    return connect_impl.get_all_formulas(project_id, vcs_id, design_group_id)
 
 
 def delete_formulas(project_id: int, vcsRow_Dg_ids: List[Tuple[int, int]]):
@@ -443,8 +443,7 @@ def delete_formulas(project_id: int, vcsRow_Dg_ids: List[Tuple[int, int]]):
 def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int, user_id: int) -> vcs_model.VcsRow:
     rows = list(sorted(vcs_impl.get_vcs_table(
         project_id, vcs_id), key=lambda row: row.index))
-    formulas = connect_impl.get_all_formulas(
-        project_id, vcs_id, design_group_id, user_id)
+    formulas = connect_impl.get_all_formulas(project_id, vcs_id, design_group_id)
     last_id = -1
     rows.reverse()  # Reverse to find last technical process
     for row in rows:
