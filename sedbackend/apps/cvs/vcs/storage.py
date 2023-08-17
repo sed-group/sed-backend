@@ -302,8 +302,9 @@ def get_all_value_driver_vcs(db_connection: PooledMySQLConnection, project_id: i
         raise exceptions.ValueDriverNotFoundException
 
     value_drivers = []
-    [value_drivers.append(populate_value_driver(res)) for res in results]
-    logger.debug(value_drivers)
+    [value_drivers.append(populate_value_driver(res)) for res in results if res['id'] not in
+     [vd.id for vd in value_drivers]]
+
     return value_drivers
 
 
