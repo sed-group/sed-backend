@@ -350,7 +350,7 @@ def delete_design(db_connection: PooledMySQLConnection, design_id: int) -> bool:
 def get_all_drivers_design_group(db_connection: PooledMySQLConnection, design_group_id: int) -> List[ValueDriver]:
     logger.debug(f'Fetching all value drivers for design group {design_group_id}')
 
-    columns = DESIGN_GROUP_DRIVER_COLUMNS + ['id', 'name', 'unit']
+    columns = DESIGN_GROUP_DRIVER_COLUMNS + CVS_VALUE_DRIVER_COLUMNS
     select_statement = MySQLStatementBuilder(db_connection)
     res = select_statement \
         .select(DESIGN_GROUP_DRIVER_TABLE, columns) \
@@ -358,14 +358,7 @@ def get_all_drivers_design_group(db_connection: PooledMySQLConnection, design_gr
         .where('design_group = %s', [design_group_id]) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
 
-    vds = []
-    for result in res:
-        vd = ValueDriver(
-            id=result['id'],
-            name=result['name'],
-            unit=result['unit']
-        )
-        vds.append(vd)
+    vds = [populate_value_driver(r) for r in res]
 
     return vds
 

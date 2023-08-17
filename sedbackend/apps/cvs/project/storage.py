@@ -108,24 +108,6 @@ def delete_cvs_project(db_connection: PooledMySQLConnection, project_id: int, us
     if subproject_rows == 0:
         raise exceptions.SubProjectFailedDeletionException
 
-    delete_value_drivers_without_project(db_connection)
-
-    return True
-
-
-# This function could be a mysql trigger instead
-def delete_value_drivers_without_project(db_connection: PooledMySQLConnection) -> bool:
-    logger.debug(f'Checking and deleting if there are any value drivers without project relations')
-
-    query = f'DELETE cvd FROM cvs_value_drivers cvd \
-        LEFT JOIN cvs_project_value_drivers cpvd ON cvd.id = cpvd.value_driver \
-        WHERE cpvd.value_driver IS NULL;'
-
-    with db_connection.cursor() as cursor:
-        cursor.execute(query)
-        rows = cursor.rowcount
-    logger.debug(f'Removed {rows} value drivers')
-
     return True
 
 
