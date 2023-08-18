@@ -76,7 +76,7 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
     for vd in all_vd_design_values:
         element_id = vd["id"]
         if element_id not in unique_vds:
-            unique_vds[element_id] = {"id": vd["id"], "name": vd["name"], "unit": vd["unit"]}
+            unique_vds[element_id] = {"id": vd["id"], "name": vd["name"], "unit": vd["unit"], "project": vd["project"]}
     all_vds = list(unique_vds.values())
 
     all_dsm_ids = life_cycle_storage.get_multiple_dsm_file_id(db_connection, vcs_ids)
@@ -273,7 +273,7 @@ def get_all_sim_data(db_connection: PooledMySQLConnection, vcs_ids: List[int], d
 
 def get_all_vd_design_values(db_connection: PooledMySQLConnection, designs: List[int]):
     try:
-        query = f'SELECT design, value, vcs_row, cvd.name, cvd.unit, cvd.id \
+        query = f'SELECT design, value, vcs_row, cvd.name, cvd.unit, cvd.id, cvd.project \
                 FROM cvs_vd_design_values cvdv \
                 INNER JOIN cvs_value_drivers cvd ON cvdv.value_driver = cvd.id \
                 INNER JOIN cvs_vcs_need_drivers cvnd ON cvnd.value_driver = cvd.id \
@@ -342,8 +342,8 @@ def edit_simulation_settings(db_connection: PooledMySQLConnection, project_id: i
                   sim_settings.interarrival_time, sim_settings.start_time, sim_settings.end_time,
                   sim_settings.discount_rate, sim_settings.non_tech_add.value, sim_settings.monte_carlo,
                   sim_settings.runs]
-        update_Statement = MySQLStatementBuilder(db_connection)
-        _, rows = update_Statement \
+        update_statement = MySQLStatementBuilder(db_connection)
+        _, rows = update_statement \
             .update(table=SIM_SETTINGS_TABLE, set_statement=set_statement, values=values) \
             .where('project = %s', [project_id]) \
             .execute(return_affected_rows=True)

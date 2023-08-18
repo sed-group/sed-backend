@@ -104,12 +104,12 @@ def random_value_driver_post(user_id: int, project_id: int, name: str = None, un
     return sedbackend.apps.cvs.vcs.models.ValueDriverPost(
         name=name,
         unit=unit,
-        project=project_id
+        project_id=project_id
     )
 
 
 def seed_random_value_driver(user_id: int, project_id: int) -> sedbackend.apps.cvs.vcs.models.ValueDriver:
-    value_driver_post = random_value_driver_post(user_id=user_id, project=project_id)
+    value_driver_post = random_value_driver_post(user_id=user_id, project_id=project_id)
 
     new_value_driver = sedbackend.apps.cvs.vcs.implementation.create_value_driver(
         user_id, value_driver_post)

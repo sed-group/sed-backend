@@ -20,7 +20,9 @@ router = APIRouter()
 async def run_simulation(sim_settings: models.EditSimSettings, native_project_id: int, vcs_ids: List[int],
                          design_group_ids: List[int], normalized_npv: Optional[bool] = False,
                          user: User = Depends(get_current_active_user)) -> SimulationResult:
-    return implementation.run_simulation(sim_settings, native_project_id, vcs_ids, design_group_ids, user.id, normalized_npv)
+    return implementation.run_simulation(sim_settings, native_project_id, vcs_ids, design_group_ids, user.id,
+                                         normalized_npv)
+
 
 # Temporary disabled
 ''' 
