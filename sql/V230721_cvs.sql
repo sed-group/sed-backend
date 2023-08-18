@@ -8,16 +8,16 @@ CREATE TABLE IF NOT EXISTS `seddb`.`cvs_value_drivers`
     `user`              INT UNSIGNED NOT NULL,
     `name`              TEXT NOT NULL,
     `unit`              VARCHAR(10) NULL,
-    `project_id`        INT UNSIGNED NOT NULL,
+    `project`        INT UNSIGNED NOT NULL,
     FOREIGN KEY(`user`)
         REFERENCES  `seddb`.`users`(`id`)
         ON DELETE CASCADE,
-    FOREIGN KEY(`project_id`)
+    FOREIGN KEY(`project`)
         REFERENCES `seddb`.`cvs_projects` (`id`)
         ON DELETE CASCADE
 );
 ALTER TABLE `seddb`.`cvs_value_drivers` ADD CONSTRAINT unq_project_name_unit
-    UNIQUE (project_id, name(20), unit);
+    UNIQUE (project, name(20), unit);
 
 SET FOREIGN_KEY_CHECKS = 0;
 ALTER TABLE `seddb`.`cvs_subprocesses`

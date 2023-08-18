@@ -21,10 +21,8 @@ CVS_VALUE_DIMENSION_TABLE = 'cvs_value_dimensions'
 CVS_VALUE_DIMENSION_COLUMNS = ['id', 'name', 'priority', 'vcs_row']
 
 CVS_VALUE_DRIVER_TABLE = 'cvs_value_drivers'
-CVS_VALUE_DRIVER_COLUMNS = ['id', 'user', 'name', 'unit', 'project_id']
+CVS_VALUE_DRIVER_COLUMNS = ['id', 'user', 'name', 'unit', 'project']
 
-CVS_VCS_ROW_DRIVERS_TABLE = 'cvs_rowDrivers'
-CVS_VCS_ROW_DRIVERS_COLUMNS = ['vcs_row', 'value_driver']
 
 CVS_ISO_PROCESS_TABLE = 'cvs_iso_processes'
 CVS_ISO_PROCESS_COLUMNS = ['id', 'name', 'category']
@@ -291,7 +289,7 @@ def get_all_value_driver_vcs(db_connection: PooledMySQLConnection, project_id: i
     try:
         select_statement = MySQLStatementBuilder(db_connection)
         results = select_statement \
-            .select(CVS_VALUE_DRIVER_TABLE, ['cvs_value_drivers.id', 'user', 'name', 'unit', 'project_id']) \
+            .select(CVS_VALUE_DRIVER_TABLE, ['cvs_value_drivers.id', 'user', 'name', 'unit', 'project']) \
             .inner_join('cvs_vcs_need_drivers', 'value_driver = cvs_value_drivers.id') \
             .inner_join('cvs_stakeholder_needs', 'stakeholder_need = cvs_stakeholder_needs.id') \
             .inner_join('cvs_vcs_rows', 'vcs_row = cvs_vcs_rows.id') \
@@ -314,7 +312,7 @@ def get_all_value_driver(db_connection: PooledMySQLConnection, user_id: int) -> 
     try:
         query = f'SELECT DISTINCT cvd.*\
                 FROM cvs_value_drivers cvd \
-                LEFT JOIN cvs_projects p ON cvd.project_id = p.id \
+                LEFT JOIN cvs_projects p ON cvd.project = p.id \
                 LEFT JOIN projects_participants pp ON p.id = pp.project_id \
                 LEFT JOIN projects_subprojects ps ON p.id = ps.native_project_id \
                 WHERE (pp.user_id = %s OR p.owner_id = %s)'
@@ -436,7 +434,7 @@ def create_value_driver(db_connection: PooledMySQLConnection, user_id: int,
     try:
         insert_statement = MySQLStatementBuilder(db_connection)
         insert_statement \
-            .insert(table=CVS_VALUE_DRIVER_TABLE, columns=['user', 'name', 'unit', 'project_id']) \
+            .insert(table=CVS_VALUE_DRIVER_TABLE, columns=['user', 'name', 'unit', 'project']) \
             .set_values([user_id, value_driver_post.name, value_driver_post.unit, value_driver_post.project_id]) \
             .execute(fetch_type=FetchType.FETCH_NONE)
         value_driver_id = insert_statement.last_insert_id
@@ -498,7 +496,7 @@ def populate_value_driver(db_result) -> models.ValueDriver:
         id=db_result['id'],
         name=db_result['name'],
         unit=db_result['unit'],
-        project_id=db_result['project_id']
+        project_id=db_result['project']
     )
 
 

@@ -249,7 +249,7 @@ def get_all_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_
 
         with db_connection.cursor(prepared=True) as cursor:
             cursor.execute(
-                f"SELECT id, name, unit, project_id, vcs_row, design_group FROM {CVS_FORMULAS_VALUE_DRIVERS_TABLE} "
+                f"SELECT id, name, unit, {CVS_VALUE_DRIVERS_TABLE}.project, vcs_row, design_group FROM {CVS_FORMULAS_VALUE_DRIVERS_TABLE} "
                 f"INNER JOIN {CVS_VALUE_DRIVERS_TABLE} ON {CVS_FORMULAS_VALUE_DRIVERS_TABLE}.value_driver = cvs_value_drivers.id WHERE {where_statement}",
                 prepared_list)
             all_used_vds = [dict(zip(cursor.column_names, row)) for row in cursor.fetchall()]
@@ -265,7 +265,7 @@ def get_all_formulas(db_connection: PooledMySQLConnection, project_id: int, vcs_
         with db_connection.cursor(prepared=True) as cursor:
             logger.debug(f'Running')
             cursor.execute(
-                f"SELECT {CVS_VALUE_DRIVERS_TABLE}.id, {CVS_VALUE_DRIVERS_TABLE}.name, {CVS_VALUE_DRIVERS_TABLE}.unit, {CVS_VALUE_DRIVERS_TABLE}.project_id, {CVS_VCS_ROWS_TABLE}.id AS vcs_row FROM {CVS_VCS_ROWS_TABLE} "
+                f"SELECT {CVS_VALUE_DRIVERS_TABLE}.id, {CVS_VALUE_DRIVERS_TABLE}.name, {CVS_VALUE_DRIVERS_TABLE}.unit, {CVS_VALUE_DRIVERS_TABLE}.project, {CVS_VCS_ROWS_TABLE}.id AS vcs_row FROM {CVS_VCS_ROWS_TABLE} "
                 f"INNER JOIN {CVS_STAKEHOLDER_NEEDS_TABLE} ON {CVS_STAKEHOLDER_NEEDS_TABLE}.vcs_row = {CVS_VCS_ROWS_TABLE}.id "
                 f"INNER JOIN {CVS_VCS_NEED_DRIVERS_TABLE} ON {CVS_VCS_NEED_DRIVERS_TABLE}.stakeholder_need = {CVS_STAKEHOLDER_NEEDS_TABLE}.id "
                 f"INNER JOIN {CVS_VALUE_DRIVERS_TABLE} ON {CVS_VALUE_DRIVERS_TABLE}.id = {CVS_VCS_NEED_DRIVERS_TABLE}.value_driver "

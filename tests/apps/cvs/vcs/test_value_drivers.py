@@ -67,7 +67,7 @@ def test_create_value_driver(client, std_headers, std_user):
     res = client.post(f'/api/cvs/value-driver', headers=std_headers, json={
         'name': vd.name,
         'unit': vd.unit,
-        'project_id': vd.project_id
+        'project': vd.project_id
     })
     # Assert
     assert res.status_code == 200  # 200 OK
@@ -85,7 +85,7 @@ def test_create_value_driver_missing_name(client, std_headers, std_user):
     # Act
     res = client.post(f'/api/cvs/value-driver', headers=std_headers, json={
         'unit': vdPost.unit,
-        'project_id': vdPost.project_id
+        'project': vdPost.project_id
     })
     # Assert
     assert res.status_code == 422  # 422 Unprocessable Entity
@@ -101,7 +101,7 @@ def test_create_value_driver_missing_unit(client, std_headers, std_user):
     # Act
     res = client.post(f'/api/cvs/value-driver', headers=std_headers, json={
         'name': vd.name,
-        'project_id': vd.project_id
+        'project': vd.project_id
     })
     # Assert
     assert res.status_code == 200  # 200 OK
