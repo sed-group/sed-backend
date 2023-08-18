@@ -11,6 +11,7 @@ class CVSProject(BaseModel):
     currency: Optional[str] = Field(None, max_length=10)
     owner: User
     datetime_created: datetime
+    my_access_right: int
 
 
 class CVSProjectPost(BaseModel):

@@ -4,7 +4,6 @@ from sedbackend.apps.core.authentication.utils import get_current_active_user
 from sedbackend.apps.core.projects.dependencies import SubProjectAccessChecker
 from sedbackend.apps.core.projects.models import AccessLevel
 from sedbackend.apps.core.users.models import User
-from sedbackend.apps.cvs.design.router import router
 from sedbackend.apps.cvs.project.router import CVS_APP_SID
 from sedbackend.apps.cvs.vcs.models import ValueDriver
 from sedbackend.libs.datastructures.pagination import ListChunk
@@ -24,8 +23,8 @@ router = APIRouter()
     response_model=ListChunk[models.VCS],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
-async def get_all_vcs(native_project_id: int) -> ListChunk[models.VCS]:
-    return implementation.get_all_vcs(native_project_id)
+async def get_all_vcs(native_project_id: int, user: User = Depends(get_current_active_user)) -> ListChunk[models.VCS]:
+    return implementation.get_all_vcs(native_project_id, user.id)
 
 
 @router.get(
@@ -34,8 +33,8 @@ async def get_all_vcs(native_project_id: int) -> ListChunk[models.VCS]:
     response_model=models.VCS,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
-async def get_vcs(native_project_id: int, vcs_id: int) -> models.VCS:
-    return implementation.get_vcs(native_project_id, vcs_id)
+async def get_vcs(native_project_id: int, vcs_id: int, user: User = Depends(get_current_active_user)) -> models.VCS:
+    return implementation.get_vcs(native_project_id, vcs_id, user.id)
 
 
 @router.post(
@@ -44,8 +43,9 @@ async def get_vcs(native_project_id: int, vcs_id: int) -> models.VCS:
     response_model=models.VCS,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def create_vcs(native_project_id: int, vcs_post: models.VCSPost) -> models.VCS:
-    return implementation.create_vcs(native_project_id, vcs_post)
+async def create_vcs(native_project_id: int, vcs_post: models.VCSPost,
+                     user: User = Depends(get_current_active_user)) -> models.VCS:
+    return implementation.create_vcs(native_project_id, vcs_post, user.id)
 
 
 @router.put(
@@ -54,8 +54,9 @@ async def create_vcs(native_project_id: int, vcs_post: models.VCSPost) -> models
     response_model=models.VCS,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def edit_vcs(native_project_id: int, vcs_id: int, vcs_post: models.VCSPost) -> models.VCS:
-    return implementation.edit_vcs(native_project_id, vcs_id, vcs_post)
+async def edit_vcs(native_project_id: int, vcs_id: int, vcs_post: models.VCSPost,
+                   user: User = Depends(get_current_active_user)) -> models.VCS:
+    return implementation.edit_vcs(native_project_id, vcs_id, vcs_post, user.id)
 
 
 @router.delete(
@@ -64,8 +65,8 @@ async def edit_vcs(native_project_id: int, vcs_id: int, vcs_post: models.VCSPost
     response_model=bool,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def delete_vcs(native_project_id: int, vcs_id: int) -> bool:
-    return implementation.delete_vcs(native_project_id, vcs_id)
+async def delete_vcs(native_project_id: int, vcs_id: int, user: User = Depends(get_current_active_user)) -> bool:
+    return implementation.delete_vcs(user.id, native_project_id, vcs_id)
 
 
 # ======================================================================================================================
@@ -123,8 +124,9 @@ async def get_all_value_driver_vcs(native_project_id: int, vcs_id: int) -> List[
     response_model=List[ValueDriver],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
-async def get_value_drivers_vcs_row(native_project_id: int, vcs_id: int, vcs_row_id: int) -> List[ValueDriver]:
-    return vcs_impl.get_all_value_drivers_vcs_row(native_project_id, vcs_id, vcs_row_id)
+async def get_value_drivers_vcs_row(native_project_id: int, vcs_id: int, vcs_row_id: int,
+                                    user: User = Depends(get_current_active_user)) -> List[ValueDriver]:
+    return vcs_impl.get_all_value_drivers_vcs_row(native_project_id, vcs_id, vcs_row_id, user.id)
 
 
 @router.get(
@@ -132,8 +134,8 @@ async def get_value_drivers_vcs_row(native_project_id: int, vcs_id: int, vcs_row
     summary='Returns a value driver',
     response_model=models.ValueDriver,
 )
-async def get_value_driver(value_driver_id: int) -> models.ValueDriver:
-    return implementation.get_value_driver(value_driver_id)
+async def get_value_driver(value_driver_id: int, user: User = Depends(get_current_active_user)) -> models.ValueDriver:
+    return implementation.get_value_driver(value_driver_id, user.id)
 
 
 @router.post(
@@ -144,7 +146,6 @@ async def get_value_driver(value_driver_id: int) -> models.ValueDriver:
 async def create_value_driver(value_driver_post: models.ValueDriverPost,
                               user: User = Depends(get_current_active_user)) -> models.ValueDriver:
     return implementation.create_value_driver(user.id, value_driver_post)
-
 
 @router.post(
     '/project/{native_project_id}/value-driver/need',
@@ -160,17 +161,18 @@ async def add_drivers_to_needs(native_project_id: int, need_driver_ids: List[Tup
     summary='Edits a value driver',
     response_model=models.ValueDriver,
 )
-async def edit_value_driver(value_driver_id: int, value_driver_post: models.ValueDriverPost) -> models.ValueDriver:
-    return implementation.edit_value_driver(value_driver_id, value_driver_post)
+async def edit_value_driver(value_driver_id: int, value_driver: models.ValueDriverPut,
+                            user: User = Depends(get_current_active_user)) -> models.ValueDriver:
+    return implementation.edit_value_driver(value_driver_id, value_driver, user.id)
 
 
 @router.delete(
-    '/value-driver/{value_driver_id}',
+    '/project/{native_project_id}/value-driver/{value_driver_id}',
     summary='Deletes a value driver',
     response_model=bool,
 )
-async def delete_value_driver(value_driver_id: int) -> bool:
-    return implementation.delete_value_driver(value_driver_id)
+async def delete_value_driver(native_project_id: int, value_driver_id: int) -> bool:
+    return implementation.delete_value_driver(native_project_id, value_driver_id)
 
 
 # ======================================================================================================================
@@ -193,13 +195,13 @@ async def get_all_iso_process() -> List[models.VCSISOProcess]:
 
 
 @router.get(
-    '/project/{native_project_id}/vcs/{vcs_id}/subprocess/all',
+    '/project/{native_project_id}/subprocess/all',
     summary='Returns all subprocesses of a project',
     response_model=List[models.VCSSubprocess],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
-async def get_all_subprocess(native_project_id: int, vcs_id: int) -> List[models.VCSSubprocess]:
-    return implementation.get_all_subprocess(native_project_id, vcs_id)
+async def get_all_subprocess(native_project_id: int) -> List[models.VCSSubprocess]:
+    return implementation.get_all_subprocess(native_project_id)
 
 
 @router.get(
@@ -213,14 +215,14 @@ async def get_subprocess(native_project_id: int, subprocess_id: int) -> models.V
 
 
 @router.post(
-    '/project/{native_project_id}/vcs/{vcs_id}/subprocess',
+    '/project/{native_project_id}/subprocess',
     summary='Creates a new subprocess',
     response_model=models.VCSSubprocess,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def create_subprocess(native_project_id: int, vcs_id: int,
+async def create_subprocess(native_project_id: int,
                             subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
-    return implementation.create_subprocess(native_project_id, vcs_id, subprocess_post)
+    return implementation.create_subprocess(native_project_id, subprocess_post)
 
 
 @router.put(
@@ -254,5 +256,6 @@ async def delete_subprocess(native_project_id: int, subprocess_id: int) -> bool:
     response_model=List[models.VCS],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_edit(), CVS_APP_SID))]
 )
-async def duplicate_vcs(native_project_id: int, vcs_id: int, n: int) -> List[models.VCS]:
-    return implementation.duplicate_vcs(native_project_id, vcs_id, n)
+async def duplicate_vcs(native_project_id: int, vcs_id: int, n: int,
+                        user: User = Depends(get_current_active_user)) -> List[models.VCS]:
+    return implementation.duplicate_vcs(native_project_id, vcs_id, n, user.id)

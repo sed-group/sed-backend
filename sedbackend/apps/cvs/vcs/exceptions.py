@@ -59,6 +59,14 @@ class ValueDriverFailedToCreateException(Exception):
     pass
 
 
+class ProjectValueDriverNotFoundException(Exception):
+    pass
+
+
+class ProjectValueDriverFailedToCreateException(Exception):
+    pass
+
+
 # ======================================================================================================================
 # VCS ISO Processes
 # ======================================================================================================================
@@ -92,6 +100,10 @@ class SubprocessFailedCreationException(Exception):
     pass
 
 
+class SubprocessNotUniqueException(Exception):
+    pass
+
+
 # ======================================================================================================================
 # VCS Table
 # ======================================================================================================================
@@ -120,6 +132,10 @@ class VCSRowNotCorrectException(Exception):
 
 
 class VCSandVCSRowIDMismatchException(Exception):
+    pass
+
+
+class VCSTableProcessNotUniqueException(Exception):
     pass
 
 

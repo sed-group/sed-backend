@@ -43,7 +43,7 @@ class VCSISOProcess(BaseModel):
 
 class VCSSubprocess(BaseModel):
     id: int
-    vcs_id: int
+    project_id: int
     name: str
     parent_process: VCSISOProcess
 
@@ -84,11 +84,18 @@ class ValueDriver(BaseModel):
     id: int
     name: str
     unit: Optional[str] = None
+    project_id: int
+
+
+class ValueDriverPut(BaseModel):
+    name: str
+    unit: Optional[str] = None
 
 
 class ValueDriverPost(BaseModel):
     name: str
     unit: Optional[str] = None
+    project_id: int
 
 
 # ======================================================================================================================

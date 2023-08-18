@@ -30,7 +30,5 @@ class ProcessesVcsMatchException(Exception):
     pass
 
 
-class FileNotFoundException(Exception):
-    def __init__(self, vcs_id: int = None):
-        self.vcs_id = vcs_id
-
+class DSMFileFailedDeletionException(Exception):
+    pass
