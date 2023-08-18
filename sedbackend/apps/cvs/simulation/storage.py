@@ -1,9 +1,7 @@
 import re
 import sys
-import tempfile
 from math import isnan
 
-from fastapi import UploadFile
 from mysql.connector.pooling import PooledMySQLConnection
 import pandas as pd
 from mysql.connector import Error
@@ -13,14 +11,13 @@ from fastapi.logger import logger
 from desim import interface as des
 from desim.data import NonTechCost, TimeFormat
 from desim.simulation import Process
-import os
 
 from typing import List
 from sedbackend.apps.cvs.design.storage import get_all_designs
 
 from mysqlsb import FetchType, MySQLStatementBuilder
 
-from sedbackend.apps.cvs.life_cycle.storage import get_dsm_from_file_id, get_dsm_from_csv
+from sedbackend.apps.cvs.life_cycle.storage import get_dsm_from_file_id
 from sedbackend.apps.cvs.simulation.models import SimulationResult
 from sedbackend.apps.cvs.vcs.storage import get_vcss
 from sedbackend.libs.formula_parser.parser import NumericStringParser
@@ -76,7 +73,7 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
     for vd in all_vd_design_values:
         element_id = vd["id"]
         if element_id not in unique_vds:
-            unique_vds[element_id] = {"id": vd["id"], "name": vd["name"], "unit": vd["unit"], "project": vd["project"]}
+            unique_vds[element_id] = {"id": vd["id"], "name": vd["name"], "unit": vd["unit"], "project_id": vd["project"]}
     all_vds = list(unique_vds.values())
 
     all_dsm_ids = life_cycle_storage.get_multiple_dsm_file_id(db_connection, vcs_ids)
@@ -409,7 +406,7 @@ def parse_formula(formula: str, vd_values, ef_values, formula_row: dict = None) 
         if tag == "vd":
             id_number = int(value)
             for vd in vd_values:
-                if vd["value_driver"] == id_number:
+                if vd["id"] == id_number:
                     return str(vd["value"])
         elif tag == "ef":
             for ef in ef_values:
