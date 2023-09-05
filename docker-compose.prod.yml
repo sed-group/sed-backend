@@ -8,15 +8,14 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      - NGINX_HOST=sedlab.ppd.chalmers.se
+      - NGINX_HOST=143.198.251.72
       - NGINX_PORT=443
     build:
       context: ./deployment/nginx/
       dockerfile: Dockerfile-tls-termination-proxy
     restart: unless-stopped
     volumes:
-      - C:\Certbot\live\sedlab.ppd.chalmers.se\:/etc/nginx/certs/live/sedlab.ppd.chalmers.se # TLS Certs syslink location
-      - C:\Certbot\archive\sedlab.ppd.chalmers.se\:/etc/nginx/certs/archive/sedlab.ppd.chalmers.se # TLS Certs actual location
+      - ./nginx.conf:/etc/nginx/nginx.conf
     depends_on:
       - "core-db"
       - "backend-api"
