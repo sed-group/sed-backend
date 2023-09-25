@@ -1,23 +1,16 @@
-# Value driver to project relation
-SET FOREIGN_KEY_CHECKS = 0;
-DROP TABLE IF EXISTS `seddb`.`cvs_value_drivers`;
-SET FOREIGN_KEY_CHECKS = 1;
-CREATE TABLE IF NOT EXISTS `seddb`.`cvs_value_drivers`
+# DSM
+CREATE TABLE IF NOT EXISTS `seddb`.`cvs_dsm_files`
 (
-    `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `user`              INT UNSIGNED NOT NULL,
-    `name`              TEXT NOT NULL,
-    `unit`              VARCHAR(10) NULL,
-    `project`        INT UNSIGNED NOT NULL,
-    FOREIGN KEY(`user`)
-        REFERENCES  `seddb`.`users`(`id`)
+    `vcs` INT UNSIGNED NOT NULL,
+    `file` INT UNSIGNED NOT NULL,
+    PRIMARY KEY (`vcs`),
+    FOREIGN KEY (`vcs`)
+        REFERENCES `seddb`.`cvs_vcss`(`id`)
         ON DELETE CASCADE,
-    FOREIGN KEY(`project`)
-        REFERENCES `seddb`.`cvs_projects` (`id`)
-        ON DELETE CASCADE
+    FOREIGN KEY(`file`)
+      REFERENCES `seddb`.`files`(`id`)
+      ON DELETE CASCADE
 );
-ALTER TABLE `seddb`.`cvs_value_drivers` ADD CONSTRAINT unq_project_name_unit
-    UNIQUE (project, name(20), unit);
 
 SET FOREIGN_KEY_CHECKS = 0;
 ALTER TABLE `seddb`.`cvs_subprocesses`
@@ -33,10 +26,6 @@ ALTER TABLE `seddb`.`cvs_design_mi_formulas`
     ADD FOREIGN KEY (`project`)
         REFERENCES `seddb`.`cvs_projects` (`id`)
         ON DELETE CASCADE;
-
-DROP TABLE IF EXISTS `seddb`.`cvs_formulas_market_inputs`;
-DROP TABLE IF EXISTS `seddb`.`cvs_formulas_value_drivers`;
-
 
 CREATE TABLE IF NOT EXISTS `seddb`.`cvs_formulas_external_factors`
 (
