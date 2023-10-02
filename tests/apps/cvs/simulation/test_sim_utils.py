@@ -19,17 +19,18 @@ def test_parse_formula_simple():
 
 def test_parse_formula_values():
     # Setup
-    vd_values = [{"id": 47241, "name": "Speed", "unit": "0-1", "value": 10}]
+    vd_values = [{"id": 47241, "name": "Speed", "unit": "0-1", "value": 10},
+                 {"id": 1, "name": "Test", "unit": "T", "value": 20}]
     mi_values = [{"market_input": 114, "name": "Fuel Cost", "unit": "k€/liter", "value": 5}]
-    formula = '2+{vd:47241,"Design Similarity [0-1]"}/{ef:114,"Fuel Cost [k€/liter]"}'
+    formula = '2+{vd:47241,"Design Similarity [0-1]"}/{ef:114,"Fuel Cost [k€/liter]"}+{vd:1,"Test [T]"}'
     nsp = NumericStringParser()
 
     # Act
     new_formula = parse_formula(formula, vd_values, mi_values)
 
     # Assert
-    assert new_formula == "2+10/5"
-    assert nsp.eval(new_formula) == 4
+    assert new_formula == "2+10/5+20"
+    assert nsp.eval(new_formula) == 24
 
 
 def test_parse_formula_process_variable():
@@ -106,3 +107,103 @@ def test_parse_without_multiplication_signs():
     # Assert
     assert new_formula == "2*10*5"
     assert nsp.eval(new_formula) == 100
+
+
+def test_if_statement_true():
+    formula = 'if(1, 1, 0)'
+    nsp = NumericStringParser()
+
+    # Act
+    new_formula = parse_formula(formula, [], [])
+
+    # Assert
+    assert new_formula == "1"
+    assert nsp.eval(new_formula) == 1
+
+
+def test_if_statement_false():
+    formula = 'if(0, 1, 0)'
+    nsp = NumericStringParser()
+
+    # Act
+    new_formula = parse_formula(formula, [], [])
+
+    # Assert
+    assert new_formula == "0"
+    assert nsp.eval(new_formula) == 0
+
+
+def test_if_statement_true_condition():
+    formula = 'if("10=10", 1, 0)'
+    nsp = NumericStringParser()
+
+    # Act
+    new_formula = parse_formula(formula, [], [])
+
+    # Assert
+    assert new_formula == "1"
+    assert nsp.eval(new_formula) == 1
+
+
+def test_if_statement_false_condition():
+    formula = 'if(10=11, 1, 0)'
+    nsp = NumericStringParser()
+
+    # Act
+    new_formula = parse_formula(formula, [], [])
+
+    # Assert
+    assert new_formula == "0"
+    assert nsp.eval(new_formula) == 0
+
+
+def test_if_statement_whitespace():
+    formula = 'if(10 = 10, 1, 0)'
+    nsp = NumericStringParser()
+
+    # Act
+    new_formula = parse_formula(formula, [], [])
+
+    # Assert
+    assert new_formula == "1"
+    assert nsp.eval(new_formula) == 1
+
+
+def test_if_statement_string():
+    formula = 'if("Speed" = "Speed", 10, 0)'
+    nsp = NumericStringParser()
+
+    # Act
+    new_formula = parse_formula(formula, [], [])
+
+    # Assert
+    assert new_formula == "10"
+    assert nsp.eval(new_formula) == 10
+
+
+def test_if_statement_greater_than():
+    formula = 'if(10 > 9, 10, 0)'
+    nsp = NumericStringParser()
+
+    # Act
+    new_formula = parse_formula(formula, [], [])
+
+    # Assert
+    assert new_formula == "10"
+    assert nsp.eval(new_formula) == 10
+
+
+def test_if_statement_formula():
+    # Setup
+    vd_values = [{"id": 47241, "name": "Speed", "unit": "0-1", "value": 10},
+                 {"id": 1, "name": "Test", "unit": "T", "value": 20}]
+    mi_values = [{"market_input": 114, "name": "Fuel Cost", "unit": "k€/liter", "value": 5}]
+    formula = '2+{vd:47241,"Design Similarity [0-1]"}/{ef:114,"Fuel Cost [k€/liter]"}+if({vd:1,"Test [T]"}=20, {vd:47241,"Design Similarity [0-1]"}, 0)'
+    nsp = NumericStringParser()
+
+    # Act
+    new_formula = parse_formula(formula, vd_values, mi_values)
+
+    # Assert
+    assert new_formula == "2+10/5+10"
+    assert nsp.eval(new_formula) == 14

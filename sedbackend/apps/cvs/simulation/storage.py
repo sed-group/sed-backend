@@ -396,6 +396,24 @@ def add_multiplication_signs(formula: str) -> str:
     return result
 
 
+def parse_if_statement(formula: str) -> str:
+    # The pattern is if(condition, true_value, false_value)
+    pattern = r'if\(([^,]+),([^,]+),([^,]+)\)'
+    match = re.search(pattern, formula)
+
+    if match:
+        condition, true_value, false_value = match.groups()
+        condition = condition.replace('=', '==')
+        if eval(condition):
+            value = true_value
+        else:
+            value = false_value
+
+        formula = re.sub(pattern, value.strip(), formula).strip()
+
+    return formula
+
+
 def parse_formula(formula: str, vd_values, ef_values, formula_row: dict = None) -> str:
     pattern = r'\{(?P<tag>vd|ef|process):(?P<value>[a-zA-Z0-9_]+),"([^"]+)"\}'
 
@@ -420,6 +438,9 @@ def parse_formula(formula: str, vd_values, ef_values, formula_row: dict = None) 
 
     replaced_text = re.sub(pattern, replace, formula)
     replaced_text = re.sub(pattern, replace, replaced_text)
+
+    replaced_text = parse_if_statement(replaced_text)
+
     replaced_text = re.sub(pattern, '0', replaced_text)  # If there are any tags left, replace them with 0
 
     return replaced_text
