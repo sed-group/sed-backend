@@ -29,25 +29,43 @@ from sedbackend.apps.cvs.life_cycle import storage as life_cycle_storage
 from sedbackend.apps.core.files import exceptions as file_exceptions
 
 SIM_SETTINGS_TABLE = "cvs_simulation_settings"
-SIM_SETTINGS_COLUMNS = ['project', 'time_unit', 'flow_process', 'flow_start_time', 'flow_time',
-                        'interarrival_time', 'start_time', 'end_time', 'discount_rate', 'non_tech_add', 'monte_carlo',
-                        'runs']
+SIM_SETTINGS_COLUMNS = [
+    "project",
+    "time_unit",
+    "flow_process",
+    "flow_start_time",
+    "flow_time",
+    "interarrival_time",
+    "start_time",
+    "end_time",
+    "discount_rate",
+    "non_tech_add",
+    "monte_carlo",
+    "runs",
+]
 
-TIME_FORMAT_DICT = dict({
-    'year': TimeFormat.YEAR,
-    'month': TimeFormat.MONTH,
-    'week': TimeFormat.WEEK,
-    'day': TimeFormat.DAY,
-    'hour': TimeFormat.HOUR,
-    'minutes': TimeFormat.MINUTES
-})
+TIME_FORMAT_DICT = dict(
+    {
+        "year": TimeFormat.YEAR,
+        "month": TimeFormat.MONTH,
+        "week": TimeFormat.WEEK,
+        "day": TimeFormat.DAY,
+        "hour": TimeFormat.HOUR,
+        "minutes": TimeFormat.MINUTES,
+    }
+)
 
 
-def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.EditSimSettings,
-                   project_id: int, vcs_ids: List[int],
-                   design_group_ids: List[int], user_id, normalized_npv: bool = False,
-                   is_multiprocessing: bool = False,
-                   ) -> SimulationResult:
+def run_simulation(
+    db_connection: PooledMySQLConnection,
+    sim_settings: models.EditSimSettings,
+    project_id: int,
+    vcs_ids: List[int],
+    design_group_ids: List[int],
+    user_id,
+    normalized_npv: bool = False,
+    is_multiprocessing: bool = False,
+) -> SimulationResult:
     if not check_sim_settings(sim_settings):
         raise e.BadlyFormattedSettingsException
 
@@ -67,23 +85,32 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
 
     all_designs = get_all_designs(db_connection, design_group_ids)
 
-    all_vd_design_values = get_all_vd_design_values(db_connection, [design.id for design in all_designs])
+    all_vd_design_values = get_all_vd_design_values(
+        db_connection, [design.id for design in all_designs]
+    )
 
     unique_vds = {}
     for vd in all_vd_design_values:
         element_id = vd["id"]
         if element_id not in unique_vds:
-            unique_vds[element_id] = {"id": vd["id"], "name": vd["name"], "unit": vd["unit"], "project_id": vd["project"]}
+            unique_vds[element_id] = {
+                "id": vd["id"],
+                "name": vd["name"],
+                "unit": vd["unit"],
+                "project_id": vd["project"],
+            }
     all_vds = list(unique_vds.values())
 
     all_dsm_ids = life_cycle_storage.get_multiple_dsm_file_id(db_connection, vcs_ids)
 
     all_vcss = get_vcss(db_connection, project_id, vcs_ids, user_id)
 
-    sim_result = SimulationResult(designs=all_designs, vcss=all_vcss, vds=all_vds, runs=[])
+    sim_result = SimulationResult(
+        designs=all_designs, vcss=all_vcss, vds=all_vds, runs=[]
+    )
 
     for vcs_id in vcs_ids:
-        market_values = [mi for mi in all_market_values if mi['vcs'] == vcs_id]
+        market_values = [mi for mi in all_market_values if mi["vcs"] == vcs_id]
         dsm_id = [dsm for dsm in all_dsm_ids if dsm[0] == vcs_id]
         dsm = None
         if len(dsm_id) > 0:
@@ -93,22 +120,33 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
             except file_exceptions.FileNotFoundException:
                 pass
         for design_group_id in design_group_ids:
-            sim_data = [sd for sd in all_sim_data if sd['vcs'] == vcs_id and sd['design_group'] == design_group_id]
+            sim_data = [
+                sd
+                for sd in all_sim_data
+                if sd["vcs"] == vcs_id and sd["design_group"] == design_group_id
+            ]
             if sim_data is None or sim_data == []:
                 raise e.VcsFailedException
 
             if not check_entity_rate(sim_data, process):
                 raise e.RateWrongOrderException
 
-            designs = [design.id for design in all_designs if design.design_group_id == design_group_id]
+            designs = [
+                design.id
+                for design in all_designs
+                if design.design_group_id == design_group_id
+            ]
 
             if designs is None or []:
                 raise e.DesignIdsNotFoundException
 
             for design in designs:
-                vd_values = [vd for vd in all_vd_design_values if vd['design'] == design]
-                processes, non_tech_processes = populate_processes(non_tech_add, sim_data, design, market_values,
-                                                                   vd_values)
+                vd_values = [
+                    vd for vd in all_vd_design_values if vd["design"] == design
+                ]
+                processes, non_tech_processes = populate_processes(
+                    non_tech_add, sim_data, design, market_values, vd_values
+                )
 
                 if dsm is None:
                     dsm = create_simple_dsm(processes)
@@ -117,30 +155,58 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
 
                 try:
                     if is_monte_carlo and not is_multiprocessing:
-                        results = sim.run_monte_carlo_simulation(flow_time, interarrival, process, processes,
-                                                                 non_tech_processes,
-                                                                 non_tech_add, dsm, time_unit, discount_rate, runtime,
-                                                                 runs)
+                        results = sim.run_monte_carlo_simulation(
+                            flow_time,
+                            interarrival,
+                            process,
+                            processes,
+                            non_tech_processes,
+                            non_tech_add,
+                            dsm,
+                            time_unit,
+                            discount_rate,
+                            runtime,
+                            runs,
+                        )
                     elif is_monte_carlo and is_multiprocessing:
-                        results = sim.run_parallell_simulations(flow_time, interarrival, process, processes,
-                                                                non_tech_processes,
-                                                                non_tech_add, dsm, time_unit, discount_rate, runtime,
-                                                                runs)
+                        results = sim.run_parallell_simulations(
+                            flow_time,
+                            interarrival,
+                            process,
+                            processes,
+                            non_tech_processes,
+                            non_tech_add,
+                            dsm,
+                            time_unit,
+                            discount_rate,
+                            runtime,
+                            runs,
+                        )
                     else:
-                        results = sim.run_simulation(flow_time, interarrival, process, processes, non_tech_processes,
-                                                     non_tech_add, dsm, time_unit,
-                                                     discount_rate, runtime)
+                        results = sim.run_simulation(
+                            flow_time,
+                            interarrival,
+                            process,
+                            processes,
+                            non_tech_processes,
+                            non_tech_add,
+                            dsm,
+                            time_unit,
+                            discount_rate,
+                            runtime,
+                        )
 
                 except Exception as exc:
                     tb = sys.exc_info()[2]
-                    logger.debug(
-                        f'{exc.__class__}, {exc}, {exc.with_traceback(tb)}')
-                    print(f'{exc.__class__}, {exc}')
+                    logger.debug(f"{exc.__class__}, {exc}, {exc.with_traceback(tb)}")
+                    print(f"{exc.__class__}, {exc}")
                     raise e.SimulationFailedException
 
                 sim_run_res = models.Simulation(
                     time=results.timesteps[-1],
-                    mean_NPV=results.normalize_npv() if normalized_npv else results.mean_npv(),
+                    mean_NPV=results.normalize_npv()
+                    if normalized_npv
+                    else results.mean_npv(),
                     max_NPVs=results.all_max_npv(),
                     mean_payback_time=results.mean_npv_payback_time(),
                     all_npvs=results.npvs,
@@ -151,13 +217,13 @@ def run_simulation(db_connection: PooledMySQLConnection, sim_settings: models.Ed
                 )
 
                 sim_result.runs.append(sim_run_res)
-    logger.debug('Returning the results')
+    logger.debug("Returning the results")
     return sim_result
 
 
-def populate_processes(non_tech_add: NonTechCost, db_results, design: int,
-                       mi_values=None,
-                       vd_values=None):
+def populate_processes(
+    non_tech_add: NonTechCost, db_results, design: int, mi_values=None, vd_values=None
+):
     if mi_values is None:
         mi_values = []
     parser = BaseArithmeticParser()
@@ -166,64 +232,76 @@ def populate_processes(non_tech_add: NonTechCost, db_results, design: int,
     non_tech_processes = []
 
     for row in db_results:
-        vd_values_row = [vd for vd in vd_values if vd['vcs_row'] == row['id'] and vd['design'] == design]
-        if row['category'] != 'Technical processes':
+        vd_values_row = [
+            vd
+            for vd in vd_values
+            if vd["vcs_row"] == row["id"] and vd["design"] == design
+        ]
+        if row["category"] != "Technical processes":
             try:
                 non_tech = models.NonTechnicalProcess(
-                    cost=parser.evaluate(parse_formula(row['cost'], vd_values_row, mi_values, row)),
+                    cost=parser.evaluate(
+                        parse_formula(row["cost"], vd_values_row, mi_values, row)
+                    ),
                     revenue=parser.evaluate(
-                        parse_formula(row['revenue'], vd_values_row, mi_values, row)),
-                    name=row['iso_name'])
+                        parse_formula(row["revenue"], vd_values_row, mi_values, row)
+                    ),
+                    name=row["iso_name"],
+                )
             except Exception as exc:
-                logger.debug(f'{exc.__class__}, {exc}')
-                raise e.FormulaEvalException(row['id'])
+                logger.debug(f"{exc.__class__}, {exc}")
+                raise e.FormulaEvalException(row["id"])
             non_tech_processes.append(non_tech)
 
-        elif row['iso_name'] is not None and row['sub_name'] is None:
+        elif row["iso_name"] is not None and row["sub_name"] is None:
             try:
-                time = parser.evaluate(parse_formula(
-                    row['time'], vd_values, mi_values, row))
-                cost_formula = parse_formula(row['cost'], vd_values, mi_values, row)
+                time = parser.evaluate(
+                    parse_formula(row["time"], vd_values, mi_values, row)
+                )
+                cost_formula = parse_formula(row["cost"], vd_values, mi_values, row)
                 revenue_formula = parse_formula(
-                    row['revenue'], vd_values, mi_values, row)
-                p = Process(row['id'],
-                            time,
-                            parser.evaluate(expr.replace_all(
-                                'time', time, cost_formula)),
-                            parser.evaluate(expr.replace_all(
-                                'time', time, revenue_formula)),
-                            row['iso_name'], non_tech_add, TIME_FORMAT_DICT.get(
-                        row['time_unit'].lower())
-                            )
+                    row["revenue"], vd_values, mi_values, row
+                )
+                p = Process(
+                    row["id"],
+                    time,
+                    parser.evaluate(expr.replace_all("time", time, cost_formula)),
+                    parser.evaluate(expr.replace_all("time", time, revenue_formula)),
+                    row["iso_name"],
+                    non_tech_add,
+                    TIME_FORMAT_DICT.get(row["time_unit"].lower()),
+                )
                 if p.time < 0:
-                    raise e.NegativeTimeException(row['id'])
+                    raise e.NegativeTimeException(row["id"])
             except Exception as exc:
-                logger.debug(f'{exc.__class__}, {exc}')
-                raise e.FormulaEvalException(row['id'])
+                logger.debug(f"{exc.__class__}, {exc}")
+                raise e.FormulaEvalException(row["id"])
             technical_processes.append(p)
-        elif row['sub_name'] is not None:
+        elif row["sub_name"] is not None:
             sub_name = f'{row["sub_name"]} ({row["iso_name"]})'
             try:
-                time = parser.evaluate(parse_formula(
-                    row['time'], vd_values, mi_values, row))
-                cost_formula = parse_formula(row['cost'], vd_values, mi_values, row)
+                time = parser.evaluate(
+                    parse_formula(row["time"], vd_values, mi_values, row)
+                )
+                cost_formula = parse_formula(row["cost"], vd_values, mi_values, row)
                 revenue_formula = parse_formula(
-                    row['revenue'], vd_values, mi_values, row)
-                p = Process(row['id'],
-                            time,
-                            parser.evaluate(expr.replace_all(
-                                'time', time, cost_formula)),
-                            parser.evaluate(expr.replace_all(
-                                'time', time, revenue_formula)),
-                            sub_name, non_tech_add, TIME_FORMAT_DICT.get(
-                        row['time_unit'].lower())
-                            )
+                    row["revenue"], vd_values, mi_values, row
+                )
+                p = Process(
+                    row["id"],
+                    time,
+                    parser.evaluate(expr.replace_all("time", time, cost_formula)),
+                    parser.evaluate(expr.replace_all("time", time, revenue_formula)),
+                    sub_name,
+                    non_tech_add,
+                    TIME_FORMAT_DICT.get(row["time_unit"].lower()),
+                )
 
                 if p.time < 0:
-                    raise e.NegativeTimeException(row['id'])
+                    raise e.NegativeTimeException(row["id"])
             except Exception as exc:
-                logger.debug(f'{exc.__class__}, {exc}')
-                raise e.FormulaEvalException(row['id'])
+                logger.debug(f"{exc.__class__}, {exc}")
+                raise e.FormulaEvalException(row["id"])
             technical_processes.append(p)
         else:
             raise e.ProcessNotFoundException
@@ -231,14 +309,16 @@ def populate_processes(non_tech_add: NonTechCost, db_results, design: int,
     return technical_processes, non_tech_processes
 
 
-def get_sim_data(db_connection: PooledMySQLConnection, vcs_id: int, design_group_id: int):
-    query = f'SELECT cvs_vcs_rows.id, cvs_vcs_rows.iso_process, cvs_iso_processes.name as iso_name, category, \
+def get_sim_data(
+    db_connection: PooledMySQLConnection, vcs_id: int, design_group_id: int
+):
+    query = f"SELECT cvs_vcs_rows.id, cvs_vcs_rows.iso_process, cvs_iso_processes.name as iso_name, category, \
             subprocess, cvs_subprocesses.name as sub_name, time, time_unit, cost, revenue, rate FROM cvs_vcs_rows \
             LEFT OUTER JOIN cvs_subprocesses ON cvs_vcs_rows.subprocess = cvs_subprocesses.id \
             LEFT OUTER JOIN cvs_iso_processes ON cvs_vcs_rows.iso_process = cvs_iso_processes.id \
                 OR cvs_subprocesses.iso_process = cvs_iso_processes.id \
             LEFT OUTER JOIN cvs_design_mi_formulas ON cvs_vcs_rows.id = cvs_design_mi_formulas.vcs_row \
-            WHERE cvs_vcs_rows.vcs = %s AND cvs_design_mi_formulas.design_group = %s ORDER BY `index`'
+            WHERE cvs_vcs_rows.vcs = %s AND cvs_design_mi_formulas.design_group = %s ORDER BY `index`"
     with db_connection.cursor(prepared=True) as cursor:
         cursor.execute(query, [vcs_id, design_group_id])
         res = cursor.fetchall()
@@ -246,7 +326,11 @@ def get_sim_data(db_connection: PooledMySQLConnection, vcs_id: int, design_group
     return res
 
 
-def get_all_sim_data(db_connection: PooledMySQLConnection, vcs_ids: List[int], design_group_ids: List[int]):
+def get_all_sim_data(
+    db_connection: PooledMySQLConnection,
+    vcs_ids: List[int],
+    design_group_ids: List[int],
+):
     try:
         query = f'SELECT cvs_vcs_rows.id, cvs_vcs_rows.vcs, cvs_design_mi_formulas.design_group, \
                     cvs_vcs_rows.iso_process, cvs_iso_processes.name as iso_name, category, \
@@ -263,7 +347,7 @@ def get_all_sim_data(db_connection: PooledMySQLConnection, vcs_ids: List[int], d
             res = cursor.fetchall()
             res = [dict(zip(cursor.column_names, row)) for row in res]
     except Error as error:
-        logger.debug(f'Error msg: {error.msg}')
+        logger.debug(f"Error msg: {error.msg}")
         raise e.CouldNotFetchSimulationDataException
     return res
 
@@ -281,18 +365,20 @@ def get_all_vd_design_values(db_connection: PooledMySQLConnection, designs: List
             res = cursor.fetchall()
             res = [dict(zip(cursor.column_names, row)) for row in res]
     except Error as error:
-        logger.debug(f'Error msg: {error.msg}')
+        logger.debug(f"Error msg: {error.msg}")
         raise e.CouldNotFetchValueDriverDesignValuesException
     return res
 
 
 def get_simulation_settings(db_connection: PooledMySQLConnection, project_id: int):
-    logger.debug(f'Fetching simulation settings for project {project_id}')
+    logger.debug(f"Fetching simulation settings for project {project_id}")
 
     select_statement = MySQLStatementBuilder(db_connection)
-    res = select_statement.select(SIM_SETTINGS_TABLE, SIM_SETTINGS_COLUMNS) \
-        .where('project = %s', [project_id]) \
+    res = (
+        select_statement.select(SIM_SETTINGS_TABLE, SIM_SETTINGS_COLUMNS)
+        .where("project = %s", [project_id])
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+    )
 
     if res is None:
         raise e.SimSettingsNotFoundException
@@ -300,20 +386,28 @@ def get_simulation_settings(db_connection: PooledMySQLConnection, project_id: in
     return populate_sim_settings(res)
 
 
-def edit_simulation_settings(db_connection: PooledMySQLConnection, project_id: int,
-                             sim_settings: models.EditSimSettings, user_id: int):
-    logger.debug(f'Editing simulation settings for project {project_id}')
+def edit_simulation_settings(
+    db_connection: PooledMySQLConnection,
+    project_id: int,
+    sim_settings: models.EditSimSettings,
+    user_id: int,
+):
+    logger.debug(f"Editing simulation settings for project {project_id}")
 
-    if (sim_settings.flow_process is None and sim_settings.flow_start_time is None) \
-            or (sim_settings.flow_process is not None and sim_settings.flow_start_time is not None):
+    if (sim_settings.flow_process is None and sim_settings.flow_start_time is None) or (
+        sim_settings.flow_process is not None
+        and sim_settings.flow_start_time is not None
+    ):
         raise e.InvalidFlowSettingsException
 
     count_sim = MySQLStatementBuilder(db_connection)
-    count = count_sim.count(SIM_SETTINGS_TABLE) \
-        .where('project = %s', [project_id]) \
+    count = (
+        count_sim.count(SIM_SETTINGS_TABLE)
+        .where("project = %s", [project_id])
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+    )
 
-    count = count['count']
+    count = count["count"]
 
     if sim_settings.flow_process is not None:
         flow_process_exists = False
@@ -321,48 +415,75 @@ def edit_simulation_settings(db_connection: PooledMySQLConnection, project_id: i
         for vcs in vcss:
             rows = vcs_storage.get_vcs_table(db_connection, project_id, vcs.id)
             for row in rows:
-                if (row.iso_process is not None and row.iso_process.name == sim_settings.flow_process) or \
-                        (row.subprocess is not None and f'{row.subprocess.name} ({row.subprocess.parent_process.name})'
-                         == sim_settings.flow_process):
+                if (
+                    row.iso_process is not None
+                    and row.iso_process.name == sim_settings.flow_process
+                ) or (
+                    row.subprocess is not None
+                    and f"{row.subprocess.name} ({row.subprocess.parent_process.name})"
+                    == sim_settings.flow_process
+                ):
                     flow_process_exists = True
                     break
 
         if not flow_process_exists:
             raise e.FlowProcessNotFoundException
 
-    if (count == 1):
+    if count == 1:
         columns = SIM_SETTINGS_COLUMNS[1:]
-        set_statement = ','.join([col + ' = %s' for col in columns])
+        set_statement = ",".join([col + " = %s" for col in columns])
 
-        values = [sim_settings.time_unit.value, sim_settings.flow_process, sim_settings.flow_start_time,
-                  sim_settings.flow_time,
-                  sim_settings.interarrival_time, sim_settings.start_time, sim_settings.end_time,
-                  sim_settings.discount_rate, sim_settings.non_tech_add.value, sim_settings.monte_carlo,
-                  sim_settings.runs]
+        values = [
+            sim_settings.time_unit.value,
+            sim_settings.flow_process,
+            sim_settings.flow_start_time,
+            sim_settings.flow_time,
+            sim_settings.interarrival_time,
+            sim_settings.start_time,
+            sim_settings.end_time,
+            sim_settings.discount_rate,
+            sim_settings.non_tech_add.value,
+            sim_settings.monte_carlo,
+            sim_settings.runs,
+        ]
         update_statement = MySQLStatementBuilder(db_connection)
-        _, rows = update_statement \
-            .update(table=SIM_SETTINGS_TABLE, set_statement=set_statement, values=values) \
-            .where('project = %s', [project_id]) \
+        _, rows = (
+            update_statement.update(
+                table=SIM_SETTINGS_TABLE, set_statement=set_statement, values=values
+            )
+            .where("project = %s", [project_id])
             .execute(return_affected_rows=True)
+        )
 
-    elif (count == 0):
+    elif count == 0:
         create_sim_settings(db_connection, project_id, sim_settings)
 
     return True
 
 
-def create_sim_settings(db_connection: PooledMySQLConnection, project_id: int,
-                        sim_settings: models.EditSimSettings) -> bool:
-    values = [project_id] + [sim_settings.time_unit.value, sim_settings.flow_process, sim_settings.flow_start_time,
-                             sim_settings.flow_time,
-                             sim_settings.interarrival_time, sim_settings.start_time, sim_settings.end_time,
-                             sim_settings.discount_rate, sim_settings.non_tech_add.value, sim_settings.monte_carlo,
-                             sim_settings.runs]
+def create_sim_settings(
+    db_connection: PooledMySQLConnection,
+    project_id: int,
+    sim_settings: models.EditSimSettings,
+) -> bool:
+    values = [project_id] + [
+        sim_settings.time_unit.value,
+        sim_settings.flow_process,
+        sim_settings.flow_start_time,
+        sim_settings.flow_time,
+        sim_settings.interarrival_time,
+        sim_settings.start_time,
+        sim_settings.end_time,
+        sim_settings.discount_rate,
+        sim_settings.non_tech_add.value,
+        sim_settings.monte_carlo,
+        sim_settings.runs,
+    ]
 
     insert_statement = MySQLStatementBuilder(db_connection)
-    insert_statement.insert(SIM_SETTINGS_TABLE, SIM_SETTINGS_COLUMNS) \
-        .set_values(values) \
-        .execute(fetch_type=FetchType.FETCH_NONE)
+    insert_statement.insert(SIM_SETTINGS_TABLE, SIM_SETTINGS_COLUMNS).set_values(
+        values
+    ).execute(fetch_type=FetchType.FETCH_NONE)
 
     return True
 
@@ -376,14 +497,14 @@ def get_all_market_values(db_connection: PooledMySQLConnection, vcs_ids: List[in
             res = cursor.fetchall()
             res = [dict(zip(cursor.column_names, row)) for row in res]
     except Error as error:
-        logger.debug(f'Error msg: {error.msg}')
+        logger.debug(f"Error msg: {error.msg}")
         raise e.CouldNotFetchMarketInputValuesException
     return res
 
 
 def add_multiplication_signs(formula: str) -> str:
     # Define a regular expression pattern to find the positions where the multiplication sign is missing
-    pattern = r'(\d)([a-zA-Z({\[<])|([}\])>]|})([a-zA-Z({\[<])|([}\])>]|{)(\d)'
+    pattern = r"(\d)([a-zA-Z({\[<])|([}\])>]|})([a-zA-Z({\[<])|([}\])>]|{)(\d)"
 
     # Use the re.sub() function to replace the matches with the correct format
     def replace(match):
@@ -398,13 +519,14 @@ def add_multiplication_signs(formula: str) -> str:
 
 def parse_if_statement(formula: str) -> str:
     # The pattern is if(condition, true_value, false_value)
-    pattern = r'if\(([^,]+),([^,]+),([^,]+)\)'
+    pattern = r"if\(([^,]+),([^,]+),([^,]+)\)"
     match = re.search(pattern, formula)
     parser = BaseArithmeticParser()
 
     if match:
         condition, true_value, false_value = match.groups()
-        condition = condition.replace('=', '==')
+        condition = condition.replace("=", "==")
+        logger.debug(f"Parsing if statement {condition}, {true_value}, {false_value}")
         if parser.evaluate(condition):
             value = true_value
         else:
@@ -426,14 +548,16 @@ def parse_formula(formula: str, vd_values, ef_values, formula_row: dict = None) 
             id_number = int(value)
             for vd in vd_values:
                 if vd["id"] == id_number:
-                    return str(vd["value"])
+                    vd_value = str(vd["value"])
+                    return vd_value if vd_value.replace('.','').isnumeric() else '"' + vd_value + '"'
         elif tag == "ef":
             for ef in ef_values:
                 id_number = int(value)
                 if ef["market_input"] == id_number:
-                    return str(ef["value"])
+                    ef_value = str(ef["value"])
+                    return ef_value if ef_value.replace('.','').isnumeric() else '"' + ef_value + '"'
         elif formula_row and tag == "process":
-            return f'({formula_row[value.lower()]})'
+            return f"({formula_row[value.lower()]})"
 
         return match.group()
 
@@ -442,7 +566,9 @@ def parse_formula(formula: str, vd_values, ef_values, formula_row: dict = None) 
 
     replaced_text = parse_if_statement(replaced_text)
 
-    replaced_text = re.sub(pattern, '0', replaced_text)  # If there are any tags left, replace them with 0
+    replaced_text = re.sub(
+        pattern, "0", replaced_text
+    )  # If there are any tags left, replace them with 0
 
     return replaced_text
 
@@ -452,12 +578,18 @@ def check_entity_rate(db_results, flow_process_name: str):
     # Set the flow_process_index to be highest possible.
     flow_process_index = len(db_results)
     for i in range(len(db_results)):
-        if db_results[i]['sub_name'] == flow_process_name or db_results[i]['iso_name'] == flow_process_name:
+        if (
+            db_results[i]["sub_name"] == flow_process_name
+            or db_results[i]["iso_name"] == flow_process_name
+        ):
             flow_process_index = i
 
         if i > flow_process_index:
             for j in range(i, len(db_results)):
-                if db_results[j]['rate'] == 'per_project' and db_results[j]['category'] == 'Technical processes':
+                if (
+                    db_results[j]["rate"] == "per_project"
+                    and db_results[j]["category"] == "Technical processes"
+                ):
                     print("Rate check false")
                     rate_check = False
                     break
@@ -496,7 +628,9 @@ def create_simple_dsm(processes: List[Process]) -> dict:
         else:
             name = processes[i - 1].name
 
-        dsm.update({name: [1 if i + 1 == j else "X" if i == j else 0 for j in range(n)]})
+        dsm.update(
+            {name: [1 if i + 1 == j else "X" if i == j else 0 for j in range(n)]}
+        )
     return dsm
 
 
@@ -518,18 +652,18 @@ def fill_dsm_with_zeros(dsm: dict) -> dict:
 
 
 def populate_sim_settings(db_result) -> models.SimSettings:
-    logger.debug(f'Populating simulation settings')
+    logger.debug(f"Populating simulation settings")
     return models.SimSettings(
-        project=db_result['project'],
-        time_unit=db_result['time_unit'],
-        flow_process=db_result['flow_process'],
-        flow_start_time=db_result['flow_start_time'],
-        flow_time=db_result['flow_time'],
-        interarrival_time=db_result['interarrival_time'],
-        start_time=db_result['start_time'],
-        end_time=db_result['end_time'],
-        discount_rate=db_result['discount_rate'],
-        non_tech_add=db_result['non_tech_add'],
-        monte_carlo=db_result['monte_carlo'],
-        runs=db_result['runs']
+        project=db_result["project"],
+        time_unit=db_result["time_unit"],
+        flow_process=db_result["flow_process"],
+        flow_start_time=db_result["flow_start_time"],
+        flow_time=db_result["flow_time"],
+        interarrival_time=db_result["interarrival_time"],
+        start_time=db_result["start_time"],
+        end_time=db_result["end_time"],
+        discount_rate=db_result["discount_rate"],
+        non_tech_add=db_result["non_tech_add"],
+        monte_carlo=db_result["monte_carlo"],
+        runs=db_result["runs"],
     )
