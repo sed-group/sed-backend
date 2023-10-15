@@ -1,5 +1,6 @@
 from sedbackend.apps.cvs.simulation.storage import parse_formula, add_multiplication_signs
-from sedbackend.libs.formula_parser.parser import NumericStringParser
+from plusminus import BaseArithmeticParser
+
 
 
 def test_parse_formula_simple():
@@ -7,14 +8,14 @@ def test_parse_formula_simple():
     formula = f'(3+1)/2'
     vd_values = []
     mi_values = []
-    nsp = NumericStringParser()
+    parser = BaseArithmeticParser()
 
     # Act
     new_formula = parse_formula(formula, vd_values, mi_values)
 
     # Assert
     assert new_formula == formula
-    assert nsp.eval(new_formula) == 2
+    assert parser.evaluate(new_formula) == 2
 
 
 def test_parse_formula_values():
@@ -23,14 +24,14 @@ def test_parse_formula_values():
                  {"id": 1, "name": "Test", "unit": "T", "value": 20}]
     mi_values = [{"market_input": 114, "name": "Fuel Cost", "unit": "k€/liter", "value": 5}]
     formula = '2+{vd:47241,"Design Similarity [0-1]"}/{ef:114,"Fuel Cost [k€/liter]"}+{vd:1,"Test [T]"}'
-    nsp = NumericStringParser()
+    parser = BaseArithmeticParser()
 
     # Act
     new_formula = parse_formula(formula, vd_values, mi_values)
 
     # Assert
     assert new_formula == "2+10/5+20"
-    assert nsp.eval(new_formula) == 24
+    assert parser.evaluate(new_formula) == 24
 
 
 def test_parse_formula_process_variable():
@@ -47,14 +48,14 @@ def test_parse_formula_process_variable():
         "cost": cost,
         "revenue": revenue,
     }
-    nsp = NumericStringParser()
+    parser = BaseArithmeticParser()
 
     # Act
     new_formula = parse_formula(formula, vd_values, mi_values, formula_row)
 
     # Assert
     assert new_formula == "10*(2+10/5)"
-    assert nsp.eval(new_formula) == 40
+    assert parser.evaluate(new_formula) == 40
 
 
 def test_parse_formula_vd_no_exist():
@@ -62,14 +63,14 @@ def test_parse_formula_vd_no_exist():
     vd_values = [{"id": 47241, "name": "Speed", "unit": "0-1", "value": 10}]
     mi_values = [{"market_input": 114, "name": "Fuel Cost", "unit": "k€/liter", "value": 5}]
     formula = '2+{vd:1,"Design Similarity [0-1]"}/{ef:114,"Fuel Cost [k€/liter]"}'
-    nsp = NumericStringParser()
+    parser = BaseArithmeticParser()
 
     # Act
     new_formula = parse_formula(formula, vd_values, mi_values)
 
     # Assert
     assert new_formula == "2+0/5"
-    assert nsp.eval(new_formula) == 2
+    assert parser.evaluate(new_formula) == 2
 
 
 def test_add_multiplication_signs():
@@ -99,98 +100,98 @@ def test_parse_without_multiplication_signs():
     vd_values = [{"id": 47241, "name": "Speed", "unit": "0-1", "value": 10}]
     mi_values = [{"market_input": 114, "name": "Fuel Cost", "unit": "k€/liter", "value": 5}]
     formula = '2{vd:47241,"Design Similarity [0-1]"}{ef:114,"Fuel Cost [k€/liter]"}'
-    nsp = NumericStringParser()
+    parser = BaseArithmeticParser()
 
     # Act
     new_formula = parse_formula(formula, vd_values, mi_values)
 
     # Assert
     assert new_formula == "2*10*5"
-    assert nsp.eval(new_formula) == 100
+    assert parser.evaluate(new_formula) == 100
 
 
 def test_if_statement_true():
     formula = 'if(1, 1, 0)'
-    nsp = NumericStringParser()
+    parser = BaseArithmeticParser()
 
     # Act
     new_formula = parse_formula(formula, [], [])
 
     # Assert
     assert new_formula == "1"
-    assert nsp.eval(new_formula) == 1
+    assert parser.evaluate(new_formula) == 1
 
 
 def test_if_statement_false():
     formula = 'if(0, 1, 0)'
-    nsp = NumericStringParser()
+    parser = BaseArithmeticParser()
 
     # Act
     new_formula = parse_formula(formula, [], [])
 
     # Assert
     assert new_formula == "0"
-    assert nsp.eval(new_formula) == 0
+    assert parser.evaluate(new_formula) == 0
 
 
 def test_if_statement_true_condition():
-    formula = 'if("10=10", 1, 0)'
-    nsp = NumericStringParser()
+    formula = 'if(10=10, 1, 0)'
+    parser = BaseArithmeticParser()
 
     # Act
     new_formula = parse_formula(formula, [], [])
 
     # Assert
     assert new_formula == "1"
-    assert nsp.eval(new_formula) == 1
+    assert parser.evaluate(new_formula) == 1
 
 
 def test_if_statement_false_condition():
     formula = 'if(10=11, 1, 0)'
-    nsp = NumericStringParser()
+    parser = BaseArithmeticParser()
 
     # Act
     new_formula = parse_formula(formula, [], [])
 
     # Assert
     assert new_formula == "0"
-    assert nsp.eval(new_formula) == 0
+    assert parser.evaluate(new_formula) == 0
 
 
 def test_if_statement_whitespace():
     formula = 'if(10 = 10, 1, 0)'
-    nsp = NumericStringParser()
+    parser = BaseArithmeticParser()
 
     # Act
     new_formula = parse_formula(formula, [], [])
 
     # Assert
     assert new_formula == "1"
-    assert nsp.eval(new_formula) == 1
+    assert parser.evaluate(new_formula) == 1
 
 
 def test_if_statement_string():
     formula = 'if("Speed" = "Speed", 10, 0)'
-    nsp = NumericStringParser()
+    parser = BaseArithmeticParser()
 
     # Act
     new_formula = parse_formula(formula, [], [])
 
     # Assert
     assert new_formula == "10"
-    assert nsp.eval(new_formula) == 10
+    assert parser.evaluate(new_formula) == 10
 
 
 def test_if_statement_greater_than():
     formula = 'if(10 > 9, 10, 0)'
-    nsp = NumericStringParser()
+    parser = BaseArithmeticParser()
 
     # Act
     new_formula = parse_formula(formula, [], [])
 
     # Assert
     assert new_formula == "10"
-    assert nsp.eval(new_formula) == 10
+    assert parser.evaluate(new_formula) == 10
 
 
 def test_if_statement_formula():
@@ -199,11 +200,11 @@ def test_if_statement_formula():
                  {"id": 1, "name": "Test", "unit": "T", "value": 20}]
     mi_values = [{"market_input": 114, "name": "Fuel Cost", "unit": "k€/liter", "value": 5}]
     formula = '2+{vd:47241,"Design Similarity [0-1]"}/{ef:114,"Fuel Cost [k€/liter]"}+if({vd:1,"Test [T]"}=20, {vd:47241,"Design Similarity [0-1]"}, 0)'
-    nsp = NumericStringParser()
+    parser = BaseArithmeticParser()
 
     # Act
     new_formula = parse_formula(formula, vd_values, mi_values)
 
     # Assert
     assert new_formula == "2+10/5+10"
-    assert nsp.eval(new_formula) == 14
+    assert parser.evaluate(new_formula) == 14

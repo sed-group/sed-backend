@@ -11,6 +11,7 @@ from fastapi.logger import logger
 from desim import interface as des
 from desim.data import NonTechCost, TimeFormat
 from desim.simulation import Process
+from plusminus import BaseArithmeticParser
 
 from typing import List
 from sedbackend.apps.cvs.design.storage import get_all_designs
@@ -20,7 +21,6 @@ from mysqlsb import FetchType, MySQLStatementBuilder
 from sedbackend.apps.cvs.life_cycle.storage import get_dsm_from_file_id
 from sedbackend.apps.cvs.simulation.models import SimulationResult
 from sedbackend.apps.cvs.vcs.storage import get_vcss
-from sedbackend.libs.formula_parser.parser import NumericStringParser
 from sedbackend.libs.formula_parser import expressions as expr
 from sedbackend.apps.cvs.simulation import models
 import sedbackend.apps.cvs.simulation.exceptions as e
@@ -160,7 +160,7 @@ def populate_processes(non_tech_add: NonTechCost, db_results, design: int,
                        vd_values=None):
     if mi_values is None:
         mi_values = []
-    nsp = NumericStringParser()
+    parser = BaseArithmeticParser()
 
     technical_processes = []
     non_tech_processes = []
@@ -170,8 +170,8 @@ def populate_processes(non_tech_add: NonTechCost, db_results, design: int,
         if row['category'] != 'Technical processes':
             try:
                 non_tech = models.NonTechnicalProcess(
-                    cost=nsp.eval(parse_formula(row['cost'], vd_values_row, mi_values, row)),
-                    revenue=nsp.eval(
+                    cost=parser.evaluate(parse_formula(row['cost'], vd_values_row, mi_values, row)),
+                    revenue=parser.evaluate(
                         parse_formula(row['revenue'], vd_values_row, mi_values, row)),
                     name=row['iso_name'])
             except Exception as exc:
@@ -181,16 +181,16 @@ def populate_processes(non_tech_add: NonTechCost, db_results, design: int,
 
         elif row['iso_name'] is not None and row['sub_name'] is None:
             try:
-                time = nsp.eval(parse_formula(
+                time = parser.evaluate(parse_formula(
                     row['time'], vd_values, mi_values, row))
                 cost_formula = parse_formula(row['cost'], vd_values, mi_values, row)
                 revenue_formula = parse_formula(
                     row['revenue'], vd_values, mi_values, row)
                 p = Process(row['id'],
                             time,
-                            nsp.eval(expr.replace_all(
+                            parser.evaluate(expr.replace_all(
                                 'time', time, cost_formula)),
-                            nsp.eval(expr.replace_all(
+                            parser.evaluate(expr.replace_all(
                                 'time', time, revenue_formula)),
                             row['iso_name'], non_tech_add, TIME_FORMAT_DICT.get(
                         row['time_unit'].lower())
@@ -204,16 +204,16 @@ def populate_processes(non_tech_add: NonTechCost, db_results, design: int,
         elif row['sub_name'] is not None:
             sub_name = f'{row["sub_name"]} ({row["iso_name"]})'
             try:
-                time = nsp.eval(parse_formula(
+                time = parser.evaluate(parse_formula(
                     row['time'], vd_values, mi_values, row))
                 cost_formula = parse_formula(row['cost'], vd_values, mi_values, row)
                 revenue_formula = parse_formula(
                     row['revenue'], vd_values, mi_values, row)
                 p = Process(row['id'],
                             time,
-                            nsp.eval(expr.replace_all(
+                            parser.evaluate(expr.replace_all(
                                 'time', time, cost_formula)),
-                            nsp.eval(expr.replace_all(
+                            parser.evaluate(expr.replace_all(
                                 'time', time, revenue_formula)),
                             sub_name, non_tech_add, TIME_FORMAT_DICT.get(
                         row['time_unit'].lower())
@@ -400,11 +400,12 @@ def parse_if_statement(formula: str) -> str:
     # The pattern is if(condition, true_value, false_value)
     pattern = r'if\(([^,]+),([^,]+),([^,]+)\)'
     match = re.search(pattern, formula)
+    parser = BaseArithmeticParser()
 
     if match:
         condition, true_value, false_value = match.groups()
         condition = condition.replace('=', '==')
-        if eval(condition):
+        if parser.evaluate(condition):
             value = true_value
         else:
             value = false_value
