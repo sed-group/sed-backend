@@ -119,9 +119,7 @@ def test_run_sim_end_time_before_start_time(client, std_headers, std_user):
 
     # Assert
     assert res.status_code == 400
-    assert res.json() == {
-        "detail": "Settings are not correct"
-    }  # Should raise BadlyFormattedSettingsException
+    assert "Settings are not correct" in res.json()["detail"]
 
     # Cleanup
     tu.delete_design_group(project.id, design_group.id)
@@ -153,9 +151,7 @@ def test_run_sim_flow_time_above_total_time(client, std_headers, std_user):
 
     # Assert
     assert res.status_code == 400
-    assert res.json() == {
-        "detail": "Settings are not correct"
-    }  # Should raise BadlyFormattedSettingsException
+    assert "Settings are not correct" in res.json()["detail"]
 
     # Cleanup
     tu.delete_design_group(project.id, design_group.id)
@@ -188,9 +184,7 @@ def test_run_sim_no_flows(client, std_headers, std_user):
 
     # Assert
     assert res.status_code == 400
-    assert res.json() == {
-        "detail": "Settings are not correct"
-    }  # Should raise BadlyFormattedSettingsException
+    assert "Settings are not correct" in res.json()["detail"]
 
     # Cleanup
     tu.delete_design_group(project.id, design_group.id)
@@ -223,9 +217,7 @@ def test_run_sim_both_flows(client, std_headers, std_user):
 
     # Assert
     assert res.status_code == 400
-    assert res.json() == {
-        "detail": "Settings are not correct"
-    }  # Should raise BadlyFormattedSettingsException
+    assert "Settings are not correct" in res.json()["detail"]
 
     # Cleanup
     tu.delete_design_group(project.id, design_group.id)
@@ -265,7 +257,7 @@ def test_run_sim_rate_invalid_order(client, std_headers, std_user):
     # Assert
     assert res.status_code == 400
     assert res.json() == {
-        "detail": "Wrong order of rate of entities. Per project assigned after per product"
+        "detail": "Wrong order of rate of entities. Total sum cannot come after per product. Check your VCS table."
     }  # RateWrongOrderException
 
     # Cleanup

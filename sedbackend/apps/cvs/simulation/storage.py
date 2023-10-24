@@ -592,6 +592,9 @@ def check_sim_settings(settings: models.EditSimSettings) -> str:
     if settings.flow_time > settings.end_time - settings.start_time:
         settings_check_msg += "Flow time is longer than simulation time. \n"
 
+    if settings.flow_start_time is not None and settings.flow_process is not None:
+        settings_check_msg += "Cannot have flow start time on flow process. \n"
+
     if settings.flow_start_time is None and settings.flow_process is None:
         settings_check_msg += "Flow start time is not set. \n"
 
