@@ -1,4 +1,5 @@
 from tkinter import E
+import re
 
 
 class ProcessNotFoundException(Exception):
@@ -16,7 +17,13 @@ class EntityRateOutOfOrderException(Exception):
 class FormulaEvalException(Exception):
     def __init__(self, exception, sim_data) -> None:
         self.name = sim_data['iso_name'] if sim_data['iso_name'] is not None else sim_data['sub_name']
-        self.message = str(exception)
+        pattern = r"found '([^']+)'"
+        match = re.search(pattern, str(exception))
+        if match:
+            found_char = match.group(1)
+            self.message = f"Check your formula for \"{found_char}\""
+        else:
+            self.message = str(exception)
 
 
 class RateWrongOrderException(Exception):

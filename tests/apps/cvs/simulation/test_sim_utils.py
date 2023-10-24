@@ -207,3 +207,4 @@ def test_if_statement_formula():
     # Assert
     assert new_formula == "2+10/5+10"
     assert nsp.eval(new_formula) == 14
+    
