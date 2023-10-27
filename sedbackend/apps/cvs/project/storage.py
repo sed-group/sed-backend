@@ -74,6 +74,13 @@ def get_cvs_project(
     if result is None:
         raise exceptions.CVSProjectNotFoundException
 
+    if not subproject:
+        subproject = proj_storage.db_get_subproject_native(
+            db_connection, "MOD.CVS", cvs_project_id
+        )
+    if not project:
+        project = proj_storage.db_get_project(db_connection, subproject.project_id)
+
     return populate_cvs_project(db_connection, result, project, subproject)
 
 
@@ -103,7 +110,7 @@ def create_cvs_project(
     )
     project_model = proj_models.ProjectPost(
         name=cvs_project.name,
-        participants=[user_id] + cvs_project.participants,
+        participants=[user_id] + list(cvs_project.participants_access.keys()),
         participants_access={
             user_id: proj_models.AccessLevel.OWNER,
             **cvs_project.participants_access,
@@ -119,11 +126,13 @@ def create_cvs_project(
 
 def edit_cvs_project(
     db_connection: PooledMySQLConnection,
-    project_id: int,
+    cvs_project_id: int,
     new_project: models.CVSProjectPost,
     user_id: int,
 ) -> models.CVSProject:
-    logger.debug(f"Editing CVS project with id={project_id}.")
+    logger.debug(f"Editing CVS project with id={cvs_project_id}.")
+
+    cvs_project = get_cvs_project(db_connection, cvs_project_id, user_id)
 
     # Updating
     update_statement = MySQLStatementBuilder(db_connection)
@@ -132,10 +141,39 @@ def edit_cvs_project(
         set_statement="name = %s, description = %s, currency = %s",
         values=[new_project.name, new_project.description, new_project.currency],
     )
-    update_statement.where("id = %s", [project_id])
+    update_statement.where("id = %s", [cvs_project_id])
     update_statement.execute(return_affected_rows=True)
 
-    return get_cvs_project(db_connection, project_id, user_id)
+    if cvs_project.project:
+        old_participants = cvs_project.project.participants_access
+        old_participants.pop(user_id)
+        new_participants = new_project.participants_access
+        participants_to_add = {}
+        participants_to_remove = []
+        participants_to_update = {}
+
+        for user_id, access_level in new_participants.items():
+            if user_id not in old_participants:
+                participants_to_add[user_id] = access_level
+            elif old_participants[user_id] != access_level:
+                participants_to_update[user_id] = access_level
+
+        for user_id, access_level in old_participants.items():
+            if user_id not in new_participants:
+                participants_to_remove.append(user_id)
+
+        project = proj_storage.db_update_project(
+            db_connection,
+            proj_models.ProjectEdit(
+                id=cvs_project.project.id,
+                name=cvs_project.project.name,
+                participants_to_add=participants_to_add,
+                participants_to_remove=participants_to_remove,
+                participants_to_update=participants_to_update,
+            ),
+        )
+
+    return get_cvs_project(db_connection, cvs_project_id, user_id, project)
 
 
 def delete_cvs_project(

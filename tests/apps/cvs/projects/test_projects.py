@@ -297,3 +297,146 @@ def test_create_project_participants(client, std_headers, std_user):
     # Cleanup
     tu.delete_project_by_id(res.json()["id"], res.json()["owner"]["id"])
     impl_users.impl_delete_user_from_db(participant.id)
+
+
+def test_add_project_participant(client, std_headers, std_user):
+    # Setup
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    participant = impl_users.impl_post_user(
+        models_users.UserPost(
+            username=testutils.random_str(10, 20),
+            password=testutils.random_str(10, 20),
+            email=testutils.random_str(10, 20),
+            full_name="Test User",
+        ),
+    )
+    project = tu.seed_random_project(current_user.id)
+
+    # Act
+    res = client.put(
+        f"/api/cvs/project/{project.id}",
+        headers=std_headers,
+        json={
+            "name": project.name,
+            "description": project.description,
+            "currency": project.currency,
+            "participants_access": {participant.id: 2},
+        },
+    )
+
+    # Assert
+    assert res.status_code == 200
+    assert [current_user.id, participant.id] == [
+        user["id"] for user in res.json()["project"]["participants"]
+    ]
+    assert res.json()["project"]["participants_access"][str(participant.id)] == 2
+    assert res.json()["project"]["participants_access"][str(current_user.id)] == 4
+
+    # Cleanup
+    tu.delete_project_by_id(project.id, current_user.id)
+    impl_users.impl_delete_user_from_db(participant.id)
+
+
+def test_remove_project_participant(client, std_headers, std_user):
+    # Setup
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    name = testutils.random_str(5, 30)
+    description = testutils.random_str(20, 200)
+    currency = testutils.random_str(0, 10)
+
+    participant = impl_users.impl_post_user(
+        models_users.UserPost(
+            username=testutils.random_str(10, 20),
+            password=testutils.random_str(10, 20),
+            email=testutils.random_str(10, 20),
+            full_name="Test User",
+        ),
+    )
+
+    res = client.post(
+        "/api/cvs/project",
+        headers=std_headers,
+        json={
+            "name": name,
+            "description": description,
+            "currency": currency,
+            "participants_access": {participant.id: 2},
+        },
+    )
+    cvs_project = res.json()
+
+    # Act
+    res = client.put(
+        f"/api/cvs/project/{cvs_project['id']}",
+        headers=std_headers,
+        json={
+            "name": cvs_project["name"],
+            "description": cvs_project["description"],
+            "currency": cvs_project["currency"],
+            "participants_access": {},
+        },
+    )
+
+    # Assert
+    assert res.status_code == 200
+    assert participant.id not in [
+        user["id"] for user in res.json()["project"]["participants"]
+    ]
+    assert res.json()["project"]["participants_access"][str(current_user.id)] == 4
+
+    # Cleanup
+    tu.delete_project_by_id(cvs_project["id"], current_user.id)
+    impl_users.impl_delete_user_from_db(participant.id)
+
+
+def test_update_project_participant(client, std_headers, std_user):
+    # Setup
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    name = testutils.random_str(5, 30)
+    description = testutils.random_str(20, 200)
+    currency = testutils.random_str(0, 10)
+
+    participant = impl_users.impl_post_user(
+        models_users.UserPost(
+            username=testutils.random_str(10, 20),
+            password=testutils.random_str(10, 20),
+            email=testutils.random_str(10, 20),
+            full_name="Test User",
+        ),
+    )
+
+    res = client.post(
+        "/api/cvs/project",
+        headers=std_headers,
+        json={
+            "name": name,
+            "description": description,
+            "currency": currency,
+            "participants_access": {participant.id: 2},
+        },
+    )
+    cvs_project = res.json()
+
+    # Act
+    res = client.put(
+        f"/api/cvs/project/{cvs_project['id']}",
+        headers=std_headers,
+        json={
+            "name": cvs_project["name"],
+            "description": cvs_project["description"],
+            "currency": cvs_project["currency"],
+            "participants_access": {participant.id: 3},
+        },
+    )
+
+    # Assert
+    assert res.status_code == 200
+    assert [current_user.id, participant.id] == [
+        user["id"] for user in res.json()["project"]["participants"]
+    ]
+    assert res.json()["project"]["participants_access"][str(participant.id)] == 3
+    assert res.json()["project"]["participants_access"][str(current_user.id)] == 4
+
+    # Cleanup
+    tu.delete_project_by_id(cvs_project["id"], current_user.id)
+    impl_users.impl_delete_user_from_db(participant.id)

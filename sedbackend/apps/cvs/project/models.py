@@ -23,5 +23,4 @@ class CVSProjectPost(BaseModel):
     name: str = Field(..., max_length=255)
     description: Optional[str] = None
     currency: Optional[str] = Field(None, max_length=10)
-    participants: Optional[List[int]] = []
     participants_access: Optional[Dict[int, AccessLevel]] = {}
