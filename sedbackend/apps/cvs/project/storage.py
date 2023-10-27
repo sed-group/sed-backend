@@ -55,12 +55,14 @@ def get_all_cvs_project(
 
 def get_cvs_project(
     db_connection: PooledMySQLConnection,
-    cvs_project_id: int,
+    project_id: int,
     user_id: int,
     project: proj_models.Project = None,
     subproject: proj_models.SubProject = None,
 ) -> models.CVSProject:
-    logger.debug(f"Fetching CVS project with id={cvs_project_id} user={user_id}.")
+    logger.debug(f"Fetching CVS project with id={project_id} user={user_id}.")
+
+    cvs_project_id = project_id
 
     query = f"SELECT p.*, COALESCE(pp.access_level, 4) AS my_access_right \
             FROM cvs_projects p \
