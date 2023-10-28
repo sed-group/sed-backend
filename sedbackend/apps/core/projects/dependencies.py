@@ -62,6 +62,8 @@ class SubProjectAccessChecker:
             project = impl_get_project(subproject.project_id)   # <-- This can throw
             # Check user access level in that project
             access = project.participants_access[user_id]
+            print("access: ", access)
+            print("access_levels: ", access_levels)
             if access in access_levels:
                 logger.debug(f"Yes, user {user_id} has access level {access}")
                 return True

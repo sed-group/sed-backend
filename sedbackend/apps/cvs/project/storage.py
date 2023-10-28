@@ -62,15 +62,13 @@ def get_cvs_project(
 ) -> models.CVSProject:
     logger.debug(f"Fetching CVS project with id={project_id} user={user_id}.")
 
-    cvs_project_id = project_id
-
     query = f"SELECT p.*, COALESCE(pp.access_level, 4) AS my_access_right \
             FROM cvs_projects p \
             LEFT JOIN projects_participants pp ON pp.project_id = %s AND pp.user_id = %s \
             WHERE p.id = %s;"
 
     with db_connection.cursor(prepared=True, dictionary=True) as cursor:
-        cursor.execute(query, [cvs_project_id, user_id, cvs_project_id])
+        cursor.execute(query, [project_id, user_id, project_id])
         result = cursor.fetchone()
     logger.debug(result)
     if result is None:
@@ -78,7 +76,7 @@ def get_cvs_project(
 
     if not subproject:
         subproject = proj_storage.db_get_subproject_native(
-            db_connection, "MOD.CVS", cvs_project_id
+            db_connection, "MOD.CVS", project_id
         )
     if not project:
         project = proj_storage.db_get_project(db_connection, subproject.project_id)
