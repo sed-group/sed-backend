@@ -78,7 +78,7 @@ def get_cvs_project(
         subproject = proj_storage.db_get_subproject_native(
             db_connection, "MOD.CVS", project_id
         )
-    if not project:
+    if not project and subproject and subproject.project_id:
         project = proj_storage.db_get_project(db_connection, subproject.project_id)
 
     return populate_cvs_project(db_connection, result, project, subproject)
