@@ -36,17 +36,29 @@ def get_all_cvs_project(
 ) -> ListChunk[models.CVSProject]:
     logger.debug(f"Fetching all CVS projects for user with id={user_id}.")
 
+    # The issue is that cvs_project.id is not the same as 
+
     query = f"SELECT DISTINCT p.*, COALESCE(pp.access_level, 4) AS my_access_right \
             FROM cvs_projects p \
-            LEFT JOIN projects_subprojects ps ON p.id = ps.project_id AND ps.owner_id = %s \
-            LEFT JOIN projects_participants pp ON p.id = pp.project_id AND pp.user_id = %s \
+            LEFT JOIN projects_subprojects ps ON p.id = ps.native_project_id \
+            LEFT JOIN projects_participants pp ON ps.project_id = pp.project_id AND pp.user_id = %s \
             WHERE p.owner_id = %s OR ps.owner_id = %s OR pp.user_id = %s;"
 
     with db_connection.cursor(prepared=True, dictionary=True) as cursor:
-        cursor.execute(query, [user_id, user_id, user_id, user_id, user_id])
+        cursor.execute(query, [user_id, user_id, user_id, user_id])
         result = cursor.fetchall()
 
-    cvs_project_list = [populate_cvs_project(db_connection, res) for res in result]
+    cvs_project_list = []
+    for res in result:
+        subproject = proj_storage.db_get_subproject_native(
+            db_connection, "MOD.CVS", res["id"]
+        )
+        project = None
+        if subproject.project_id:
+            project = proj_storage.db_get_project(db_connection, subproject.project_id)
+        cvs_project_list.append(
+            populate_cvs_project(db_connection, res, project, subproject)
+        )
 
     return ListChunk[models.CVSProject](
         chunk=cvs_project_list, length_total=len(cvs_project_list)
