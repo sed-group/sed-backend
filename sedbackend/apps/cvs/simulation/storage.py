@@ -66,9 +66,9 @@ def run_simulation(
     normalized_npv: bool = False,
     is_multiprocessing: bool = False,
 ) -> SimulationResult:
-    if not check_sim_settings(sim_settings):
-        raise e.BadlyFormattedSettingsException
-
+    settings_msg = check_sim_settings(sim_settings)
+    if settings_msg:
+        raise e.BadlyFormattedSettingsException(settings_msg)
     interarrival = sim_settings.interarrival_time
     flow_time = sim_settings.flow_time
     runtime = sim_settings.end_time - sim_settings.start_time
@@ -80,11 +80,8 @@ def run_simulation(
     runs = sim_settings.runs
 
     all_sim_data = get_all_sim_data(db_connection, vcs_ids, design_group_ids)
-
     all_market_values = get_all_market_values(db_connection, vcs_ids)
-
     all_designs = get_all_designs(db_connection, design_group_ids)
-
     all_vd_design_values = get_all_vd_design_values(
         db_connection, [design.id for design in all_designs]
     )
@@ -100,11 +97,8 @@ def run_simulation(
                 "project_id": vd["project"],
             }
     all_vds = list(unique_vds.values())
-
     all_dsm_ids = life_cycle_storage.get_multiple_dsm_file_id(db_connection, vcs_ids)
-
     all_vcss = get_vcss(db_connection, project_id, vcs_ids, user_id)
-
     sim_result = SimulationResult(
         designs=all_designs, vcss=all_vcss, vds=all_vds, runs=[]
     )
@@ -126,7 +120,7 @@ def run_simulation(
                 if sd["vcs"] == vcs_id and sd["design_group"] == design_group_id
             ]
             if sim_data is None or sim_data == []:
-                raise e.VcsFailedException
+                raise e.CouldNotFetchSimulationDataException
 
             if not check_entity_rate(sim_data, process):
                 raise e.RateWrongOrderException
@@ -200,7 +194,7 @@ def run_simulation(
                     tb = sys.exc_info()[2]
                     logger.debug(f"{exc.__class__}, {exc}, {exc.with_traceback(tb)}")
                     print(f"{exc.__class__}, {exc}")
-                    raise e.SimulationFailedException
+                    raise e.SimulationFailedException(exc)
 
                 sim_run_res = models.Simulation(
                     time=results.timesteps[-1],
@@ -250,7 +244,7 @@ def populate_processes(
                 )
             except Exception as exc:
                 logger.debug(f"{exc.__class__}, {exc}")
-                raise e.FormulaEvalException(row["id"])
+                raise e.FormulaEvalException(exc, row)
             non_tech_processes.append(non_tech)
 
         elif row["iso_name"] is not None and row["sub_name"] is None:
@@ -271,11 +265,11 @@ def populate_processes(
                     non_tech_add,
                     TIME_FORMAT_DICT.get(row["time_unit"].lower() if row["time_unit"] else "year"),
                 )
-                if p.time < 0:
-                    raise e.NegativeTimeException(row["id"])
             except Exception as exc:
                 logger.debug(f"{exc.__class__}, {exc}")
-                raise e.FormulaEvalException(row["id"])
+                raise e.FormulaEvalException(exc, row)
+            if p.time < 0:
+                raise e.NegativeTimeException(row)
             technical_processes.append(p)
         elif row["sub_name"] is not None:
             sub_name = f'{row["sub_name"]} ({row["iso_name"]})'
@@ -296,12 +290,11 @@ def populate_processes(
                     non_tech_add,
                     TIME_FORMAT_DICT.get(row["time_unit"].lower() if row["time_unit"] else "year"),
                 )
-
-                if p.time < 0:
-                    raise e.NegativeTimeException(row["id"])
             except Exception as exc:
                 logger.debug(f"{exc.__class__}, {exc}")
-                raise e.FormulaEvalException(row["id"])
+                raise e.FormulaEvalException(exc, row)
+            if p.time < 0:
+                raise e.NegativeTimeException(row)
             technical_processes.append(p)
         else:
             raise e.ProcessNotFoundException
@@ -511,7 +504,6 @@ def parse_if_statement(formula: str) -> str:
     if match:
         condition, true_value, false_value = match.groups()
         condition = condition.replace("=", "==")
-        logger.debug(f"Parsing if statement {condition}, {true_value}, {false_value}")
         if parser.evaluate(condition):
             value = true_value
         else:
@@ -592,22 +584,21 @@ def check_entity_rate(db_results, flow_process_name: str):
     return rate_check
 
 
-def check_sim_settings(settings: models.EditSimSettings) -> bool:
-    settings_check = True
-
+def check_sim_settings(settings: models.EditSimSettings) -> str:
+    settings_check_msg = ""
     if settings.end_time - settings.start_time <= 0:
-        settings_check = False
+        settings_check_msg += "End simulation is less than start simulation. \n"
 
     if settings.flow_time > settings.end_time - settings.start_time:
-        settings_check = False
+        settings_check_msg += "Flow time is longer than simulation time. \n"
 
     if settings.flow_start_time is not None and settings.flow_process is not None:
-        settings_check = False
+        settings_check_msg += "Cannot have flow start time on flow process. \n"
 
     if settings.flow_start_time is None and settings.flow_process is None:
-        settings_check = False
+        settings_check_msg += "Flow start time is not set. \n"
 
-    return settings_check
+    return settings_check_msg
 
 
 # Create DSM that only goes from one process to the other following the order of the index in the VCS

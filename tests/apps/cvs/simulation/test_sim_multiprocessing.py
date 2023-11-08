@@ -110,7 +110,7 @@ def test_run_mc_sim_end_time_before_start_time(client, std_headers, std_user):
 
     # Assert
     assert res.status_code == 400
-    assert res.json() == {'detail': 'Settings are not correct'}  # Should raise BadlyFormattedSettingsException
+    assert "Settings are not correct" in res.json()["detail"]
 
     # Cleanup
     tu.delete_design_group(project.id, design_group.id)
@@ -139,7 +139,7 @@ def test_run_mc_sim_no_flows(client, std_headers, std_user):
 
     # Assert
     assert res.status_code == 400
-    assert res.json() == {'detail': 'Settings are not correct'}  # Should raise BadlyFormattedSettingsException
+    assert "Settings are not correct" in res.json()["detail"]
 
     # Cleanup
     tu.delete_design_group(project.id, design_group.id)
@@ -168,7 +168,7 @@ def test_run_mc_sim_both_flows(client, std_headers, std_user):
 
     # Assert
     assert res.status_code == 400
-    assert res.json() == {'detail': 'Settings are not correct'}  # Should raise BadlyFormattedSettingsException
+    assert "Settings are not correct" in res.json()["detail"]
 
     # Cleanup
     tu.delete_design_group(project.id, design_group.id)
