@@ -487,20 +487,16 @@ def seed_simulation_settings(project_id: int, vcs_ids: List[int], design_ids: Li
     rows = [row.iso_process.name if row.iso_process is not None else row.subprocess.name for row in
             vcs_impl.get_vcs_table(
                 project_id, vcs_ids[0])]
-    print("Seed settings vcs rows", rows)
     for vcs_id in vcs_ids:
         new_rows = [row.iso_process.name if row.iso_process is not None else row.subprocess.name for row in
                     vcs_impl.get_vcs_table(
                         project_id, vcs_id)]
-        print("New rows", new_rows)
         rows = list(filter(lambda x: x in rows, new_rows))
-        print("Common elements", rows)
 
     time_unit = random_time_unit()
     interarrival_time = round(tu.random.uniform(1, 255), ndigits=5)
     start_time = round(tu.random.uniform(1, 300), ndigits=5)
     end_time = round(tu.random.uniform(300, 1000), ndigits=5)
-    print("Row len", len(rows))
     flow_process = rows[1]
     flow_start_time = None  # Get valid start time
     flow_time = round(tu.random.uniform(0, end_time - start_time), ndigits=5)
