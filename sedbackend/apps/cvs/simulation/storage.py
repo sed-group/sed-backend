@@ -11,6 +11,7 @@ from fastapi.logger import logger
 from desim import interface as des
 from desim.data import NonTechCost, TimeFormat
 from desim.simulation import Process
+from plusminus import BaseArithmeticParser
 
 from typing import List
 from sedbackend.apps.cvs.design.storage import get_all_designs
@@ -20,7 +21,6 @@ from mysqlsb import FetchType, MySQLStatementBuilder
 from sedbackend.apps.cvs.life_cycle.storage import get_dsm_from_file_id
 from sedbackend.apps.cvs.simulation.models import SimulationResult
 from sedbackend.apps.cvs.vcs.storage import get_vcss
-from sedbackend.libs.formula_parser.parser import NumericStringParser
 from sedbackend.libs.formula_parser import expressions as expr
 from sedbackend.apps.cvs.simulation import models
 import sedbackend.apps.cvs.simulation.exceptions as e
@@ -69,7 +69,6 @@ def run_simulation(
     settings_msg = check_sim_settings(sim_settings)
     if settings_msg:
         raise e.BadlyFormattedSettingsException(settings_msg)
-
     interarrival = sim_settings.interarrival_time
     flow_time = sim_settings.flow_time
     runtime = sim_settings.end_time - sim_settings.start_time
@@ -221,7 +220,7 @@ def populate_processes(
 ):
     if mi_values is None:
         mi_values = []
-    nsp = NumericStringParser()
+    parser = BaseArithmeticParser()
 
     technical_processes = []
     non_tech_processes = []
@@ -235,10 +234,10 @@ def populate_processes(
         if row["category"] != "Technical processes":
             try:
                 non_tech = models.NonTechnicalProcess(
-                    cost=nsp.eval(
+                    cost=parser.evaluate(
                         parse_formula(row["cost"], vd_values_row, mi_values, row)
                     ),
-                    revenue=nsp.eval(
+                    revenue=parser.evaluate(
                         parse_formula(row["revenue"], vd_values_row, mi_values, row)
                     ),
                     name=row["iso_name"],
@@ -250,7 +249,9 @@ def populate_processes(
 
         elif row["iso_name"] is not None and row["sub_name"] is None:
             try:
-                time = nsp.eval(parse_formula(row["time"], vd_values, mi_values, row))
+                time = parser.evaluate(
+                    parse_formula(row["time"], vd_values, mi_values, row)
+                )
                 cost_formula = parse_formula(row["cost"], vd_values, mi_values, row)
                 revenue_formula = parse_formula(
                     row["revenue"], vd_values, mi_values, row
@@ -258,11 +259,11 @@ def populate_processes(
                 p = Process(
                     row["id"],
                     time,
-                    nsp.eval(expr.replace_all("time", time, cost_formula)),
-                    nsp.eval(expr.replace_all("time", time, revenue_formula)),
+                    parser.evaluate(expr.replace_all("time", time, cost_formula)),
+                    parser.evaluate(expr.replace_all("time", time, revenue_formula)),
                     row["iso_name"],
                     non_tech_add,
-                    TIME_FORMAT_DICT.get(row["time_unit"].lower()),
+                    TIME_FORMAT_DICT.get(row["time_unit"].lower() if row["time_unit"] else "year"),
                 )
             except Exception as exc:
                 logger.debug(f"{exc.__class__}, {exc}")
@@ -273,7 +274,9 @@ def populate_processes(
         elif row["sub_name"] is not None:
             sub_name = f'{row["sub_name"]} ({row["iso_name"]})'
             try:
-                time = nsp.eval(parse_formula(row["time"], vd_values, mi_values, row))
+                time = parser.evaluate(
+                    parse_formula(row["time"], vd_values, mi_values, row)
+                )
                 cost_formula = parse_formula(row["cost"], vd_values, mi_values, row)
                 revenue_formula = parse_formula(
                     row["revenue"], vd_values, mi_values, row
@@ -281,11 +284,11 @@ def populate_processes(
                 p = Process(
                     row["id"],
                     time,
-                    nsp.eval(expr.replace_all("time", time, cost_formula)),
-                    nsp.eval(expr.replace_all("time", time, revenue_formula)),
+                    parser.evaluate(expr.replace_all("time", time, cost_formula)),
+                    parser.evaluate(expr.replace_all("time", time, revenue_formula)),
                     sub_name,
                     non_tech_add,
-                    TIME_FORMAT_DICT.get(row["time_unit"].lower()),
+                    TIME_FORMAT_DICT.get(row["time_unit"].lower() if row["time_unit"] else "year"),
                 )
             except Exception as exc:
                 logger.debug(f"{exc.__class__}, {exc}")
@@ -299,41 +302,26 @@ def populate_processes(
     return technical_processes, non_tech_processes
 
 
-def get_sim_data(
-    db_connection: PooledMySQLConnection, vcs_id: int, design_group_id: int
-):
-    query = f"SELECT cvs_vcs_rows.id, cvs_vcs_rows.iso_process, cvs_iso_processes.name as iso_name, category, \
-            subprocess, cvs_subprocesses.name as sub_name, time, time_unit, cost, revenue, rate FROM cvs_vcs_rows \
-            LEFT OUTER JOIN cvs_subprocesses ON cvs_vcs_rows.subprocess = cvs_subprocesses.id \
-            LEFT OUTER JOIN cvs_iso_processes ON cvs_vcs_rows.iso_process = cvs_iso_processes.id \
-                OR cvs_subprocesses.iso_process = cvs_iso_processes.id \
-            LEFT OUTER JOIN cvs_design_mi_formulas ON cvs_vcs_rows.id = cvs_design_mi_formulas.vcs_row \
-            WHERE cvs_vcs_rows.vcs = %s AND cvs_design_mi_formulas.design_group = %s ORDER BY `index`"
-    with db_connection.cursor(prepared=True) as cursor:
-        cursor.execute(query, [vcs_id, design_group_id])
-        res = cursor.fetchall()
-        res = [dict(zip(cursor.column_names, row)) for row in res]
-    return res
-
-
 def get_all_sim_data(
     db_connection: PooledMySQLConnection,
     vcs_ids: List[int],
     design_group_ids: List[int],
 ):
     try:
-        query = f'SELECT cvs_vcs_rows.id, cvs_vcs_rows.vcs, cvs_design_mi_formulas.design_group, \
+        query = f'SELECT cvs_vcs_rows.id, cvs_vcs_rows.vcs, cvs_design_groups.id as design_group, \
                     cvs_vcs_rows.iso_process, cvs_iso_processes.name as iso_name, category, \
                     subprocess, cvs_subprocesses.name as sub_name, time, time_unit, cost, revenue, rate FROM cvs_vcs_rows \
+                    LEFT JOIN cvs_design_groups ON cvs_design_groups.id IN ({",".join(["%s" for _ in range(len(design_group_ids))])}) \
                     LEFT OUTER JOIN cvs_subprocesses ON cvs_vcs_rows.subprocess = cvs_subprocesses.id \
                     LEFT OUTER JOIN cvs_iso_processes ON cvs_vcs_rows.iso_process = cvs_iso_processes.id \
                         OR cvs_subprocesses.iso_process = cvs_iso_processes.id \
-                    LEFT OUTER JOIN cvs_design_mi_formulas ON cvs_vcs_rows.id = cvs_design_mi_formulas.vcs_row \
+                    LEFT JOIN cvs_design_mi_formulas ON cvs_vcs_rows.id = cvs_design_mi_formulas.vcs_row \
+                        AND cvs_design_mi_formulas.design_group \
+                        IN ({",".join(["%s" for _ in range(len(design_group_ids))])}) \
                     WHERE cvs_vcs_rows.vcs IN ({",".join(["%s" for _ in range(len(vcs_ids))])}) \
-                    AND cvs_design_mi_formulas.design_group \
-                    IN ({",".join(["%s" for _ in range(len(design_group_ids))])}) ORDER BY `index`'
+                    ORDER BY `index`'
         with db_connection.cursor(prepared=True) as cursor:
-            cursor.execute(query, vcs_ids + design_group_ids)
+            cursor.execute(query, design_group_ids + design_group_ids + vcs_ids)
             res = cursor.fetchall()
             res = [dict(zip(cursor.column_names, row)) for row in res]
     except Error as error:
@@ -511,11 +499,12 @@ def parse_if_statement(formula: str) -> str:
     # The pattern is if(condition, true_value, false_value)
     pattern = r"if\(([^,]+),([^,]+),([^,]+)\)"
     match = re.search(pattern, formula)
+    parser = BaseArithmeticParser()
 
     if match:
         condition, true_value, false_value = match.groups()
         condition = condition.replace("=", "==")
-        if eval(condition):
+        if parser.evaluate(condition):
             value = true_value
         else:
             value = false_value
@@ -526,6 +515,8 @@ def parse_if_statement(formula: str) -> str:
 
 
 def parse_formula(formula: str, vd_values, ef_values, formula_row: dict = None) -> str:
+    if not formula:
+        return "0"
     pattern = r'\{(?P<tag>vd|ef|process):(?P<value>[a-zA-Z0-9_]+),"([^"]+)"\}'
 
     formula = add_multiplication_signs(formula)
@@ -536,12 +527,22 @@ def parse_formula(formula: str, vd_values, ef_values, formula_row: dict = None) 
             id_number = int(value)
             for vd in vd_values:
                 if vd["id"] == id_number:
-                    return str(vd["value"])
+                    vd_value = str(vd["value"])
+                    return (
+                        vd_value
+                        if vd_value.replace(".", "").isnumeric()
+                        else '"' + vd_value + '"'
+                    )
         elif tag == "ef":
             for ef in ef_values:
                 id_number = int(value)
                 if ef["market_input"] == id_number:
-                    return str(ef["value"])
+                    ef_value = str(ef["value"])
+                    return (
+                        ef_value
+                        if ef_value.replace(".", "").isnumeric()
+                        else '"' + ef_value + '"'
+                    )
         elif formula_row and tag == "process":
             return f"({formula_row[value.lower()]})"
 
@@ -576,7 +577,6 @@ def check_entity_rate(db_results, flow_process_name: str):
                     db_results[j]["rate"] == "per_project"
                     and db_results[j]["category"] == "Technical processes"
                 ):
-                    print("Rate check false")
                     rate_check = False
                     break
             break

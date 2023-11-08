@@ -298,3 +298,37 @@ def test_run_sim_invalid_proj(client, std_headers, std_user):
     tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)
+
+
+def test_run_single_simulation_no_values(client, std_headers, std_user):
+    # Setup
+
+    current_user = impl_users.impl_get_user_with_username(std_user.username)
+    project = tu.seed_random_project(current_user.id)
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
+    tu.seed_vcs_table_rows(current_user.id, project.id, vcs.id, 10)
+    design_group = tu.seed_random_design_group(project.id)
+    designs = tu.seed_random_designs(project.id, design_group.id, 1)
+    settings = tu.seed_simulation_settings(project.id, [vcs.id], [designs[0].id])
+    settings.monte_carlo = False
+
+    # Act
+    res = client.post(
+        f"/api/cvs/project/{project.id}/simulation/run",
+        headers=std_headers,
+        json={
+            "sim_settings": settings.dict(),
+            "vcs_ids": [vcs.id],
+            "design_group_ids": [design_group.id],
+        },
+    )
+    print(res.json())
+
+    # Assert
+    assert res.status_code == 200
+    assert res.json()["runs"][0]["max_NPVs"][-1] == 0
+
+    # Cleanup
+    tu.delete_design_group(project.id, design_group.id)
+    tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
+    tu.delete_project_by_id(project.id, current_user.id)
