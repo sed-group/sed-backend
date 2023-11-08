@@ -30,7 +30,7 @@ class DesignGroupPost(BaseModel):
 
 class ValueDriverDesignValue(BaseModel):
     vd_id: int
-    value: float
+    value: str
 
     def __eq__(self, other: Any) -> bool:
         return self.vd_id == other.vd_id
