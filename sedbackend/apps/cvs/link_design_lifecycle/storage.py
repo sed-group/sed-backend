@@ -500,14 +500,14 @@ def populate_formula(db_result) -> models.FormulaRowGet:
         vcs_row_id=db_result['vcs_row'],
         design_group_id=db_result['design_group'],
         time=models.Formula(
-            text=db_result['time'], latex=db_result['time_latex'], comment=db_result['time_comment']
+            text=db_result['time'] or '', latex=db_result['time_latex'] or '', comment=db_result['time_comment']
         ),
         time_unit=db_result['time_unit'],
         cost=models.Formula(
-            text=db_result['cost'], latex=db_result['cost_latex'], comment=db_result['cost_comment']
+            text=db_result['cost'] or '', latex=db_result['cost_latex'] or '', comment=db_result['cost_comment']
         ),
         revenue=models.Formula(
-            text=db_result['revenue'], latex=db_result['revenue_latex'], comment=db_result['revenue_comment']
+            text=db_result['revenue'] or '', latex=db_result['revenue_latex'] or '', comment=db_result['revenue_comment']
         ),
         rate=db_result['rate'],
         row_value_drivers=[
