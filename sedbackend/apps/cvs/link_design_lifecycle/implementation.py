@@ -68,11 +68,6 @@ def get_all_formulas(project_id: int, vcs_id: int, design_group_id: int) -> List
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f'Could not find VCS with id {vcs_id}'
             )
-        except exceptions.WrongTimeUnitException as e:  # Where exactly does this fire????
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f'Wrong time unit. Given unit: {e.time_unit}'
-            )
         except project_exceptions.CVSProjectNotFoundException:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

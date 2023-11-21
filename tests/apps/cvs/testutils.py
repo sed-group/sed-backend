@@ -422,10 +422,10 @@ def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, use
 
         formula_post = connect_model.FormulaRowPost(
             vcs_row_id=vcs_row.id,
-            time=connect_model.Formula(formula=time, comment=""),
+            time=connect_model.Formula(text=time, latex=time, comment=""),
             time_unit=time_unit,
-            cost=connect_model.Formula(formula=cost, comment=""),
-            revenue=connect_model.Formula(formula=revenue, comment=""),
+            cost=connect_model.Formula(text=cost, latex=cost, comment=""),
+            revenue=connect_model.Formula(text=revenue, latex=revenue, comment=""),
             rate=rate
         )
 

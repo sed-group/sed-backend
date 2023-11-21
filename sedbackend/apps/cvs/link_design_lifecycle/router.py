@@ -18,8 +18,7 @@ router = APIRouter()
     response_model=List[models.FormulaRowGet],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
-async def get_all_formulas(native_project_id: int, vcs_id: int, dg_id: int,
-                           user: User = Depends(get_current_active_user)) -> List[models.FormulaRowGet]:
+async def get_all_formulas(native_project_id: int, vcs_id: int, dg_id: int) -> List[models.FormulaRowGet]:
     return implementation.get_all_formulas(native_project_id, vcs_id, dg_id)
 
 
