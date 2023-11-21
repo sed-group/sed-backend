@@ -26,7 +26,8 @@ class Rate(Enum):
 
 
 class Formula(BaseModel):
-    formula: str
+    text: str
+    latex: str
     comment: Optional[str] = None
 
 
