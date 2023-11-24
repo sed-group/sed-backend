@@ -1,32 +1,48 @@
 import re
 import sys
 from math import isnan
+import csv
+
+import requests
+
+import io
+import magic
+import os
+import tempfile
+from datetime import datetime
+from plusminus import BaseArithmeticParser
 
 from mysql.connector.pooling import PooledMySQLConnection
 import pandas as pd
+import numpy as np
 from mysql.connector import Error
 
 from fastapi.logger import logger
+from fastapi import UploadFile
 
 from desim import interface as des
 from desim.data import NonTechCost, TimeFormat
 from desim.simulation import Process
-from plusminus import BaseArithmeticParser
 
 from typing import List
 from sedbackend.apps.cvs.design.storage import get_all_designs
 
 from mysqlsb import FetchType, MySQLStatementBuilder
 
-from sedbackend.apps.cvs.life_cycle.storage import get_dsm_from_file_id
+from sedbackend.apps.cvs.project.router import CVS_APP_SID
 from sedbackend.apps.cvs.simulation.models import SimulationResult
+from sedbackend.apps.cvs.life_cycle.storage import get_dsm_from_file_id
 from sedbackend.apps.cvs.vcs.storage import get_vcss
 from sedbackend.libs.formula_parser import expressions as expr
 from sedbackend.apps.cvs.simulation import models
 import sedbackend.apps.cvs.simulation.exceptions as e
 from sedbackend.apps.cvs.vcs import storage as vcs_storage
-from sedbackend.apps.cvs.life_cycle import storage as life_cycle_storage
-from sedbackend.apps.core.files import exceptions as file_exceptions
+from sedbackend.apps.cvs.life_cycle import exceptions as life_cycle_exceptions, storage as life_cycle_storage
+from sedbackend.apps.core.files import models as file_models, storage as file_storage, exceptions as file_exceptions
+from sedbackend.apps.core.projects import storage as core_project_storage
+from sedbackend.apps.core.files import models as file_models, storage as file_storage, exceptions as file_ex
+from sedbackend.apps.core.files.models import StoredFilePath
+
 
 SIM_SETTINGS_TABLE = "cvs_simulation_settings"
 SIM_SETTINGS_COLUMNS = [
@@ -54,6 +70,103 @@ TIME_FORMAT_DICT = dict(
         "minutes": TimeFormat.MINUTES,
     }
 )
+MAX_FILE_SIZE = 100 * 10 ** 6  # 100MB
+
+SIM_SETTINGS_TABLE = "cvs_simulation_settings"
+SIM_SETTINGS_COLUMNS = ['project', 'time_unit', 'flow_process', 'flow_start_time', 'flow_time',
+                        'interarrival_time', 'start_time', 'end_time', 'discount_rate', 'non_tech_add', 'monte_carlo',
+                        'runs']
+
+CVS_SIMULATION_FILES_TABLE = 'cvs_simulation_files'
+CVS_SIMULATION_FILES_COLUMNSS = ['project_id', 'file']
+CVS_SIMULATION_FILES_COLUMNS = ['project_id', 'file', 'insert_timestamp']
+
+def csv_from_dataframe(dataframe) -> UploadFile:
+    dataframe = pd.DataFrame(dataframe)
+    fd, path = tempfile.mkstemp()
+    try:
+        with open(path, "w+") as csv_file:
+            dataframe.to_json(csv_file,orient='columns')
+    finally:
+        csv_file = open(path, "r+b")
+        upload_file = UploadFile(filename=csv_file.name + ".json", file=csv_file)
+        os.close(fd)
+        os.remove(path)
+
+    return upload_file
+
+def save_simulation(db_connection: PooledMySQLConnection, project_id: int, simulation: SimulationResult,user_id: int) -> bool:
+    upload_file = csv_from_dataframe(simulation)
+    logger.debug(f'upload_files: {upload_file.read}')
+    return save_simulation_file(db_connection, project_id, upload_file, user_id)
+
+def save_simulation_file(db_connection: PooledMySQLConnection, project_id: int,
+                   file: UploadFile, user_id) -> bool:
+    subproject = core_project_storage.db_get_subproject_native(db_connection, CVS_APP_SID, project_id)
+    model_file = file_models.StoredFilePost.import_fastapi_file(file, user_id, subproject.id)
+    
+    with model_file.file_object as f:
+        f.seek(0)
+        tmp_file = f.read()
+        mime = magic.from_buffer(tmp_file)
+        logger.debug(f'Mime: {mime}')
+        if mime != "JSON data" and "ASCII text" not in mime:
+            raise life_cycle_exceptions.InvalidFileTypeException
+        f.seek(0)
+        csv_file = pd.read_json(f)
+        logger.debug(f'File content: {model_file}')
+        f.seek(0)
+        stored_file = file_storage.db_save_file(db_connection, model_file)
+        
+    insert_statement = MySQLStatementBuilder(db_connection)
+    insert_statement.insert(CVS_SIMULATION_FILES_TABLE, CVS_SIMULATION_FILES_COLUMNSS) \
+        .set_values([project_id, stored_file.id]) \
+        .execute(fetch_type=FetchType.FETCH_NONE)
+    return True
+
+def get_simulation_files(db_connection: PooledMySQLConnection, project_id: int):
+    select_statement = MySQLStatementBuilder(db_connection)
+    file_res = select_statement.select(CVS_SIMULATION_FILES_TABLE, CVS_SIMULATION_FILES_COLUMNS) \
+        .where('project_id = %s', [project_id]) \
+        .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+    return file_res
+
+def get_simulation_file_path(db_connection: PooledMySQLConnection, file_id, user_id) -> StoredFilePath:
+    return file_storage.db_get_file_path(db_connection, file_id, user_id)
+
+
+
+def delete_simulation_file(db_connection: PooledMySQLConnection, project_id: int, file_id, user_id: int) -> bool:
+    if file_id is None:
+         file_storage.db_delete_file(db_connection, file_id, user_id)
+
+    delete_statement = MySQLStatementBuilder(db_connection)
+    _, rows = delete_statement.delete(CVS_SIMULATION_FILES_TABLE) \
+        .where('file = %s', [file_id] ) \
+        .execute(return_affected_rows=True)
+    return True
+
+
+def delete_all_simulation_files(db_connection: PooledMySQLConnection, project_id: int, user_id: int) -> bool:
+    files = get_simulation_files(db_connection, project_id)
+
+    for file in files:
+        file_storage.db_delete_file(db_connection, file['file'],user_id)
+
+    delete_statement = MySQLStatementBuilder(db_connection)
+    _, rows = delete_statement.delete(CVS_SIMULATION_FILES_TABLE) \
+        .where('project_id = %s', [project_id]) \
+        .execute(return_affected_rows=True)
+    return True
+
+
+def get_file_content(db_connection: PooledMySQLConnection, user_id, file_id) -> SimulationResult:
+    path = get_simulation_file_path(db_connection, file_id, user_id).path
+    with open(path, newline='') as f:
+        data = pd.read_json(f, orient='columns')
+        designs, vcss, vds, run = data[1]
+
+    return SimulationResult(designs = designs, vcss = vcss,vds = vds,runs = run)
 
 
 def run_simulation(
@@ -211,8 +324,9 @@ def run_simulation(
                 )
 
                 sim_result.runs.append(sim_run_res)
-    logger.debug("Returning the results")
+    save_simulation(db_connection, project_id,sim_result, user_id)
     return sim_result
+    
 
 
 def populate_processes(

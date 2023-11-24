@@ -8,6 +8,7 @@ from sedbackend.apps.core.users.models import User
 from sedbackend.apps.cvs.simulation import implementation, models
 from sedbackend.apps.cvs.simulation.models import SimulationResult
 
+
 router = APIRouter()
 
 
@@ -66,6 +67,25 @@ async def get_sim_settings(native_project_id: int) -> models.SimSettings:
     return implementation.get_sim_settings(native_project_id)
 
 
+@router.get(
+    '/project/{native_project_id}/simulation/all/',
+    summary='Get simulations for project',
+    response_model=List[models.SimulationFetch],
+    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
+)
+async def get_simulations(native_project_id: int) -> List[models.SimulationFetch]:
+    return implementation.get_simulations(native_project_id)
+
+
+@router.delete(
+    '/project/{native_project_id}/simulation/all/',
+    summary='Remove all simulation files',
+    response_model= bool,
+    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
+)
+async def remove_simulation_files(native_project_id: int, user: User = Depends(get_current_active_user)) -> bool:
+    return implementation.remove_simulation_files(native_project_id, user.id)
+
 @router.put(
     '/project/{native_project_id}/simulation/settings',
     summary='Create or update simulation settings',
@@ -75,3 +95,21 @@ async def get_sim_settings(native_project_id: int) -> models.SimSettings:
 async def put_sim_settings(native_project_id: int, sim_settings: models.EditSimSettings,
                            user: User = Depends(get_current_active_user)) -> bool:
     return implementation.edit_sim_settings(native_project_id, sim_settings, user.id)
+
+@router.get(
+   '/project/{native_project_id}/simulation/file/{file_id}',
+    summary='Get simulation file',
+    response_model=models.SimulationResult,
+    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
+)
+async def get_simulation_file_content(native_project_id,file_id: int, user: User = Depends(get_current_active_user)) -> models.SimulationResult:
+    return implementation.get_simulation_file_content(user.id, file_id)
+
+@router.delete(
+   '/project/{native_project_id}/simulation/file/{file_id}',
+    summary='Remove simulation file',
+    response_model=bool,
+    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
+)
+async def get_simulation_file_content(native_project_id,file_id: int, user: User = Depends(get_current_active_user)) -> bool:
+    return implementation.remove_simulation_file(native_project_id, user.id, file_id)

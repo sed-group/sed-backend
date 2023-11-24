@@ -27,7 +27,7 @@ from sedbackend.apps.cvs.simulation.exceptions import (
     CouldNotFetchValueDriverDesignValuesException,
     NoTechnicalProcessException,
 )
-from sedbackend.apps.cvs.simulation.models import SimulationResult
+from sedbackend.apps.cvs.simulation.models import SimulationResult,SimulationFetch
 
 from sedbackend.apps.cvs.vcs import exceptions as vcs_exceptions
 from sedbackend.apps.cvs.market_input import exceptions as market_input_exceptions
@@ -55,6 +55,7 @@ def run_simulation(
                 normalized_npv,
                 is_multiprocessing,
             )
+            con.commit()
             return result
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
@@ -129,11 +130,6 @@ def run_simulation(
     except file_ex.FileNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Could not find DSM file"
-        )
-    except FailedToFetchSimulationDataException:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Could not fetch simulation data. Check your VCSs and Design Groups.",
         )
     except SimulationFailedException as e:
         raise HTTPException(
@@ -224,6 +220,86 @@ def get_sim_settings(project_id: int) -> models.SimSettings:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Could not send simulation settings",
         )
+        
+def get_simulations(project_id: int) -> List[models.SimulationFetch]:
+    try:
+        with get_connection() as con:
+            result = storage.get_simulation_files(con, project_id)
+            return result
+    except project_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Could not find project"
+        )
+    except Exception as e:
+        logger.debug(e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not send simulations",
+        )
+        
+        
+def remove_simulation_files(project_id: int, user_id: int) -> bool:
+    try:
+        with get_connection() as con:
+            result = storage.delete_all_simulation_files(con, project_id, user_id)
+            con.commit()
+            return result
+    except project_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Could not find project"
+        )
+    except Exception as e:
+        logger.debug(e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not send simulations",
+        )
+        
+        
+        
+def get_simulation_file_content(user_id: int, file_id) -> SimulationResult:
+    try:
+        with get_connection() as con:
+            result = storage.get_file_content(con, user_id, file_id)
+            if result is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Could not find simulation file",
+                )
+            logger.debug('Successfully retrieved simulation file content')
+            logger.debug(result)
+            return result
+    except project_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Could not find project"
+        )
+    except Exception as e:
+        logger.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not retrieve simulation file content",
+        )
+        
+        
+        
+def remove_simulation_file(project_id: int, user_id, file_id) -> bool:
+    try:
+        with get_connection() as con:
+            result = storage.delete_simulation_file(con, project_id, file_id,user_id)
+            con.commit()
+            return result
+    except project_exceptions.CVSProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Could not find project"
+        )
+    except Exception as e:
+        logger.debug(e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not send simulations",
+        )
+
 
 
 def edit_sim_settings(

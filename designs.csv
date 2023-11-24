@@ -1,0 +1,4 @@
+id,name,design_group_id,vd_design_values
+1,(2G) HUD,7,"[{'vd_id': 2, 'value': '1.144'}, {'vd_id': 3, 'value': '15'}, {'vd_id': 4, 'value': '0'}, {'vd_id': 5, 'value': '2.08'}, {'vd_id': 6, 'value': '0'}]"
+2,(2G) AR HUD,7,"[{'vd_id': 2, 'value': '0.91'}, {'vd_id': 3, 'value': '20'}, {'vd_id': 4, 'value': '15'}, {'vd_id': 5, 'value': '2.15'}, {'vd_id': 6, 'value': '0'}]"
+3,(3G) Holographic Wave Guice AR-HUD,7,"[{'vd_id': 2, 'value': '0.45'}, {'vd_id': 3, 'value': '30'}, {'vd_id': 4, 'value': '4'}, {'vd_id': 5, 'value': '2.35'}, {'vd_id': 6, 'value': '0'}]"
