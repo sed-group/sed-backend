@@ -75,7 +75,7 @@ class SimSettings(EditSimSettings):
 class SimulationFetch(BaseModel):
     project_id: int
     file: int
-    insert_timestamp: datetime.datetime
+    insert_timestamp: str
 
     
 

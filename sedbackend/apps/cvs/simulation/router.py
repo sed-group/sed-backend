@@ -15,12 +15,12 @@ router = APIRouter()
 @router.post(
     '/project/{native_project_id}/simulation/run',
     summary='Run simulation',
-    response_model=models.SimulationResult,
+    response_model=models.SimulationFetch,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
 async def run_simulation(sim_settings: models.EditSimSettings, native_project_id: int, vcs_ids: List[int],
                          design_group_ids: List[int], normalized_npv: Optional[bool] = False,
-                         user: User = Depends(get_current_active_user)) -> SimulationResult:
+                         user: User = Depends(get_current_active_user)) -> models.SimulationFetch:
     return implementation.run_simulation(sim_settings, native_project_id, vcs_ids, design_group_ids, user.id,
                                          normalized_npv)
 
@@ -47,12 +47,12 @@ async def run_dsm_file_simulation(native_project_id: int, sim_params: models.Fil
 @router.post(
     '/project/{native_project_id}/simulation/run-multiprocessing',
     summary='Run monte carlo simulation with multiprocessing',
-    response_model=models.SimulationResult,
+    response_model=models.SimulationFetch,
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
 )
 async def run_multiprocessing(sim_settings: models.EditSimSettings, native_project_id: int, vcs_ids: List[int],
                               design_group_ids: List[int], normalized_npv: Optional[bool] = False,
-                              user: User = Depends(get_current_active_user)) -> SimulationResult:
+                              user: User = Depends(get_current_active_user)) -> models.SimulationFetch:
     return implementation.run_simulation(sim_settings, native_project_id, vcs_ids, design_group_ids, user.id,
                                          normalized_npv, True)
 
@@ -68,7 +68,7 @@ async def get_sim_settings(native_project_id: int) -> models.SimSettings:
 
 
 @router.get(
-    '/project/{native_project_id}/simulation/all/',
+    '/project/{native_project_id}/simulation/all',
     summary='Get simulations for project',
     response_model=List[models.SimulationFetch],
     dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
@@ -77,12 +77,12 @@ async def get_simulations(native_project_id: int) -> List[models.SimulationFetch
     return implementation.get_simulations(native_project_id)
 
 
-@router.delete(
-    '/project/{native_project_id}/simulation/all/',
-    summary='Remove all simulation files',
-    response_model= bool,
-    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
-)
+#@router.delete(
+ #   '/project/{native_project_id}/simulation/all',
+  #  summary='Remove all simulation files',
+   # response_model= bool,
+    #dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
+#)
 async def remove_simulation_files(native_project_id: int, user: User = Depends(get_current_active_user)) -> bool:
     return implementation.remove_simulation_files(native_project_id, user.id)
 

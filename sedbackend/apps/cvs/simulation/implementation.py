@@ -42,7 +42,7 @@ def run_simulation(
     user_id: int,
     normalized_npv: bool = False,
     is_multiprocessing: bool = False,
-) -> SimulationResult:
+) -> models.SimulationFetch:
     try:
         with get_connection() as con:
             result = storage.run_simulation(

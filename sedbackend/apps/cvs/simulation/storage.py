@@ -27,7 +27,7 @@ from desim.simulation import Process
 from typing import List
 from sedbackend.apps.cvs.design.storage import get_all_designs
 
-from mysqlsb import FetchType, MySQLStatementBuilder
+from mysqlsb import FetchType, MySQLStatementBuilder,Sort
 
 from sedbackend.apps.cvs.project.router import CVS_APP_SID
 from sedbackend.apps.cvs.simulation.models import SimulationResult
@@ -124,16 +124,19 @@ def save_simulation_file(db_connection: PooledMySQLConnection, project_id: int,
         .execute(fetch_type=FetchType.FETCH_NONE)
     return True
 
-def get_simulation_files(db_connection: PooledMySQLConnection, project_id: int):
+def get_simulation_files(db_connection: PooledMySQLConnection, project_id: int) -> [models.SimulationFetch]:
     select_statement = MySQLStatementBuilder(db_connection)
     file_res = select_statement.select(CVS_SIMULATION_FILES_TABLE, CVS_SIMULATION_FILES_COLUMNS) \
         .where('project_id = %s', [project_id]) \
+        .order_by(['file'], Sort.DESCENDING) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+    for row in file_res:
+        row['insert_timestamp'] = str(row['insert_timestamp'])
+        logger.debug(row['insert_timestamp'])
     return file_res
 
 def get_simulation_file_path(db_connection: PooledMySQLConnection, file_id, user_id) -> StoredFilePath:
     return file_storage.db_get_file_path(db_connection, file_id, user_id)
-
 
 
 def delete_simulation_file(db_connection: PooledMySQLConnection, project_id: int, file_id, user_id: int) -> bool:
@@ -169,6 +172,18 @@ def get_file_content(db_connection: PooledMySQLConnection, user_id, file_id) -> 
     return SimulationResult(designs = designs, vcss = vcss,vds = vds,runs = run)
 
 
+def get_simulation_content_with_max_file_id(db_connection: PooledMySQLConnection, project_id: int) -> models.SimulationFetch:
+    select_statement = MySQLStatementBuilder(db_connection)
+    max_file_id_subquery = select_statement.select(CVS_SIMULATION_FILES_TABLE, CVS_SIMULATION_FILES_COLUMNS) \
+        .where('project_id = %s', [project_id]) \
+        .order_by(['file'], Sort.DESCENDING) \
+        .limit(1) \
+        .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+
+    return max_file_id_subquery
+
+
+
 def run_simulation(
     db_connection: PooledMySQLConnection,
     sim_settings: models.EditSimSettings,
@@ -178,7 +193,7 @@ def run_simulation(
     user_id,
     normalized_npv: bool = False,
     is_multiprocessing: bool = False,
-) -> SimulationResult:
+) -> models.SimulationFetch:
     settings_msg = check_sim_settings(sim_settings)
     if settings_msg:
         raise e.BadlyFormattedSettingsException(settings_msg)
@@ -325,7 +340,10 @@ def run_simulation(
 
                 sim_result.runs.append(sim_run_res)
     save_simulation(db_connection, project_id,sim_result, user_id)
-    return sim_result
+    sim_file_info = get_simulation_content_with_max_file_id(db_connection, project_id)
+
+
+    return sim_file_info
     
 
 
