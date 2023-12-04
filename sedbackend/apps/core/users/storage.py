@@ -199,7 +199,7 @@ def db_search_users(connection: PooledMySQLConnection, username_search_str: str,
     if len(username_search_str) == 0:
         username_search_str = "."
     if len(full_name_search_str) == 0:
-        full_name_search_stmnt = '(`full_name` rlike ? OR `full_name` IS NULL)'
+        full_name_search_stmnt = '(`full_name` rlike ? OR `full_name` IS NULL OR `full_name` = "")'
         full_name_search_str = "."
 
     stmnt = MySQLStatementBuilder(connection)
