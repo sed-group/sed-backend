@@ -76,6 +76,7 @@ class SimulationFetch(BaseModel):
     project_id: int
     file: int
     insert_timestamp: str
+    vs_x_ds: str
 
     
 

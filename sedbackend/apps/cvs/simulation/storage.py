@@ -78,8 +78,8 @@ SIM_SETTINGS_COLUMNS = ['project', 'time_unit', 'flow_process', 'flow_start_time
                         'runs']
 
 CVS_SIMULATION_FILES_TABLE = 'cvs_simulation_files'
-CVS_SIMULATION_FILES_COLUMNSS = ['project_id', 'file']
-CVS_SIMULATION_FILES_COLUMNS = ['project_id', 'file', 'insert_timestamp']
+CVS_SIMULATION_FILES_COLUMNSS = ['project_id', 'file','vs_x_ds']
+CVS_SIMULATION_FILES_COLUMNS = ['project_id', 'file', 'insert_timestamp', 'vs_x_ds']
 
 def csv_from_dataframe(dataframe) -> UploadFile:
     dataframe = pd.DataFrame(dataframe)
@@ -95,13 +95,13 @@ def csv_from_dataframe(dataframe) -> UploadFile:
 
     return upload_file
 
-def save_simulation(db_connection: PooledMySQLConnection, project_id: int, simulation: SimulationResult,user_id: int) -> bool:
+def save_simulation(db_connection: PooledMySQLConnection, project_id: int, simulation: SimulationResult,user_id: int, vs_x_ds: str) -> bool:
     upload_file = csv_from_dataframe(simulation)
     logger.debug(f'upload_files: {upload_file.read}')
-    return save_simulation_file(db_connection, project_id, upload_file, user_id)
+    return save_simulation_file(db_connection, project_id, upload_file, user_id, vs_x_ds)
 
 def save_simulation_file(db_connection: PooledMySQLConnection, project_id: int,
-                   file: UploadFile, user_id) -> bool:
+                   file: UploadFile, user_id, vs_x_ds: str) -> bool:
     subproject = core_project_storage.db_get_subproject_native(db_connection, CVS_APP_SID, project_id)
     model_file = file_models.StoredFilePost.import_fastapi_file(file, user_id, subproject.id)
     
@@ -120,18 +120,20 @@ def save_simulation_file(db_connection: PooledMySQLConnection, project_id: int,
         
     insert_statement = MySQLStatementBuilder(db_connection)
     insert_statement.insert(CVS_SIMULATION_FILES_TABLE, CVS_SIMULATION_FILES_COLUMNSS) \
-        .set_values([project_id, stored_file.id]) \
+        .set_values([project_id, stored_file.id, vs_x_ds]) \
         .execute(fetch_type=FetchType.FETCH_NONE)
     return True
 
-def get_simulation_files(db_connection: PooledMySQLConnection, project_id: int) -> [models.SimulationFetch]:
+def get_simulation_files(db_connection: PooledMySQLConnection, project_id: int) -> List[models.SimulationFetch]:
     select_statement = MySQLStatementBuilder(db_connection)
     file_res = select_statement.select(CVS_SIMULATION_FILES_TABLE, CVS_SIMULATION_FILES_COLUMNS) \
         .where('project_id = %s', [project_id]) \
         .order_by(['file'], Sort.DESCENDING) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
     for row in file_res:
-        row['insert_timestamp'] = str(row['insert_timestamp'])
+        logger.debug(type( row['insert_timestamp']))
+        row['insert_timestamp'] =  row['insert_timestamp'].strftime("%Y-%m-%d")
+        logger.debug(type( row['insert_timestamp']))
         logger.debug(row['insert_timestamp'])
     return file_res
 
@@ -152,14 +154,8 @@ def delete_simulation_file(db_connection: PooledMySQLConnection, project_id: int
 
 def delete_all_simulation_files(db_connection: PooledMySQLConnection, project_id: int, user_id: int) -> bool:
     files = get_simulation_files(db_connection, project_id)
-
     for file in files:
         file_storage.db_delete_file(db_connection, file['file'],user_id)
-
-    delete_statement = MySQLStatementBuilder(db_connection)
-    _, rows = delete_statement.delete(CVS_SIMULATION_FILES_TABLE) \
-        .where('project_id = %s', [project_id]) \
-        .execute(return_affected_rows=True)
     return True
 
 
@@ -179,6 +175,8 @@ def get_simulation_content_with_max_file_id(db_connection: PooledMySQLConnection
         .order_by(['file'], Sort.DESCENDING) \
         .limit(1) \
         .execute(fetch_type=FetchType.FETCH_ONE, dictionary=True)
+        
+    max_file_id_subquery['insert_timestamp'] =   max_file_id_subquery['insert_timestamp'].strftime("%Y-%m-%d")
 
     return max_file_id_subquery
 
@@ -339,10 +337,11 @@ def run_simulation(
                 )
 
                 sim_result.runs.append(sim_run_res)
-    save_simulation(db_connection, project_id,sim_result, user_id)
-    sim_file_info = get_simulation_content_with_max_file_id(db_connection, project_id)
-
-
+    vs_x_ds = str(len(sim_result.vcss)) + 'x' + str(len(sim_result.designs))            
+    save_simulation(db_connection, project_id,sim_result, user_id, vs_x_ds)
+    sim_file_info = get_simulation_content_with_max_file_id(db_connection, project_id) 
+    logger.debug("abs1")
+    logger.debug("abs2")
     return sim_file_info
     
 

@@ -56,6 +56,8 @@ def run_simulation(
                 is_multiprocessing,
             )
             con.commit()
+            logger.debug("abs3")
+            logger.debug(result)
             return result
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
@@ -225,23 +227,20 @@ def get_simulations(project_id: int) -> List[models.SimulationFetch]:
     try:
         with get_connection() as con:
             result = storage.get_simulation_files(con, project_id)
+            con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Could not find project"
-        )
-    except Exception as e:
-        logger.debug(e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Could not send simulations",
         )
         
         
 def remove_simulation_files(project_id: int, user_id: int) -> bool:
     try:
         with get_connection() as con:
+            logger.debug('queww')
             result = storage.delete_all_simulation_files(con, project_id, user_id)
+            logger.debug(result)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
@@ -268,6 +267,7 @@ def get_simulation_file_content(user_id: int, file_id) -> SimulationResult:
                 )
             logger.debug('Successfully retrieved simulation file content')
             logger.debug(result)
+            con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(

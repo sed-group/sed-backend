@@ -77,12 +77,12 @@ async def get_simulations(native_project_id: int) -> List[models.SimulationFetch
     return implementation.get_simulations(native_project_id)
 
 
-#@router.delete(
- #   '/project/{native_project_id}/simulation/all',
-  #  summary='Remove all simulation files',
-   # response_model= bool,
-    #dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
-#)
+@router.delete(
+    '/project/{native_project_id}/simulation/all',
+    summary='Remove all simulation files',
+    response_model= bool,
+    dependencies=[Depends(SubProjectAccessChecker(AccessLevel.list_can_read(), CVS_APP_SID))]
+)
 async def remove_simulation_files(native_project_id: int, user: User = Depends(get_current_active_user)) -> bool:
     return implementation.remove_simulation_files(native_project_id, user.id)
 
