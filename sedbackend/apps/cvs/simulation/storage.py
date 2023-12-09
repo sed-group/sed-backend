@@ -110,9 +110,10 @@ def save_simulation_file(db_connection: PooledMySQLConnection, project_id: int,
         tmp_file = f.read()
         mime = magic.from_buffer(tmp_file)
         logger.debug(f'Mime: {mime}')
-        if mime != "JSON data" and "ASCII text" not in mime:
+        if mime != "JSON text data" and "ASCII text" not in mime:
             raise life_cycle_exceptions.InvalidFileTypeException
         f.seek(0)
+        logger.debug('hello')
         csv_file = pd.read_json(f)
         logger.debug(f'File content: {model_file}')
         f.seek(0)
