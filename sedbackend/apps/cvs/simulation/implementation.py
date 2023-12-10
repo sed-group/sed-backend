@@ -56,7 +56,6 @@ def run_simulation(
                 is_multiprocessing,
             )
             con.commit()
-            logger.debug("abs3")
             logger.debug(result)
             return result
     except auth_ex.UnauthorizedOperationException:
@@ -238,7 +237,6 @@ def get_simulations(project_id: int) -> List[models.SimulationFetch]:
 def remove_simulation_files(project_id: int, user_id: int) -> bool:
     try:
         with get_connection() as con:
-            logger.debug('queww')
             result = storage.delete_all_simulation_files(con, project_id, user_id)
             logger.debug(result)
             con.commit()
