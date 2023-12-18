@@ -113,7 +113,6 @@ def save_simulation_file(db_connection: PooledMySQLConnection, project_id: int,
         if mime != "JSON text data" and "ASCII text" not in mime:
             raise life_cycle_exceptions.InvalidFileTypeException
         f.seek(0)
-        logger.debug('hello')
         csv_file = pd.read_json(f)
         logger.debug(f'File content: {model_file}')
         f.seek(0)
@@ -132,10 +131,7 @@ def get_simulation_files(db_connection: PooledMySQLConnection, project_id: int) 
         .order_by(['file'], Sort.DESCENDING) \
         .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
     for row in file_res:
-        logger.debug(type( row['insert_timestamp']))
         row['insert_timestamp'] =  row['insert_timestamp'].strftime("%Y-%m-%d")
-        logger.debug(type( row['insert_timestamp']))
-        logger.debug(row['insert_timestamp'])
     return file_res
 
 def get_simulation_file_path(db_connection: PooledMySQLConnection, file_id, user_id) -> StoredFilePath:
@@ -341,8 +337,6 @@ def run_simulation(
     vs_x_ds = str(len(sim_result.vcss)) + 'x' + str(len(sim_result.designs))            
     save_simulation(db_connection, project_id,sim_result, user_id, vs_x_ds)
     sim_file_info = get_simulation_content_with_max_file_id(db_connection, project_id) 
-    logger.debug("abs1")
-    logger.debug("abs2")
     return sim_file_info
     
 
