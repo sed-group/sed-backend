@@ -43,6 +43,7 @@ CVS_FORMULAS_EXTERNAL_FACTORS_TABLE = 'cvs_formulas_external_factors'
 CVS_FORMULAS_EXTERNAL_FACTORS_COLUMNS = ['vcs_row', 'design_group', 'external_factor']
 
 CVS_EXTERNAL_FACTORS_TABLE = 'cvs_market_inputs'
+CVS_EXTERNAL_FACTORS_COLUMNS = ['id', 'name', 'unit']
 CVS_STAKEHOLDER_NEEDS_TABLE = 'cvs_stakeholder_needs'
 CVS_VCS_ROWS_TABLE = 'cvs_vcs_rows'
 CVS_VCS_NEED_DRIVERS_TABLE = 'cvs_vcs_need_drivers'
@@ -490,25 +491,93 @@ def get_all_formulas(
             for ef in all_used_efs
             if ef['vcs_row'] == row.id and ef['design_group'] == r['design_group']
         ]
-        formulas.append(populate_formula(r))
+        formulas.append(populate_formula_row(db_connection, r))
 
     return formulas
 
 
-def populate_formula(db_result) -> models.FormulaRowGet:
+def populate_formula(
+    db_connection: PooledMySQLConnection,
+    text: str = '',
+    latex: str = '',
+    comment: str = '',
+) -> models.Formula:
+    used_value_drivers = set()
+    used_external_factors = set()
+    # find all value drivers and external factors
+    vd_pattern = r'\{vd:(?P<id>\d+),"([^"]+)"\}'
+    vd_matches = re.findall(vd_pattern, text)
+    for vd_id, _ in vd_matches:
+        used_value_drivers.add(vd_id)
+    ef_pattern = r'\{ef:(?P<id>\d+),"([^"]+)"\}'
+    ef_matches = re.findall(ef_pattern, text)
+    for ef_id, _ in ef_matches:
+        used_external_factors.add(ef_id)
+
+    # fetch value drivers and external factors
+    vd_names = {}
+    ef_names = {}
+    if len(used_value_drivers):
+        select_statement = MySQLStatementBuilder(db_connection)
+        value_drivers = (
+            select_statement.select(CVS_VALUE_DRIVERS_TABLE, CVS_VALUE_DRIVERS_COLUMNS)
+            .where("id IN (" + ",".join(["%s" for _ in range(len(used_value_drivers))]) + ")", used_value_drivers)
+            .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+        )
+        for vd in value_drivers:
+            vd_names[str(vd['id'])] = f"{vd['name']} [{vd['unit'] if vd['unit'] else 'N/A'}]" 
+    if len(used_external_factors):
+        select_statement = MySQLStatementBuilder(db_connection)
+        external_factors = (
+            select_statement.select(
+                CVS_EXTERNAL_FACTORS_TABLE, CVS_EXTERNAL_FACTORS_COLUMNS
+            )
+            .where("id IN (" + ",".join(["%s" for _ in range(len(used_external_factors))]) + ")", used_external_factors)
+            .execute(fetch_type=FetchType.FETCH_ALL, dictionary=True)
+        )
+        for ef in external_factors:
+            ef_names[str(ef['id'])] = f"{ef['name']} [{ef['unit'] if ef['unit'] else 'N/A'}]" 
+
+
+    # replace value driver and external factors names in text
+    for vd in used_value_drivers:
+        vd_replace_pattern = r'\{vd:' + vd + r',"([^"]+)"\}'
+        vd_name = vd_names[vd] if vd in vd_names else 'UNDEFINED [N/A]'
+        text = re.sub(vd_replace_pattern, '{vd:' + vd + ',"' + vd_name + '"}', text)
+        vd_latex_pattern = r'\\class{vd}{\\identifier{vd:' + vd + r'}{\\text{([^"]+)}}}'
+        latex_new = f'\+class{{vd}}{{\+identifier{{vd:{str(vd)}}}{{\+text{{{str(vd_name)}}}}}}}' 
+        latex = re.sub(vd_latex_pattern, latex_new, latex)
+    for ef in used_external_factors:
+        ef_replace_pattern = r'\{ef:' + ef + r',"([^"]+)"\}'
+        ef_name = ef_names[ef] if ef in ef_names else 'UNDEFINED [N/A]'
+        text = re.sub(ef_replace_pattern, '{ef:' + ef + ',"' + ef_name + '"}', text)
+        ef_latex_pattern = r'\\class{ef}{\\identifier{ef:' + ef + r'}{\\text{([^"]+)}}}'
+        latex_new = f'\+class{{ef}}{{\+identifier{{ef:{str(ef)}}}{{\+text{{{str(ef_name)}}}}}}}'
+        latex = re.sub(ef_latex_pattern, latex_new, latex)
+
+    return models.Formula(text=text, latex=latex, comment=comment)
+
+
+def populate_formula_row(db_connection: PooledMySQLConnection, db_result) -> models.FormulaRowGet:
     return models.FormulaRowGet(
         vcs_row_id=db_result['vcs_row'],
         design_group_id=db_result['design_group'],
-        time=models.Formula(
-            text=db_result['time'] or '', latex=db_result['time_latex'] or '', comment=db_result['time_comment']
-        ),
+        time=populate_formula(
+            db_connection,
+            text=db_result['time'],
+            latex=db_result['time_latex'],
+            comment=db_result['time_comment']),
         time_unit=db_result['time_unit'],
-        cost=models.Formula(
-            text=db_result['cost'] or '', latex=db_result['cost_latex'] or '', comment=db_result['cost_comment']
-        ),
-        revenue=models.Formula(
-            text=db_result['revenue'] or '', latex=db_result['revenue_latex'] or '', comment=db_result['revenue_comment']
-        ),
+        cost=populate_formula(
+            db_connection,
+            text=db_result['cost'],
+            latex=db_result['cost_latex'],
+            comment=db_result['cost_comment']),
+        revenue=populate_formula(
+            db_connection,
+            text=db_result['revenue'],
+            latex=db_result['revenue_latex'],
+            comment=db_result['revenue_comment']),
         rate=db_result['rate'],
         row_value_drivers=[
             vcs_storage.populate_value_driver(valueDriver)
