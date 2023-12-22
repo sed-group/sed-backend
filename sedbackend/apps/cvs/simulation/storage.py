@@ -1,11 +1,6 @@
 import re
 import sys
 from math import isnan
-import csv
-
-import requests
-
-import io
 import magic
 import os
 import tempfile
@@ -14,7 +9,6 @@ from plusminus import BaseArithmeticParser
 
 from mysql.connector.pooling import PooledMySQLConnection
 import pandas as pd
-import numpy as np
 from mysql.connector import Error
 
 from fastapi.logger import logger
@@ -40,7 +34,7 @@ from sedbackend.apps.cvs.vcs import storage as vcs_storage
 from sedbackend.apps.cvs.life_cycle import exceptions as life_cycle_exceptions, storage as life_cycle_storage
 from sedbackend.apps.core.files import models as file_models, storage as file_storage, exceptions as file_exceptions
 from sedbackend.apps.core.projects import storage as core_project_storage
-from sedbackend.apps.core.files import models as file_models, storage as file_storage, exceptions as file_ex
+from sedbackend.apps.core.files import models as file_models, storage as file_storage
 from sedbackend.apps.core.files.models import StoredFilePath
 
 
@@ -109,11 +103,9 @@ def save_simulation_file(db_connection: PooledMySQLConnection, project_id: int,
         f.seek(0)
         tmp_file = f.read()
         mime = magic.from_buffer(tmp_file)
-        logger.debug(f'Mime: {mime}')
         if mime != "JSON text data" and "ASCII text" not in mime:
             raise life_cycle_exceptions.InvalidFileTypeException
         f.seek(0)
-        csv_file = pd.read_json(f)
         logger.debug(f'File content: {model_file}')
         f.seek(0)
         stored_file = file_storage.db_save_file(db_connection, model_file)

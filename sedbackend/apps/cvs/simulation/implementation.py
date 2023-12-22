@@ -56,7 +56,6 @@ def run_simulation(
                 is_multiprocessing,
             )
             con.commit()
-            logger.debug(result)
             return result
     except auth_ex.UnauthorizedOperationException:
         raise HTTPException(
@@ -238,7 +237,6 @@ def remove_simulation_files(project_id: int, user_id: int) -> bool:
     try:
         with get_connection() as con:
             result = storage.delete_all_simulation_files(con, project_id, user_id)
-            logger.debug(result)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
@@ -264,7 +262,6 @@ def get_simulation_file_content(user_id: int, file_id) -> SimulationResult:
                     detail=f"Could not find simulation file",
                 )
             logger.debug('Successfully retrieved simulation file content')
-            logger.debug(result)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
