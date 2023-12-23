@@ -26,12 +26,12 @@ def test_create_formulas(client, std_headers, std_user):
     external_factor = tu.seed_random_external_factor(project.id)
 
     # Act
-    time = f"2+{{vd:{str(value_driver.id)},\"{str(value_driver.name)} [{str(value_driver.unit)}]\"}}+{{vd:{str(value_driver.id)},\"{str(value_driver.name)} [{str(value_driver.unit)}]\"}}"
-    time_latex = f'2+\\class{{vd}}{{\\identifier{{vd:{str(value_driver.id)}}}{{\\text{{{str(value_driver.name)} [{str(value_driver.unit)}]}}}}}}+\\class{{vd}}{{\\identifier{{vd:{str(value_driver.id)}}}{{\\text{{{str(value_driver.name)} [{str(value_driver.unit)}]}}}}}}'
-    cost = f"2+{{ef:{str(external_factor.id)},\"{str(external_factor.name)} [{str(external_factor.unit)}]\"}}"
-    cost_latex = f'2+\\class{{ef}}{{\\identifier{{ef:{str(external_factor.id)}}}{{\\text{{{str(external_factor.name)}}}}}}}'
-    revenue = f"20+{{vd:{str(value_driver.id)},\"{str(value_driver.name)} [{str(value_driver.unit)}]\"}}+{{ef:{str(external_factor.id)},\"{str(external_factor.name)} [{str(external_factor.unit)}]\"}}"
-    revenue_latex = f'20+\\class{{vd}}{{\\identifier{{vd:{str(value_driver.id)}}}{{\\text{{{str(value_driver.name)}}}}}}}+\\class{{ef}}{{\\identifier{{vd:{str(external_factor.id)}}}{{\\text{{{str(external_factor.name)}}}}}}}'
+    time = f'2+{{vd:{str(value_driver.id)},"{str(value_driver.name)} [{str(value_driver.unit)}]"}}+5+{{vd:{str(value_driver.id)},"{str(value_driver.name)} [{str(value_driver.unit)}]"}}+2'
+    time_latex = f"2+\\class{{vd}}{{\\identifier{{vd:{str(value_driver.id)}}}{{\\text{{{str(value_driver.name)} [{str(value_driver.unit)}]}}}}}}+5+\\class{{vd}}{{\\identifier{{vd:{str(value_driver.id)}}}{{\\text{{{str(value_driver.name)} [{str(value_driver.unit)}]}}}}}}+2"
+    cost = f'2+{{ef:{str(external_factor.id)},"{str(external_factor.name)} [{str(external_factor.unit)}]"}}'
+    cost_latex = f"2+\\class{{ef}}{{\\identifier{{ef:{str(external_factor.id)}}}{{\\text{{{str(external_factor.name)} [{str(external_factor.unit)}]}}}}}}"
+    revenue = f'20+{{vd:{str(value_driver.id)},"{str(value_driver.name)} [{str(value_driver.unit)}]"}}+{{ef:{str(external_factor.id)},"{str(external_factor.name)} [{str(external_factor.unit)}]"}}'
+    revenue_latex = f"20+\\class{{vd}}{{\\identifier{{vd:{str(value_driver.id)}}}{{\\text{{{str(value_driver.name)} [{str(value_driver.unit)}]}}}}}}+\\class{{ef}}{{\\identifier{{ef:{str(external_factor.id)}}}{{\\text{{{str(external_factor.name)} [{str(external_factor.unit)}]}}}}}}"
     time_comment = testutils.random_str(10, 200)
     cost_comment = testutils.random_str(10, 200)
     revenue_comment = None
@@ -40,7 +40,7 @@ def test_create_formulas(client, std_headers, std_user):
 
     time_unit = tu.random_time_unit()
     res = client.put(
-        f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas',
+        f"/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas",
         headers=std_headers,
         json=[
             {
@@ -59,24 +59,24 @@ def test_create_formulas(client, std_headers, std_user):
     )
 
     res_get = client.get(
-        f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas/all',
+        f"/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas/all",
         headers=std_headers,
     )
 
     # Assert
     assert res.status_code == 200
-    assert res_get.json()[0]['used_value_drivers'][0]['id'] == value_driver.id
-    assert res_get.json()[0]['used_external_factors'][0]['id'] == external_factor.id
-    assert res_get.json()[0]['time']['text'] == time
-    assert res_get.json()[0]['time']['latex'] == time_latex
-    assert res_get.json()[0]['time']['comment'] == time_comment
-    assert res_get.json()[0]['cost']['text'] == cost
-    assert res_get.json()[0]['cost']['latex'] == cost_latex
-    assert res_get.json()[0]['cost']['comment'] == cost_comment
-    assert res_get.json()[0]['revenue']['text'] == revenue
-    assert res_get.json()[0]['revenue']['latex'] == revenue_latex
-    assert res_get.json()[0]['revenue']['comment'] == revenue_comment
-    assert res_get.json()[0]['rate'] == rate
+    assert res_get.json()[0]["used_value_drivers"][0]["id"] == value_driver.id
+    assert res_get.json()[0]["used_external_factors"][0]["id"] == external_factor.id
+    assert res_get.json()[0]["time"]["text"] == time
+    assert res_get.json()[0]["time"]["latex"] == time_latex
+    assert res_get.json()[0]["time"]["comment"] == time_comment
+    assert res_get.json()[0]["cost"]["text"] == cost
+    assert res_get.json()[0]["cost"]["latex"] == cost_latex
+    assert res_get.json()[0]["cost"]["comment"] == cost_comment
+    assert res_get.json()[0]["revenue"]["text"] == revenue
+    assert res_get.json()[0]["revenue"]["latex"] == revenue_latex
+    assert res_get.json()[0]["revenue"]["comment"] == revenue_comment
+    assert res_get.json()[0]["rate"] == rate
 
     # Cleanup
     tu.delete_design_group(project.id, design_group.id)
@@ -104,7 +104,7 @@ def test_create_formulas_no_optional(client, std_headers, std_user):
     rate = tu.random_rate_choice()
 
     res = client.put(
-        f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas',
+        f"/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas",
         headers=std_headers,
         json=[
             {
@@ -143,7 +143,7 @@ def test_get_all_formulas(client, std_headers, std_user):
     )
 
     res = client.get(
-        f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas/all',
+        f"/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas/all",
         headers=std_headers,
     )
 
@@ -175,7 +175,7 @@ def test_get_all_formulas_invalid_project(client, std_headers, std_user):
     tu.seed_random_formulas(project.id, vcs.id, design_group.id, current_user.id)
 
     res = client.get(
-        f'/api/cvs/project/{invalid_proj_id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas/all',
+        f"/api/cvs/project/{invalid_proj_id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas/all",
         headers=std_headers,
     )
 
@@ -201,7 +201,7 @@ def test_get_all_formulas_invalid_vcs(client, std_headers, std_user):
     tu.seed_random_formulas(project.id, vcs.id, design_group.id, current_user.id)
 
     res = client.get(
-        f'/api/cvs/project/{project.id}/vcs/{invalid_vcs_id}/design-group/{design_group.id}/formulas/all',
+        f"/api/cvs/project/{project.id}/vcs/{invalid_vcs_id}/design-group/{design_group.id}/formulas/all",
         headers=std_headers,
     )
 
@@ -227,7 +227,7 @@ def get_all_formulas_invalid_design_group(client, std_headers, std_user):
     tu.seed_random_formulas(project.id, vcs.id, design_group.id, current_user.id)
 
     res = client.get(
-        f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{invalid_dg_id}/formulas/all',
+        f"/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{invalid_dg_id}/formulas/all",
         headers=std_headers,
     )
 
@@ -257,7 +257,7 @@ def test_edit_formulas(client, std_headers, std_user):
     # Act
 
     time = (
-        '2+{vd:'
+        "2+{vd:"
         + str(value_driver.id)
         + ',"'
         + str(value_driver.name)
@@ -267,9 +267,9 @@ def test_edit_formulas(client, std_headers, std_user):
         + str(value_driver.name)
         + '"}'
     )
-    cost = '2+{ef:' + str(external_factor.id) + ',"' + str(external_factor.name) + '"}'
+    cost = "2+{ef:" + str(external_factor.id) + ',"' + str(external_factor.name) + '"}'
     revenue = (
-        '20+{vd:'
+        "20+{vd:"
         + str(value_driver.id)
         + ',"'
         + str(value_driver.name)
@@ -284,7 +284,7 @@ def test_edit_formulas(client, std_headers, std_user):
     rate = tu.random_rate_choice()
 
     res = client.put(
-        f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{formulas[0].design_group_id}/formulas',
+        f"/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{formulas[0].design_group_id}/formulas",
         headers=std_headers,
         json=[
             {
@@ -299,14 +299,14 @@ def test_edit_formulas(client, std_headers, std_user):
     )
 
     res_get = client.get(
-        f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas/all',
+        f"/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas/all",
         headers=std_headers,
     )
 
     # Assert
     assert res.status_code == 200
-    assert res_get.json()[0]['used_value_drivers'][0]['id'] == value_driver.id
-    assert res_get.json()[0]['used_external_factors'][0]['id'] == external_factor.id
+    assert res_get.json()[0]["used_value_drivers"][0]["id"] == value_driver.id
+    assert res_get.json()[0]["used_external_factors"][0]["id"] == external_factor.id
 
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
@@ -333,7 +333,7 @@ def test_edit_formulas_no_optional(client, std_headers, std_user):
     rate = tu.random_rate_choice()
 
     res = client.put(
-        f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{formulas[0].design_group_id}/formulas',
+        f"/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{formulas[0].design_group_id}/formulas",
         headers=std_headers,
         json=[
             {
@@ -383,7 +383,7 @@ def test_edit_formulas_invalid_dg(client, std_headers, std_user):
     rate = tu.random_rate_choice()
 
     res = client.put(
-        f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{dg_invalid_id}/formulas',
+        f"/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{dg_invalid_id}/formulas",
         headers=std_headers,
         json=[
             {
@@ -427,7 +427,7 @@ def test_edit_formulas_invalid_vcs_row(client, std_headers, std_user):
     rate = tu.random_rate_choice()
 
     res = client.put(
-        f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas',
+        f"/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas",
         headers=std_headers,
         json=[
             {
@@ -472,7 +472,7 @@ def test_edit_formulas_invalid_project(client, std_headers, std_user):
     rate = tu.random_rate_choice()
 
     res = client.put(
-        f'/api/cvs/project/{invalid_proj_id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas',
+        f"/api/cvs/project/{invalid_proj_id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas",
         headers=std_headers,
         json=[
             {
@@ -510,7 +510,7 @@ def test_delete_formulas(client, std_headers, std_user):
     )
 
     res = client.delete(
-        f'/api/cvs/project/{project.id}/vcs-row/{formulas[0].vcs_row_id}/design-group/{formulas[0].design_group_id}/formulas',
+        f"/api/cvs/project/{project.id}/vcs-row/{formulas[0].vcs_row_id}/design-group/{formulas[0].design_group_id}/formulas",
         headers=std_headers,
     )
 
@@ -539,8 +539,8 @@ def test_delete_formulas_invalid_project(client, std_headers, std_user):
     )
 
     res = client.delete(
-        f'/api/cvs/project/{invalid_proj_id}/vcs-row/{formulas[0].vcs_row_id}/design-group/'
-        f'{formulas[0].design_group_id}/formulas',
+        f"/api/cvs/project/{invalid_proj_id}/vcs-row/{formulas[0].vcs_row_id}/design-group/"
+        f"{formulas[0].design_group_id}/formulas",
         headers=std_headers,
     )
 
@@ -567,7 +567,7 @@ def test_delete_formulas_invalid_vcs_row(client, std_headers, std_user):
     invalid_vcs_row_id = formulas[0].vcs_row_id + 1
 
     res = client.delete(
-        f'/api/cvs/project/{project.id}/vcs-row/{invalid_vcs_row_id}/design-group/{formulas[0].design_group_id}/formulas',
+        f"/api/cvs/project/{project.id}/vcs-row/{invalid_vcs_row_id}/design-group/{formulas[0].design_group_id}/formulas",
         headers=std_headers,
     )
 
@@ -594,7 +594,7 @@ def test_delete_formulas_invalid_design_group(client, std_headers, std_user):
     )
 
     res = client.delete(
-        f'/api/cvs/project/{project.id}/vcs-row/{formulas[0].vcs_row_id}/design-group/{invalid_dg_id}/formulas',
+        f"/api/cvs/project/{project.id}/vcs-row/{formulas[0].vcs_row_id}/design-group/{invalid_dg_id}/formulas",
         headers=std_headers,
     )
 
@@ -624,7 +624,7 @@ def test_get_vcs_dg_pairs(client, std_headers, std_user):
 
     # Act
     res = client.get(
-        f'/api/cvs/project/{project.id}/vcs/design/formula-pairs', headers=std_headers
+        f"/api/cvs/project/{project.id}/vcs/design/formula-pairs", headers=std_headers
     )
 
     # Assert
@@ -661,7 +661,7 @@ def test_get_vcs_dg_pairs_invalid_project(client, std_headers, std_user):
 
         # Act
     res = client.get(
-        f'/api/cvs/project/{invalid_proj_id}/vcs/design/formula-pairs',
+        f"/api/cvs/project/{invalid_proj_id}/vcs/design/formula-pairs",
         headers=std_headers,
     )
 
@@ -686,7 +686,7 @@ def test_get_all_formulas_name_change(client, std_headers, std_user):
     external_factor = tu.seed_random_external_factor(project.id)
 
     time = (
-        '2+{vd:'
+        "2+{vd:"
         + str(value_driver.id)
         + ',"'
         + str(value_driver.name)
@@ -696,11 +696,11 @@ def test_get_all_formulas_name_change(client, std_headers, std_user):
         + str(value_driver.name)
         + '"}'
     )
-    time_latex = f'2+\\class{{vd}}{{\\identifier{{vd:{str(value_driver.id)}}}{{\\text{{{str(value_driver.name)}}}}}}}+\\class{{vd}}{{\\identifier{{vd:{str(value_driver.id)}}}{{\\text{{{str(value_driver.name)}}}}}}}'
-    cost = '2+{ef:' + str(external_factor.id) + ',"' + str(external_factor.name) + '"}'
-    cost_latex = f'2+\\class{{ef}}{{\\identifier{{ef:{str(external_factor.id)}}}{{\\text{{{str(external_factor.name)}}}}}}}'
+    time_latex = f"2+\\class{{vd}}{{\\identifier{{vd:{str(value_driver.id)}}}{{\\text{{{str(value_driver.name)}}}}}}}+\\class{{vd}}{{\\identifier{{vd:{str(value_driver.id)}}}{{\\text{{{str(value_driver.name)}}}}}}}"
+    cost = "2+{ef:" + str(external_factor.id) + ',"' + str(external_factor.name) + '"}'
+    cost_latex = f"2+\\class{{ef}}{{\\identifier{{ef:{str(external_factor.id)}}}{{\\text{{{str(external_factor.name)}}}}}}}"
     revenue = (
-        '20+{vd:'
+        "20+{vd:"
         + str(value_driver2.id)
         + ',"'
         + str(value_driver2.name)
@@ -710,7 +710,7 @@ def test_get_all_formulas_name_change(client, std_headers, std_user):
         + str(external_factor.name)
         + '"}'
     )
-    revenue_latex = f'20+\\class{{vd}}{{\\identifier{{vd:{str(value_driver2.id)}}}{{\\text{{{str(value_driver2.name)}}}}}}}+\\class{{ef}}{{\\identifier{{vd:{str(external_factor.id)}}}{{\\text{{{str(external_factor.name)}}}}}}}'
+    revenue_latex = f"20+\\class{{vd}}{{\\identifier{{vd:{str(value_driver2.id)}}}{{\\text{{{str(value_driver2.name)}}}}}}}+\\class{{ef}}{{\\identifier{{vd:{str(external_factor.id)}}}{{\\text{{{str(external_factor.name)}}}}}}}"
 
     rate = tu.random_rate_choice()
 
@@ -742,18 +742,18 @@ def test_get_all_formulas_name_change(client, std_headers, std_user):
     impl_vcs.delete_value_driver(project.id, value_driver2.id)
 
     res = client.get(
-        f'/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas/all',
+        f"/api/cvs/project/{project.id}/vcs/{vcs.id}/design-group/{design_group.id}/formulas/all",
         headers=std_headers,
     )
 
     # Assert
     assert res.status_code == 200
-    assert 'new VD name [VD unit]' in res.json()[0]['time']['text']
-    assert 'new VD name [VD unit]' in res.json()[0]['time']['latex']
-    assert 'new EF name [EF unit]' in res.json()[0]['cost']['text']
-    assert 'new EF name [EF unit]' in res.json()[0]['cost']['latex']
-    assert 'UNDEFINED [N/A]' in res.json()[0]['revenue']['text']
-    assert 'UNDEFINED [N/A]' in res.json()[0]['revenue']['latex']
+    assert "new VD name [VD unit]" in res.json()[0]["time"]["text"]
+    assert "new VD name [VD unit]" in res.json()[0]["time"]["latex"]
+    assert "new EF name [EF unit]" in res.json()[0]["cost"]["text"]
+    assert "new EF name [EF unit]" in res.json()[0]["cost"]["latex"]
+    assert "UNDEFINED [N/A]" in res.json()[0]["revenue"]["text"]
+    assert "UNDEFINED [N/A]" in res.json()[0]["revenue"]["latex"]
 
     # Cleanup
     tu.delete_design_group(project.id, design_group.id)
