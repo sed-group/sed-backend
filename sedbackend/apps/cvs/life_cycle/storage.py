@@ -315,7 +315,6 @@ def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int,
         dsm_file = pd.read_csv(f)
         logger.debug(f'File content: {dsm_file}')
         vcs_table = vcs_storage.get_vcs_table(db_connection, project_id, vcs_id)
-
         vcs_processes = get_process_names_from_rows(vcs_table)
 
         if len(dsm_file['Processes'].values[1:-1]) != len(vcs_processes):
@@ -342,6 +341,7 @@ def save_dsm_file(db_connection: PooledMySQLConnection, project_id: int,
                 pass
 
         f.seek(0)
+        logger.debug(f'File content: {model_file}')
         stored_file = file_storage.db_save_file(db_connection, model_file)
 
     insert_statement = MySQLStatementBuilder(db_connection)
@@ -409,7 +409,6 @@ def delete_dsm_file(db_connection: PooledMySQLConnection, project_id: int, vcs_i
         raise exceptions.DSMFileFailedDeletionException
 
     return True
-
 
 def get_dsm_from_file_id(db_connection: PooledMySQLConnection, file_id: int, user_id: int) -> dict:
     try:

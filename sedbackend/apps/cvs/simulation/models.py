@@ -4,11 +4,13 @@ from pydantic import BaseModel
 from typing import Optional
 from fastapi import Form
 
+import datetime
 from sedbackend.apps.cvs.design.models import DesignGroup, Design, ValueDriverDesignValue
 from sedbackend.apps.cvs.link_design_lifecycle import models as link_model
 from dataclasses import dataclass
 
 from sedbackend.apps.cvs.vcs.models import VCS, ValueDriver
+from sedbackend.apps.cvs.design.models import DesignGroup, Design, ValueDriverDesignValue
 
 
 class NonTechCost(str, Enum):
@@ -70,6 +72,13 @@ class EditSimSettings(BaseModel):
 class SimSettings(EditSimSettings):
     project: int
 
+class SimulationFetch(BaseModel):
+    project_id: int
+    file: int
+    insert_timestamp: str
+    vs_x_ds: str
+
+    
 
 @dataclass
 class FileParams:
