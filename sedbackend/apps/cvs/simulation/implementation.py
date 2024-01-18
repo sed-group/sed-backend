@@ -299,7 +299,7 @@ def remove_simulation_file(project_id: int, user_id, file_id) -> bool:
         )
 
 
-"""
+
 def edit_sim_settings(
     project_id: int, sim_settings: models.EditSimSettings, user_id: int
 ) -> bool:
@@ -327,4 +327,3 @@ def edit_sim_settings(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Could not update simulation settings",
         )
-"""
