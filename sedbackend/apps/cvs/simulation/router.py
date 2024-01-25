@@ -96,6 +96,7 @@ async def put_sim_settings(native_project_id: int, sim_settings: models.EditSimS
                            user: User = Depends(get_current_active_user)) -> bool:
     return implementation.edit_sim_settings(native_project_id, sim_settings, user.id)
 
+
 @router.get(
    '/project/{native_project_id}/simulation/file/{file_id}',
     summary='Get simulation file',

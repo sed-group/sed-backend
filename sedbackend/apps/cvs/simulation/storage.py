@@ -326,7 +326,8 @@ def run_simulation(
                 )
 
                 sim_result.runs.append(sim_run_res)
-    vs_x_ds = str(len(sim_result.vcss)) + 'x' + str(len(sim_result.designs))            
+    vs_x_ds = str(len(sim_result.vcss)) + 'x' + str(len(sim_result.designs))    
+    edit_simulation_settings(db_connection, project_id, sim_settings, user_id)        
     save_simulation(db_connection, project_id,sim_result, user_id, vs_x_ds)
     sim_file_info = get_simulation_content_with_max_file_id(db_connection, project_id) 
     return sim_file_info
