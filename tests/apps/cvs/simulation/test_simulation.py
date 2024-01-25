@@ -14,7 +14,7 @@ def test_run_single_simulation(client, std_headers, std_user):
     settings.monte_carlo = False
 
     # Act
-    res = client.post(
+    saveSim = client.post(
         f"/api/cvs/project/{project.id}/simulation/run",
         headers=std_headers,
         json={
@@ -23,9 +23,22 @@ def test_run_single_simulation(client, std_headers, std_user):
             "design_group_ids": [design_group.id],
         },
     )
-
+    allSimId = client.get(
+        f"/api/cvs/project/{project.id}/simulation/all",
+        headers=std_headers
+    )
+    res = client.get(
+       f"/api/cvs/project/{project.id}/simulation/file/{allSimId.json()[-1]['file']}",
+        headers=std_headers
+    )
     # Assert
+    
+    assert saveSim.status_code == 200
+    assert allSimId.status_code == 200
     assert res.status_code == 200
+    assert res.json()['designs'] == design
+    assert allSimId.json()[-1]['project_id'] == project.id
+    
 
     # Should probably assert some other stuff about the output to ensure that it is correct.
 
@@ -33,6 +46,7 @@ def test_run_single_simulation(client, std_headers, std_user):
     tu.delete_design_group(project.id, design_group.id)
     tu.delete_VCS_with_ids(current_user.id, project.id, [vcs.id])
     tu.delete_project_by_id(project.id, current_user.id)
+    assert res.status_code == 200
 
 
 def test_run_sim_invalid_design_group(client, std_headers, std_user):
@@ -313,7 +327,7 @@ def test_run_single_simulation_no_values(client, std_headers, std_user):
     settings.monte_carlo = False
 
     # Act
-    res = client.post(
+    saveSim = client.post(
         f"/api/cvs/project/{project.id}/simulation/run",
         headers=std_headers,
         json={
@@ -322,8 +336,11 @@ def test_run_single_simulation_no_values(client, std_headers, std_user):
             "design_group_ids": [design_group.id],
         },
     )
-    print(res.json())
-
+    res = client.get(
+       f"/api/cvs/project/{project.id}/simulation/file/{saveSim.json()['file']}",
+        headers=std_headers
+    )
+    
     # Assert
     assert res.status_code == 200
     assert res.json()["runs"][0]["max_NPVs"][-1] == 0
