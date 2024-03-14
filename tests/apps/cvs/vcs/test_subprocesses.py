@@ -7,10 +7,9 @@ def test_get_all_subprocesses(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
-    tu.seed_random_subprocesses(project.id, vcs.id, 5)
+    tu.seed_random_subprocesses(project.id, 5)
     # Act
-    res = client.get(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/subprocess/all', headers=std_headers)
+    res = client.get(f'/api/cvs/project/{project.id}/subprocess/all', headers=std_headers)
     # Assert
     assert res.status_code == 200  # 200 OK
     assert len(res.json()) == 5
@@ -23,9 +22,8 @@ def test_get_all_subprocesses_no_subprocesses(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
     # Act
-    res = client.get(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/subprocess/all', headers=std_headers)
+    res = client.get(f'/api/cvs/project/{project.id}/subprocess/all', headers=std_headers)
     # Assert
     assert res.status_code == 200  # 200 OK
     assert len(res.json()) == 0
@@ -38,8 +36,7 @@ def test_get_subprocess(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
-    subprocess = tu.seed_random_subprocesses(project.id, vcs.id, 1)[0]
+    subprocess = tu.seed_random_subprocesses(project.id, 1)[0]
     # Act
     res = client.get(f'/api/cvs/project/{project.id}/subprocess/{subprocess.id}', headers=std_headers)
     # Assert
@@ -55,10 +52,9 @@ def test_get_subprocess_not_found(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
-    tu.seed_random_subprocesses(project.id, vcs.id, 1)
+    tu.seed_random_subprocesses(project.id, 1)
     # Act
-    res = client.get(f'/api/cvs/project/{project.id}/subprocess/999', headers=std_headers)
+    res = client.get(f'/api/cvs/project/{project.id}/subprocess/99999999', headers=std_headers)
     # Assert
     assert res.status_code == 404  # 404 Not Found
     # Cleanup
@@ -70,10 +66,9 @@ def test_create_subprocess(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
-    subprocess = tu.seed_random_subprocesses(project.id, vcs.id, 1)[0]
+    subprocess = tu.seed_random_subprocesses(project.id, 1)[0]
     # Act
-    res = client.post(f'/api/cvs/project/{project.id}/vcs/{vcs.id}/subprocess', headers=std_headers, json={
+    res = client.post(f'/api/cvs/project/{project.id}/subprocess', headers=std_headers, json={
         'name': 'New subprocess',
         'parent_process_id': subprocess.parent_process.id
     })
@@ -90,8 +85,8 @@ def test_edit_subprocess(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
-    subprocess = tu.seed_random_subprocesses(project.id, vcs.id, 1)[0]
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
+    subprocess = tu.seed_random_subprocesses(project.id, 1)[0]
     # Act
     res = client.put(f'/api/cvs/project/{project.id}/subprocess/{subprocess.id}', headers=std_headers, json={
         'name': 'New name',
@@ -112,13 +107,13 @@ def test_delete_subprocess(client, std_headers, std_user):
     # Setup
     current_user = impl_users.impl_get_user_with_username(std_user.username)
     project = tu.seed_random_project(current_user.id)
-    vcs = tu.seed_random_vcs(project.id)
-    subprocess = tu.seed_random_subprocesses(project.id, vcs.id, 1)[0]
+    vcs = tu.seed_random_vcs(project.id, current_user.id)
+    subprocess = tu.seed_random_subprocesses(project.id, 1)[0]
     # Act
     res = client.delete(f'/api/cvs/project/{project.id}/subprocess/{subprocess.id}', headers=std_headers)
     # Assert
     assert res.status_code == 200  # 200 OK
-    assert len(impl_vcs.get_all_subprocess(project.id, vcs.id)) == 0
+    assert len(impl_vcs.get_all_subprocess(project.id)) == 0
     # Cleanup
     tu.delete_project_by_id(project.id, current_user.id)
     tu.delete_vd_from_user(current_user.id)

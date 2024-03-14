@@ -1,4 +1,5 @@
 from tkinter import E
+import re
 
 
 class ProcessNotFoundException(Exception):
@@ -14,8 +15,15 @@ class EntityRateOutOfOrderException(Exception):
 
 
 class FormulaEvalException(Exception):
-    def __init__(self, process_id) -> None:
-        self.process_id = process_id
+    def __init__(self, exception, sim_data) -> None:
+        self.name = sim_data['iso_name'] if sim_data['iso_name'] is not None else sim_data['sub_name']
+        pattern = r"found '([^']+)'"
+        match = re.search(pattern, str(exception))
+        if match:
+            found_char = match.group(1)
+            self.message = f"Check your formula for \"{found_char}\""
+        else:
+            self.message = str(exception)
 
 
 class RateWrongOrderException(Exception):
@@ -23,12 +31,14 @@ class RateWrongOrderException(Exception):
 
 
 class NegativeTimeException(Exception):
-    def __init__(self, process_id) -> None:
-        self.process_id = process_id
+    def __init__(self, sim_data) -> None:
+        self.name = sim_data['iso_name'] if sim_data['iso_name'] is not None else sim_data['sub_name']
 
 
 class SimulationFailedException(Exception):
-    pass
+    def __init__(self, exception) -> None:
+        self.message = str(exception)
+
 
 
 class DesignIdsNotFoundException(Exception):
@@ -44,7 +54,8 @@ class VcsFailedException(Exception):
 
 
 class BadlyFormattedSettingsException(Exception):
-    pass
+    def __init__(self, message) -> None:
+        self.message = message
 
 
 class FlowProcessNotFoundException(Exception):

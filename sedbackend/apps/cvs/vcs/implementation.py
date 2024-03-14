@@ -8,17 +8,19 @@ from sedbackend.apps.core.users import exceptions as user_ex
 from sedbackend.apps.core.db import get_connection
 import sedbackend.apps.cvs.project.exceptions as project_exceptions
 from sedbackend.apps.cvs.vcs import models, storage, exceptions
+from sedbackend.apps.cvs.vcs.models import ValueDriverPost
 from sedbackend.libs.datastructures.pagination import ListChunk
+from sedbackend.apps.core.files import exceptions as file_ex
 
 
 # ======================================================================================================================
 # VCS
 # ======================================================================================================================
 
-def get_all_vcs(project_id: int) -> ListChunk[models.VCS]:
+def get_all_vcs(project_id: int, user_id: int) -> ListChunk[models.VCS]:
     try:
         with get_connection() as con:
-            return storage.get_all_vcs(con, project_id)
+            return storage.get_all_vcs(con, project_id, user_id)
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -26,10 +28,10 @@ def get_all_vcs(project_id: int) -> ListChunk[models.VCS]:
         )
 
 
-def get_vcs(project_id: int, vcs_id: int) -> models.VCS:
+def get_vcs(project_id: int, vcs_id: int, user_id: int) -> models.VCS:
     try:
         with get_connection() as con:
-            return storage.get_vcs(con, project_id, vcs_id)
+            return storage.get_vcs(con, project_id, vcs_id, user_id)
     except exceptions.VCSNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -52,10 +54,10 @@ def get_vcs(project_id: int, vcs_id: int) -> models.VCS:
         )
 
 
-def create_vcs(project_id: int, vcs_post: models.VCSPost) -> models.VCS:
+def create_vcs(project_id: int, vcs_post: models.VCSPost, user_id: int) -> models.VCS:
     try:
         with get_connection() as con:
-            result = storage.create_vcs(con, project_id, vcs_post)
+            result = storage.create_vcs(con, project_id, vcs_post, user_id)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
@@ -75,10 +77,10 @@ def create_vcs(project_id: int, vcs_post: models.VCSPost) -> models.VCS:
         )
 
 
-def edit_vcs(project_id: int, vcs_id: int, vcs_post: models.VCSPost) -> models.VCS:
+def edit_vcs(project_id: int, vcs_id: int, vcs_post: models.VCSPost, user_id: int) -> models.VCS:
     try:
         with get_connection() as con:
-            result = storage.edit_vcs(con, project_id, vcs_id, vcs_post)
+            result = storage.edit_vcs(con, project_id, vcs_id, vcs_post, user_id)
             con.commit()
             return result
     except exceptions.VCSNotFoundException:
@@ -108,10 +110,10 @@ def edit_vcs(project_id: int, vcs_id: int, vcs_post: models.VCSPost) -> models.V
         )
 
 
-def delete_vcs(project_id: int, vcs_id: int) -> bool:
+def delete_vcs(user_id: int, project_id: int, vcs_id: int) -> bool:
     try:
         with get_connection() as con:
-            res = storage.delete_vcs(con, project_id, vcs_id)
+            res = storage.delete_vcs(con, user_id, project_id, vcs_id)
             con.commit()
             return res
     except exceptions.VCSNotFoundException:
@@ -133,6 +135,16 @@ def delete_vcs(project_id: int, vcs_id: int) -> bool:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'VCS with id={vcs_id} does not belong to project with id={project_id}.',
+        )
+    except file_ex.FileNotDeletedException:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"File could not be deleted"
+        )
+    except file_ex.PathMismatchException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Path to file does not match internal path'
         )
 
 
@@ -180,10 +192,10 @@ def get_all_value_driver_vcs(project_id: int, vcs_id: int) -> List[models.ValueD
         )
 
 
-def get_all_value_drivers_vcs_row(project_id: int, vcs_id: int, row_id: int) -> List[models.ValueDriver]:
+def get_all_value_drivers_vcs_row(project_id: int, vcs_id: int, row_id: int, user_id: int) -> List[models.ValueDriver]:
     try:
         with get_connection() as con:
-            res = storage.get_all_value_drivers_vcs_row(con, project_id, vcs_id, row_id)
+            res = storage.get_all_value_drivers_vcs_row(con, project_id, vcs_id, row_id, user_id)
             con.commit()
             return res
     except exceptions.VCSNotFoundException:
@@ -203,10 +215,10 @@ def get_all_value_drivers_vcs_row(project_id: int, vcs_id: int, row_id: int) -> 
         )
 
 
-def get_value_driver(value_driver_id: int) -> models.ValueDriver:
+def get_value_driver(value_driver_id: int, user_id: int) -> models.ValueDriver:
     try:
         with get_connection() as con:
-            return storage.get_value_driver(con, value_driver_id)
+            return storage.get_value_driver(con, value_driver_id, user_id)
     except exceptions.ValueDriverNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -233,10 +245,10 @@ def create_value_driver(user_id: int, value_driver_post: models.ValueDriverPost)
 
 
 def edit_value_driver(value_driver_id: int,
-                      value_driver_post: models.ValueDriverPost) -> models.ValueDriver:
+                      value_driver: models.ValueDriverPut, user_id: int) -> models.ValueDriver:
     try:
         with get_connection() as con:
-            result = storage.edit_value_driver(con, value_driver_id, value_driver_post)
+            result = storage.edit_value_driver(con, value_driver_id, value_driver, user_id)
             con.commit()
             return result
     except exceptions.ValueDriverNotFoundException:
@@ -256,7 +268,7 @@ def edit_value_driver(value_driver_id: int,
         )
 
 
-def delete_value_driver(value_driver_id: int) -> bool:
+def delete_value_driver(project_id: int, value_driver_id: int) -> bool:
     try:
         with get_connection() as con:
             res = storage.delete_value_driver(con, value_driver_id)
@@ -276,6 +288,11 @@ def delete_value_driver(value_driver_id: int) -> bool:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Unauthorized user.',
+        )
+    except exceptions.ProjectValueDriverNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Could not find project={project_id} <-> value driver={value_driver_id} relation.'
         )
 
 
@@ -314,6 +331,7 @@ def add_vcs_multiple_needs_drivers(need_driver_ids: List[Tuple[int, int]]):
             detail=f'Badly formatted request'
         )
 
+
 # ======================================================================================================================
 # VCS ISO Processes
 # ======================================================================================================================
@@ -350,10 +368,10 @@ def get_iso_process(iso_process_id: int) -> models.VCSISOProcess:
 # ======================================================================================================================
 
 
-def get_all_subprocess(project_id: int, vcs_id: int) -> List[models.VCSSubprocess]:
+def get_all_subprocess(project_id: int) -> List[models.VCSSubprocess]:
     try:
         with get_connection() as con:
-            return storage.get_all_subprocess(con, project_id, vcs_id)
+            return storage.get_all_subprocess(con, project_id)
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -374,7 +392,7 @@ def get_all_subprocess(project_id: int, vcs_id: int) -> List[models.VCSSubproces
 def get_subprocess(project_id: int, subprocess_id: int) -> models.VCSSubprocess:
     try:
         with get_connection() as con:
-            return storage.get_subprocess(con, project_id, subprocess_id)
+            return storage.get_subprocess(con, subprocess_id)
     except project_exceptions.CVSProjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -392,10 +410,10 @@ def get_subprocess(project_id: int, subprocess_id: int) -> models.VCSSubprocess:
         )
 
 
-def create_subprocess(project_id: int, vcs_id: int, subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
+def create_subprocess(project_id: int, subprocess_post: models.VCSSubprocessPost) -> models.VCSSubprocess:
     try:
         with get_connection() as con:
-            result = storage.create_subprocess(con, project_id, vcs_id, subprocess_post)
+            result = storage.create_subprocess(con, project_id, subprocess_post)
             con.commit()
             return result
     except project_exceptions.CVSProjectNotFoundException:
@@ -417,6 +435,11 @@ def create_subprocess(project_id: int, vcs_id: int, subprocess_post: models.VCSS
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=err.msg
+        )
+    except exceptions.SubprocessNotUniqueException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Subprocess name must be unique.',
         )
 
 
@@ -554,16 +577,21 @@ def edit_vcs_table(project_id: int, vcs_id: int, updated_vcs_rows: List[models.V
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Could not create subprocess'
         )
+    except exceptions.VCSTableProcessNotUniqueException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Process name must be unique'
+        )
 
 
 # ======================================================================================================================
 # VCS Duplicate
 # ======================================================================================================================
 
-def duplicate_vcs(project_id: int, vcs_id: int, n: int) -> List[models.VCS]:
+def duplicate_vcs(project_id: int, vcs_id: int, n: int, user_id: int) -> List[models.VCS]:
     try:
         with get_connection() as con:
-            res = storage.duplicate_whole_vcs(con, project_id, vcs_id, n)
+            res = storage.duplicate_whole_vcs(con, project_id, vcs_id, n, user_id)
             con.commit()
             return res
     except exceptions.VCSNotFoundException:

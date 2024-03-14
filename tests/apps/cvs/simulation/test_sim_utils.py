@@ -1,7 +1,6 @@
-from sedbackend.apps.cvs.simulation.storage import parse_formula
-from sedbackend.libs.formula_parser.expressions import get_prefix_names, get_prefix_variables, \
-    replace_prefix_variables
-from sedbackend.libs.formula_parser.parser import NumericStringParser
+from sedbackend.apps.cvs.simulation.storage import parse_formula, add_multiplication_signs
+from plusminus import BaseArithmeticParser
+
 
 
 def test_parse_formula_simple():
@@ -9,118 +8,203 @@ def test_parse_formula_simple():
     formula = f'(3+1)/2'
     vd_values = []
     mi_values = []
-    nsp = NumericStringParser()
+    parser = BaseArithmeticParser()
 
     # Act
     new_formula = parse_formula(formula, vd_values, mi_values)
 
     # Assert
     assert new_formula == formula
-    assert nsp.eval(new_formula) == 2
+    assert parser.evaluate(new_formula) == 2
 
 
 def test_parse_formula_values():
     # Setup
-    vd_values = [{"id": 1, "name": "Speed", "unit": "km/h", "value": 3},
-                 {"id": 2, "name": "Weight", "unit": "kg", "value": 4}]
-    mi_values = [{"id": 1, "name": "Test", "unit": "T", "value": 5},
-                 {"id": 2, "name": "Test 2", "unit": "T2", "value": 6}]
-    formula = f'2*"VD(Speed [km/h])"+"EF(Test 2 [T2])"'
-    nsp = NumericStringParser()
+    vd_values = [{"id": 47241, "name": "Speed", "unit": "0-1", "value": 10},
+                 {"id": 1, "name": "Test", "unit": "T", "value": 20}]
+    mi_values = [{"market_input": 114, "name": "Fuel Cost", "unit": "k€/liter", "value": 5}]
+    formula = '2+{vd:47241,"Design Similarity [0-1]"}/{ef:114,"Fuel Cost [k€/liter]"}+{vd:1,"Test [T]"}'
+    parser = BaseArithmeticParser()
 
     # Act
     new_formula = parse_formula(formula, vd_values, mi_values)
 
     # Assert
-    assert new_formula == "2*3+6"
-    assert nsp.eval(new_formula) == 12
+    assert new_formula == "2+10/5+20"
+    assert parser.evaluate(new_formula) == 24
+
+
+def test_parse_formula_process_variable():
+    # Setup
+    vd_values = [{"id": 47241, "name": "Speed", "unit": "0-1", "value": 10}]
+    mi_values = [{"market_input": 114, "name": "Fuel Cost", "unit": "k€/liter", "value": 5}]
+
+    formula = '{vd:47241,"Design Similarity [0-1]"}*{process:COST,"COST"}'
+    time = 5
+    cost = '2+{vd:47241,"Design Similarity [0-1]"}/{ef:114,"Fuel Cost [k€/liter]"}'
+    revenue = 10
+    formula_row = {
+        "time": time,
+        "cost": cost,
+        "revenue": revenue,
+    }
+    parser = BaseArithmeticParser()
+
+    # Act
+    new_formula = parse_formula(formula, vd_values, mi_values, formula_row)
+
+    # Assert
+    assert new_formula == "10*(2+10/5)"
+    assert parser.evaluate(new_formula) == 40
 
 
 def test_parse_formula_vd_no_exist():
     # Setup
-    vd_values = [{"id": 1, "name": "Speed", "unit": "km/h", "value": 3},
-                 {"id": 2, "name": "Weight", "unit": "kg", "value": 4}]
-    mi_values = [{"id": 1, "name": "Test", "unit": "T", "value": 5},
-                 {"id": 2, "name": "Test 2", "unit": "T2", "value": 6}]
-    formula = f'2*"VD(DontExist [km/h])"+"EF(Dont Exist [T2])"'
-    nsp = NumericStringParser()
+    vd_values = [{"id": 47241, "name": "Speed", "unit": "0-1", "value": 10}]
+    mi_values = [{"market_input": 114, "name": "Fuel Cost", "unit": "k€/liter", "value": 5}]
+    formula = '2+{vd:1,"Design Similarity [0-1]"}/{ef:114,"Fuel Cost [k€/liter]"}'
+    parser = BaseArithmeticParser()
 
     # Act
     new_formula = parse_formula(formula, vd_values, mi_values)
 
     # Assert
-    assert new_formula == "2*0+0"
-    assert nsp.eval(new_formula) == 0
+    assert new_formula == "2+0/5"
+    assert parser.evaluate(new_formula) == 2
 
 
-def test_parse_formula_unit_no_exist():
+def test_add_multiplication_signs():
     # Setup
-    vd_values = [{"id": 1, "name": "Speed", "unit": None, "value": 3}]
-    mi_values = [{"id": 2, "name": "Test 2", "unit": None, "value": 6}]
-    formula = f'2*"VD(Speed [N/A])"+"EF(Test 2 [N/A])"'
-    nsp = NumericStringParser()
+    formula = '2{vd:47241,"Design Similarity [0-1]"}{ef:114,"Fuel Cost [k€/liter]"}'
+
+    # Act
+    new_formula = add_multiplication_signs(formula)
+
+    # Assert
+    assert new_formula == '2*{vd:47241,"Design Similarity [0-1]"}*{ef:114,"Fuel Cost [k€/liter]"}'
+
+
+def test_add_multiplication_valid_formula():
+    # Setup
+    formula = '2*{vd:47241,"Design Similarity [0-1]"}*{ef:114,"Fuel Cost [k€/liter]"}'
+
+    # Act
+    new_formula = add_multiplication_signs(formula)
+
+    # Assert
+    assert new_formula == '2*{vd:47241,"Design Similarity [0-1]"}*{ef:114,"Fuel Cost [k€/liter]"}'
+
+
+def test_parse_without_multiplication_signs():
+    # Setup
+    vd_values = [{"id": 47241, "name": "Speed", "unit": "0-1", "value": 10}]
+    mi_values = [{"market_input": 114, "name": "Fuel Cost", "unit": "k€/liter", "value": 5}]
+    formula = '2{vd:47241,"Design Similarity [0-1]"}{ef:114,"Fuel Cost [k€/liter]"}'
+    parser = BaseArithmeticParser()
 
     # Act
     new_formula = parse_formula(formula, vd_values, mi_values)
 
     # Assert
-    assert new_formula == "2*3+6"
-    assert nsp.eval(new_formula) == 12
+    assert new_formula == "2*10*5"
+    assert parser.evaluate(new_formula) == 100
 
 
-def test_get_prefix_variables():
-    # Setup
-    text_vd = f'2*"VD(Speed [km/h])"+"VD(Test [T])"'
-    text_mi = f'2*"EF(Test (OK) [T])"+"EF(Test2 [T2])"'
-
-    # Act
-    variables_vd = get_prefix_variables("VD", text_vd)
-    variables_mi = get_prefix_variables("EF", text_mi)
-
-    # Assert
-    assert variables_vd == ["Speed [km/h]", "Test [T]"]
-    assert variables_mi == ["Test (OK) [T]", "Test2 [T2]"]
-
-
-def test_get_prefix_names():
-    # Setup
-    text_vd = f'2*"VD(Speed King [L] [km/h])"+"VD(Test(L) */&¢€ [T])"'
-    text_mi = f'2*"EF(Test (OK) [T])"+"EF(Test2 [T2])"'
+def test_if_statement_true():
+    formula = 'if(1, 1, 0)'
+    parser = BaseArithmeticParser()
 
     # Act
-    names_vd = get_prefix_names("VD", text_vd)
-    names_mi = get_prefix_names("EF", text_mi)
+    new_formula = parse_formula(formula, [], [])
 
     # Assert
-    assert names_vd == ["Speed King [L]", "Test(L) */&¢€"]
-    assert names_mi == ["Test (OK)", "Test2"]
+    assert new_formula == "1"
+    assert parser.evaluate(new_formula) == 1
 
 
-def test_replace_prefix_variables():
-    # Setup
-    text_vd = f'2*"VD(Speed [km/h])"+"VD(Test [T])"'
-    text_mi = f'2*"EF(Test (OK) [T])"+"EF(Test2 [T2])"'
+def test_if_statement_false():
+    formula = 'if(0, 1, 0)'
+    parser = BaseArithmeticParser()
 
     # Act
-    new_text_vd = replace_prefix_variables("VD", "Speed [km/h]", "2", text_vd)
-    new_text_mi = replace_prefix_variables("EF", "Test (OK) [T]", "4", text_mi)
+    new_formula = parse_formula(formula, [], [])
 
     # Assert
-    assert new_text_vd == f'2*2+"VD(Test [T])"'
-    assert new_text_mi == f'2*4+"EF(Test2 [T2])"'
+    assert new_formula == "0"
+    assert parser.evaluate(new_formula) == 0
 
 
-def test_value_not_found():
+def test_if_statement_true_condition():
+    formula = 'if(10=10, 1, 0)'
+    parser = BaseArithmeticParser()
+
+    # Act
+    new_formula = parse_formula(formula, [], [])
+
+    # Assert
+    assert new_formula == "1"
+    assert parser.evaluate(new_formula) == 1
+
+
+def test_if_statement_false_condition():
+    formula = 'if(10=11, 1, 0)'
+    parser = BaseArithmeticParser()
+
+    # Act
+    new_formula = parse_formula(formula, [], [])
+
+    # Assert
+    assert new_formula == "0"
+    assert parser.evaluate(new_formula) == 0
+
+
+def test_if_statement_whitespace():
+    formula = 'if(10 = 10, 1, 0)'
+    parser = BaseArithmeticParser()
+
+    # Act
+    new_formula = parse_formula(formula, [], [])
+
+    # Assert
+    assert new_formula == "1"
+    assert parser.evaluate(new_formula) == 1
+
+
+def test_if_statement_string():
+    formula = 'if("Speed" = "Speed", 10, 0)'
+    parser = BaseArithmeticParser()
+
+    # Act
+    new_formula = parse_formula(formula, [], [])
+
+    # Assert
+    assert new_formula == "10"
+    assert parser.evaluate(new_formula) == 10
+
+
+def test_if_statement_greater_than():
+    formula = 'if(10 > 9, 10, 0)'
+    parser = BaseArithmeticParser()
+
+    # Act
+    new_formula = parse_formula(formula, [], [])
+
+    # Assert
+    assert new_formula == "10"
+    assert parser.evaluate(new_formula) == 10
+
+
+def test_if_statement_formula():
     # Setup
-    vd_values = [{"id": 1, "name": "Speed", "unit": "km/h", "value": 2}]
-    mi_values = [{"id": 2, "name": "Test 2", "unit": "T", "value": 3}]
-    formula = f'2*"VD(NO [km/h])"+"EF(NOTFOUND [T])"'
-    nsp = NumericStringParser()
+    vd_values = [{"id": 47241, "name": "Speed", "unit": "0-1", "value": 10},
+                 {"id": 1, "name": "Test", "unit": "T", "value": 20}]
+    mi_values = [{"market_input": 114, "name": "Fuel Cost", "unit": "k€/liter", "value": 5}]
+    formula = '2+{vd:47241,"Design Similarity [0-1]"}/{ef:114,"Fuel Cost [k€/liter]"}+if({vd:1,"Test [T]"}=20, {vd:47241,"Design Similarity [0-1]"}, 0)'
+    parser = BaseArithmeticParser()
 
     # Act
     new_formula = parse_formula(formula, vd_values, mi_values)
 
     # Assert
-    assert new_formula == "2*0+0"
-    assert nsp.eval(new_formula) == 0
-
+    assert new_formula == "2+10/5+10"
+    assert parser.evaluate(new_formula) == 14

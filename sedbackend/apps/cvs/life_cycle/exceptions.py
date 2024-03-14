@@ -17,3 +17,18 @@ class InvalidNodeType(Exception):
 
 class NodeFailedToUpdateException(Exception):
     pass
+
+class InvalidFileTypeException(Exception):
+    pass
+
+
+class FileSizeException(Exception):
+    pass
+
+
+class ProcessesVcsMatchException(Exception):
+    pass
+
+
+class DSMFileFailedDeletionException(Exception):
+    pass

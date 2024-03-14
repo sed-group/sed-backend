@@ -2,10 +2,15 @@ from typing import List
 from enum import Enum
 from pydantic import BaseModel
 from typing import Optional
-import json
 from fastapi import Form
+
+import datetime
+from sedbackend.apps.cvs.design.models import DesignGroup, Design, ValueDriverDesignValue
 from sedbackend.apps.cvs.link_design_lifecycle import models as link_model
 from dataclasses import dataclass
+
+from sedbackend.apps.cvs.vcs.models import VCS, ValueDriver
+from sedbackend.apps.cvs.design.models import DesignGroup, Design, ValueDriverDesignValue
 
 
 class NonTechCost(str, Enum):
@@ -37,6 +42,17 @@ class Simulation(BaseModel):
     max_NPVs: List[float]
     mean_payback_time: float
     all_npvs: List[List[float]]
+    payback_time: float
+    surplus_value_end_result: float
+    design_id: int
+    vcs_id: int
+
+
+class SimulationResult(BaseModel):
+    designs: List[Design]
+    vcss: List[VCS]
+    vds: List[ValueDriver]
+    runs: List[Simulation]
 
 
 class EditSimSettings(BaseModel):
@@ -56,6 +72,13 @@ class EditSimSettings(BaseModel):
 class SimSettings(EditSimSettings):
     project: int
 
+class SimulationFetch(BaseModel):
+    project_id: int
+    file: int
+    insert_timestamp: str
+    vs_x_ds: str
+
+    
 
 @dataclass
 class FileParams:

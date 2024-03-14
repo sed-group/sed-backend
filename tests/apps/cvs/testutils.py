@@ -1,20 +1,24 @@
 from typing import List, Tuple, Optional
 import random
 
+from fastapi.logger import logger
+
+from sedbackend.apps.core.files import implementation as impl_files
 import sedbackend.apps.cvs.simulation.implementation as sim_impl
 import sedbackend.apps.cvs.simulation.models as sim_model
+from sedbackend.apps.cvs.market_input.models import ExternalFactorValue, VcsEFValuePair
 from sedbackend.apps.cvs.simulation.models import NonTechCost
 import sedbackend.apps.cvs.design.implementation as design_impl
 import sedbackend.apps.cvs.design.models as design_model
 import sedbackend.apps.cvs.link_design_lifecycle.implementation as connect_impl
 import sedbackend.apps.cvs.link_design_lifecycle.models as connect_model
-import sedbackend.apps.cvs.life_cycle.implementation
+import sedbackend.apps.cvs.life_cycle.implementation as impl_life_cycle
 import sedbackend.apps.cvs.life_cycle.models
 import sedbackend.apps.cvs.project.implementation
 import sedbackend.apps.cvs.project.models
 import sedbackend.apps.cvs.vcs.implementation as vcs_impl
 import sedbackend.apps.cvs.vcs.models as vcs_model
-from sedbackend.apps.cvs.link_design_lifecycle.models import FormulaGet, TimeFormat, Rate
+from sedbackend.apps.cvs.link_design_lifecycle.models import TimeFormat, Rate
 from sedbackend.apps.cvs.market_input import models as market_input_model, implementation as market_input_impl
 import tests.testutils as tu
 
@@ -80,44 +84,37 @@ def random_VCS(name: str = None, description: str = None, year_from: int = None,
     return vcs
 
 
-def seed_random_vcs(project_id):
+def seed_random_vcs(project_id: int, user_id: int):
     vcs = random_VCS()
 
-    new_vcs = vcs_impl.create_vcs(project_id, vcs)
+    new_vcs = vcs_impl.create_vcs(project_id, vcs, user_id)
 
     return new_vcs
 
 
-def delete_VCSs(project_id: int, vcs_list: List[sedbackend.apps.cvs.vcs.models.VCS]):
-    id_list = []
-    for vcs in vcs_list:
-        id_list.append(vcs.id)
-
-    delete_VCS_with_ids(project_id, id_list)
-
-
-def delete_VCS_with_ids(project_id: int, vcs_id_list: List[int]):
+def delete_VCS_with_ids(user_id: int, project_id: int, vcs_id_list: List[int]):
     for vcsid in vcs_id_list:
-        vcs_impl.delete_vcs(project_id, vcsid)
+        vcs_impl.delete_vcs(user_id, project_id, vcsid)
 
 
-def random_value_driver(name: str = None, unit: str = None):
+def random_value_driver_post(user_id: int, project_id: int, name: str = None, unit: str = None):
     if name is None:
         name = tu.random_str(5, 50)
     if unit is None:
-        unit = tu.random_str(0, 10)
+        unit = tu.random_str(1, 10)
 
     return sedbackend.apps.cvs.vcs.models.ValueDriverPost(
         name=name,
-        unit=unit
+        unit=unit,
+        project_id=project_id
     )
 
 
-def seed_random_value_driver(user_id) -> sedbackend.apps.cvs.vcs.models.ValueDriver:
-    value_driver = random_value_driver()
+def seed_random_value_driver(user_id: int, project_id: int) -> sedbackend.apps.cvs.vcs.models.ValueDriver:
+    value_driver_post = random_value_driver_post(user_id=user_id, project_id=project_id)
 
     new_value_driver = sedbackend.apps.cvs.vcs.implementation.create_value_driver(
-        user_id, value_driver)
+        user_id, value_driver_post)
 
     return new_value_driver
 
@@ -149,10 +146,10 @@ def random_table_row(
         index = random.randint(1, 15)
 
     if random.randint(1, 8) == 2:
-        subprocess = random_subprocess(project_id, vcs_id)
+        subprocess = random_subprocess(project_id)
         subprocess_id = subprocess.id
     else:
-        if random.randint(1, 5) == 1: #Give 1/5 chance to produce non-tech process
+        if random.randint(1, 5) == 1:  # Give 1/5 chance to produce non-tech process
             iso_process_id = random.randint(1, 14)
         else:
             iso_process_id = random.randint(15, 25)
@@ -164,7 +161,7 @@ def random_table_row(
         stakeholder_expectations = tu.random_str(5, 50)
 
     if stakeholder_needs is None:
-        stakeholder_needs = seed_stakeholder_needs(user_id)
+        stakeholder_needs = seed_stakeholder_needs(user_id, project_id)
 
     table_row = sedbackend.apps.cvs.vcs.models.VcsRowPost(
         index=index,
@@ -178,7 +175,7 @@ def random_table_row(
     return table_row
 
 
-def random_subprocess(project_id: int, vcs_id: int, name: str = None, parent_process_id: int = None):
+def random_subprocess(project_id: int, name: str = None, parent_process_id: int = None):
     if name is None:
         name = tu.random_str(5, 50)
     if parent_process_id is None:
@@ -188,14 +185,14 @@ def random_subprocess(project_id: int, vcs_id: int, name: str = None, parent_pro
         name=name,
         parent_process_id=parent_process_id
     )
-    subp = vcs_impl.create_subprocess(project_id, vcs_id, subprocess)
+    subp = vcs_impl.create_subprocess(project_id, subprocess)
     return subp
 
 
-def seed_random_subprocesses(project_id: int, vcs_id: int, amount=15):
+def seed_random_subprocesses(project_id: int, amount=15):
     subprocess_list = []
     for _ in range(amount):
-        subprocess_list.append(random_subprocess(project_id, vcs_id))
+        subprocess_list.append(random_subprocess(project_id))
 
     return subprocess_list
 
@@ -211,6 +208,7 @@ def delete_subprocesses(subprocesses, project_id):
 
 
 def random_stakeholder_need(user_id,
+                            project_id: int,
                             need: str = None,
                             rank_weight: float = None,
                             value_driver_ids: List[int] = None) -> sedbackend.apps.cvs.vcs.models.StakeholderNeedPost:
@@ -221,7 +219,7 @@ def random_stakeholder_need(user_id,
         rank_weight = round(random.random(), ndigits=4)
 
     if value_driver_ids is None:
-        vd = seed_random_value_driver(user_id)
+        vd = seed_random_value_driver(user_id, project_id)
         value_driver_ids = [vd.id]
 
     stakeholder_need = sedbackend.apps.cvs.vcs.models.StakeholderNeedPost(
@@ -232,10 +230,10 @@ def random_stakeholder_need(user_id,
     return stakeholder_need
 
 
-def seed_stakeholder_needs(user_id, amount=10) -> List[sedbackend.apps.cvs.vcs.models.StakeholderNeedPost]:
+def seed_stakeholder_needs(user_id, project_id, amount=10) -> List[sedbackend.apps.cvs.vcs.models.StakeholderNeedPost]:
     stakeholder_needs = []
     for _ in range(amount):
-        stakeholder_need = random_stakeholder_need(user_id)
+        stakeholder_need = random_stakeholder_need(user_id, project_id)
         stakeholder_needs.append(stakeholder_need)
 
     return stakeholder_needs
@@ -256,6 +254,7 @@ def seed_vcs_table_rows(user_id, project_id, vcs_id, amount=15) -> List[vcs_mode
 def create_vcs_table(project_id, vcs_id, rows: List[vcs_model.VcsRowPost]) -> List[vcs_model.VcsRow]:
     vcs_impl.edit_vcs_table(project_id, vcs_id, rows)
     return vcs_impl.get_vcs_table(project_id, vcs_id)
+
 
 # ======================================================================================================================
 # BPMN Table
@@ -346,6 +345,11 @@ def delete_multiple_bpmn_nodes(nodes, project_id, vcs_id, user_id):
         delete_bpmn_node(node.id, project_id, vcs_id, user_id)
 
 
+def delete_dsm_file_from_vcs_id(proj_id, vcs_id, user_id):
+    file_id = impl_life_cycle.get_dsm_file_id(proj_id, vcs_id)
+    impl_files.impl_delete_file(file_id, user_id)
+
+
 # ======================================================================================================================
 # Designs
 # ======================================================================================================================
@@ -393,7 +397,6 @@ def random_design(value_driver_ids: int = None):
 
 
 def seed_random_designs(project_id: int, dg_id: int, amount: int = 10):
-
     design_impl.edit_designs(project_id, dg_id, [design_model.DesignPut(name=tu.random_str(5, 50))
                                                  for _ in range(amount)])
 
@@ -405,8 +408,8 @@ def seed_random_designs(project_id: int, dg_id: int, amount: int = 10):
 # ======================================================================================================================
 
 def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, user_id: int,
-                         amount: int = 10) -> List[connect_model.FormulaGet]:
-    vcs_rows = seed_vcs_table_rows(user_id,  project_id, vcs_id, amount)
+                         amount: int = 10) -> List[connect_model.FormulaRowGet]:
+    vcs_rows = seed_vcs_table_rows(user_id, project_id, vcs_id, amount)
 
     for i, vcs_row in enumerate(vcs_rows):
 
@@ -419,38 +422,19 @@ def seed_random_formulas(project_id: int, vcs_id: int, design_group_id: int, use
         else:
             rate = Rate.PRODUCT
 
-        formula_post = connect_model.FormulaPost(
-            time=time,
+        formula_post = connect_model.FormulaRowPost(
+            vcs_row_id=vcs_row.id,
+            time=connect_model.Formula(text=time, latex=time, comment=""),
             time_unit=time_unit,
-            cost=cost,
-            revenue=revenue,
+            cost=connect_model.Formula(text=cost, latex=cost, comment=""),
+            revenue=connect_model.Formula(text=revenue, latex=revenue, comment=""),
             rate=rate
         )
 
         connect_impl.edit_formulas(
-            project_id, vcs_row.id, design_group_id, formula_post)
+            project_id, vcs_id, design_group_id, [formula_post])
 
     return connect_impl.get_all_formulas(project_id, vcs_id, design_group_id)
-
-
-def create_formulas(project_id: int, vcs_rows: List[vcs_model.VcsRow], dg_id: int) -> List[FormulaGet]:
-    for row in vcs_rows:
-        time = str(tu.random.randint(1, 200))
-        time_unit = random_time_unit()
-        cost = str(tu.random.randint(1, 2000))
-        revenue = str(tu.random.randint(1, 10000))
-        rate = Rate.PRODUCT.value
-
-        formula_post = connect_model.FormulaPost(
-            time=time,
-            time_unit=time_unit,
-            cost=cost,
-            revenue=revenue,
-            rate=rate
-        )
-        connect_impl.edit_formulas(project_id, row.id, dg_id, formula_post)
-
-    return connect_impl.get_all_formulas(project_id, vcs_rows[0].vcs_id, dg_id)
 
 
 def delete_formulas(project_id: int, vcsRow_Dg_ids: List[Tuple[int, int]]):
@@ -458,69 +442,11 @@ def delete_formulas(project_id: int, vcsRow_Dg_ids: List[Tuple[int, int]]):
         connect_impl.delete_formulas(project_id, vcs_row, dg)
 
 
-def seed_formulas_for_multiple_vcs(project_id: int, vcss: List[int], dgs: List[int], user_id: int):
-    tr = random_table_row(user_id, project_id, vcss[0])
-    while tr.subprocess != None:
-        tr = random_table_row(user_id, project_id,  vcss[0])
-
-    row_ids = []
-    for vcs_id in vcss:
-        orig_table = vcs_impl.get_vcs_table(project_id, vcs_id)
-        table = [
-            vcs_model.VcsRowPost(
-                id=tr.id,
-                index=tr.index,
-                stakeholder=tr.stakeholder,
-                stakeholder_needs=[
-                    vcs_model.StakeholderNeedPost(
-                        id=need.id,
-                        need=need.need,
-                        value_dimension=need.value_dimension,
-                        rank_weight=need.rank_weight,
-                        value_drivers=[vd.id for vd in need.value_drivers])
-                    for need in tr.stakeholder_needs],
-                stakeholder_expectations=tr.stakeholder_expectations,
-                iso_process=None if tr.iso_process is None else tr.iso_process.id,
-                subprocess=None if tr.subprocess is None else tr.subprocess.id)
-            for tr in orig_table]
-        table.append(tr)
-        vcs_impl.edit_vcs_table(project_id, vcs_id, table)
-        row = list(filter(lambda row: row not in orig_table,
-                   vcs_impl.get_vcs_table(project_id, vcs_id)))[0]
-        row_ids.append(row.id)
-
-    time = str(tu.random.randint(1, 200))
-    time_unit = random_time_unit()
-    cost = str(tu.random.randint(1, 2000))
-    revenue = str(tu.random.randint(1, 10000))
-    rate = Rate.PRODUCT.value
-
-    # TODO when value drivers and market inputs are connected to the
-    # formulas, add them here.
-    value_driver_ids = []
-    market_input_ids = []
-
-    formulaPost = connect_model.FormulaPost(
-        time=time,
-        time_unit=time_unit,
-        cost=cost,
-        revenue=revenue,
-        rate=rate,
-        value_driver_ids=value_driver_ids,
-        market_input_ids=market_input_ids
-    )
-
-    for row_id in row_ids:
-        for dg_id in dgs:
-            connect_impl.edit_formulas(project_id, row_id, dg_id, formulaPost)
-
-
-def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int) -> vcs_model.VcsRow:
+def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int, user_id: int) -> vcs_model.VcsRow:
     rows = list(sorted(vcs_impl.get_vcs_table(
         project_id, vcs_id), key=lambda row: row.index))
-    formulas = connect_impl.get_all_formulas(
-        project_id, vcs_id, design_group_id)
-
+    formulas = connect_impl.get_all_formulas(project_id, vcs_id, design_group_id)
+    last_id = -1
     rows.reverse()  # Reverse to find last technical process
     for row in rows:
         if row.iso_process is not None:
@@ -534,7 +460,8 @@ def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int)
 
     last = next(filter(lambda x: x.vcs_row_id == last_id, formulas))
 
-    new_last = connect_model.FormulaPost(
+    new_last = connect_model.FormulaRowPost(
+        vcs_row_id=last.vcs_row_id,
         time=last.time,
         time_unit=last.time_unit,
         cost=last.cost,
@@ -542,7 +469,7 @@ def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int)
         rate=Rate.PROJECT.value
     )
 
-    connect_impl.edit_formulas(project_id, last_id, design_group_id, new_last)
+    connect_impl.edit_formulas(project_id, vcs_id, design_group_id, [new_last])
 
     rows.reverse()  # reverse back to find first technical process
     for row in rows:
@@ -559,21 +486,19 @@ def edit_rate_order_formulas(project_id: int, vcs_id: int, design_group_id: int)
 # ======================================================================================================================
 
 def seed_simulation_settings(project_id: int, vcs_ids: List[int], design_ids: List[int]) -> sim_model.SimSettings:
-    rows = [row.iso_process.name if row.iso_process is not None else row.subprocess.name for row in vcs_impl.get_vcs_table(
-        project_id, vcs_ids[0])]
-    print("Seed settings vcs rows", rows)
+    rows = [row.iso_process.name if row.iso_process is not None else row.subprocess.name for row in
+            vcs_impl.get_vcs_table(
+                project_id, vcs_ids[0])]
     for vcs_id in vcs_ids:
-        new_rows = [row.iso_process.name if row.iso_process is not None else row.subprocess.name for row in vcs_impl.get_vcs_table(
-            project_id, vcs_id)]
-        print("New rows", new_rows)
+        new_rows = [row.iso_process.name if row.iso_process is not None else row.subprocess.name for row in
+                    vcs_impl.get_vcs_table(
+                        project_id, vcs_id)]
         rows = list(filter(lambda x: x in rows, new_rows))
-        print("Common elements", rows)
 
     time_unit = random_time_unit()
     interarrival_time = round(tu.random.uniform(1, 255), ndigits=5)
     start_time = round(tu.random.uniform(1, 300), ndigits=5)
     end_time = round(tu.random.uniform(300, 1000), ndigits=5)
-    print("Row len", len(rows))
     flow_process = rows[1]
     flow_start_time = None  # Get valid start time
     flow_time = round(tu.random.uniform(0, end_time - start_time), ndigits=5)
@@ -606,11 +531,11 @@ def seed_random_sim_settings(user_id: int, project_id: int) -> sim_model.SimSett
     start_time = round(tu.random.uniform(1, 300), ndigits=5)
     end_time = round(tu.random.uniform(300, 1000), ndigits=5)
     if tu.random.getrandbits(1):
-        vcs = seed_random_vcs(project_id)
+        vcs = seed_random_vcs(project_id, user_id)
         rows = seed_vcs_table_rows(user_id, project_id, vcs.id, 3)
         for row in rows:
             if row.subprocess is not None:
-                flow_process = row.subprocess.name
+                flow_process = f'{row.subprocess.name} ({row.subprocess.parent_process.name})'
                 break
             elif row.iso_process is not None:
                 flow_process = row.iso_process.name
@@ -644,31 +569,40 @@ def seed_random_sim_settings(user_id: int, project_id: int) -> sim_model.SimSett
         runs=runs
     )
 
-    sim_impl.edit_sim_settings(project_id, sim_settings)
+    sim_impl.edit_sim_settings(project_id, sim_settings, user_id)
     return sim_impl.get_sim_settings(project_id)
 
 
 # ======================================================================================================================
-# Market Input
+# External factors
 # ======================================================================================================================
 
-def seed_random_market_input(project_id: int):
+def seed_random_external_factor(project_id: int):
     name = tu.random_str(5, 50)
     unit = tu.random_str(5, 50)
-    market_input_post = market_input_model.MarketInputPost(
+    market_input_post = market_input_model.ExternalFactorPost(
         name=name,
         unit=unit
     )
-    return market_input_impl.create_market_input(project_id, market_input_post)
+    return market_input_impl.create_external_factor(project_id, market_input_post)
 
 
-def seed_random_market_input_values(project_id: int, vcs_id: int, market_input_id: int):
-    market_input_impl.update_market_input_values(project_id, [market_input_model.MarketInputValue(
-        vcs_id=vcs_id,
-        market_input_id=market_input_id,
-        value=random.random() * 100)])
+def seed_random_external_factor_values(project_id: int, vcs_id: int, ef_id: int):
+    name = tu.random_str(5, 50)
+    unit = tu.random_str(5, 50)
+    value = random.random() * 100
+    market_input_impl.update_external_factor_values(project_id, [
+        ExternalFactorValue(
+            id=ef_id,
+            name=name,
+            unit=unit,
+            external_factor_values=[
+                VcsEFValuePair(vcs_id=vcs_id, value=value)
+            ]
+        )
+    ])
 
-    return market_input_impl.get_all_market_values(project_id)
+    return market_input_impl.get_all_external_factor_values(project_id)
 
 
 # ======================================================================================================================
